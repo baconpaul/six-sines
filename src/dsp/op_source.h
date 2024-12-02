@@ -33,23 +33,26 @@ struct alignas(16) OpSource
     float absolute{60}; // in midi keys
 
     // todo waveshape
-    float pan{0.0};
 
     uint32_t phase[2];
     uint32_t dPhase[2];
 
     OpSource()
     {
+        clearPhase();
         for (int i = 0; i < blockSize; ++i)
         {
-            phaseInput[0][i] = 0;
-            phaseInput[1][i] = 0;
             rmInput[0][i] = 1.f;
             rmInput[1][i] = 1.f;
         }
 
         phase[0] = 4 << 27;
         phase[1] = 4 << 27;
+    }
+
+    void clearPhase()
+    {
+        memset(phaseInput, 0, sizeof(phaseInput));
     }
 
     void setFrequency(float freq)

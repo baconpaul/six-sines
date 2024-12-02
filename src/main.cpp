@@ -15,6 +15,7 @@
 #include "sst/basic-blocks/tables/SincTableProvider.h"
 #include <cstdint>
 
+#include "dsp/matrix_node.h"
 #include "dsp/op_source.h"
 #include "dsp/sintable.h"
 #include "infra/RIFFWavWriter.h"
@@ -23,6 +24,7 @@
 int main(int, char **)
 {
     baconpaul::fm::OpSource osrc, osrc2;
+    baconpaul::fm::MatrixNode node(osrc, osrc2);
 
     baconpaul::fm::RIFFWavWriter writer("test.wav", 2);
     writer.openFile();
@@ -34,25 +36,22 @@ int main(int, char **)
     auto fr = 55.0;
     osrc.setFrequency(fr);
     osrc2.setFrequency(fr * 2.1);
+    node.fmLevel = 0.4;
+    node.attack();
 
-    for (int i = 0; i < 50000; ++i)
+    for (int i = 0; i < 80000; ++i)
     {
-        if ((i + 1) % 3000 == 0)
+        if ((i + 1) % 7000 == 0)
         {
             fr *= pow(2.0, 4.0 / 12.0);
             osrc.setFrequency(fr);
             osrc2.setFrequency(fr * 2.1);
+            node.attack();
         }
 
         osrc2.renderBlock();
-        for (int j = 0; j < baconpaul::fm::blockSize; ++j)
-        {
-            osrc.phaseInput[0][j] = (int32_t)((1 << 26) * osrc2.output[0][j]);
-            osrc.phaseInput[1][j] = (int32_t)((1 << 26) * osrc2.output[1][j]);
-        }
-
+        node.applyBlock(((i+1)%7000) < 2500);
         osrc.renderBlock();
-        ;
 
         for (int j = 0; j < baconpaul::fm::blockSize; ++j)
         {

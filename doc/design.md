@@ -2,18 +2,27 @@ Individual Oscillator
 
 + stereo phase and rm input
 + Stereo out
+- power
 - Keytrack
   - if on: ratio
   - if off: absolute frequency
 - Waveshape (quadrant picker)
 - feedback
-- pan
 - will need gated somewhere
-- lfo
-  - to pan, to frequency
-- dahdsr
-  - to pan, to frequency
+- lfo with power and depth to frequency
+- dahdsr with power and depth to frequency
 
-FM Matrix
+FM Matrix Node
++ Has a reference to an input and output 
++ float depth
+- pan (for application)
+- RM or FM
+- DAHDSR to scale float depth
+- LFO to scale float depth
+- (its a product if both are on)
+
+Evaluator
+
+Mixer
 
 Final output lanczos downsampler (and gSR to 120khz or some such)
