@@ -24,10 +24,15 @@
 int main(int, char **)
 {
     baconpaul::fm::OpSource osrc, osrc2;
-    baconpaul::fm::MatrixNode node(osrc, osrc2);
+    baconpaul::fm::MatrixNodeFrom node(osrc, osrc2);
+    baconpaul::fm::MatrixNodeSelf snode(osrc);
 
     baconpaul::fm::RIFFWavWriter writer("test.wav", 2);
-    writer.openFile();
+    if (!writer.openFile())
+    {
+        std::cout << "Cannot open test wav" << std::endl;
+        exit(2);
+    }
     assert(writer.isOpen());
     writer.writeRIFFHeader();
     writer.writeFMTChunk(baconpaul::fm::gSampleRate);
@@ -36,8 +41,8 @@ int main(int, char **)
     auto fr = 55.0;
     osrc.setFrequency(fr);
     osrc2.setFrequency(fr * 2.1);
-    node.fmLevel = 0.4;
     node.attack();
+    snode.attack();
 
     for (int i = 0; i < 80000; ++i)
     {
@@ -47,10 +52,23 @@ int main(int, char **)
             osrc.setFrequency(fr);
             osrc2.setFrequency(fr * 2.1);
             node.attack();
+            snode.attack();
+            if (snode.fbBase > 0)
+            {
+                snode.fbBase = 0;
+                node.fmLevel = 0.5;
+            }
+            else
+            {
+                snode.fbBase = 1.0;
+                node.fmLevel = 0;
+            }
         }
 
         osrc2.renderBlock();
-        node.applyBlock(((i+1)%7000) < 2500);
+        node.applyBlock(((i + 1) % 7000) < 2500);
+
+        snode.applyBlock(((i + 1) % 7000) < 2500);
         osrc.renderBlock();
 
         for (int j = 0; j < baconpaul::fm::blockSize; ++j)
@@ -60,7 +78,11 @@ int main(int, char **)
         }
     }
 
-    writer.closeFile();
+    if (!writer.closeFile())
+    {
+        std::cout << "Cannot close file" << std::endl;
+        exit(1);
+    }
     /*
     baconpaul::fm::SinTable st;
 

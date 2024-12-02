@@ -26,6 +26,7 @@ struct alignas(16) OpSource
 {
     int32_t phaseInput alignas(16)[2][blockSize];
     float rmInput alignas(16)[2][blockSize];
+    int32_t feedbackLevel alignas(16)[blockSize];
     float output alignas(16)[2][blockSize];
 
     bool keytrack{true};
@@ -44,6 +45,8 @@ struct alignas(16) OpSource
         {
             rmInput[0][i] = 1.f;
             rmInput[1][i] = 1.f;
+
+            feedbackLevel[i] = 0.f;
         }
 
         phase[0] = 4 << 27;
@@ -69,13 +72,15 @@ struct alignas(16) OpSource
             {
                 phase[ch] += dPhase[ch];
                 auto rm = rmInput[ch][i];
-                auto out = st.at(phase[ch] + phaseInput[ch][i]) * rm;
+                auto out = st.at(phase[ch] + phaseInput[ch][i] + (int32_t)(feedbackLevel[i] * fbVal[ch])) * rm;
                 output[ch][i] = out;
+                fbVal[ch] = out;
             }
         }
     }
 
     SinTable st;
+    float fbVal[2]{0.f, 0.f};
 };
 } // namespace baconpaul::fm
 
