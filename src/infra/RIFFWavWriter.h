@@ -1,21 +1,23 @@
 /*
- * SampleCreator
+ * BaconPaul's FM Atrocity
  *
- * An experimental idea based on a preliminary convo. Probably best to come back later.
+ * A mess, with FM.
  *
- * Copyright Paul Walker 2024
+ * Copyright 2024, Paul Walker and Various authors, as described in the github
+ * transaction log.
  *
- * Released under the MIT License. See `LICENSE.md` for details
+ * This source repo is released under the MIT license, but has
+ * GPL3 dependencies, as such the combined work can also be
+ * released under GPL3. You know the drill.
  */
 
-#ifndef SRC_RIFFWAVWRITER_HPP
-#define SRC_RIFFWAVWRITER_HPP
+#ifndef BACONPAUL_FMTHING_INFRA_RIFFWAVWRITER_H
+#define BACONPAUL_FMTHING_INFRA_RIFFWAVWRITER_H
 
 #include <filesystem>
 #include <string>
 #include <fstream>
 #include <iostream>
-
 
 namespace baconpaul::fm
 {
@@ -189,5 +191,5 @@ struct RIFFWavWriter
 
     [[nodiscard]] size_t getSampleCount() const { return dataLen / (nChannels * sizeof(float)); }
 };
-} // namespace baconpaul::samplecreator::riffwav
+} // namespace baconpaul::fm
 #endif // SAMPLECREATOR_RIFFWAVWRITER_HPP

@@ -1,13 +1,68 @@
+/*
+ * BaconPaul's FM Atrocity
+ *
+ * A mess, with FM.
+ *
+ * Copyright 2024, Paul Walker and Various authors, as described in the github
+ * transaction log.
+ *
+ * This source repo is released under the MIT license, but has
+ * GPL3 dependencies, as such the combined work can also be
+ * released under GPL3. You know the drill.
+ */
+
 #include <iostream>
 #include "sst/basic-blocks/tables/SincTableProvider.h"
 #include <cstdint>
 
-#include "sintable.h"
-#include "RIFFWavWriter.h"
+#include "dsp/op_source.h"
+#include "dsp/sintable.h"
+#include "infra/RIFFWavWriter.h"
 #include <cassert>
 
 int main(int, char **)
 {
+    baconpaul::fm::OpSource osrc, osrc2;
+
+    baconpaul::fm::RIFFWavWriter writer("test.wav", 2);
+    writer.openFile();
+    assert(writer.isOpen());
+    writer.writeRIFFHeader();
+    writer.writeFMTChunk(baconpaul::fm::gSampleRate);
+    writer.startDataChunk();
+
+    auto fr = 55.0;
+    osrc.setFrequency(fr);
+    osrc2.setFrequency(fr * 2.1);
+
+    for (int i = 0; i < 50000; ++i)
+    {
+        if ((i + 1) % 3000 == 0)
+        {
+            fr *= pow(2.0, 4.0 / 12.0);
+            osrc.setFrequency(fr);
+            osrc2.setFrequency(fr * 2.1);
+        }
+
+        osrc2.renderBlock();
+        for (int j = 0; j < baconpaul::fm::blockSize; ++j)
+        {
+            osrc.phaseInput[0][j] = (int32_t)((1 << 26) * osrc2.output[0][j]);
+            osrc.phaseInput[1][j] = (int32_t)((1 << 26) * osrc2.output[1][j]);
+        }
+
+        osrc.renderBlock();
+        ;
+
+        for (int j = 0; j < baconpaul::fm::blockSize; ++j)
+        {
+            float smp[2]{osrc.output[0][j], osrc.output[1][j]};
+            writer.pushSamples(smp);
+        }
+    }
+
+    writer.closeFile();
+    /*
     baconpaul::fm::SinTable st;
 
     uint32_t phase;
@@ -21,12 +76,6 @@ int main(int, char **)
     uint32_t ph = 4 << 27;
     uint32_t cph = 4 << 27;
 
-    baconpaul::fm::RIFFWavWriter writer("test.wav", 2);
-    writer.openFile();
-    assert(writer.isOpen());
-    writer.writeRIFFHeader();
-    writer.writeFMTChunk(sr);
-    writer.startDataChunk();
     float smp[2];
 
     auto tri = [](auto f)
@@ -63,4 +112,5 @@ int main(int, char **)
 
     writer.closeFile();
     std::cout << "hw" << std::endl;
+    */
 }

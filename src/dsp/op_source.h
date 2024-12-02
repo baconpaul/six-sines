@@ -1,0 +1,79 @@
+/*
+ * BaconPaul's FM Atrocity
+ *
+ * A mess, with FM.
+ *
+ * Copyright 2024, Paul Walker and Various authors, as described in the github
+ * transaction log.
+ *
+ * This source repo is released under the MIT license, but has
+ * GPL3 dependencies, as such the combined work can also be
+ * released under GPL3. You know the drill.
+ */
+
+#ifndef BACONPAUL_FMTHING_DSP_OP_SOURCE_H
+#define BACONPAUL_FMTHING_DSP_OP_SOURCE_H
+
+#include <cstdint>
+
+#include "configuration.h"
+
+#include "dsp/sintable.h"
+
+namespace baconpaul::fm
+{
+struct alignas(16) OpSource
+{
+    int32_t phaseInput alignas(16)[2][blockSize];
+    float rmInput alignas(16)[2][blockSize];
+    float output alignas(16)[2][blockSize];
+
+    bool keytrack{true};
+    float ratio{1.0};   // in  frequency multiple
+    float absolute{60}; // in midi keys
+
+    // todo waveshape
+    float pan{0.0};
+
+    uint32_t phase[2];
+    uint32_t dPhase[2];
+
+    OpSource()
+    {
+        for (int i = 0; i < blockSize; ++i)
+        {
+            phaseInput[0][i] = 0;
+            phaseInput[1][i] = 0;
+            rmInput[0][i] = 1.f;
+            rmInput[1][i] = 1.f;
+        }
+
+        phase[0] = 4 << 27;
+        phase[1] = 4 << 27;
+    }
+
+    void setFrequency(float freq)
+    {
+        dPhase[0] = st.dPhase(freq, gSampleRate);
+        dPhase[1] = st.dPhase(freq, gSampleRate);
+    }
+
+    void renderBlock()
+    {
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            for (int i = 0; i < blockSize; ++i)
+            {
+                phase[ch] += dPhase[ch];
+                auto rm = rmInput[ch][i];
+                auto out = st.at(phase[ch] + phaseInput[ch][i]) * rm;
+                output[ch][i] = out;
+            }
+        }
+    }
+
+    SinTable st;
+};
+} // namespace baconpaul::fm
+
+#endif
