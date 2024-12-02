@@ -37,6 +37,8 @@ int main(int, char **)
             return (1-f) * 2;
     };
 
+    float fb{0.f};
+    bool doFB{false};
     for (int i = 0; i < 800000; ++i)
     {
         if ((i+1) % 50000 == 0)
@@ -44,12 +46,14 @@ int main(int, char **)
             fr *= pow(2.0, 4.0 / 12.0);
             dph = st.dPhase(fr, sr);
             dph2 = st.dPhase(fr * frac, sr);
+            doFB = !doFB;
         }
 
-        auto p1 = st.at(cph) * tri(1.f * (i % 50000) / 50000);
+        auto p1 = st.at(cph) * tri(1.f * (i % 50000) / 50000) * doFB;
         cph += dph2;
 
-        auto res = st.at(ph + (int32_t) (p1 * (1<<26)));
+        auto res = st.at(ph + (int32_t) (p1 * (1<<26)) + (int32_t)(fb * (1<<24)));
+        fb = res *  tri(1.f * (i % 50000) / 50000) * (!doFB);
         smp[0] = res;
         smp[1] = res;
         writer.pushSamples(smp);
