@@ -26,6 +26,7 @@ int main(int, char **)
     baconpaul::fm::OpSource osrc, osrc2;
     baconpaul::fm::MatrixNodeFrom node(osrc, osrc2);
     baconpaul::fm::MatrixNodeSelf snode(osrc);
+    baconpaul::fm::MixerNode outnode(osrc);
 
     baconpaul::fm::RIFFWavWriter writer("test.wav", 2);
     if (!writer.openFile())
@@ -44,15 +45,18 @@ int main(int, char **)
     node.attack();
     snode.attack();
 
+    int every{7000};
+    int gate{2500};
     for (int i = 0; i < 80000; ++i)
     {
-        if ((i + 1) % 7000 == 0)
+        if (i % every == 0)
         {
             fr *= pow(2.0, 4.0 / 12.0);
             osrc.setFrequency(fr);
             osrc2.setFrequency(fr * 2.1);
             node.attack();
             snode.attack();
+            outnode.attack();
             if (snode.fbBase > 0)
             {
                 snode.fbBase = 0;
@@ -66,14 +70,16 @@ int main(int, char **)
         }
 
         osrc2.renderBlock();
-        node.applyBlock(((i + 1) % 7000) < 2500);
+        node.applyBlock(((i + 1) % every) < gate);
 
-        snode.applyBlock(((i + 1) % 7000) < 2500);
+        snode.applyBlock(((i + 1) % every) < gate);
         osrc.renderBlock();
+
+        outnode.renderBlock(((i + 1) % every) < gate);
 
         for (int j = 0; j < baconpaul::fm::blockSize; ++j)
         {
-            float smp[2]{osrc.output[0][j], osrc.output[1][j]};
+            float smp[2]{outnode.output[0][j], outnode.output[1][j]};
             writer.pushSamples(smp);
         }
     }

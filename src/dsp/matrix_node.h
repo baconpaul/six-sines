@@ -57,10 +57,35 @@ struct MatrixNodeSelf
     void attack() { env.attack(0.2); }
     void applyBlock(bool gated)
     {
-        env.processBlock01AD(0.0, 0.1, 0.00, 0.4, 0.95, 0.7, gated);
+        env.processBlock01AD(0.2, 0.1, 0.00, 0.4, 0.95, 0.7, gated);
         for (int j = 0; j < blockSize; ++j)
         {
             onto.feedbackLevel[j] = (int32_t)((1<<24)*env.outputCache[j] * fbBase);
+        }
+    }
+};
+
+struct MixerNode
+{
+    float output alignas(16)[2][blockSize];
+    OpSource &from;
+    SRProvider sr;
+    MixerNode(OpSource &f) : from(f), env(&sr) {}
+
+    float baseLevel{1.0};
+
+    sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
+
+    void attack() {env.attack(0.0);}
+
+    void renderBlock(bool gated)
+    {
+        env.processBlock01AD(0.0, 0.6, 0.00, 0.6, 0.2, 0.7, gated);
+        for (int j = 0; j < blockSize; ++j)
+        {
+            // use mech blah
+            output[0][j] = baseLevel * env.outputCache[j] * from.output[0][j];
+            output[1][j] = baseLevel * env.outputCache[j] * from.output[1][j];
         }
     }
 };
