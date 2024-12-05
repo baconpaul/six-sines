@@ -14,11 +14,28 @@
 #ifndef BACONPAUL_FMTHING_CONFIGURATION_H
 #define BACONPAUL_FMTHING_CONFIGURATION_H
 
+#include <stddef.h>
+#include <cstdint>
+#include <string>
+
 namespace baconpaul::fm
 {
 static constexpr size_t blockSize{16};
 static constexpr float gSampleRate{128000.0};
 
 } // namespace baconpaul::fm
+
+inline std::string fileTrunc(const std::string &f)
+{
+    auto p = f.find("/src/");
+    if (p != std::string::npos)
+    {
+        return f.substr(p + 1);
+    }
+    return f;
+}
+
+#define FMLOG(...)                                                                                 \
+    std::cout << fileTrunc(__FILE__) << ":" << __LINE__ << " " << __VA_ARGS__ << std::endl;
 
 #endif // CONFIGURATION_H

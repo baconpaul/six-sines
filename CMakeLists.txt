@@ -88,7 +88,13 @@ add_executable(ifm-main src/main.cpp)
 target_link_libraries(ifm-main PRIVATE sst-basic-blocks)
 target_include_directories(ifm-main PRIVATE src)
 
-add_library(ifm-impl STATIC src/lib.cpp)
+add_library(ifm-impl STATIC
+        src/lib.cpp
+        src/clap/ifm-clap.cpp
+        src/clap/ifm-clap-entry-impl.cpp
+)
+target_include_directories(ifm-impl PUBLIC src)
+target_link_libraries(ifm-impl PUBLIC clap clap-helpers)
 
 
 set(CLAP_TARGET ${PROJECT_NAME}_clap)
