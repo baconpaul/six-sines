@@ -19,7 +19,7 @@
 namespace baconpaul::fm
 {
 
-extern const clap_plugin *makePlugin();
+extern const clap_plugin *makePlugin(const clap_host *);
 
 const clap_plugin_descriptor *getDescriptor()
 {
@@ -57,7 +57,7 @@ const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_h
     if (strcmp(plugin_id, getDescriptor()->id) == 0)
     {
         FMLOG("Asked for desc");
-        return makePlugin();
+        return makePlugin(host);
     }
     return nullptr;
 }
