@@ -53,15 +53,12 @@ struct alignas(16) OpSource
         phase[1] = 4 << 27;
     }
 
-    void clearPhase()
-    {
-        memset(phaseInput, 0, sizeof(phaseInput));
-    }
+    void clearPhase() { memset(phaseInput, 0, sizeof(phaseInput)); }
 
     void setFrequency(float freq)
     {
-        dPhase[0] = st.dPhase(freq, gSampleRate);
-        dPhase[1] = st.dPhase(freq, gSampleRate);
+        dPhase[0] = st.dPhase(freq);
+        dPhase[1] = st.dPhase(freq);
     }
 
     void renderBlock()
@@ -72,7 +69,9 @@ struct alignas(16) OpSource
             {
                 phase[ch] += dPhase[ch];
                 auto rm = rmInput[ch][i];
-                auto out = st.at(phase[ch] + phaseInput[ch][i] + (int32_t)(feedbackLevel[i] * fbVal[ch])) * rm;
+                auto out =
+                    st.at(phase[ch] + phaseInput[ch][i] + (int32_t)(feedbackLevel[i] * fbVal[ch])) *
+                    rm;
                 output[ch][i] = out;
                 fbVal[ch] = out;
             }

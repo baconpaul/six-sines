@@ -29,6 +29,8 @@ Evaluator
 Mixer
 - Each node gets an envelope an LFO and a pan and level control
 
+Voice Object
+
 Final output lanczos downsampler (and gSR to 120khz or some such)
 
 MIDI mappings what to do

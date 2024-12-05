@@ -14,6 +14,8 @@
 #ifndef BACONPAUL_FMTHING_DSP_SINTABLE_H
 #define BACONPAUL_FMTHING_DSP_SINTABLE_H
 
+#include "configuration.h"
+
 namespace baconpaul::fm
 {
 struct SinTable
@@ -53,9 +55,10 @@ struct SinTable
         }
     }
 
-    uint32_t dPhase(float fr, float sr)
+    static constexpr double frToPhase{(1 << 26) / gSampleRate};
+    uint32_t dPhase(float fr)
     {
-        auto dph = (uint32_t)(fr / sr * (1 << 26));
+        auto dph = (uint32_t)(fr * frToPhase);
         return dph;
     }
 
