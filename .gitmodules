@@ -4,3 +4,30 @@
 [submodule "libs/simde"]
 	path = libs/simde
 	url = https://github.com/simd-everywhere/simde
+[submodule "libs/clap-libs/clap"]
+	path = libs/clap-libs/clap
+	url = https://github.com/free-audio/clap.git
+[submodule "libs/clap-libs/clap-helpers"]
+	path = libs/clap-libs/clap-helpers
+	url = https://github.com/free-audio/clap-helpers.git
+[submodule "libs/clap-libs/clap-wrapper"]
+	path = libs/clap-libs/clap-wrapper
+	url = https://github.com/free-audio/clap-wrapper.git
+[submodule "libs/sst/sst-clap-helpers"]
+	path = libs/sst/sst-clap-helpers
+	url = https://github.com/surge-synthesizer/sst-clap-helpers.git
+[submodule "libs/JUCE"]
+	path = libs/JUCE
+	url = https://github.com/juce-framework/JUCE.git
+[submodule "libs/sst/sst-jucegui"]
+	path = libs/sst/sst-jucegui
+	url = https://github.com/surge-synthesizer/sst-jucegui.git
+[submodule "libs/sst/sst-voicemanager"]
+	path = libs/sst/sst-voicemanager
+	url = https://github.com/surge-synthesizer/sst-voicemanager.git
+[submodule "libs/MTS-ESP"]
+	path = libs/MTS-ESP
+	url = https://github.com/ODDSound/MTS-ESP
+[submodule "libs/fmt"]
+	path = libs/fmt
+	url = https://github.com/fmtlib/fmt.git
