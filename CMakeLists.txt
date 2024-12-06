@@ -91,9 +91,10 @@ target_include_directories(ifm-main PRIVATE src)
 add_library(ifm-impl STATIC
         src/clap/ifm-clap.cpp
         src/clap/ifm-clap-entry-impl.cpp
+        src/ui/ifm-editor.cpp
 )
 target_include_directories(ifm-impl PUBLIC src)
-target_link_libraries(ifm-impl PUBLIC clap clap-helpers sst-basic-blocks sst-voicemanager sst-jucegui)
+target_link_libraries(ifm-impl PUBLIC clap clap-helpers sst-basic-blocks sst-voicemanager sst-jucegui sst::clap_juce_shim sst::clap_juce_shim_headers)
 
 
 set(CLAP_TARGET ${PROJECT_NAME}_clap)
@@ -150,14 +151,14 @@ if (APPLE)
 endif()
 
 
-set(sat ${PROJECT_NAME}_Standalone)
+set(sat ${PROJECT_NAME}_standalone)
 add_executable(${sat})
 target_sources(${sat} PRIVATE src/clap/ifm-clap-entry.cpp)
 target_link_libraries(${sat} PRIVATE ifm-impl)
 target_add_standalone_wrapper(TARGET ${sat}
         OUTPUT_NAME "IFM"
         STATICALLY_LINKED_CLAP_ENTRY True
-        PLUGIN_ID "org.baconpaul.ifm-synth")
+        PLUGIN_ID "org.baconpaul.ifm")
 
 
 

@@ -10,6 +10,7 @@
  * GPL3 dependencies, as such the combined work can also be
  * released under GPL3. You know the drill.
  */
+
 #include "configuration.h"
 #include <clap/clap.h>
 
@@ -21,6 +22,9 @@
 
 #include <memory>
 #include "sst/voicemanager/midi1_to_voicemanager.h"
+#include "sst/clap_juce_shim/clap_juce_shim.h"
+
+#include "ui/ifm-editor.h"
 
 namespace baconpaul::fm
 {
@@ -36,11 +40,14 @@ static constexpr clap::helpers::CheckingLevel checkLevel = clap::helpers::Checki
 
 using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
 
-struct FMClap : public plugHelper_t // , sst::clap_juce_shim::EditorProvider
+struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 {
     FMClap(const clap_host *h) : plugHelper_t(getDescriptor(), h)
     {
         engine = std::make_unique<Synth>();
+
+        clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
+        clapJuceShim->setResizable(false);
     }
     virtual ~FMClap(){};
 
@@ -205,12 +212,15 @@ struct FMClap : public plugHelper_t // , sst::clap_juce_shim::EditorProvider
     // override;
 
   public:
-#if 0
+  public:
     bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }
     std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
     ADD_SHIM_IMPLEMENTATION(clapJuceShim)
     ADD_SHIM_LINUX_TIMER(clapJuceShim)
-    std::unique_ptr<juce::Component> createEditor() override;
+    std::unique_ptr<juce::Component> createEditor() override
+    {
+        return std::make_unique<baconpaul::fm::ui::IFMEditor>();
+    }
 
     bool registerOrUnregisterTimer(clap_id &id, int ms, bool reg) override
     {
@@ -226,7 +236,6 @@ struct FMClap : public plugHelper_t // , sst::clap_juce_shim::EditorProvider
         }
         return true;
     }
-#endif
 };
 
 } // namespace clapimpl
