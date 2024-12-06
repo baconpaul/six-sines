@@ -38,9 +38,10 @@ struct alignas(16) OpSource
     uint32_t phase[2];
     uint32_t dPhase[2];
 
-    OpSource()
+    OpSource() { reset(); }
+
+    void reset()
     {
-        clearPhase();
         for (int i = 0; i < blockSize; ++i)
         {
             rmInput[0][i] = 1.f;
@@ -51,9 +52,8 @@ struct alignas(16) OpSource
 
         phase[0] = 4 << 27;
         phase[1] = 4 << 27;
+        memset(phaseInput, 0, sizeof(phaseInput));
     }
-
-    void clearPhase() { memset(phaseInput, 0, sizeof(phaseInput)); }
 
     void setFrequency(float freq)
     {

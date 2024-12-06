@@ -70,7 +70,7 @@ struct MixerNode
     float output alignas(16)[2][blockSize];
     OpSource &from;
     SRProvider sr;
-    MixerNode(OpSource &f) : from(f), env(&sr) {}
+    MixerNode(OpSource &f) : from(f), env(&sr) { memset(output, 0, sizeof(output)); }
 
     float baseLevel{1.0};
 
@@ -86,6 +86,38 @@ struct MixerNode
             // use mech blah
             output[0][j] = baseLevel * env.outputCache[j] * from.output[0][j];
             output[1][j] = baseLevel * env.outputCache[j] * from.output[1][j];
+        }
+    }
+};
+
+struct OutputNode
+{
+    float output alignas(16)[2][blockSize];
+    std::array<MixerNode, numOps> &fromArr;
+    SRProvider sr;
+    OutputNode(std::array<MixerNode, numOps> &f) : fromArr(f), env(&sr)
+    {
+        memset(output, 0, sizeof(output));
+    }
+
+    float baseLevel{1.0};
+
+    sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
+
+    void attack() { env.attack(0.0); }
+
+    void renderBlock(bool gated)
+    {
+        env.processBlock01AD(0.0, 0.6, 0.00, 0.6, 0.2, 0.7, gated);
+        memset(output, 0, sizeof(output));
+        for (const auto &from : fromArr)
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                // use mech blah
+                output[0][j] += baseLevel * env.outputCache[j] * from.output[0][j];
+                output[1][j] += baseLevel * env.outputCache[j] * from.output[1][j];
+            }
         }
     }
 };

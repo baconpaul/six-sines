@@ -32,7 +32,11 @@ add_library(ifm-impl STATIC
         src/synth/voice.cpp
 )
 target_include_directories(ifm-impl PUBLIC src)
-target_link_libraries(ifm-impl PUBLIC simde clap clap-helpers sst-basic-blocks sst-voicemanager sst-jucegui sst::clap_juce_shim sst::clap_juce_shim_headers)
+target_link_libraries(ifm-impl PUBLIC
+        simde
+        clap clap-helpers
+        sst-basic-blocks sst-voicemanager sst-jucegui sst-cpputils
+        sst::clap_juce_shim sst::clap_juce_shim_headers)
 
 
 set(CLAP_TARGET ${PROJECT_NAME}_clap)

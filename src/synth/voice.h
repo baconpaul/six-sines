@@ -24,16 +24,25 @@ struct Voice
 {
     const float *const output[2];
 
-    Voice() : out(src), output{out.output[0], out.output[1]} {}
+    Voice();
     ~Voice() = default;
 
-    void attack() { out.attack(); }
+    void attack();
     void renderBlock();
 
     bool gated{false}, used{false};
     int key{0};
-    OpSource src;
-    MixerNode out;
+
+    std::array<OpSource, numOps> src;
+    std::array<bool, numOps> isKeytrack;
+    std::array<float, numOps> cmRatio;
+
+    // std::array<MatrixNodeSelf, numOps> selfNode;
+    // std::array<MatrixNodeFrom, matrixSize> matrixNode;
+
+    std::array<MixerNode, numOps> mixerNode;
+
+    OutputNode out;
 
     Voice *prior{nullptr}, *next{nullptr};
 };

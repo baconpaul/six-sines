@@ -11,6 +11,7 @@ target_include_directories(simde INTERFACE simde)
 add_subdirectory(sst/sst-basic-blocks)
 add_subdirectory(sst/sst-jucegui)
 add_subdirectory(sst/sst-voicemanager)
+add_subdirectory(sst/sst-cpputils)
 
 add_library(mts-esp-client STATIC MTS-ESP/Client/libMTSClient.cpp)
 target_include_directories(mts-esp-client PUBLIC MTS-ESP/Client)
