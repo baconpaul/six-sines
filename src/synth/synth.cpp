@@ -38,8 +38,8 @@ void Synth::process()
             cvoice->out.renderBlock(cvoice->gated);
             for (int s = 0; s < blockSize; ++s)
             {
-                lOutput[0][s] += cvoice->out.output[0][s] * 0.707;
-                lOutput[1][s] += cvoice->out.output[1][s] * 0.707;
+                lOutput[0][s] += cvoice->out.output[0][s] * 0.5;
+                lOutput[1][s] += cvoice->out.output[1][s] * 0.5;
             }
 
             if (cvoice->out.env.stage >
