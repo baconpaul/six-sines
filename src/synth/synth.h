@@ -16,27 +16,20 @@
 
 #include <memory>
 #include <array>
+
+#include "sst/basic-blocks/dsp/LanczosResampler.h"
 #include "sst/voicemanager/voicemanager.h"
-#include "dsp/op_source.h"
-#include "dsp/matrix_node.h"
+
+#include "configuration.h"
+
+#include "synth/voice.h"
 
 namespace baconpaul::fm
 {
-struct Voice
-{
-    Voice() : out(src) {}
-    ~Voice() = default;
-
-    void attack() { out.attack(); }
-    bool gated{false}, used{false};
-    int key{0};
-    OpSource src;
-    MixerNode out;
-};
-
 struct Synth
 {
     float output alignas(16)[2][blockSize];
+
     struct VMConfig
     {
         static constexpr size_t maxVoiceCount{128};
@@ -122,32 +115,7 @@ struct Synth
 
     ~Synth() = default;
 
-    void process()
-    {
-        // sample rate conversion has to go here
-        memset(output, 0, sizeof(output));
-        for (int i = 0; i < VMConfig::maxVoiceCount; ++i)
-        {
-            if (voices[i].used)
-            {
-                voices[i].src.setFrequency(440.0 * pow(2.0, (voices[i].key - 69) / 12.0));
-                voices[i].src.renderBlock();
-                voices[i].out.renderBlock(voices[i].gated);
-                if (voices[i].out.env.stage >
-                    sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize>::s_release)
-                {
-                    FMLOG("Ending voice at " << voices[i].key);
-                    responder.doVoiceEndCallback(&voices[i]);
-                    voices[i].used = false;
-                }
-                for (int s = 0; s < blockSize; ++s)
-                {
-                    output[0][s] += voices[i].out.output[0][s];
-                    output[1][s] += voices[i].out.output[1][s];
-                }
-            }
-        }
-    }
+    void process();
 
     static_assert(sst::voicemanager::constraints::ConstraintsChecker<VMConfig, VMResponder,
                                                                      VMMonoResponder>::satisfies());

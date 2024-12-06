@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 # I don't want to deal with filesystem from two places right now
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "Build for 10.1")
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "Build for 10.15")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 string(TIMESTAMP DAY_OF_YEAR "%j")
@@ -13,88 +13,26 @@ message(STATUS "Using date-driven version while in alpha. 0.${PART0}.${PART1}.0"
 
 project(integer-fm VERSION 0.${PART0}.${PART1}.0 LANGUAGES C CXX)
 
-if (APPLE)
-    enable_language(OBJC)
-    enable_language(OBJCXX)
-    set(CMAKE_OBJC_VISIBILITY_PRESET hidden)
-    set(CMAKE_OBJCXX_VISIBILITY_PRESET hidden)
-endif()
-
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Never want shared if not specified")
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
-
 # use asan as an option (currently mac only)
 option(USE_SANITIZER "Build and link with ASAN" FALSE)
 option(COPY_AFTER_BUILD "Will copy after build" TRUE)
 
-# Compiler specific choices
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    add_compile_options(
-            $<$<BOOL:${USE_SANITIZER}>:-fsanitize=address>
-            $<$<BOOL:${USE_SANITIZER}>:-fsanitize=undefined>
-
-            $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-fno-char8_t>
-    )
-
-    add_link_options(
-            $<$<BOOL:${USE_SANITIZER}>:-fsanitize=address>
-            $<$<BOOL:${USE_SANITIZER}>:-fsanitize=undefined>
-    )
-endif()
-
-if (MSVC)
-    add_compile_options(
-            # Set source and executable charsets to UTF-8
-            $<$<CXX_COMPILER_ID:MSVC>:/utf-8>
-            # Do *not* use the new, breaking char8_t UTF-8 bits in C++20.
-            $<$<COMPILE_LANGUAGE:CXX>:/Zc:char8_t->
-            # make msvc define __cplulsplus properly
-            $<$<COMPILE_LANGUAGE:CXX>:/Zc:__cplusplus>
-    )
-endif()
-
-
-add_subdirectory(libs/clap-libs/clap EXCLUDE_FROM_ALL)
-add_subdirectory(libs/clap-libs/clap-helpers EXCLUDE_FROM_ALL)
-add_subdirectory(libs/fmt EXCLUDE_FROM_ALL)
+include(cmake/compile-options.cmake)
 
 set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
-add_subdirectory(libs/sst/sst-clap-helpers)
-add_clap_juce_shim(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
-
-add_library(simde INTERFACE)
-target_include_directories(simde INTERFACE libs/simde)
-add_subdirectory(libs/sst/sst-basic-blocks)
-add_subdirectory(libs/sst/sst-jucegui)
-add_subdirectory(libs/sst/sst-voicemanager)
-
-add_library(mts-esp-client STATIC libs/MTS-ESP/Client/libMTSClient.cpp)
-target_include_directories(mts-esp-client PUBLIC libs/MTS-ESP/Client)
-
-set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
-set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")
-set(CLAP_WRAPPER_BUILD_AUV2 TRUE CACHE BOOL "It's only logical")
-if (APPLE)
-    # BaconPaul has jack kinda installed
-    set(RTAUDIO_API_JACK FALSE CACHE BOOL "Not on apple")
-endif()
-
-add_subdirectory(libs/clap-libs/clap-wrapper)
-
-add_executable(ifm-main src/main.cpp)
-target_link_libraries(ifm-main PRIVATE sst-basic-blocks)
-target_include_directories(ifm-main PRIVATE src)
+add_subdirectory(libs)
 
 add_library(ifm-impl STATIC
         src/clap/ifm-clap.cpp
         src/clap/ifm-clap-entry-impl.cpp
+
         src/ui/ifm-editor.cpp
+
+        src/synth/synth.cpp
+        src/synth/voice.cpp
 )
 target_include_directories(ifm-impl PUBLIC src)
-target_link_libraries(ifm-impl PUBLIC clap clap-helpers sst-basic-blocks sst-voicemanager sst-jucegui sst::clap_juce_shim sst::clap_juce_shim_headers)
+target_link_libraries(ifm-impl PUBLIC simde clap clap-helpers sst-basic-blocks sst-voicemanager sst-jucegui sst::clap_juce_shim sst::clap_juce_shim_headers)
 
 
 set(CLAP_TARGET ${PROJECT_NAME}_clap)
