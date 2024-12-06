@@ -12,3 +12,14 @@
  */
 
 #include "voice.h"
+
+namespace baconpaul::fm
+{
+void Voice::renderBlock()
+{
+    src.setFrequency(440.0 * pow(2.0, (key - 69) / 12.0));
+    src.renderBlock();
+    out.renderBlock(gated);
+}
+
+} // namespace baconpaul::fm

@@ -22,10 +22,14 @@ namespace baconpaul::fm
 
 struct Voice
 {
-    Voice() : out(src) {}
+    const float *const output[2];
+
+    Voice() : out(src), output{out.output[0], out.output[1]} {}
     ~Voice() = default;
 
     void attack() { out.attack(); }
+    void renderBlock();
+
     bool gated{false}, used{false};
     int key{0};
     OpSource src;

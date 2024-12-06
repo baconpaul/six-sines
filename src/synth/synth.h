@@ -41,6 +41,9 @@ struct Synth
 
     std::array<Voice, VMConfig::maxVoiceCount> voices;
     Voice *head{nullptr};
+    void addToVoiceList(Voice *);
+    Voice *removeFromVoiceList(Voice *); // returns next
+    void dumpVoiceList();
 
     struct VMResponder
     {
@@ -54,9 +57,10 @@ struct Synth
         void moveAndRetriggerVoice(Voice *, uint16_t, uint16_t, uint16_t, float) {}
 
         int32_t beginVoiceCreationTransaction(
-            typename sst::voicemanager::VoiceBeginBufferEntry<VMConfig>::buffer_t &, uint16_t,
+            typename sst::voicemanager::VoiceBeginBufferEntry<VMConfig>::buffer_t &buffer, uint16_t,
             uint16_t, uint16_t, int32_t, float)
         {
+            buffer[0].polyphonyGroup = 0;
             return 1;
         };
         void endVoiceCreationTransaction(uint16_t, uint16_t, uint16_t, int32_t, float) {}
@@ -79,15 +83,7 @@ struct Synth
                         synth.voices[i].gated = true;
                         synth.voices[i].key = key;
                         synth.voices[i].attack();
-                        synth.voices[i].prior = nullptr;
-                        synth.voices[i].next = synth.head;
-                        if (synth.voices[i].next)
-                        {
-                            synth.voices[i].next->prior = &(synth.voices[i]);
-                        }
-                        synth.head = &synth.voices[i];
-
-                        // synth.dumpList();
+                        synth.addToVoiceList(&synth.voices[i]);
 
                         return 1;
                     }
@@ -136,8 +132,6 @@ struct Synth
 
     static_assert(sst::voicemanager::constraints::ConstraintsChecker<VMConfig, VMResponder,
                                                                      VMMonoResponder>::satisfies());
-
-    void dumpList();
 };
 } // namespace baconpaul::fm
 #endif // SYNTH_H

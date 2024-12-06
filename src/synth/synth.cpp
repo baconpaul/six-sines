@@ -28,44 +28,20 @@ void Synth::process()
 
         while (cvoice)
         {
-            if (!cvoice->used)
-            {
-                FMLOG("Unused cvoice at " << cvoice->key);
-            }
             assert(cvoice->used);
-            cvoice->src.setFrequency(440.0 * pow(2.0, (cvoice->key - 69) / 12.0));
-            cvoice->src.renderBlock();
-            cvoice->out.renderBlock(cvoice->gated);
+            cvoice->renderBlock();
+
             for (int s = 0; s < blockSize; ++s)
             {
-                lOutput[0][s] += cvoice->out.output[0][s] * 0.5;
-                lOutput[1][s] += cvoice->out.output[1][s] * 0.5;
+                lOutput[0][s] += cvoice->output[0][s] * 0.5;
+                lOutput[1][s] += cvoice->output[1][s] * 0.5;
             }
 
             if (cvoice->out.env.stage >
                 sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize>::s_release)
             {
                 responder.doVoiceEndCallback(cvoice);
-
-                if (cvoice->prior)
-                {
-                    cvoice->prior->next = cvoice->next;
-                }
-                if (cvoice->next)
-                {
-                    cvoice->next->prior = cvoice->prior;
-                }
-                if (cvoice == head)
-                {
-                    head = cvoice->next;
-                }
-                cvoice->used = false;
-                auto nv = cvoice->next;
-                cvoice->next = nullptr;
-                cvoice->prior = nullptr;
-                cvoice = nv;
-
-                // dumpList();
+                cvoice = removeFromVoiceList(cvoice);
             }
             else
             {
@@ -81,9 +57,41 @@ void Synth::process()
     resampler->populateNextBlockSize(output[0], output[1]);
 }
 
-void Synth::dumpList()
+void Synth::addToVoiceList(Voice *v)
 {
-    FMLOG("DUMP LIST : head=" << std::hex << head << std::dec);
+    v->prior = nullptr;
+    v->next = head;
+    if (v->next)
+    {
+        v->next->prior = v;
+    }
+    head = v;
+}
+
+Voice *Synth::removeFromVoiceList(Voice *cvoice)
+{
+    if (cvoice->prior)
+    {
+        cvoice->prior->next = cvoice->next;
+    }
+    if (cvoice->next)
+    {
+        cvoice->next->prior = cvoice->prior;
+    }
+    if (cvoice == head)
+    {
+        head = cvoice->next;
+    }
+    auto nv = cvoice->next;
+    cvoice->used = false;
+    cvoice->next = nullptr;
+    cvoice->prior = nullptr;
+    return nv;
+}
+
+void Synth::dumpVoiceList()
+{
+    FMLOG("DUMP VOICE LIST : head=" << std::hex << head << std::dec);
     auto c = head;
     while (c)
     {
