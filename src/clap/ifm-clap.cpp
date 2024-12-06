@@ -122,7 +122,6 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 // Only realy need to run events when we do the block process
                 while (nextEvent && nextEvent->time <= s)
                 {
-                    FMLOG(nextEvent->type << " is event type");
                     handleEvent(nextEvent);
                     nextEventIndex++;
                     if (nextEventIndex < sz)

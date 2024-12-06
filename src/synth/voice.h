@@ -30,6 +30,8 @@ struct Voice
     int key{0};
     OpSource src;
     MixerNode out;
+
+    Voice *prior{nullptr}, *next{nullptr};
 };
 } // namespace baconpaul::fm
 #endif // VOICE_H

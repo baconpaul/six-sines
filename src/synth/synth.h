@@ -40,6 +40,8 @@ struct Synth
     };
 
     std::array<Voice, VMConfig::maxVoiceCount> voices;
+    Voice *head{nullptr};
+
     struct VMResponder
     {
         Synth &synth;
@@ -55,7 +57,6 @@ struct Synth
             typename sst::voicemanager::VoiceBeginBufferEntry<VMConfig>::buffer_t &, uint16_t,
             uint16_t, uint16_t, int32_t, float)
         {
-            FMLOG("BEGIN VOICE TRANSACTION");
             return 1;
         };
         void endVoiceCreationTransaction(uint16_t, uint16_t, uint16_t, int32_t, float) {}
@@ -66,7 +67,6 @@ struct Synth
             typename sst::voicemanager::VoiceInitBufferEntry<VMConfig>::buffer_t &obuf, uint16_t pt,
             uint16_t ch, uint16_t key, int32_t nid, float vel, float rt)
         {
-            FMLOG("INIT VOICE " << (int)key << " making " << ct);
             if (ibuf[0].instruction != sst::voicemanager::VoiceInitInstructionsEntry<
                                            baconpaul::fm::Synth::VMConfig>::Instruction::SKIP)
             {
@@ -79,6 +79,16 @@ struct Synth
                         synth.voices[i].gated = true;
                         synth.voices[i].key = key;
                         synth.voices[i].attack();
+                        synth.voices[i].prior = nullptr;
+                        synth.voices[i].next = synth.head;
+                        if (synth.voices[i].next)
+                        {
+                            synth.voices[i].next->prior = &(synth.voices[i]);
+                        }
+                        synth.head = &synth.voices[i];
+
+                        // synth.dumpList();
+
                         return 1;
                     }
                 }
@@ -86,11 +96,7 @@ struct Synth
             }
             return 0;
         }
-        void releaseVoice(Voice *v, float)
-        {
-            v->gated = false;
-            FMLOG("RELEASE VOICE");
-        }
+        void releaseVoice(Voice *v, float) { v->gated = false; }
         void setNoteExpression(Voice *, int32_t, double) {}
         void setVoicePolyphonicParameterModulation(Voice *, uint32_t, double) {}
         void setPolyphonicAftertouch(Voice *, int8_t) {}
@@ -130,6 +136,8 @@ struct Synth
 
     static_assert(sst::voicemanager::constraints::ConstraintsChecker<VMConfig, VMResponder,
                                                                      VMMonoResponder>::satisfies());
+
+    void dumpList();
 };
 } // namespace baconpaul::fm
 #endif // SYNTH_H

@@ -23,25 +23,53 @@ void Synth::process()
     {
         float lOutput alignas(16)[2][blockSize];
         memset(lOutput, 0, sizeof(output));
-        for (int i = 0; i < VMConfig::maxVoiceCount; ++i)
+        // this can be way more efficient
+        auto cvoice = head;
+
+        while (cvoice)
         {
-            if (voices[i].used)
+            if (!cvoice->used)
             {
-                voices[i].src.setFrequency(440.0 * pow(2.0, (voices[i].key - 69) / 12.0));
-                voices[i].src.renderBlock();
-                voices[i].out.renderBlock(voices[i].gated);
-                if (voices[i].out.env.stage >
-                    sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize>::s_release)
+                FMLOG("Unused cvoice at " << cvoice->key);
+            }
+            assert(cvoice->used);
+            cvoice->src.setFrequency(440.0 * pow(2.0, (cvoice->key - 69) / 12.0));
+            cvoice->src.renderBlock();
+            cvoice->out.renderBlock(cvoice->gated);
+            for (int s = 0; s < blockSize; ++s)
+            {
+                lOutput[0][s] += cvoice->out.output[0][s] * 0.707;
+                lOutput[1][s] += cvoice->out.output[1][s] * 0.707;
+            }
+
+            if (cvoice->out.env.stage >
+                sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize>::s_release)
+            {
+                responder.doVoiceEndCallback(cvoice);
+
+                if (cvoice->prior)
                 {
-                    FMLOG("Ending voice at " << voices[i].key);
-                    responder.doVoiceEndCallback(&voices[i]);
-                    voices[i].used = false;
+                    cvoice->prior->next = cvoice->next;
                 }
-                for (int s = 0; s < blockSize; ++s)
+                if (cvoice->next)
                 {
-                    lOutput[0][s] += voices[i].out.output[0][s] * 0.707;
-                    lOutput[1][s] += voices[i].out.output[1][s] * 0.707;
+                    cvoice->next->prior = cvoice->prior;
                 }
+                if (cvoice == head)
+                {
+                    head = cvoice->next;
+                }
+                cvoice->used = false;
+                auto nv = cvoice->next;
+                cvoice->next = nullptr;
+                cvoice->prior = nullptr;
+                cvoice = nv;
+
+                // dumpList();
+            }
+            else
+            {
+                cvoice = cvoice->next;
             }
         }
         for (int i = 0; i < blockSize; ++i)
@@ -52,4 +80,16 @@ void Synth::process()
 
     resampler->populateNextBlockSize(output[0], output[1]);
 }
+
+void Synth::dumpList()
+{
+    FMLOG("DUMP LIST : head=" << std::hex << head << std::dec);
+    auto c = head;
+    while (c)
+    {
+        FMLOG("   c=" << std::hex << c << std::dec << " key=" << c->key << " u=" << c->used);
+        c = c->next;
+    }
+}
+
 } // namespace baconpaul::fm
