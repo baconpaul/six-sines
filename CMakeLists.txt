@@ -93,7 +93,7 @@ add_library(ifm-impl STATIC
         src/clap/ifm-clap-entry-impl.cpp
 )
 target_include_directories(ifm-impl PUBLIC src)
-target_link_libraries(ifm-impl PUBLIC clap clap-helpers)
+target_link_libraries(ifm-impl PUBLIC clap clap-helpers sst-basic-blocks sst-voicemanager sst-jucegui)
 
 
 set(CLAP_TARGET ${PROJECT_NAME}_clap)

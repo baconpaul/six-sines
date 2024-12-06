@@ -37,7 +37,10 @@ using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
 
 struct FMClap : public plugHelper_t // , sst::clap_juce_shim::EditorProvider
 {
-    FMClap(const clap_host *h) : plugHelper_t(getDescriptor(), h) {}
+    FMClap(const clap_host *h) : plugHelper_t(getDescriptor(), h)
+    {
+        engine = std::make_unique<Synth>();
+    }
     virtual ~FMClap(){};
 
     std::unique_ptr<Synth> engine;
@@ -52,15 +55,41 @@ struct FMClap : public plugHelper_t // , sst::clap_juce_shim::EditorProvider
 
     void onMainThread() noexcept override {}
 
-    bool implementsAudioPorts() const noexcept override { return false; }
-    // uint32_t audioPortsCount(bool isInput) const noexcept override;
-    // bool audioPortsInfo(uint32_t index, bool isInput,
-    //                     clap_audio_port_info *info) const noexcept override;
+    bool implementsAudioPorts() const noexcept override { return true; }
+    uint32_t audioPortsCount(bool isInput) const noexcept override { return isInput ? 0 : 1; }
+    bool audioPortsInfo(uint32_t index, bool isInput,
+                        clap_audio_port_info *info) const noexcept override
+    {
+        assert(!isInput);
+        assert(index == 0);
+        if (isInput || index != 0)
+            return false;
+        info->id = 75241;
+        info->in_place_pair = CLAP_INVALID_ID;
+        strncpy(info->name, "Main Out", sizeof(info->name));
+        info->flags = CLAP_AUDIO_PORT_IS_MAIN;
+        info->channel_count = 2;
+        info->port_type = CLAP_PORT_STEREO;
+        return true;
+    }
 
-    bool implementsNotePorts() const noexcept override { return false; }
-    // uint32_t notePortsCount(bool isInput) const noexcept override;
-    // bool notePortsInfo(uint32_t index, bool isInput,
-    //                       clap_note_port_info *info) const noexcept override;
+    bool implementsNotePorts() const noexcept override { return true; }
+    uint32_t notePortsCount(bool isInput) const noexcept override { return isInput ? 1 : 0; }
+    bool notePortsInfo(uint32_t index, bool isInput,
+                       clap_note_port_info *info) const noexcept override
+    {
+        assert(isInput);
+        assert(index == 0);
+        if (!isInput || index != 0)
+            return false;
+
+        info->id = 17252;
+        info->supported_dialects =
+            CLAP_NOTE_DIALECT_MIDI | CLAP_NOTE_DIALECT_MIDI_MPE | CLAP_NOTE_DIALECT_CLAP;
+        info->preferred_dialect = CLAP_NOTE_DIALECT_CLAP;
+        strncpy(info->name, "Note Input", CLAP_NAME_SIZE - 1);
+        return true;
+    }
 
     clap_process_status process(const clap_process *process) noexcept override
     {
