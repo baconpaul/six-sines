@@ -22,7 +22,7 @@
 namespace baconpaul::fm
 {
 static constexpr size_t blockSize{16};
-static constexpr float gSampleRate{128000.0};
+static constexpr float gSampleRate{48000.0};
 
 } // namespace baconpaul::fm
 

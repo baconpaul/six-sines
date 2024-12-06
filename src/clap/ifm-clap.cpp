@@ -20,6 +20,7 @@
 #include <clap/helpers/host-proxy.hxx>
 
 #include <memory>
+#include "sst/voicemanager/midi1_to_voicemanager.h"
 
 namespace baconpaul::fm
 {
@@ -93,9 +94,100 @@ struct FMClap : public plugHelper_t // , sst::clap_juce_shim::EditorProvider
 
     clap_process_status process(const clap_process *process) noexcept override
     {
+        auto ev = process->in_events;
+
+        auto sz = ev->size(ev);
+
+        const clap_event_header_t *nextEvent{nullptr};
+        uint32_t nextEventIndex{0};
+        if (sz != 0)
+        {
+            nextEvent = ev->get(ev, nextEventIndex);
+        }
+
+        float **out = process->audio_outputs[0].data32;
+
+        for (auto s = 0U; s < process->frames_count; ++s)
+        {
+            if (blockPos == 0)
+            {
+                // Only realy need to run events when we do the block process
+                while (nextEvent && nextEvent->time <= s)
+                {
+                    FMLOG(nextEvent->type << " is event type");
+                    handleEvent(nextEvent);
+                    nextEventIndex++;
+                    if (nextEventIndex < sz)
+                        nextEvent = ev->get(ev, nextEventIndex);
+                    else
+                        nextEvent = nullptr;
+                }
+
+                engine->process();
+            }
+
+            out[0][s] = engine->output[0][blockPos];
+            out[1][s] = engine->output[1][blockPos];
+
+            blockPos++;
+            if (blockPos == blockSize)
+            {
+                blockPos = 0;
+            }
+        }
         return CLAP_PROCESS_CONTINUE;
     }
-    // bool handleEvent(const clap_event_header_t *);
+    bool handleEvent(const clap_event_header_t *nextEvent)
+    {
+        auto &vm = engine->voiceManager;
+        if (nextEvent->space_id == CLAP_CORE_EVENT_SPACE_ID)
+        {
+            switch (nextEvent->type)
+            {
+            case CLAP_EVENT_MIDI:
+            {
+                auto mevt = reinterpret_cast<const clap_event_midi *>(nextEvent);
+                sst::voicemanager::applyMidi1Message(*vm, mevt->port_index, mevt->data);
+            }
+            break;
+
+            case CLAP_EVENT_NOTE_ON:
+            {
+                auto nevt = reinterpret_cast<const clap_event_note *>(nextEvent);
+                vm->processNoteOnEvent(nevt->port_index, nevt->channel, nevt->key, nevt->note_id,
+                                       nevt->velocity, 0.f);
+            }
+            break;
+
+            case CLAP_EVENT_NOTE_OFF:
+            {
+                auto nevt = reinterpret_cast<const clap_event_note *>(nextEvent);
+                vm->processNoteOffEvent(nevt->port_index, nevt->channel, nevt->key, nevt->note_id,
+                                        nevt->velocity);
+            }
+            break;
+            case CLAP_EVENT_PARAM_VALUE:
+            {
+                auto pevt = reinterpret_cast<const clap_event_param_value *>(nextEvent);
+                FMLOG("PARAM VALUE IGNORED");
+            }
+            break;
+
+            case CLAP_EVENT_NOTE_EXPRESSION:
+            {
+                auto nevt = reinterpret_cast<const clap_event_note_expression *>(nextEvent);
+                vm->routeNoteExpression(nevt->port_index, nevt->channel, nevt->key, nevt->note_id,
+                                        nevt->expression_id, nevt->value);
+            }
+            break;
+            default:
+            {
+            }
+            break;
+            }
+        }
+        return true;
+    }
 
     bool implementsState() const noexcept override { return false; }
     // bool stateSave(const clap_ostream *stream) noexcept override;
