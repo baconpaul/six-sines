@@ -30,6 +30,9 @@ struct Synth
 {
     float output alignas(16)[2][blockSize];
 
+    using resampler_t = sst::basic_blocks::dsp::LanczosResampler<blockSize>;
+    std::unique_ptr<resampler_t> resampler;
+
     struct VMConfig
     {
         static constexpr size_t maxVoiceCount{128};
@@ -114,6 +117,14 @@ struct Synth
     }
 
     ~Synth() = default;
+
+    double realSampleRate{0};
+    void setSampleRate(double sampleRate)
+    {
+        FMLOG("Creating resampler at " << sampleRate << " from " << gSampleRate);
+        realSampleRate = sampleRate;
+        resampler = std::make_unique<resampler_t>(gSampleRate, realSampleRate);
+    }
 
     void process();
 

@@ -58,6 +58,7 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     bool activate(double sampleRate, uint32_t minFrameCount,
                   uint32_t maxFrameCount) noexcept override
     {
+        engine->setSampleRate(sampleRate);
         return true;
     }
 
