@@ -36,8 +36,9 @@ struct Voice
     std::array<OpSource, numOps> src;
     std::array<bool, numOps> isKeytrack;
     std::array<float, numOps> cmRatio;
+    std::array<float, numOps> freq;
 
-    // std::array<MatrixNodeSelf, numOps> selfNode;
+    std::array<MatrixNodeSelf, numOps> selfNode;
     // std::array<MatrixNodeFrom, matrixSize> matrixNode;
 
     std::array<MixerNode, numOps> mixerNode;
