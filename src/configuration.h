@@ -21,9 +21,11 @@
 
 namespace baconpaul::fm
 {
-static constexpr size_t blockSize{16};
+static constexpr size_t blockSize{8};
 static constexpr float gSampleRate{128000.0};
 static constexpr size_t numOps{6};
+
+// see comment on sourceAtMatrix in voice.cpp
 static constexpr size_t matrixSize{(numOps * (numOps - 1)) / 2};
 
 } // namespace baconpaul::fm

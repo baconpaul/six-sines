@@ -42,17 +42,23 @@ struct alignas(16) OpSource
 
     void reset()
     {
+        zeroInputs();
+        phase[0] = 4 << 27;
+        phase[1] = 4 << 27;
+    }
+
+    void zeroInputs()
+    {
         for (int i = 0; i < blockSize; ++i)
         {
             rmInput[0][i] = 1.f;
             rmInput[1][i] = 1.f;
 
-            feedbackLevel[i] = 0.f;
-        }
+            phaseInput[0][i] = 0;
+            phaseInput[1][i] = 0;
 
-        phase[0] = 4 << 27;
-        phase[1] = 4 << 27;
-        memset(phaseInput, 0, sizeof(phaseInput));
+            feedbackLevel[i] = 0;
+        }
     }
 
     void setFrequency(float freq)

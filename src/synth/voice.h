@@ -39,7 +39,10 @@ struct Voice
     std::array<float, numOps> freq;
 
     std::array<MatrixNodeSelf, numOps> selfNode;
-    // std::array<MatrixNodeFrom, matrixSize> matrixNode;
+    std::array<MatrixNodeFrom, matrixSize> matrixNode;
+
+    OpSource &sourceAtMatrix(size_t pos);
+    OpSource &targetAtMatrix(size_t pos);
 
     std::array<MixerNode, numOps> mixerNode;
 

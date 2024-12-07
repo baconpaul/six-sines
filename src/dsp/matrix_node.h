@@ -37,9 +37,9 @@ struct MatrixNodeFrom
         env.processBlock01AD(0.2, 0.4, 0.05, 0.3, 0.3, 0.3, gated);
         for (int j = 0; j < blockSize; ++j)
         {
-            onto.phaseInput[0][j] =
+            onto.phaseInput[0][j] +=
                 (int32_t)((1 << 27) * fmLevel * env.outputCache[j] * from.output[0][j]);
-            onto.phaseInput[1][j] =
+            onto.phaseInput[1][j] +=
                 (int32_t)((1 << 27) * fmLevel * env.outputCache[j] * from.output[1][j]);
         }
     }
@@ -50,7 +50,7 @@ struct MatrixNodeSelf
     OpSource &onto;
     SRProvider sr;
     MatrixNodeSelf(OpSource &on) : onto(on), env(&sr){};
-    float fbBase{1.0};
+    float fbBase{0.0};
 
     sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
 
@@ -100,8 +100,6 @@ struct OutputNode
         memset(output, 0, sizeof(output));
     }
 
-    float baseLevel{1.0};
-
     sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
 
     void attack() { env.attack(0.0); }
@@ -114,9 +112,9 @@ struct OutputNode
         {
             for (int j = 0; j < blockSize; ++j)
             {
-                // use mech blah
-                output[0][j] += baseLevel * env.outputCache[j] * from.output[0][j];
-                output[1][j] += baseLevel * env.outputCache[j] * from.output[1][j];
+                // use mech blah also we can multiply by output cache at end (TODO)
+                output[0][j] += env.outputCache[j] * from.output[0][j];
+                output[1][j] += env.outputCache[j] * from.output[1][j];
             }
         }
     }
