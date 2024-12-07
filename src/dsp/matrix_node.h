@@ -54,10 +54,10 @@ struct MatrixNodeSelf
 
     sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
 
-    void attack() { env.attack(0.2); }
+    void attack() { env.attack(0.1); }
     void applyBlock(bool gated)
     {
-        env.processBlock01AD(0.2, 0.1, 0.00, 0.4, 0.95, 0.7, gated);
+        env.processBlock01AD(0.1, 0.1, 0.00, 0.7, 0.2, 0.7, gated);
         for (int j = 0; j < blockSize; ++j)
         {
             onto.feedbackLevel[j] = (int32_t)((1 << 24) * env.outputCache[j] * fbBase);
