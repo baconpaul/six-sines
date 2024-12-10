@@ -16,11 +16,20 @@
 
 #include <functional>
 #include <juce_gui_basics/juce_gui_basics.h>
+
+#include <sst/jucegui/components/NamedPanel.h>
+#include <sst/jucegui/components/WindowPanel.h>
+#include <sst/jucegui/components/Knob.h>
+#include <sst/jucegui/data/Continuous.h>
+
 #include "synth/synth.h"
+
+namespace jcmp = sst::jucegui::components;
+namespace jdat = sst::jucegui::data;
 
 namespace baconpaul::fm::ui
 {
-struct IFMEditor : juce::Component
+struct IFMEditor : jcmp::WindowPanel
 {
     Patch patchCopy;
     Synth::audioToUIQueue_t &audioToUI;
@@ -30,10 +39,12 @@ struct IFMEditor : juce::Component
               std::function<void()> flushOperator);
     virtual ~IFMEditor();
 
-    void paint(juce::Graphics &g) override;
+    void resized() override;
 
     void idle();
     std::unique_ptr<juce::Timer> idleTimer;
+
+    std::unique_ptr<jcmp::NamedPanel> matrixPanel, mixerPanel, singlePanel, sourcesPanel, mainPanel;
 };
 } // namespace baconpaul::fm::ui
 #endif // IFM_EDITOR_H

@@ -26,7 +26,21 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
                      std::function<void()> fo)
     : audioToUI(atou), uiToAudio(utoa), flushOperator(fo)
 {
-    setSize(900, 340);
+    sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
+
+    setStyle(sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
+        sst::jucegui::style::StyleSheet::LIGHT));
+
+    matrixPanel = std::make_unique<jcmp::NamedPanel>("Matrix");
+    mixerPanel = std::make_unique<jcmp::NamedPanel>("Mixer");
+    singlePanel = std::make_unique<jcmp::NamedPanel>("Edit");
+    sourcesPanel = std::make_unique<jcmp::NamedPanel>("Sources");
+    mainPanel = std::make_unique<jcmp::NamedPanel>("Main");
+    addAndMakeVisible(*matrixPanel);
+    addAndMakeVisible(*mixerPanel);
+    addAndMakeVisible(*singlePanel);
+    addAndMakeVisible(*sourcesPanel);
+    addAndMakeVisible(*mainPanel);
 
     auto startMsg = Synth::UIToAudioMsg{Synth::UIToAudioMsg::REQUEST_REFRESH};
     uiToAudio.push(startMsg);
@@ -34,6 +48,8 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
 
     idleTimer = std::make_unique<IdleTimer>(*this);
     idleTimer->startTimer(1000. / 60.);
+
+    setSize(800, 920);
 }
 IFMEditor::~IFMEditor() { idleTimer->stopTimer(); }
 
@@ -47,25 +63,32 @@ void IFMEditor::idle()
     }
 }
 
-void IFMEditor::paint(juce::Graphics &g)
+void IFMEditor::resized()
 {
-    auto w = getWidth();
-    auto h = getHeight();
-    auto x = 0;
-    auto y = 0;
+    auto rdx{1};
 
-    int it{0};
-    while (w > 0 && h > 0)
-    {
-        auto r = 255 * std::sin(it * 2 * M_PI * 0.21);
-        g.setColour(juce::Colour(r, (it * 10) % 255, 255 - r));
-        g.fillRect(x, y, w, h);
-        x += 10;
-        y += 10;
-        w -= 20;
-        h -= 20;
-        it++;
-    }
+    auto tp = 100;
+
+    auto rb = getLocalBounds().withTrimmedTop(tp);
+    auto edH = 300;
+    auto mp = rb.withTrimmedBottom(edH);
+    mp = mp.withWidth(mp.getHeight());
+
+    matrixPanel->setBounds(mp.reduced(rdx));
+
+    auto sp = rb.withTrimmedBottom(mp.getHeight());
+    sp = sp.translated(0, mp.getHeight());
+    singlePanel->setBounds(sp.reduced(rdx));
+
+    auto mx = rb.withTrimmedBottom(edH).withTrimmedLeft(mp.getWidth());
+    mixerPanel->setBounds(mx.reduced(rdx));
+
+    auto ta = getLocalBounds().withHeight(tp);
+    auto sr = ta.withWidth(mp.getWidth());
+    sourcesPanel->setBounds(sr.reduced(rdx));
+
+    auto mn = ta.withTrimmedLeft(sr.getWidth());
+    mainPanel->setBounds(mn.reduced(rdx));
 }
 
 } // namespace baconpaul::fm::ui
