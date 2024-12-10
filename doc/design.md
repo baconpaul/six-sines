@@ -38,3 +38,9 @@ MIDI mappings what to do
 
 Other ToDos
 - Envelope Rate Linear to 2x provider
+
+Patch object
+
+Installer
+
+Rename it all something

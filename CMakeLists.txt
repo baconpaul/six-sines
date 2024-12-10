@@ -30,11 +30,13 @@ add_library(ifm-impl STATIC
 
         src/synth/synth.cpp
         src/synth/voice.cpp
+        src/synth/patch.cpp
 )
 target_include_directories(ifm-impl PUBLIC src)
 target_link_libraries(ifm-impl PUBLIC
         simde
         clap clap-helpers
+        fmt-header-only
         sst-basic-blocks sst-voicemanager sst-jucegui sst-cpputils
         sst::clap_juce_shim sst::clap_juce_shim_headers)
 
@@ -45,7 +47,7 @@ add_library(${CLAP_TARGET} MODULE
 )
 target_link_libraries(${CLAP_TARGET} ifm-impl)
 target_library_make_clap(TARGET ${CLAP_TARGET}
-        CLAP_NAME "IFM"
+        CLAP_NAME "The BaconPaul FM Disaster"
         CLAP_MACOS_BUNDLE_IDENTIFIER org.baconpaul.ifm.clap
         CLAP_MACOS_BUNDLE_VERSION ${PROJECT_VERSION}
         COPY_AFTER_BUILD TRUE
@@ -57,7 +59,7 @@ add_library(${VST3_TARGET} MODULE)
 target_sources(${VST3_TARGET} PRIVATE src/clap/ifm-clap-entry.cpp)
 target_link_libraries(${VST3_TARGET} PRIVATE ifm-impl)
 target_add_vst3_wrapper(TARGET ${VST3_TARGET}
-        OUTPUT_NAME "IFM"
+        OUTPUT_NAME "The BaconPaul FM Disaster"
         SUPPORTS_ALL_NOTE_EXPRESSIONS TRUE
 )
 if (WIN32)
@@ -79,7 +81,7 @@ if (APPLE)
     message(STATUS "Adding AUv2 with ${PROJECT_VERSION}")
     target_add_auv2_wrapper(
             TARGET ${AUV2_TARGET}
-            OUTPUT_NAME "IFM"
+            OUTPUT_NAME "The BaconPaul FM Disaster"
             BUNDLE_IDENTIFIER "org.baconpaul.ifm.auv2"
             BUNDLE_VERSION ${PROJECT_VERSION}
 
@@ -98,7 +100,7 @@ add_executable(${sat})
 target_sources(${sat} PRIVATE src/clap/ifm-clap-entry.cpp)
 target_link_libraries(${sat} PRIVATE ifm-impl)
 target_add_standalone_wrapper(TARGET ${sat}
-        OUTPUT_NAME "IFM"
+        OUTPUT_NAME "The BaconPaul FM Disaster"
         STATICALLY_LINKED_CLAP_ENTRY True
         PLUGIN_ID "org.baconpaul.ifm")
 

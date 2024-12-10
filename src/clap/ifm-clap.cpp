@@ -200,18 +200,57 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     // bool stateSave(const clap_ostream *stream) noexcept override;
     // bool stateLoad(const clap_istream *stream) noexcept override;
 
-    bool implementsParams() const noexcept override { return false; }
-    // uint32_t paramsCount() const noexcept override;
-    // bool paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept override;
-    // bool paramsValue(clap_id paramId, double *value) noexcept override;
-    // bool paramsValueToText(clap_id paramId, double value, char *display,
-    //                           uint32_t size) noexcept override;
-    // bool paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept
-    // override;
+    bool implementsParams() const noexcept override { return true; }
+    uint32_t paramsCount() const noexcept override { return engine->patch.params.size(); }
+    bool paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept override
+    {
+        auto *param = engine->patch.params[paramIndex];
+        auto &md = param->meta;
+        md.toClapParamInfo<CLAP_NAME_SIZE, clap_param_info_t>(info);
+        info->cookie = (void *)param;
+        return true;
+    }
+    bool paramsValue(clap_id paramId, double *value) noexcept override
+    {
+        *value = engine->patch.paramMap[paramId]->value;
+        return true;
+    }
+    bool paramsValueToText(clap_id paramId, double value, char *display,
+                           uint32_t size) noexcept override
+    {
+        auto it = engine->patch.paramMap.find(paramId);
+        if (it == engine->patch.paramMap.end())
+        {
+            return false;
+        }
+        auto valdisp = it->second->meta.valueToString(value);
+        if (!valdisp.has_value())
+            return false;
+
+        strncpy(display, valdisp->c_str(), size);
+        display[size - 1] = 0;
+        return true;
+    }
+    bool paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept override
+    {
+        auto it = engine->patch.paramMap.find(paramId);
+        if (it == engine->patch.paramMap.end())
+        {
+            return false;
+        }
+        std::string err;
+        auto val = it->second->meta.valueFromString(display, err);
+        if (!val.has_value())
+        {
+            FMLOG("Error converting '" << display << "' : " << err);
+            return false;
+        }
+        *value = *val;
+        return true;
+    }
     // void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept
     // override;
 
-  public:
   public:
     bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }
     std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;

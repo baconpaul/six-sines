@@ -24,17 +24,17 @@ extern const clap_plugin *makePlugin(const clap_host *);
 const clap_plugin_descriptor *getDescriptor()
 {
     static const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT,
-                                     CLAP_PLUGIN_FEATURE_SYNTHESIZER, "Free and Open Source",
+                                     CLAP_PLUGIN_FEATURE_SYNTHESIZER, "Free and Open Source", "FM",
                                      nullptr};
     static clap_plugin_descriptor desc = {CLAP_VERSION,
                                           "org.baconpaul.ifm",
-                                          "IFM",
+                                          "The BaconPaul FM Disaster",
                                           "BaconPaul",
                                           "https://baconpaul.org",
                                           "",
                                           "",
                                           "0.0.1",
-                                          "FM Madness, including Integers, or something",
+                                          "FM architecture madness, or something",
                                           &features[0]};
     return &desc;
 }

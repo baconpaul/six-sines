@@ -23,6 +23,7 @@
 #include "configuration.h"
 
 #include "synth/voice.h"
+#include "synth/patch.h"
 
 namespace baconpaul::fm
 {
@@ -32,6 +33,8 @@ struct Synth
 
     using resampler_t = sst::basic_blocks::dsp::LanczosResampler<blockSize>;
     std::unique_ptr<resampler_t> resampler;
+
+    Patch patch;
 
     struct VMConfig
     {
@@ -113,11 +116,7 @@ struct Synth
     VMMonoResponder monoResponder;
     std::unique_ptr<voiceManager_t> voiceManager;
 
-    Synth() : responder(*this)
-    {
-        voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
-    }
-
+    Synth();
     ~Synth() = default;
 
     double realSampleRate{0};

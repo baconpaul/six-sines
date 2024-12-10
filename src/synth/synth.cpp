@@ -15,6 +15,15 @@
 
 namespace baconpaul::fm
 {
+Synth::Synth() : responder(*this)
+{
+    voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
+
+    for (auto &p : patch.params)
+    {
+        FMLOG(p->meta.id << " -> " << p->meta.name);
+    }
+}
 void Synth::process()
 {
     assert(resampler);

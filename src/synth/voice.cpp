@@ -13,6 +13,7 @@
 
 #include "voice.h"
 #include "sst/cpputils/constructors.h"
+#include "synth/matrix_index.h"
 
 namespace baconpaul::fm
 {
@@ -92,45 +93,7 @@ void Voice::renderBlock()
 
 static_assert(numOps == 6, "Rebuild this table if not");
 
-OpSource &Voice::sourceAtMatrix(size_t pos)
-{
-    static size_t sourceTable[matrixSize];
-    static bool sourceTableInit{false};
-    if (!sourceTableInit)
-    {
-        int idx{0};
-        for (int i = 1; i < numOps; ++i)
-        {
-            for (int j = i; j < numOps; ++j)
-            {
-                sourceTable[idx++] = j;
-            }
-        }
-        sourceTableInit = true;
-    }
-    return src[sourceTable[pos]];
-}
-OpSource &Voice::targetAtMatrix(size_t pos)
-{
-    static size_t targetTable[matrixSize];
-    static bool targetTableInit{false};
-    if (!targetTableInit)
-    {
-        int idx{0};
-        for (int i = 1; i < numOps; ++i)
-        {
-            for (int j = i; j < numOps; ++j)
-            {
-                targetTable[idx++] = i - 1;
-            }
-        }
-        targetTableInit = true;
-        for (int i = 0; i < matrixSize; ++i)
-        {
-            FMLOG("TARGET INIT " << i << " " << targetTable[i]);
-        }
-    }
-    return src[targetTable[pos]];
-}
+OpSource &Voice::sourceAtMatrix(size_t pos) { return src[MatrixIndex::sourceIndexAt(pos)]; }
+OpSource &Voice::targetAtMatrix(size_t pos) { return src[MatrixIndex::targetIndexAt(pos)]; }
 
 } // namespace baconpaul::fm
