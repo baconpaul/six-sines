@@ -59,7 +59,6 @@ struct Patch
           matrixNodes(scpu::make_array_bind_first_index<MatrixNode, matrixSize>()),
           mixerNodes(scpu::make_array_bind_first_index<MixerNode, numOps>())
     {
-        FMLOG("Constructing patch object");
         auto pushParams = [this](auto &from)
         {
             auto m = from.params();
@@ -77,12 +76,9 @@ struct Patch
         };
 
         pushParams(mainOutput);
-
         std::for_each(selfNodes.begin(), selfNodes.end(), pushParams);
         std::for_each(mixerNodes.begin(), mixerNodes.end(), pushParams);
         std::for_each(matrixNodes.begin(), matrixNodes.end(), pushParams);
-
-        FMLOG("After running meta has size " << params.size());
     }
     struct SelfNode
     {

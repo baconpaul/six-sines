@@ -196,9 +196,99 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         return true;
     }
 
-    bool implementsState() const noexcept override { return false; }
-    // bool stateSave(const clap_ostream *stream) noexcept override;
-    // bool stateLoad(const clap_istream *stream) noexcept override;
+    bool implementsState() const noexcept override { return true; }
+    bool stateSave(const clap_ostream *ostream) noexcept override
+    {
+        std::ostringstream oss;
+        oss << "FM;V=1\n";
+        for (auto p : engine->patch.params)
+        {
+            oss << p->meta.id << "|" << p->value << "\n";
+        }
+        auto ss = oss.str();
+        auto c = ss.c_str();
+        auto s = ss.length() + 1; // write the null terminator
+        while (s > 0)
+        {
+            auto r = ostream->write(ostream, c, s);
+            if (r < 0)
+                return false;
+            s -= r;
+            c += r;
+        }
+        return true;
+    }
+    bool stateLoad(const clap_istream *istream) noexcept override
+    {
+        static constexpr uint32_t initSize = 1 << 16, chunkSize = 1 << 8;
+        std::vector<char> buffer;
+        buffer.resize(initSize);
+
+        int64_t rd{0};
+        int64_t totalRd{0};
+        auto bp = buffer.data();
+
+        while ((rd = istream->read(istream, bp, chunkSize)) > 0)
+        {
+            bp += rd;
+            totalRd += rd;
+            if (totalRd >= buffer.size() - chunkSize - 1)
+            {
+                buffer.resize(buffer.size() * 2);
+                bp = buffer.data() + totalRd;
+            }
+        }
+        buffer[totalRd] = 0;
+
+        if (totalRd == 0)
+        {
+            FMLOG("Received stream size 0. Invalid state");
+            return false;
+        }
+
+        auto data = std::string(buffer.data());
+
+        auto p = data.find('\n');
+        bool first{true};
+        while (p != std::string::npos && !data.empty())
+        {
+            auto ss = data.substr(0, p);
+            if (first)
+            {
+                if (ss != "FM;V=1")
+                {
+                    FMLOG("Bad version string [" << ss << "]");
+                    return false;
+                }
+                first = false;
+            }
+            else
+            {
+                auto sl = ss.find('|');
+                auto id = ss.substr(0, sl);
+                auto v = ss.substr(sl + 1);
+
+                auto idv = std::atoi(id.c_str());
+                auto vv = std::atof(v.c_str());
+
+                auto it = engine->patch.paramMap.find(idv);
+                if (it == engine->patch.paramMap.end())
+                {
+                    // Silengly ignore I guess
+                }
+                else
+                {
+                    it->second->value = vv;
+                }
+            }
+            data = data.substr(p + 1);
+            p = data.find('\n');
+        }
+
+        engine->doFullRefresh = true;
+        _host.paramsRequestFlush();
+        return true;
+    }
 
     bool implementsParams() const noexcept override { return true; }
     uint32_t paramsCount() const noexcept override { return engine->patch.params.size(); }

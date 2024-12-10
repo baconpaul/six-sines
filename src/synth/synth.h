@@ -158,6 +158,7 @@ struct Synth
     using uiToAudioQueue_T = sst::cpputils::SimpleRingBuffer<UIToAudioMsg, 1024 * 16>;
     audioToUIQueue_t audioToUi;
     uiToAudioQueue_T uiToAudio;
+    std::atomic<bool> doFullRefresh{false};
     void pushFullUIRefresh();
 };
 } // namespace baconpaul::fm

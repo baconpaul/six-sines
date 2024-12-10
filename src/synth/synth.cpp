@@ -108,6 +108,13 @@ void Synth::dumpVoiceList()
 
 void Synth::processUIQueue()
 {
+    bool didRefresh{false};
+    if (doFullRefresh)
+    {
+        pushFullUIRefresh();
+        doFullRefresh = false;
+        didRefresh = true;
+    }
     auto uiM = uiToAudio.pop();
     while (uiM.has_value())
     {
@@ -116,7 +123,11 @@ void Synth::processUIQueue()
         {
         case UIToAudioMsg::REQUEST_REFRESH:
         {
-            pushFullUIRefresh();
+            if (!didRefresh)
+            {
+                // don't do it twice in one process obvs
+                pushFullUIRefresh();
+            }
         }
         break;
         case UIToAudioMsg::SET_PARAM:
