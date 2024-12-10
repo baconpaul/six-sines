@@ -14,16 +14,26 @@
 #ifndef BACONPAUL_FMTHING_UI_IFM_EDITOR_H
 #define BACONPAUL_FMTHING_UI_IFM_EDITOR_H
 
+#include <functional>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "synth/synth.h"
 
 namespace baconpaul::fm::ui
 {
 struct IFMEditor : juce::Component
 {
-    IFMEditor();
-    virtual ~IFMEditor() = default;
+    Patch patchCopy;
+    Synth::audioToUIQueue_t &audioToUI;
+    Synth::uiToAudioQueue_T &uiToAudio;
+    std::function<void()> flushOperator;
+    IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &utoa,
+              std::function<void()> flushOperator);
+    virtual ~IFMEditor();
 
     void paint(juce::Graphics &g) override;
+
+    void idle();
+    std::unique_ptr<juce::Timer> idleTimer;
 };
 } // namespace baconpaul::fm::ui
 #endif // IFM_EDITOR_H

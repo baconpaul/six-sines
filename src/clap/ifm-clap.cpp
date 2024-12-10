@@ -248,8 +248,11 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         *value = *val;
         return true;
     }
-    // void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept
-    // override;
+    void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override
+    {
+        engine->processUIQueue();
+        // More to do here when i actually do param change processes
+    }
 
   public:
     bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }
@@ -258,7 +261,8 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     ADD_SHIM_LINUX_TIMER(clapJuceShim)
     std::unique_ptr<juce::Component> createEditor() override
     {
-        return std::make_unique<baconpaul::fm::ui::IFMEditor>();
+        return std::make_unique<baconpaul::fm::ui::IFMEditor>(
+            engine->audioToUi, engine->uiToAudio, [this]() { _host.paramsRequestFlush(); });
     }
 
     bool registerOrUnregisterTimer(clap_id &id, int ms, bool reg) override

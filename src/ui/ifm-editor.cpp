@@ -15,7 +15,37 @@
 
 namespace baconpaul::fm::ui
 {
-IFMEditor::IFMEditor() { setSize(900, 340); }
+struct IdleTimer : juce::Timer
+{
+    IFMEditor &editor;
+    IdleTimer(IFMEditor &e) : editor(e) {}
+    void timerCallback() override { editor.idle(); }
+};
+
+IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &utoa,
+                     std::function<void()> fo)
+    : audioToUI(atou), uiToAudio(utoa), flushOperator(fo)
+{
+    setSize(900, 340);
+
+    auto startMsg = Synth::UIToAudioMsg{Synth::UIToAudioMsg::REQUEST_REFRESH};
+    uiToAudio.push(startMsg);
+    flushOperator();
+
+    idleTimer = std::make_unique<IdleTimer>(*this);
+    idleTimer->startTimer(1000. / 60.);
+}
+IFMEditor::~IFMEditor() { idleTimer->stopTimer(); }
+
+void IFMEditor::idle()
+{
+    auto aum = audioToUI.pop();
+    while (aum.has_value())
+    {
+        patchCopy.paramMap[aum->paramId]->value = aum->value;
+        aum = audioToUI.pop();
+    }
+}
 
 void IFMEditor::paint(juce::Graphics &g)
 {

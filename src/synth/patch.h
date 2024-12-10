@@ -46,7 +46,7 @@ struct Param
 struct Patch
 {
     std::vector<const Param *> params;
-    std::unordered_map<uint32_t, const Param *> paramMap;
+    std::unordered_map<uint32_t, Param *> paramMap;
 
     static constexpr uint32_t floatFlags{CLAP_PARAM_IS_AUTOMATABLE};
     static constexpr uint32_t boolFlags{CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED};
@@ -59,7 +59,8 @@ struct Patch
           matrixNodes(scpu::make_array_bind_first_index<MatrixNode, matrixSize>()),
           mixerNodes(scpu::make_array_bind_first_index<MixerNode, numOps>())
     {
-        auto pushParams = [this](const auto &from)
+        FMLOG("Constructing patch object");
+        auto pushParams = [this](auto &from)
         {
             auto m = from.params();
             params.insert(params.end(), m.begin(), m.end());
@@ -109,7 +110,7 @@ struct Patch
         Param fbLevel;
         Param active;
 
-        std::vector<const Param *> params() const { return {&fbLevel, &active}; }
+        std::vector<Param *> params() { return {&fbLevel, &active}; }
     };
 
     struct MixerNode
@@ -138,7 +139,7 @@ struct Patch
         Param level;
         Param active;
 
-        std::vector<const Param *> params() const { return {&level, &active}; }
+        std::vector<Param *> params() { return {&level, &active}; }
     };
 
     struct MatrixNode
@@ -171,7 +172,7 @@ struct Patch
             ;
         }
         uint32_t id(int f) const { return idBase + idStride * index + f; }
-        std::vector<const Param *> params() const { return {&level, &active}; }
+        std::vector<Param *> params() { return {&level, &active}; }
     };
 
     struct MainOutput
@@ -192,7 +193,7 @@ struct Patch
 
         Param level;
 
-        std::vector<const Param *> params() const { return {&level}; }
+        std::vector<Param *> params() { return {&level}; }
     };
 
     std::array<SelfNode, numOps> selfNodes;

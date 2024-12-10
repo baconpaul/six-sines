@@ -19,6 +19,7 @@
 
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
 #include "sst/voicemanager/voicemanager.h"
+#include "sst/cpputils/ring_buffer.h"
 
 #include "configuration.h"
 
@@ -128,9 +129,36 @@ struct Synth
     }
 
     void process();
+    void processUIQueue();
 
     static_assert(sst::voicemanager::constraints::ConstraintsChecker<VMConfig, VMResponder,
                                                                      VMMonoResponder>::satisfies());
+
+    // UI Communication
+    struct AudioToUIMsg
+    {
+        enum Action : uint32_t
+        {
+            UPDATE_PARAM,
+        } action;
+        uint32_t paramId{0};
+        float value{0};
+    };
+    struct UIToAudioMsg
+    {
+        enum Action : uint32_t
+        {
+            REQUEST_REFRESH,
+            SET_PARAM,
+        } action;
+        uint32_t paramId{0};
+        float value{0};
+    };
+    using audioToUIQueue_t = sst::cpputils::SimpleRingBuffer<AudioToUIMsg, 1024 * 16>;
+    using uiToAudioQueue_T = sst::cpputils::SimpleRingBuffer<UIToAudioMsg, 1024 * 16>;
+    audioToUIQueue_t audioToUi;
+    uiToAudioQueue_T uiToAudio;
+    void pushFullUIRefresh();
 };
 } // namespace baconpaul::fm
 #endif // SYNTH_H

@@ -18,15 +18,12 @@ namespace baconpaul::fm
 Synth::Synth() : responder(*this)
 {
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
-
-    for (auto &p : patch.params)
-    {
-        FMLOG(p->meta.id << " -> " << p->meta.name);
-    }
 }
 void Synth::process()
 {
     assert(resampler);
+
+    processUIQueue();
 
     while (resampler->inputsRequiredToGenerateOutputs(blockSize) > 0)
     {
@@ -106,6 +103,35 @@ void Synth::dumpVoiceList()
     {
         FMLOG("   c=" << std::hex << c << std::dec << " key=" << c->key << " u=" << c->used);
         c = c->next;
+    }
+}
+
+void Synth::processUIQueue()
+{
+    auto uiM = uiToAudio.pop();
+    while (uiM.has_value())
+    {
+        FMLOG("UI Message " << uiM->action);
+        switch (uiM->action)
+        {
+        case UIToAudioMsg::REQUEST_REFRESH:
+        {
+            pushFullUIRefresh();
+        }
+        break;
+        case UIToAudioMsg::SET_PARAM:
+            break;
+        }
+        uiM = uiToAudio.pop();
+    }
+}
+
+void Synth::pushFullUIRefresh()
+{
+    for (const auto *p : patch.params)
+    {
+        AudioToUIMsg au = {AudioToUIMsg::UPDATE_PARAM, p->meta.id, p->value};
+        audioToUi.push(au);
     }
 }
 
