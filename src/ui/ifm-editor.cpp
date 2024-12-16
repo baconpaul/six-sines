@@ -62,7 +62,13 @@ void IFMEditor::idle()
     auto aum = audioToUI.pop();
     while (aum.has_value())
     {
-        patchCopy.paramMap[aum->paramId]->value = aum->value;
+        if (aum->action == Synth::AudioToUIMsg::UPDATE_PARAM)
+        {
+            patchCopy.paramMap[aum->paramId]->value = aum->value;
+            auto pit = componentByID.find(aum->paramId);
+            if (pit != componentByID.end() && pit->second)
+                pit->second->repaint();
+        }
         aum = audioToUI.pop();
     }
 }

@@ -26,11 +26,11 @@ Synth::Synth() : responder(*this)
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
     lagHandler.setRate(60, blockSize, gSampleRate);
 }
-void Synth::process()
+void Synth::process(const clap_output_events_t *outq)
 {
     assert(resampler);
 
-    processUIQueue();
+    processUIQueue(outq);
 
     while (resampler->inputsRequiredToGenerateOutputs(blockSize) > 0)
     {
@@ -134,7 +134,7 @@ void Synth::dumpVoiceList()
     }
 }
 
-void Synth::processUIQueue()
+void Synth::processUIQueue(const clap_output_events_t *outq)
 {
     bool didRefresh{false};
     if (doFullRefresh)
@@ -159,13 +159,58 @@ void Synth::processUIQueue()
         break;
         case UIToAudioMsg::SET_PARAM:
         {
-            auto dest = &(patch.paramMap.at(uiM->paramId)->value);
-            lagHandler.setNewDestination(dest, uiM->value);
+            auto dest = patch.paramMap.at(uiM->paramId);
+            lagHandler.setNewDestination(&(dest->value), uiM->value);
+
+            clap_event_param_value_t p;
+            p.header.size = sizeof(clap_event_param_value_t);
+            p.header.time = 0;
+            p.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+            p.header.type = CLAP_EVENT_PARAM_VALUE;
+            p.header.flags = 0;
+            p.param_id = uiM->paramId;
+            p.cookie = dest;
+
+            p.note_id = -1;
+            p.port_index = -1;
+            p.channel = -1;
+            p.key = -1;
+
+            p.value = uiM->value;
+
+            outq->try_push(outq, &p.header);
+        }
+        break;
+        case UIToAudioMsg::BEGIN_EDIT:
+        case UIToAudioMsg::END_EDIT:
+        {
+            clap_event_param_gesture_t p;
+            p.header.size = sizeof(clap_event_param_gesture_t);
+            p.header.time = 0;
+            p.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+            p.header.type = uiM->action == UIToAudioMsg::BEGIN_EDIT ? CLAP_EVENT_PARAM_GESTURE_BEGIN
+                                                                    : CLAP_EVENT_PARAM_GESTURE_END;
+            p.header.flags = 0;
+            p.param_id = uiM->paramId;
+
+            outq->try_push(outq, &p.header);
         }
         break;
         }
         uiM = uiToAudio.pop();
     }
+}
+
+void Synth::handleParamValue(Param *p, uint32_t pid, float value)
+{
+    if (!p)
+    {
+        p = patch.paramMap.at(pid);
+    }
+
+    p->value = value;
+    AudioToUIMsg au = {AudioToUIMsg::UPDATE_PARAM, pid, value};
+    audioToUi.push(au);
 }
 
 void Synth::pushFullUIRefresh()

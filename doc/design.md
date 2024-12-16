@@ -1,7 +1,5 @@
 Individual Oscillator
 
-+ stereo phase and rm input
-+ Stereo out
 - power
 - Keytrack
   - if on: ratio
@@ -24,14 +22,8 @@ FM Matrix Node
 Self matrix node
 - basically just an FM level with an envelope and LFO
 
-Evaluator
-
 Mixer
 - Each node gets an envelope an LFO and a pan and level control
-
-Voice Object
-
-Final output lanczos downsampler (and gSR to 120khz or some such)
 
 MIDI mappings what to do
 - velocity to amplitude everywhere of course
@@ -40,7 +32,10 @@ Other ToDos
 - Envelope Rate Linear to 2x provider
 
 Patch object
+- basically working 
+- attach to voice properly is still un-done
+
+CLAP edge
+- begin/end edit
 
 Installer
-
-Rename it all something

@@ -17,10 +17,10 @@ namespace baconpaul::fm::ui
 {
 MainPanel::MainPanel(IFMEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
 {
-    createComponent(editor, editor.patchCopy.mainOutput.level.meta.id, levK, levC);
+    createComponent(editor, *this, editor.patchCopy.mainOutput.level.meta.id, levK, levC);
     addAndMakeVisible(*levK);
 
-    createComponent(editor, editor.patchCopy.mainOutput.pan.meta.id, panK, panC);
+    createComponent(editor, *this, editor.patchCopy.mainOutput.pan.meta.id, panK, panC);
     addAndMakeVisible(*panK);
 }
 MainPanel::~MainPanel() = default;

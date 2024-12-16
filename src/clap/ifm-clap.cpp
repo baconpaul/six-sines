@@ -103,7 +103,7 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     clap_process_status process(const clap_process *process) noexcept override
     {
         auto ev = process->in_events;
-
+        auto outq = process->out_events;
         auto sz = ev->size(ev);
 
         const clap_event_header_t *nextEvent{nullptr};
@@ -130,7 +130,7 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                         nextEvent = nullptr;
                 }
 
-                engine->process();
+                engine->process(outq);
             }
 
             out[0][s] = engine->output[0][blockPos];
@@ -176,7 +176,8 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             case CLAP_EVENT_PARAM_VALUE:
             {
                 auto pevt = reinterpret_cast<const clap_event_param_value *>(nextEvent);
-                FMLOG("PARAM VALUE IGNORED");
+                engine->handleParamValue(static_cast<baconpaul::fm::Param *>(pevt->cookie),
+                                         pevt->param_id, pevt->value);
             }
             break;
 
@@ -340,8 +341,7 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     }
     void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override
     {
-        engine->processUIQueue();
-        // More to do here when i actually do param change processes
+        engine->processUIQueue(out);
     }
 
   public:

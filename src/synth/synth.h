@@ -17,6 +17,7 @@
 #include <memory>
 #include <array>
 
+#include <clap/clap.h>
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
 #include "sst/basic-blocks/dsp/Lag.h"
 #include "sst/voicemanager/voicemanager.h"
@@ -129,8 +130,10 @@ struct Synth
         resampler = std::make_unique<resampler_t>(gSampleRate, realSampleRate);
     }
 
-    void process();
-    void processUIQueue();
+    void process(const clap_output_events_t *);
+    void processUIQueue(const clap_output_events_t *);
+
+    void handleParamValue(Param *p, uint32_t pid, float value);
 
     static_assert(sst::voicemanager::constraints::ConstraintsChecker<VMConfig, VMResponder,
                                                                      VMMonoResponder>::satisfies());
@@ -151,6 +154,8 @@ struct Synth
         {
             REQUEST_REFRESH,
             SET_PARAM,
+            BEGIN_EDIT,
+            END_EDIT
         } action;
         uint32_t paramId{0};
         float value{0};

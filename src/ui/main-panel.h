@@ -26,6 +26,9 @@ struct MainPanel : jcmp::NamedPanel, HasEditor
 
     void resized() override;
 
+    void beginEdit() {}
+    void endEdit() {}
+
     std::unique_ptr<PatchContinuous> levC, panC;
     std::unique_ptr<jcmp::Knob> levK, panK;
 };

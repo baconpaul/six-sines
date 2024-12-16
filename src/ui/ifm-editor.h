@@ -48,6 +48,8 @@ struct IFMEditor : jcmp::WindowPanel
 
     std::unique_ptr<jcmp::NamedPanel> matrixPanel, mixerPanel, singlePanel, sourcesPanel;
     std::unique_ptr<MainPanel> mainPanel;
+
+    std::unordered_map<uint32_t, juce::Component::SafePointer<juce::Component>> componentByID;
 };
 
 struct HasEditor
