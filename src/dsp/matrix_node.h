@@ -112,9 +112,8 @@ struct OutputNode
         {
             for (int j = 0; j < blockSize; ++j)
             {
-                // use mech blah also we can multiply by output cache at end (TODO)
-                output[0][j] += env.outputCache[j] * from.output[0][j];
-                output[1][j] += env.outputCache[j] * from.output[1][j];
+                output[0][j] += env.outputCache[j] * from.output[0][j] * 0.5;
+                output[1][j] += env.outputCache[j] * from.output[1][j] * 0.5;
             }
         }
     }

@@ -18,6 +18,7 @@
 #include <array>
 
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
+#include "sst/basic-blocks/dsp/Lag.h"
 #include "sst/voicemanager/voicemanager.h"
 #include "sst/cpputils/ring_buffer.h"
 
@@ -159,6 +160,7 @@ struct Synth
     audioToUIQueue_t audioToUi;
     uiToAudioQueue_T uiToAudio;
     std::atomic<bool> doFullRefresh{false};
+    sst::basic_blocks::dsp::UIComponentLagHandler lagHandler;
     void pushFullUIRefresh();
 };
 } // namespace baconpaul::fm
