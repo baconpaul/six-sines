@@ -27,6 +27,7 @@ add_library(ifm-impl STATIC
         src/clap/ifm-clap-entry-impl.cpp
 
         src/ui/ifm-editor.cpp
+        src/ui/main-panel.cpp
 
         src/synth/synth.cpp
         src/synth/voice.cpp

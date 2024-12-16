@@ -118,7 +118,6 @@ void Synth::processUIQueue()
     auto uiM = uiToAudio.pop();
     while (uiM.has_value())
     {
-        FMLOG("UI Message " << uiM->action);
         switch (uiM->action)
         {
         case UIToAudioMsg::REQUEST_REFRESH:
@@ -131,7 +130,10 @@ void Synth::processUIQueue()
         }
         break;
         case UIToAudioMsg::SET_PARAM:
-            break;
+        {
+            patch.paramMap.at(uiM->paramId)->value = uiM->value;
+        }
+        break;
         }
         uiM = uiToAudio.pop();
     }

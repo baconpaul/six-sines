@@ -177,19 +177,25 @@ struct Patch
         MainOutput()
             : level(floatMd()
                         .asPercent()
-                        .withName(name() + " Output Level")
+                        .withName(name() + " Level")
                         .withGroupName(name())
                         .withDefault(1.0)
-                        .withID(id(0)))
+                        .withID(id(0))),
+              pan(floatMd()
+                      .asPercentBipolar()
+                      .withName(name() + " Pan")
+                      .withGroupName(name())
+                      .withDefault(0.f)
+                      .withID(id(1)))
         {
         }
 
         std::string name() const { return "Main"; }
         uint32_t id(int f) const { return idBase + f; }
 
-        Param level;
+        Param level, pan;
 
-        std::vector<Param *> params() { return {&level}; }
+        std::vector<Param *> params() { return {&level, &pan}; }
     };
 
     std::array<SelfNode, numOps> selfNodes;

@@ -12,6 +12,8 @@
  */
 
 #include "ifm-editor.h"
+#include "patch-continuous.h"
+#include "main-panel.h"
 
 namespace baconpaul::fm::ui
 {
@@ -35,7 +37,7 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
     mixerPanel = std::make_unique<jcmp::NamedPanel>("Mixer");
     singlePanel = std::make_unique<jcmp::NamedPanel>("Edit");
     sourcesPanel = std::make_unique<jcmp::NamedPanel>("Sources");
-    mainPanel = std::make_unique<jcmp::NamedPanel>("Main");
+    mainPanel = std::make_unique<MainPanel>(*this);
     addAndMakeVisible(*matrixPanel);
     addAndMakeVisible(*mixerPanel);
     addAndMakeVisible(*singlePanel);
@@ -50,6 +52,8 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
     idleTimer->startTimer(1000. / 60.);
 
     setSize(800, 920);
+
+    auto q = std::make_unique<PatchContinuous>(*this, patchCopy.mainOutput.level.meta.id);
 }
 IFMEditor::~IFMEditor() { idleTimer->stopTimer(); }
 

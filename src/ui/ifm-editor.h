@@ -15,6 +15,7 @@
 #define BACONPAUL_FMTHING_UI_IFM_EDITOR_H
 
 #include <functional>
+#include <utility>
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <sst/jucegui/components/NamedPanel.h>
@@ -29,6 +30,7 @@ namespace jdat = sst::jucegui::data;
 
 namespace baconpaul::fm::ui
 {
+struct MainPanel;
 struct IFMEditor : jcmp::WindowPanel
 {
     Patch patchCopy;
@@ -44,7 +46,14 @@ struct IFMEditor : jcmp::WindowPanel
     void idle();
     std::unique_ptr<juce::Timer> idleTimer;
 
-    std::unique_ptr<jcmp::NamedPanel> matrixPanel, mixerPanel, singlePanel, sourcesPanel, mainPanel;
+    std::unique_ptr<jcmp::NamedPanel> matrixPanel, mixerPanel, singlePanel, sourcesPanel;
+    std::unique_ptr<MainPanel> mainPanel;
+};
+
+struct HasEditor
+{
+    IFMEditor &editor;
+    HasEditor(IFMEditor &e) : editor(e) {}
 };
 } // namespace baconpaul::fm::ui
 #endif // IFM_EDITOR_H
