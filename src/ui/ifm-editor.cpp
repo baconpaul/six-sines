@@ -53,7 +53,7 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
 
     setSize(800, 920);
 
-    auto q = std::make_unique<PatchContinuous>(*this, patchCopy.mainOutput.level.meta.id);
+    auto q = std::make_unique<PatchContinuous>(*this, patchCopy.output.level.meta.id);
 }
 IFMEditor::~IFMEditor() { idleTimer->stopTimer(); }
 

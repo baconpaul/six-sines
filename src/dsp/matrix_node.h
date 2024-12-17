@@ -15,11 +15,17 @@
 #define BACONPAUL_FMTHING_DSP_MATRIX_NODE_H
 
 #include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
+#include "sst/basic-blocks/modulators/SimpleLFO.h"
+#include "sst/basic-blocks/mechanics/block-ops.h"
+#include "sst/basic-blocks/dsp/PanLaws.h"
 #include "dsp/op_source.h"
 #include "dsp/sr_provider.h"
+#include "synth/patch.h"
 
 namespace baconpaul::fm
 {
+namespace mech = sst::basic_blocks::mechanics;
+namespace sdsp = sst::basic_blocks::dsp;
 struct MatrixNodeFrom
 {
     OpSource &onto, &from;
@@ -95,25 +101,55 @@ struct OutputNode
     float output alignas(16)[2][blockSize];
     std::array<MixerNode, numOps> &fromArr;
     SRProvider sr;
-    OutputNode(std::array<MixerNode, numOps> &f) : fromArr(f), env(&sr)
+
+    const float &level, &pan;
+    const float &delay, &attackv, &hold, &decay, &sustain, &release;
+
+    OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f)
+        : fromArr(f), env(&sr), level(on.level), pan(on.pan), delay(on.delay), attackv(on.attack),
+          hold(on.hold), decay(on.decay), sustain(on.sustain), release(on.release)
     {
         memset(output, 0, sizeof(output));
     }
 
     sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
 
-    void attack() { env.attack(0.0); }
+    void attack() { env.attack(delay); }
 
     void renderBlock(bool gated)
     {
-        env.processBlock01AD(0.0, 0.6, 0.00, 0.6, 0.2, 0.7, gated);
+        env.processBlockScaledAD(delay, attackv, hold, decay, sustain, release, gated);
         memset(output, 0, sizeof(output));
         for (const auto &from : fromArr)
         {
             for (int j = 0; j < blockSize; ++j)
             {
-                output[0][j] += env.outputCache[j] * from.output[0][j] * 0.5;
-                output[1][j] += env.outputCache[j] * from.output[1][j] * 0.5;
+                output[0][j] += from.output[0][j];
+                output[1][j] += from.output[1][j];
+            }
+        }
+
+        mech::scale_by<blockSize>(env.outputCache, output[0], output[1]);
+        mech::scale_by<blockSize>(0.5, output[0], output[1]);
+
+        // Apply main output
+        auto lv = level;
+        lv = lv * lv * lv;
+        mech::scale_by<blockSize>(lv, output[0], output[1]);
+
+        auto pn = pan;
+        if (pn != 0.f)
+        {
+            pn = (pn + 1) * 0.5;
+            sdsp::pan_laws::panmatrix_t pmat;
+            sdsp::pan_laws::stereoEqualPower(pn, pmat);
+
+            for (int i = 0; i < blockSize; ++i)
+            {
+                auto il = output[0][i];
+                auto ir = output[1][i];
+                output[0][i] = pmat[0] * il + pmat[2] * ir;
+                output[1][i] = pmat[1] * ir + pmat[3] * il;
             }
         }
     }

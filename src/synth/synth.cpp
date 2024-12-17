@@ -12,6 +12,7 @@
  */
 
 #include "synth/synth.h"
+#include "sst/cpputils/constructors.h"
 #include "sst/basic-blocks/mechanics/block-ops.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
 
@@ -21,7 +22,8 @@ namespace baconpaul::fm
 namespace mech = sst::basic_blocks::mechanics;
 namespace sdsp = sst::basic_blocks::dsp;
 
-Synth::Synth() : responder(*this)
+Synth::Synth()
+    : responder(*this), voices(sst::cpputils::make_array<Voice, VMConfig::maxVoiceCount>(patch))
 {
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
     lagHandler.setRate(60, blockSize, gSampleRate);
@@ -58,27 +60,6 @@ void Synth::process(const clap_output_events_t *outq)
             else
             {
                 cvoice = cvoice->next;
-            }
-        }
-
-        // Apply main output
-        auto lv = patch.mainOutput.level.value;
-        lv = lv * lv * lv;
-        mech::scale_by<blockSize>(lv, lOutput[0], lOutput[1]);
-
-        auto pn = patch.mainOutput.pan.value;
-        if (pn != 0.f)
-        {
-            pn = (pn + 1) * 0.5;
-            sdsp::pan_laws::panmatrix_t pmat;
-            sdsp::pan_laws::stereoEqualPower(pn, pmat);
-
-            for (int i = 0; i < blockSize; ++i)
-            {
-                auto il = lOutput[0][i];
-                auto ir = lOutput[1][i];
-                lOutput[0][i] = pmat[0] * il + pmat[2] * ir;
-                lOutput[1][i] = pmat[1] * ir + pmat[3] * il;
             }
         }
 

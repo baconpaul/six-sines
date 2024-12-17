@@ -22,6 +22,7 @@
 #include "configuration.h"
 #include "sst/cpputils/constructors.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
+#include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
 #include "synth/matrix_index.h"
 
 namespace baconpaul::fm
@@ -40,7 +41,7 @@ struct Param
         return *this;
     }
 
-    operator float() const { return value; }
+    operator const float &() const { return value; }
 };
 
 struct Patch
@@ -52,6 +53,14 @@ struct Patch
     static constexpr uint32_t boolFlags{CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED};
 
     static md_t floatMd() { return md_t().asFloat().withFlags(floatFlags); }
+    static md_t floatEnvRateMd()
+    {
+        return md_t()
+            .asFloat()
+            .withFlags(floatFlags)
+            .asLog2SecondsRange(sst::basic_blocks::modulators::TenSecondRange::etMin,
+                                sst::basic_blocks::modulators::TenSecondRange::etMax);
+    }
     static md_t boolMd() { return md_t().asBool().withFlags(boolFlags); }
 
     Patch()
@@ -75,7 +84,7 @@ struct Patch
             }
         };
 
-        pushParams(mainOutput);
+        pushParams(output);
         std::for_each(selfNodes.begin(), selfNodes.end(), pushParams);
         std::for_each(mixerNodes.begin(), mixerNodes.end(), pushParams);
         std::for_each(matrixNodes.begin(), matrixNodes.end(), pushParams);
@@ -171,10 +180,10 @@ struct Patch
         std::vector<Param *> params() { return {&level, &active}; }
     };
 
-    struct MainOutput
+    struct OutputNode
     {
         static constexpr uint32_t idBase{500};
-        MainOutput()
+        OutputNode()
             : level(floatMd()
                         .asPercent()
                         .withName(name() + " Level")
@@ -186,7 +195,38 @@ struct Patch
                       .withName(name() + " Pan")
                       .withGroupName(name())
                       .withDefault(0.f)
-                      .withID(id(1)))
+                      .withID(id(1))),
+              delay(floatEnvRateMd()
+                        .withName(name() + " Delay")
+                        .withGroupName(name())
+                        .withDefault(sst::basic_blocks::modulators::TenSecondRange::etMin)
+                        .withID(id(2))),
+              attack(floatEnvRateMd()
+                         .withName(name() + " Attack")
+                         .withGroupName(name())
+                         .withDefault(-1.f)
+                         .withID(id(3))),
+              hold(floatEnvRateMd()
+                       .withName(name() + " Hold")
+                       .withGroupName(name())
+                       .withDefault(sst::basic_blocks::modulators::TenSecondRange::etMin)
+                       .withID(id(4))),
+              decay(floatEnvRateMd()
+                        .withName(name() + " Decay")
+                        .withGroupName(name())
+                        .withDefault(1.f)
+                        .withID(id(5))),
+              sustain(floatMd()
+                          .asPercent()
+                          .withName(name() + " Sustain")
+                          .withGroupName(name())
+                          .withDefault(0.7f)
+                          .withID(id(6))),
+              release(floatEnvRateMd()
+                          .withName(name() + " Release")
+                          .withGroupName(name())
+                          .withDefault(2.f)
+                          .withID(id(7)))
         {
         }
 
@@ -194,14 +234,18 @@ struct Patch
         uint32_t id(int f) const { return idBase + f; }
 
         Param level, pan;
+        Param delay, attack, hold, decay, sustain, release;
 
-        std::vector<Param *> params() { return {&level, &pan}; }
+        std::vector<Param *> params()
+        {
+            return {&level, &pan, &delay, &attack, &hold, &decay, &sustain, &release};
+        }
     };
 
     std::array<SelfNode, numOps> selfNodes;
     std::array<MatrixNode, matrixSize> matrixNodes;
     std::array<MixerNode, numOps> mixerNodes;
-    MainOutput mainOutput;
+    OutputNode output;
 };
 } // namespace baconpaul::fm
 #endif // PATCH_H

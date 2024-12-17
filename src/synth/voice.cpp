@@ -14,14 +14,15 @@
 #include "voice.h"
 #include "sst/cpputils/constructors.h"
 #include "synth/matrix_index.h"
+#include "synth/patch.h"
 
 namespace baconpaul::fm
 {
 
 namespace scpu = sst::cpputils;
 
-Voice::Voice()
-    : out(mixerNode), output{out.output[0], out.output[1]},
+Voice::Voice(const Patch &p)
+    : out(p.output, mixerNode), output{out.output[0], out.output[1]},
       mixerNode(scpu::make_array_lambda<MixerNode, numOps>([this](auto i)
                                                            { return MixerNode(this->src[i]); })),
       selfNode(scpu::make_array_lambda<MatrixNodeSelf, numOps>(

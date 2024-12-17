@@ -19,12 +19,13 @@
 
 namespace baconpaul::fm
 {
+struct Patch;
 
 struct Voice
 {
     const float *const output[2];
 
-    Voice();
+    Voice(const Patch &);
     ~Voice() = default;
 
     void attack();
