@@ -11,25 +11,19 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_UI_MAIN_PANEL_H
-#define BACONPAUL_FMTHING_UI_MAIN_PANEL_H
+#ifndef BACONPAUL_FMTHING_UI_MAIN_SUB_PANEL_H
+#define BACONPAUL_FMTHING_UI_MAIN_SUB_PANEL_H
 
+#include <juce_gui_basics/juce_gui_basics.h>
 #include "ifm-editor.h"
-#include "patch-continuous.h"
 
 namespace baconpaul::fm::ui
 {
-struct MainPanel : jcmp::NamedPanel, HasEditor
+struct MainSubPanel : juce::Component, HasEditor
 {
-    MainPanel(IFMEditor &);
-    ~MainPanel();
-
-    void resized() override;
-
-    void beginEdit();
-
-    std::unique_ptr<PatchContinuous> levC, panC;
-    std::unique_ptr<jcmp::Knob> levK, panK;
+    MainSubPanel(IFMEditor &);
+    ~MainSubPanel();
+    void paint(juce::Graphics &g) { g.fillAll(juce::Colours::orchid); }
 };
 } // namespace baconpaul::fm::ui
-#endif // MAIN_PANEL_H
+#endif // MAIN_SUB_PANEL_H

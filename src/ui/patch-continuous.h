@@ -70,10 +70,8 @@ void createComponent(IFMEditor &e, P &panel, uint32_t id, std::unique_ptr<T> &cm
         e.uiToAudio.push({Synth::UIToAudioMsg::Action::BEGIN_EDIT, id});
         panel.beginEdit();
     };
-    cm->onEndEdit = [&e, id, &panel]()
-    {
+    cm->onEndEdit = [&e, id, &panel]() {
         e.uiToAudio.push({Synth::UIToAudioMsg::Action::END_EDIT, id});
-        panel.endEdit();
     };
     cm->setSource(pc.get());
 

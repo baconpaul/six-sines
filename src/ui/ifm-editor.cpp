@@ -14,6 +14,7 @@
 #include "ifm-editor.h"
 #include "patch-continuous.h"
 #include "main-panel.h"
+#include "main-sub-panel.h"
 
 namespace baconpaul::fm::ui
 {
@@ -43,6 +44,9 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
     addAndMakeVisible(*singlePanel);
     addAndMakeVisible(*sourcesPanel);
     addAndMakeVisible(*mainPanel);
+
+    mainSubPanel = std::make_unique<MainSubPanel>(*this);
+    singlePanel->addChildComponent(*mainSubPanel);
 
     auto startMsg = Synth::UIToAudioMsg{Synth::UIToAudioMsg::REQUEST_REFRESH};
     uiToAudio.push(startMsg);
@@ -89,6 +93,8 @@ void IFMEditor::resized()
     auto sp = rb.withTrimmedBottom(mp.getHeight());
     sp = sp.translated(0, mp.getHeight());
     singlePanel->setBounds(sp.reduced(rdx));
+    mainSubPanel->setBounds(singlePanel->getContentArea());
+    FMLOG("msp bounds " << mainSubPanel->getBounds().toString());
 
     auto mx = rb.withTrimmedBottom(edH).withTrimmedLeft(mp.getWidth());
     mixerPanel->setBounds(mx.reduced(rdx));
@@ -100,5 +106,7 @@ void IFMEditor::resized()
     auto mn = ta.withTrimmedLeft(sr.getWidth());
     mainPanel->setBounds(mn.reduced(rdx));
 }
+
+void IFMEditor::hideAllSubPanels() { mainSubPanel->setVisible(false); }
 
 } // namespace baconpaul::fm::ui

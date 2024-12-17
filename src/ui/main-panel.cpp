@@ -13,6 +13,8 @@
 
 #include "main-panel.h"
 
+#include "main-sub-panel.h"
+
 namespace baconpaul::fm::ui
 {
 MainPanel::MainPanel(IFMEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
@@ -32,6 +34,12 @@ void MainPanel::resized()
     auto q = b.withWidth(h);
     levK->setBounds(q);
     panK->setBounds(q.translated(h + 2, 0));
+}
+
+void MainPanel::beginEdit()
+{
+    editor.hideAllSubPanels();
+    editor.mainSubPanel->setVisible(true);
 }
 
 } // namespace baconpaul::fm::ui
