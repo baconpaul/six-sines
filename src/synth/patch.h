@@ -64,7 +64,8 @@ struct Patch
     static md_t boolMd() { return md_t().asBool().withFlags(boolFlags); }
 
     Patch()
-        : selfNodes(scpu::make_array_bind_first_index<SelfNode, numOps>()),
+        : sourceNodes(scpu::make_array_bind_first_index<SourceNode, numOps>()),
+          selfNodes(scpu::make_array_bind_first_index<SelfNode, numOps>()),
           matrixNodes(scpu::make_array_bind_first_index<MatrixNode, matrixSize>()),
           mixerNodes(scpu::make_array_bind_first_index<MixerNode, numOps>())
     {
@@ -85,10 +86,39 @@ struct Patch
         };
 
         pushParams(output);
+        std::for_each(sourceNodes.begin(), sourceNodes.end(), pushParams);
         std::for_each(selfNodes.begin(), selfNodes.end(), pushParams);
         std::for_each(mixerNodes.begin(), mixerNodes.end(), pushParams);
         std::for_each(matrixNodes.begin(), matrixNodes.end(), pushParams);
     }
+
+    struct SourceNode
+    {
+        static constexpr uint32_t idBase{1500}, idStride{250};
+        int index;
+        SourceNode(size_t idx)
+            : index(idx), ratio(floatMd()
+                                    .withRange(0, 16)
+                                    .withName(name() + " Ratio")
+                                    .withGroupName(name())
+                                    .withDefault(1.0)
+                                    .withID(id(0))),
+              active(boolMd()
+                         .withGroupName(name())
+                         .withName(name() + " Active")
+                         .withDefault(1.0)
+                         .withID(id(1)))
+        {
+        }
+
+        std::string name() const { return "Op " + std::to_string(index + 1); }
+        uint32_t id(int f) const { return idBase + idStride * index + f; }
+
+        Param ratio;
+        Param active;
+
+        std::vector<Param *> params() { return {&ratio}; }
+    };
     struct SelfNode
     {
         // Once streamed you cant change these bases or the individual ids inside
@@ -109,42 +139,13 @@ struct Patch
         {
         }
 
-        std::string name() const { return "Op " + std::to_string(index); }
+        std::string name() const { return "Op " + std::to_string(index + 1); }
         uint32_t id(int f) const { return idBase + idStride * index + f; }
 
         Param fbLevel;
         Param active;
 
         std::vector<Param *> params() { return {&fbLevel, &active}; }
-    };
-
-    struct MixerNode
-    {
-        static constexpr uint32_t idBase{20000}, idStride{100};
-        int index;
-        MixerNode(size_t idx)
-            : index(idx), level(floatMd()
-                                    .asPercent()
-                                    .withName(name() + " Mixer Level")
-                                    .withGroupName(name())
-                                    .withDefault(idx == 0 ? 1.f : 0.f)
-                                    .withID(id(0))),
-              active(boolMd()
-                         .withName(name() + " Mixer Active")
-                         .withGroupName(name())
-                         .withFlags(CLAP_PARAM_IS_STEPPED)
-                         .withDefault(idx == 0 ? true : false)
-                         .withID(id(1)))
-        {
-        }
-
-        std::string name() const { return "Op " + std::to_string(index + 1); }
-        uint32_t id(int f) const { return idBase + idStride * index + f; }
-
-        Param level;
-        Param active;
-
-        std::vector<Param *> params() { return {&level, &active}; }
     };
 
     struct MatrixNode
@@ -177,6 +178,35 @@ struct Patch
             ;
         }
         uint32_t id(int f) const { return idBase + idStride * index + f; }
+        std::vector<Param *> params() { return {&level, &active}; }
+    };
+
+    struct MixerNode
+    {
+        static constexpr uint32_t idBase{20000}, idStride{100};
+        int index;
+        MixerNode(size_t idx)
+            : index(idx), level(floatMd()
+                                    .asPercent()
+                                    .withName(name() + " Mixer Level")
+                                    .withGroupName(name())
+                                    .withDefault(idx == 0 ? 1.f : 0.f)
+                                    .withID(id(0))),
+              active(boolMd()
+                         .withName(name() + " Mixer Active")
+                         .withGroupName(name())
+                         .withFlags(CLAP_PARAM_IS_STEPPED)
+                         .withDefault(idx == 0 ? true : false)
+                         .withID(id(1)))
+        {
+        }
+
+        std::string name() const { return "Op " + std::to_string(index + 1); }
+        uint32_t id(int f) const { return idBase + idStride * index + f; }
+
+        Param level;
+        Param active;
+
         std::vector<Param *> params() { return {&level, &active}; }
     };
 
@@ -242,6 +272,7 @@ struct Patch
         }
     };
 
+    std::array<SourceNode, numOps> sourceNodes;
     std::array<SelfNode, numOps> selfNodes;
     std::array<MatrixNode, matrixSize> matrixNodes;
     std::array<MixerNode, numOps> mixerNodes;

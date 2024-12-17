@@ -15,6 +15,8 @@
 #include "patch-continuous.h"
 #include "main-panel.h"
 #include "main-sub-panel.h"
+#include "mixer-panel.h"
+#include "mixer-sub-panel.h"
 
 namespace baconpaul::fm::ui
 {
@@ -35,7 +37,7 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
         sst::jucegui::style::StyleSheet::LIGHT));
 
     matrixPanel = std::make_unique<jcmp::NamedPanel>("Matrix");
-    mixerPanel = std::make_unique<jcmp::NamedPanel>("Mixer");
+    mixerPanel = std::make_unique<MixerPanel>(*this);
     singlePanel = std::make_unique<jcmp::NamedPanel>("Edit");
     sourcesPanel = std::make_unique<jcmp::NamedPanel>("Sources");
     mainPanel = std::make_unique<MainPanel>(*this);
@@ -47,6 +49,8 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
 
     mainSubPanel = std::make_unique<MainSubPanel>(*this);
     singlePanel->addChildComponent(*mainSubPanel);
+    mixerSubPanel = std::make_unique<MixerSubPanel>(*this);
+    singlePanel->addChildComponent(*mixerSubPanel);
 
     auto startMsg = Synth::UIToAudioMsg{Synth::UIToAudioMsg::REQUEST_REFRESH};
     uiToAudio.push(startMsg);
@@ -94,7 +98,7 @@ void IFMEditor::resized()
     sp = sp.translated(0, mp.getHeight());
     singlePanel->setBounds(sp.reduced(rdx));
     mainSubPanel->setBounds(singlePanel->getContentArea());
-    FMLOG("msp bounds " << mainSubPanel->getBounds().toString());
+    mixerSubPanel->setBounds(singlePanel->getContentArea());
 
     auto mx = rb.withTrimmedBottom(edH).withTrimmedLeft(mp.getWidth());
     mixerPanel->setBounds(mx.reduced(rdx));
@@ -107,6 +111,12 @@ void IFMEditor::resized()
     mainPanel->setBounds(mn.reduced(rdx));
 }
 
-void IFMEditor::hideAllSubPanels() { mainSubPanel->setVisible(false); }
+void IFMEditor::hideAllSubPanels()
+{
+    for (auto &c : singlePanel->getChildren())
+    {
+        c->setVisible(false);
+    }
+}
 
 } // namespace baconpaul::fm::ui
