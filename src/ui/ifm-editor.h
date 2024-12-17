@@ -32,8 +32,12 @@ namespace baconpaul::fm::ui
 {
 struct MainPanel;
 struct MainSubPanel;
+struct MatrixPanel;
+struct MatrixSubPanel;
 struct MixerPanel;
 struct MixerSubPanel;
+struct SourcePanel;
+struct SourceSubPanel;
 
 struct IFMEditor : jcmp::WindowPanel
 {
@@ -50,12 +54,19 @@ struct IFMEditor : jcmp::WindowPanel
     void idle();
     std::unique_ptr<juce::Timer> idleTimer;
 
-    std::unique_ptr<jcmp::NamedPanel> matrixPanel, singlePanel, sourcesPanel;
+    std::unique_ptr<jcmp::NamedPanel> singlePanel;
+
     std::unique_ptr<MainPanel> mainPanel;
     std::unique_ptr<MainSubPanel> mainSubPanel;
 
+    std::unique_ptr<MatrixPanel> matrixPanel;
+    std::unique_ptr<MatrixSubPanel> matrixSubPanel;
+
     std::unique_ptr<MixerPanel> mixerPanel;
     std::unique_ptr<MixerSubPanel> mixerSubPanel;
+
+    std::unique_ptr<SourcePanel> sourcePanel;
+    std::unique_ptr<SourceSubPanel> sourceSubPanel;
 
     void hideAllSubPanels();
     std::unordered_map<uint32_t, juce::Component::SafePointer<juce::Component>> componentByID;

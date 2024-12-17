@@ -29,8 +29,12 @@ add_library(ifm-impl STATIC
         src/ui/ifm-editor.cpp
         src/ui/main-panel.cpp
         src/ui/main-sub-panel.cpp
+        src/ui/matrix-panel.cpp
+        src/ui/matrix-sub-panel.cpp
         src/ui/mixer-panel.cpp
         src/ui/mixer-sub-panel.cpp
+        src/ui/source-panel.cpp
+        src/ui/source-sub-panel.cpp
 
         src/synth/synth.cpp
         src/synth/voice.cpp

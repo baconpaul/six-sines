@@ -15,8 +15,12 @@
 #include "patch-continuous.h"
 #include "main-panel.h"
 #include "main-sub-panel.h"
+#include "matrix-panel.h"
+#include "matrix-sub-panel.h"
 #include "mixer-panel.h"
 #include "mixer-sub-panel.h"
+#include "source-panel.h"
+#include "source-sub-panel.h"
 
 namespace baconpaul::fm::ui
 {
@@ -36,21 +40,25 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
     setStyle(sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
         sst::jucegui::style::StyleSheet::LIGHT));
 
-    matrixPanel = std::make_unique<jcmp::NamedPanel>("Matrix");
+    matrixPanel = std::make_unique<MatrixPanel>(*this);
     mixerPanel = std::make_unique<MixerPanel>(*this);
     singlePanel = std::make_unique<jcmp::NamedPanel>("Edit");
-    sourcesPanel = std::make_unique<jcmp::NamedPanel>("Sources");
+    sourcePanel = std::make_unique<SourcePanel>(*this);
     mainPanel = std::make_unique<MainPanel>(*this);
     addAndMakeVisible(*matrixPanel);
     addAndMakeVisible(*mixerPanel);
     addAndMakeVisible(*singlePanel);
-    addAndMakeVisible(*sourcesPanel);
+    addAndMakeVisible(*sourcePanel);
     addAndMakeVisible(*mainPanel);
 
     mainSubPanel = std::make_unique<MainSubPanel>(*this);
     singlePanel->addChildComponent(*mainSubPanel);
+    matrixSubPanel = std::make_unique<MatrixSubPanel>(*this);
+    singlePanel->addChildComponent(*matrixSubPanel);
     mixerSubPanel = std::make_unique<MixerSubPanel>(*this);
     singlePanel->addChildComponent(*mixerSubPanel);
+    sourceSubPanel = std::make_unique<SourceSubPanel>(*this);
+    singlePanel->addChildComponent(*sourceSubPanel);
 
     auto startMsg = Synth::UIToAudioMsg{Synth::UIToAudioMsg::REQUEST_REFRESH};
     uiToAudio.push(startMsg);
@@ -98,14 +106,16 @@ void IFMEditor::resized()
     sp = sp.translated(0, mp.getHeight());
     singlePanel->setBounds(sp.reduced(rdx));
     mainSubPanel->setBounds(singlePanel->getContentArea());
+    matrixSubPanel->setBounds(singlePanel->getContentArea());
     mixerSubPanel->setBounds(singlePanel->getContentArea());
+    sourceSubPanel->setBounds(singlePanel->getContentArea());
 
     auto mx = rb.withTrimmedBottom(edH).withTrimmedLeft(mp.getWidth());
     mixerPanel->setBounds(mx.reduced(rdx));
 
     auto ta = getLocalBounds().withHeight(tp);
     auto sr = ta.withWidth(mp.getWidth());
-    sourcesPanel->setBounds(sr.reduced(rdx));
+    sourcePanel->setBounds(sr.reduced(rdx));
 
     auto mn = ta.withTrimmedLeft(sr.getWidth());
     mainPanel->setBounds(mn.reduced(rdx));
