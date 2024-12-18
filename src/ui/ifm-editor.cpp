@@ -12,7 +12,7 @@
  */
 
 #include "ifm-editor.h"
-#include "patch-continuous.h"
+#include "patch-data-bindings.h"
 #include "main-panel.h"
 #include "main-sub-panel.h"
 #include "matrix-panel.h"
@@ -38,7 +38,7 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
     sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
 
     setStyle(sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
-        sst::jucegui::style::StyleSheet::LIGHT));
+        sst::jucegui::style::StyleSheet::DARK));
 
     matrixPanel = std::make_unique<MatrixPanel>(*this);
     mixerPanel = std::make_unique<MixerPanel>(*this);

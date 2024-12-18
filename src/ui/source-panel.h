@@ -15,7 +15,7 @@
 #define BACONPAUL_FMTHING_UI_SOURCE_PANEL_H
 
 #include "ifm-editor.h"
-#include "patch-continuous.h"
+#include "patch-data-bindings.h"
 
 namespace baconpaul::fm::ui
 {

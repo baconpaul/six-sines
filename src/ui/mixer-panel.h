@@ -16,9 +16,10 @@
 
 #include <sst/jucegui/components/Knob.h>
 #include <sst/jucegui/components/Label.h>
+#include <sst/jucegui/components/ToggleButton.h>
 #include <sst/jucegui/data/Continuous.h>
 #include "ifm-editor.h"
-#include "patch-continuous.h"
+#include "patch-data-bindings.h"
 
 namespace baconpaul::fm::ui
 {
@@ -36,6 +37,8 @@ struct MixerPanel : jcmp::NamedPanel, HasEditor
 
     std::array<std::unique_ptr<jcmp::Knob>, numOps> knobs;
     std::array<std::unique_ptr<PatchContinuous>, numOps> knobsData;
+    std::array<std::unique_ptr<jcmp::ToggleButton>, numOps> power;
+    std::array<std::unique_ptr<PatchDiscrete>, numOps> powerData;
     std::array<std::unique_ptr<jcmp::Label>, numOps> labels;
 };
 } // namespace baconpaul::fm::ui

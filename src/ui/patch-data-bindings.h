@@ -11,11 +11,12 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_UI_PATCH_CONTINUOUS_H
-#define BACONPAUL_FMTHING_UI_PATCH_CONTINUOUS_H
+#ifndef BACONPAUL_FMTHING_UI_PATCH_DATA_BINDINGS_H
+#define BACONPAUL_FMTHING_UI_PATCH_DATA_BINDINGS_H
 
 #include <cstdint>
 #include "sst/jucegui/data/Continuous.h"
+#include "sst/jucegui/data/Discrete.h"
 #include "sst/jucegui/components/Knob.h"
 
 #include "ifm-editor.h"
@@ -58,11 +59,49 @@ struct PatchContinuous : jdat::Continuous
     float getMax() const override { return p->meta.maxVal; }
 };
 
-template <typename P, typename T = jcmp::Knob, typename... Args>
-void createComponent(IFMEditor &e, P &panel, uint32_t id, std::unique_ptr<T> &cm,
-                     std::unique_ptr<PatchContinuous> &pc, Args... args)
+struct PatchDiscrete : jdat::Discrete
 {
-    pc = std::make_unique<PatchContinuous>(e, id);
+    IFMEditor &editor;
+    uint32_t pid;
+    Param *p{nullptr};
+    PatchDiscrete(IFMEditor &e, uint32_t id) : editor(e), pid(id)
+    {
+        p = e.patchCopy.paramMap.at(id);
+    }
+    ~PatchDiscrete() override = default;
+
+    std::string getLabel() const override
+    {
+        auto g = p->meta.groupName;
+        auto r = p->meta.name;
+        auto gp = r.find(g);
+        if (gp != std::string::npos)
+        {
+            r = r.substr(g.size() + 1); // trailing space
+        }
+        return r;
+    }
+    int getValue() const override { return static_cast<int>(std::round(p->value)); }
+    void setValueFromGUI(const int &f) override
+    {
+        p->value = f;
+        editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pid, static_cast<float>(f)});
+        editor.flushOperator();
+    }
+    void setValueFromModel(const int &f) override { p->value = f; }
+    int getDefaultValue() const override
+    {
+        return static_cast<int>(std::round(p->meta.defaultVal));
+    }
+    int getMin() const override { return static_cast<int>(std::round(p->meta.minVal)); }
+    int getMax() const override { return static_cast<int>(std::round(p->meta.maxVal)); }
+};
+
+template <typename P, typename T = jcmp::ToggleButton, typename Q, typename... Args>
+void createComponent(IFMEditor &e, P &panel, uint32_t id, std::unique_ptr<T> &cm,
+                     std::unique_ptr<Q> &pc, Args... args)
+{
+    pc = std::make_unique<Q>(e, id);
     cm = std::make_unique<T>();
 
     cm->onBeginEdit = [&e, args..., id, &panel]()
@@ -77,5 +116,6 @@ void createComponent(IFMEditor &e, P &panel, uint32_t id, std::unique_ptr<T> &cm
 
     e.componentByID[id] = juce::Component::SafePointer<juce::Component>(cm.get());
 }
+
 } // namespace baconpaul::fm::ui
 #endif // PATCH_CONTINUOUS_H
