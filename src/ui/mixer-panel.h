@@ -32,7 +32,7 @@ struct MixerPanel : jcmp::NamedPanel, HasEditor
 
     void resized() override;
 
-    void beginEdit();
+    void beginEdit(size_t idx);
 
     std::array<std::unique_ptr<jcmp::Knob>, numOps> knobs;
     std::array<std::unique_ptr<PatchContinuous>, numOps> knobsData;

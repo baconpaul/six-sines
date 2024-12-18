@@ -58,17 +58,17 @@ struct PatchContinuous : jdat::Continuous
     float getMax() const override { return p->meta.maxVal; }
 };
 
-template <typename P, typename T = jcmp::Knob>
+template <typename P, typename T = jcmp::Knob, typename... Args>
 void createComponent(IFMEditor &e, P &panel, uint32_t id, std::unique_ptr<T> &cm,
-                     std::unique_ptr<PatchContinuous> &pc)
+                     std::unique_ptr<PatchContinuous> &pc, Args... args)
 {
     pc = std::make_unique<PatchContinuous>(e, id);
     cm = std::make_unique<T>();
 
-    cm->onBeginEdit = [&e, id, &panel]()
+    cm->onBeginEdit = [&e, args..., id, &panel]()
     {
         e.uiToAudio.push({Synth::UIToAudioMsg::Action::BEGIN_EDIT, id});
-        panel.beginEdit();
+        panel.beginEdit(args...);
     };
     cm->onEndEdit = [&e, id, &panel]() {
         e.uiToAudio.push({Synth::UIToAudioMsg::Action::END_EDIT, id});

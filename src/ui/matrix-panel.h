@@ -27,9 +27,6 @@ struct MatrixPanel : jcmp::NamedPanel, HasEditor
     void resized() override;
 
     void beginEdit();
-
-    std::unique_ptr<PatchContinuous> levC, panC;
-    std::unique_ptr<jcmp::Knob> levK, panK;
 };
 } // namespace baconpaul::fm::ui
 #endif // MAIN_PANEL_H

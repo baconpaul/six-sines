@@ -17,14 +17,7 @@
 
 namespace baconpaul::fm::ui
 {
-MatrixPanel::MatrixPanel(IFMEditor &e) : jcmp::NamedPanel("Matrix"), HasEditor(e)
-{
-    createComponent(editor, *this, editor.patchCopy.output.level.meta.id, levK, levC);
-    addAndMakeVisible(*levK);
-
-    createComponent(editor, *this, editor.patchCopy.output.pan.meta.id, panK, panC);
-    addAndMakeVisible(*panK);
-}
+MatrixPanel::MatrixPanel(IFMEditor &e) : jcmp::NamedPanel("Matrix"), HasEditor(e) {}
 MatrixPanel::~MatrixPanel() = default;
 
 void MatrixPanel::resized()
@@ -32,8 +25,6 @@ void MatrixPanel::resized()
     auto b = getContentArea();
     auto h = getContentArea().getHeight() - 18;
     auto q = b.withWidth(h);
-    levK->setBounds(q);
-    panK->setBounds(q.translated(h + 2, 0));
 }
 
 void MatrixPanel::beginEdit()

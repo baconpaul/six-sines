@@ -23,7 +23,20 @@ struct MixerSubPanel : juce::Component, HasEditor
 {
     MixerSubPanel(IFMEditor &);
     ~MixerSubPanel();
-    void paint(juce::Graphics &g) { g.fillAll(juce::Colours::green); }
+    void paint(juce::Graphics &g)
+    {
+        g.fillAll(juce::Colours::green);
+        g.setFont(juce::FontOptions(40));
+        g.setColour(juce::Colours::red);
+        g.drawText(std::to_string(index), getLocalBounds(), juce::Justification::centred);
+    }
+
+    size_t index{0};
+    void setIndex(size_t i)
+    {
+        index = i;
+        repaint();
+    }
 };
 } // namespace baconpaul::fm::ui
 #endif // MIXER_SUB_PANE_H

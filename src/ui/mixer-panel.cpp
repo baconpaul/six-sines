@@ -22,7 +22,7 @@ MixerPanel::MixerPanel(IFMEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor(e)
     auto &mn = editor.patchCopy.mixerNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
-        createComponent(editor, *this, mn[i].level.meta.id, knobs[i], knobsData[i]);
+        createComponent(editor, *this, mn[i].level.meta.id, knobs[i], knobsData[i], i);
         knobs[i]->setDrawLabel(false);
         addAndMakeVisible(*knobs[i]);
         labels[i] = std::make_unique<jcmp::Label>();
@@ -45,10 +45,10 @@ void MixerPanel::resized()
     }
 }
 
-void MixerPanel::beginEdit()
+void MixerPanel::beginEdit(size_t idx)
 {
-    FMLOG("MixerPanel beginEdit");
     editor.hideAllSubPanels();
+    editor.mixerSubPanel->setIndex(idx);
     editor.mixerSubPanel->setVisible(true);
 }
 
