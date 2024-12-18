@@ -14,6 +14,7 @@
 #include "mixer-panel.h"
 #include "mixer-sub-panel.h"
 #include "ifm-editor.h"
+#include "ui-constants.h"
 
 namespace baconpaul::fm::ui
 {
@@ -32,7 +33,7 @@ MixerPanel::MixerPanel(IFMEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor(e)
         addAndMakeVisible(*power[i]);
 
         labels[i] = std::make_unique<jcmp::Label>();
-        labels[i]->setText("Op " + std::to_string(i + 1) + " Lev");
+        labels[i]->setText("Op " + std::to_string(i + 1) + " Level");
         addAndMakeVisible(*labels[i]);
     }
 }
@@ -40,16 +41,14 @@ MixerPanel::~MixerPanel() = default;
 
 void MixerPanel::resized()
 {
-    auto sz = 50;
-    auto bsz = 26;
-    auto lsz = 18;
-    auto b = getContentArea().withWidth(sz + bsz).withHeight(sz);
+
+    auto b = getContentArea().reduced(uicMargin, 0);
+    auto x = b.getX();
+    auto y = b.getY();
     for (auto i = 0U; i < numOps; ++i)
     {
-        knobs[i]->setBounds(b.withTrimmedLeft(bsz));
-        power[i]->setBounds(b.withWidth(bsz).withTrimmedTop(bsz / 2).withTrimmedBottom(bsz / 2));
-        labels[i]->setBounds(b.translated(0, sz).withHeight(lsz));
-        b = b.translated(0, sz + lsz + 2);
+        positionPowerKnobAndLabel(x, y, power[i], knobs[i], labels[i]);
+        y += uicLabeledKnobHeight + uicMargin;
     }
 }
 

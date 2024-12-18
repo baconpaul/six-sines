@@ -14,6 +14,7 @@
 #ifndef BACONPAUL_FMTHING_UI_SOURCE_PANEL_H
 #define BACONPAUL_FMTHING_UI_SOURCE_PANEL_H
 
+#include <sst/jucegui/components/Label.h>
 #include "ifm-editor.h"
 #include "patch-data-bindings.h"
 
@@ -26,10 +27,13 @@ struct SourcePanel : jcmp::NamedPanel, HasEditor
 
     void resized() override;
 
-    void beginEdit();
+    void beginEdit(size_t idx);
 
-    std::unique_ptr<PatchContinuous> levC, panC;
-    std::unique_ptr<jcmp::Knob> levK, panK;
+    std::array<std::unique_ptr<jcmp::Knob>, numOps> knobs;
+    std::array<std::unique_ptr<PatchContinuous>, numOps> knobsData;
+    std::array<std::unique_ptr<jcmp::ToggleButton>, numOps> power;
+    std::array<std::unique_ptr<PatchDiscrete>, numOps> powerData;
+    std::array<std::unique_ptr<jcmp::Label>, numOps> labels;
 };
 } // namespace baconpaul::fm::ui
 #endif // MAIN_PANEL_H

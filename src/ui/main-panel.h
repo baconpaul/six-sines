@@ -14,6 +14,8 @@
 #ifndef BACONPAUL_FMTHING_UI_MAIN_PANEL_H
 #define BACONPAUL_FMTHING_UI_MAIN_PANEL_H
 
+#include "sst/jucegui/components/Label.h"
+
 #include "ifm-editor.h"
 #include "patch-data-bindings.h"
 
@@ -28,8 +30,9 @@ struct MainPanel : jcmp::NamedPanel, HasEditor
 
     void beginEdit();
 
-    std::unique_ptr<PatchContinuous> levC, panC;
-    std::unique_ptr<jcmp::Knob> levK, panK;
+    std::unique_ptr<PatchContinuous> levData;
+    std::unique_ptr<jcmp::Knob> lev;
+    std::unique_ptr<jcmp::Label> levLabel;
 };
 } // namespace baconpaul::fm::ui
 #endif // MAIN_PANEL_H

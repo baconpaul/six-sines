@@ -117,7 +117,7 @@ struct Patch
         Param ratio;
         Param active;
 
-        std::vector<Param *> params() { return {&ratio}; }
+        std::vector<Param *> params() { return {&ratio, &active}; }
     };
     struct SelfNode
     {

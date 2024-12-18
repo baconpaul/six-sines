@@ -12,28 +12,27 @@
  */
 
 #include "main-panel.h"
-
+#include "ui-constants.h"
 #include "main-sub-panel.h"
 
 namespace baconpaul::fm::ui
 {
 MainPanel::MainPanel(IFMEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
 {
-    createComponent(editor, *this, editor.patchCopy.output.level.meta.id, levK, levC);
-    addAndMakeVisible(*levK);
-
-    createComponent(editor, *this, editor.patchCopy.output.pan.meta.id, panK, panC);
-    addAndMakeVisible(*panK);
+    createComponent(editor, *this, editor.patchCopy.output.level.meta.id, lev, levData);
+    lev->setDrawLabel(false);
+    addAndMakeVisible(*lev);
+    levLabel = std::make_unique<jcmp::Label>();
+    levLabel->setText("Level");
+    addAndMakeVisible(*levLabel);
 }
 MainPanel::~MainPanel() = default;
 
 void MainPanel::resized()
 {
-    auto b = getContentArea();
-    auto h = getContentArea().getHeight() - 18;
-    auto q = b.withWidth(h);
-    levK->setBounds(q);
-    panK->setBounds(q.translated(h + 2, 0));
+    auto b = getContentArea().reduced(uicMargin, 0);
+
+    positionKnobAndLabel(b.getX(), b.getY(), lev, levLabel);
 }
 
 void MainPanel::beginEdit()

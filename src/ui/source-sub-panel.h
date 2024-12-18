@@ -23,7 +23,20 @@ struct SourceSubPanel : juce::Component, HasEditor
 {
     SourceSubPanel(IFMEditor &);
     ~SourceSubPanel();
-    void paint(juce::Graphics &g) { g.fillAll(juce::Colours::orange); }
+    void paint(juce::Graphics &g)
+    {
+        g.fillAll(juce::Colours::orange);
+        g.setFont(juce::FontOptions(40));
+        g.setColour(juce::Colours::red);
+        g.drawText(std::to_string(index), getLocalBounds(), juce::Justification::centred);
+    }
+
+    size_t index{0};
+    void setIndex(size_t i)
+    {
+        index = i;
+        repaint();
+    }
 };
 } // namespace baconpaul::fm::ui
 #endif // MAIN_SUB_PANEL_H

@@ -21,6 +21,7 @@
 #include "mixer-sub-panel.h"
 #include "source-panel.h"
 #include "source-sub-panel.h"
+#include "ui-constants.h"
 
 namespace baconpaul::fm::ui
 {
@@ -98,17 +99,13 @@ void IFMEditor::resized()
     auto rb = getLocalBounds().withTrimmedTop(tp);
     auto edH = 300;
     auto mp = rb.withTrimmedBottom(edH);
-    mp = mp.withWidth(mp.getHeight());
+    mp = mp.withWidth((numOps + 1) * (uicPowerButtonSize + uicKnobSize + 2 * uicMargin));
 
     matrixPanel->setBounds(mp.reduced(rdx));
 
     auto sp = rb.withTrimmedBottom(mp.getHeight());
     sp = sp.translated(0, mp.getHeight());
     singlePanel->setBounds(sp.reduced(rdx));
-    mainSubPanel->setBounds(singlePanel->getContentArea());
-    matrixSubPanel->setBounds(singlePanel->getContentArea());
-    mixerSubPanel->setBounds(singlePanel->getContentArea());
-    sourceSubPanel->setBounds(singlePanel->getContentArea());
 
     auto mx = rb.withTrimmedBottom(edH).withTrimmedLeft(mp.getWidth());
     mixerPanel->setBounds(mx.reduced(rdx));
@@ -119,6 +116,11 @@ void IFMEditor::resized()
 
     auto mn = ta.withTrimmedLeft(sr.getWidth());
     mainPanel->setBounds(mn.reduced(rdx));
+
+    mainSubPanel->setBounds(singlePanel->getContentArea());
+    matrixSubPanel->setBounds(singlePanel->getContentArea());
+    mixerSubPanel->setBounds(singlePanel->getContentArea());
+    sourceSubPanel->setBounds(singlePanel->getContentArea());
 }
 
 void IFMEditor::hideAllSubPanels()
