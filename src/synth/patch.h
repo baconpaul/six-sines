@@ -94,37 +94,38 @@ struct Patch
 
     struct DAHDSRMixin
     {
-        DAHDSRMixin(const std::string name, int id0)
+        using tsr = sst::basic_blocks::modulators::TenSecondRange;
+        DAHDSRMixin(const std::string name, int id0, bool longAdsr)
             : delay(floatEnvRateMd()
                         .withName(name + " Delay")
                         .withGroupName(name)
-                        .withDefault(sst::basic_blocks::modulators::TenSecondRange::etMin)
+                        .withDefault(tsr::etMin)
                         .withID(id0 + 0)),
               attack(floatEnvRateMd()
                          .withName(name + " Attack")
                          .withGroupName(name)
-                         .withDefault(-1.f)
+                         .withDefault(longAdsr ? -1.f : tsr::etMin)
                          .withID(id0 + 1)),
               hold(floatEnvRateMd()
                        .withName(name + " Hold")
                        .withGroupName(name)
-                       .withDefault(sst::basic_blocks::modulators::TenSecondRange::etMin)
+                       .withDefault(tsr::etMin)
                        .withID(id0 + 2)),
               decay(floatEnvRateMd()
                         .withName(name + " Decay")
                         .withGroupName(name)
-                        .withDefault(1.f)
+                        .withDefault(longAdsr ? 1.f : tsr::etMin)
                         .withID(id0 + 3)),
               sustain(floatMd()
                           .asPercent()
                           .withName(name + " Sustain")
                           .withGroupName(name)
-                          .withDefault(0.7f)
+                          .withDefault(longAdsr? 0.7f : 1.f)
                           .withID(id0 + 4)),
               release(floatEnvRateMd()
                           .withName(name + " Release")
                           .withGroupName(name)
-                          .withDefault(2.f)
+                          .withDefault(longAdsr ? 2.f : tsr::etMin)
                           .withID(id0 + 5))
         {
         }
@@ -239,7 +240,7 @@ struct Patch
                          .withFlags(CLAP_PARAM_IS_STEPPED)
                          .withDefault(idx == 0 ? true : false)
                          .withID(id(1))),
-              DAHDSRMixin(name(), id(2))
+              DAHDSRMixin(name(), id(2), false)
         {
         }
 
@@ -256,7 +257,7 @@ struct Patch
     {
         static constexpr uint32_t idBase{500};
         OutputNode()
-            : DAHDSRMixin(name(), id(2)), level(floatMd()
+            : DAHDSRMixin(name(), id(2), true), level(floatMd()
                                                     .asPercent()
                                                     .withName(name() + " Level")
                                                     .withGroupName(name())
