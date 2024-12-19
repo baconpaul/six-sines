@@ -47,7 +47,7 @@ void SourcePanel::resized()
     for (auto i = 0U; i < numOps; ++i)
     {
         positionPowerKnobAndLabel(x, y, power[i], knobs[i], labels[i]);
-        x += uicLabeledKnobHeight + uicPowerButtonSize;
+        x += uicPowerKnobWidth + uicMargin;
     }
 }
 

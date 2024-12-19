@@ -14,6 +14,8 @@
 #ifndef BACONPAUL_FMTHING_UI_MATRIX_PANEL_H
 #define BACONPAUL_FMTHING_UI_MATRIX_PANEL_H
 
+#include <sst/jucegui/components/Label.h>
+#include <sst/jucegui/components/ToggleButton.h>
 #include "ifm-editor.h"
 #include "patch-data-bindings.h"
 
@@ -26,7 +28,19 @@ struct MatrixPanel : jcmp::NamedPanel, HasEditor
 
     void resized() override;
 
-    void beginEdit();
+    void beginEdit(size_t, bool);
+
+    std::array<std::unique_ptr<jcmp::Knob>, numOps> Sknobs;
+    std::array<std::unique_ptr<PatchContinuous>, numOps> SknobsData;
+    std::array<std::unique_ptr<jcmp::ToggleButton>, numOps> Spower;
+    std::array<std::unique_ptr<PatchDiscrete>, numOps> SpowerData;
+    std::array<std::unique_ptr<jcmp::Label>, numOps> Slabels;
+
+    std::array<std::unique_ptr<jcmp::Knob>, matrixSize> Mknobs;
+    std::array<std::unique_ptr<PatchContinuous>, matrixSize> MknobsData;
+    std::array<std::unique_ptr<jcmp::ToggleButton>, matrixSize> Mpower;
+    std::array<std::unique_ptr<PatchDiscrete>, matrixSize> MpowerData;
+    std::array<std::unique_ptr<jcmp::Label>, matrixSize> Mlabels;
 };
 } // namespace baconpaul::fm::ui
 #endif // MAIN_PANEL_H

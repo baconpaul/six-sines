@@ -23,7 +23,26 @@ struct MatrixSubPanel : juce::Component, HasEditor
 {
     MatrixSubPanel(IFMEditor &);
     ~MatrixSubPanel();
-    void paint(juce::Graphics &g) { g.fillAll(juce::Colours::blue); }
+    void paint(juce::Graphics &g)
+    {
+        if (isSelf)
+            g.fillAll(juce::Colours::darkblue);
+        else
+            g.fillAll(juce::Colours::darkred);
+
+        g.setFont(juce::FontOptions(40));
+        g.setColour(juce::Colours::white);
+        g.drawText(std::to_string(index), getLocalBounds(), juce::Justification::centred);
+    }
+
+    bool isSelf{false};
+    size_t index{0};
+    void setSelectedIndex(int idx, bool isl)
+    {
+        isSelf = isl;
+        index = idx;
+        repaint();
+    };
 };
 } // namespace baconpaul::fm::ui
 #endif // MAIN_SUB_PANEL_H

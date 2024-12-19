@@ -24,6 +24,7 @@ static constexpr uint32_t uicLabelHeight{18};
 static constexpr uint32_t uicLabelGap{2};
 static constexpr uint32_t uicMargin{4};
 static constexpr uint32_t uicLabeledKnobHeight{uicKnobSize + uicLabelHeight + uicLabelGap};
+static constexpr uint32_t uicPowerKnobWidth{uicKnobSize + uicPowerButtonSize + uicMargin};
 
 template <typename K, typename L>
 inline void positionKnobAndLabel(uint32_t x, uint32_t y, const K &k, const L &l)

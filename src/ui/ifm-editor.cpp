@@ -68,7 +68,7 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
     idleTimer = std::make_unique<IdleTimer>(*this);
     idleTimer->startTimer(1000. / 60.);
 
-    setSize(800, 920);
+    setSize(800, 830);
 
     auto q = std::make_unique<PatchContinuous>(*this, patchCopy.output.level.meta.id);
 }
@@ -97,9 +97,9 @@ void IFMEditor::resized()
     auto tp = 100;
 
     auto rb = getLocalBounds().withTrimmedTop(tp);
-    auto edH = 300;
+    auto edH = 250;
     auto mp = rb.withTrimmedBottom(edH);
-    mp = mp.withWidth((numOps + 1) * (uicPowerButtonSize + uicKnobSize + 2 * uicMargin));
+    mp = mp.withWidth(numOps * (uicPowerKnobWidth + uicMargin) + 2 * uicMargin + 10);
 
     matrixPanel->setBounds(mp.reduced(rdx));
 
