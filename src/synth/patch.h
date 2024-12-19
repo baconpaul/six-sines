@@ -138,10 +138,11 @@ struct Patch
         int index;
         SourceNode(size_t idx)
             : index(idx), ratio(floatMd()
-                                    .withRange(0, 16)
+                                    .withRange(-4, 4)
+                                    .withATwoToTheBFormatting(1, 1, "x")
                                     .withName(name() + " Ratio")
                                     .withGroupName(name())
-                                    .withDefault(1.0)
+                                    .withDefault(0.0)
                                     .withID(id(0))),
               active(boolMd()
                          .withGroupName(name())

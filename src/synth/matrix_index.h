@@ -29,11 +29,11 @@ struct MatrixIndex
         if (!sourceTableInit)
         {
             int idx{0};
-            for (int i = 1; i < numOps; ++i)
+            for (int t = 1; t < numOps; ++t)
             {
-                for (int j = i; j < numOps; ++j)
+                for (int s = 0; s < t; ++s)
                 {
-                    sourceTable[idx++] = i - 1;
+                    sourceTable[idx++] = s;
                 }
             }
             sourceTableInit = true;
@@ -49,11 +49,11 @@ struct MatrixIndex
         if (!targetTableInit)
         {
             int idx{0};
-            for (int i = 1; i < numOps; ++i)
+            for (int t = 1; t < numOps; ++t)
             {
-                for (int j = i; j < numOps; ++j)
+                for (int s = 0; s < t; ++s)
                 {
-                    targetTable[idx++] = j;
+                    targetTable[idx++] = t;
                 }
             }
             targetTableInit = true;
