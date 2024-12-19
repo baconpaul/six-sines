@@ -32,7 +32,7 @@ MatrixPanel::MatrixPanel(IFMEditor &e) : jcmp::NamedPanel("Matrix"), HasEditor(e
         addAndMakeVisible(*Spower[i]);
 
         Slabels[i] = std::make_unique<jcmp::Label>();
-        Slabels[i]->setText("Op " + std::to_string(i + 1) + " F/Bk");
+        Slabels[i]->setText("Op " + std::to_string(i + 1) + " " + u8"\U000021A9");
         addAndMakeVisible(*Slabels[i]);
     }
 
@@ -50,8 +50,11 @@ MatrixPanel::MatrixPanel(IFMEditor &e) : jcmp::NamedPanel("Matrix"), HasEditor(e
 
         auto si = MatrixIndex::sourceIndexAt(i);
         auto ti = MatrixIndex::targetIndexAt(i);
+        std::string glyph = "+";
+        if (si == ti - 1)
+            glyph = u8"\U00002192";
         Mlabels[i] = std::make_unique<jcmp::Label>();
-        Mlabels[i]->setText("Op " + std::to_string(si + 1) + " ->");
+        Mlabels[i]->setText("Op " + std::to_string(si + 1) + " " + glyph);
         addAndMakeVisible(*Mlabels[i]);
     }
 }

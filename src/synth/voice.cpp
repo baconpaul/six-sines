@@ -23,13 +23,15 @@ namespace scpu = sst::cpputils;
 
 Voice::Voice(const Patch &p)
     : out(p.output, mixerNode), output{out.output[0], out.output[1]},
-      mixerNode(scpu::make_array_lambda<MixerNode, numOps>([this](auto i)
-                                                           { return MixerNode(this->src[i]); })),
+      mixerNode(scpu::make_array_lambda<MixerNode, numOps>(
+          [this, &p](auto i) { return MixerNode(p.mixerNodes[i], this->src[i]); })),
       selfNode(scpu::make_array_lambda<MatrixNodeSelf, numOps>(
-          [this](auto i) { return MatrixNodeSelf(this->src[i]); })),
+          [this, &p](auto i) { return MatrixNodeSelf(p.selfNodes[i], this->src[i]); })),
       matrixNode(scpu::make_array_lambda<MatrixNodeFrom, matrixSize>(
-          [this](auto i)
-          { return MatrixNodeFrom(this->targetAtMatrix(i), this->sourceAtMatrix(i)); }))
+          [&p, this](auto i) {
+              return MatrixNodeFrom(p.matrixNodes[i], this->targetAtMatrix(i),
+                                    this->sourceAtMatrix(i));
+          }))
 {
     std::fill(isKeytrack.begin(), isKeytrack.end(), true);
     std::fill(cmRatio.begin(), cmRatio.end(), 1.0);

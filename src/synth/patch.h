@@ -92,6 +92,46 @@ struct Patch
         std::for_each(matrixNodes.begin(), matrixNodes.end(), pushParams);
     }
 
+    struct DAHDSRMixin
+    {
+        DAHDSRMixin(const std::string name, int id0)
+            : delay(floatEnvRateMd()
+                        .withName(name + " Delay")
+                        .withGroupName(name)
+                        .withDefault(sst::basic_blocks::modulators::TenSecondRange::etMin)
+                        .withID(id0 + 0)),
+              attack(floatEnvRateMd()
+                         .withName(name + " Attack")
+                         .withGroupName(name)
+                         .withDefault(-1.f)
+                         .withID(id0 + 1)),
+              hold(floatEnvRateMd()
+                       .withName(name + " Hold")
+                       .withGroupName(name)
+                       .withDefault(sst::basic_blocks::modulators::TenSecondRange::etMin)
+                       .withID(id0 + 2)),
+              decay(floatEnvRateMd()
+                        .withName(name + " Decay")
+                        .withGroupName(name)
+                        .withDefault(1.f)
+                        .withID(id0 + 3)),
+              sustain(floatMd()
+                          .asPercent()
+                          .withName(name + " Sustain")
+                          .withGroupName(name)
+                          .withDefault(0.7f)
+                          .withID(id0 + 4)),
+              release(floatEnvRateMd()
+                          .withName(name + " Release")
+                          .withGroupName(name)
+                          .withDefault(2.f)
+                          .withID(id0 + 5))
+        {
+        }
+
+        Param delay, attack, hold, decay, sustain, release;
+    };
+
     struct SourceNode
     {
         static constexpr uint32_t idBase{1500}, idStride{250};
@@ -181,7 +221,7 @@ struct Patch
         std::vector<Param *> params() { return {&level, &active}; }
     };
 
-    struct MixerNode
+    struct MixerNode : public DAHDSRMixin
     {
         static constexpr uint32_t idBase{20000}, idStride{100};
         int index;
@@ -197,7 +237,8 @@ struct Patch
                          .withGroupName(name())
                          .withFlags(CLAP_PARAM_IS_STEPPED)
                          .withDefault(idx == 0 ? true : false)
-                         .withID(id(1)))
+                         .withID(id(1))),
+              DAHDSRMixin(name(), id(2))
         {
         }
 
@@ -210,53 +251,22 @@ struct Patch
         std::vector<Param *> params() { return {&level, &active}; }
     };
 
-    struct OutputNode
+    struct OutputNode : public DAHDSRMixin
     {
         static constexpr uint32_t idBase{500};
         OutputNode()
-            : level(floatMd()
-                        .asPercent()
-                        .withName(name() + " Level")
-                        .withGroupName(name())
-                        .withDefault(1.0)
-                        .withID(id(0))),
+            : DAHDSRMixin(name(), id(2)), level(floatMd()
+                                                    .asPercent()
+                                                    .withName(name() + " Level")
+                                                    .withGroupName(name())
+                                                    .withDefault(1.0)
+                                                    .withID(id(0))),
               pan(floatMd()
                       .asPercentBipolar()
                       .withName(name() + " Pan")
                       .withGroupName(name())
                       .withDefault(0.f)
-                      .withID(id(1))),
-              delay(floatEnvRateMd()
-                        .withName(name() + " Delay")
-                        .withGroupName(name())
-                        .withDefault(sst::basic_blocks::modulators::TenSecondRange::etMin)
-                        .withID(id(2))),
-              attack(floatEnvRateMd()
-                         .withName(name() + " Attack")
-                         .withGroupName(name())
-                         .withDefault(-1.f)
-                         .withID(id(3))),
-              hold(floatEnvRateMd()
-                       .withName(name() + " Hold")
-                       .withGroupName(name())
-                       .withDefault(sst::basic_blocks::modulators::TenSecondRange::etMin)
-                       .withID(id(4))),
-              decay(floatEnvRateMd()
-                        .withName(name() + " Decay")
-                        .withGroupName(name())
-                        .withDefault(1.f)
-                        .withID(id(5))),
-              sustain(floatMd()
-                          .asPercent()
-                          .withName(name() + " Sustain")
-                          .withGroupName(name())
-                          .withDefault(0.7f)
-                          .withID(id(6))),
-              release(floatEnvRateMd()
-                          .withName(name() + " Release")
-                          .withGroupName(name())
-                          .withDefault(2.f)
-                          .withID(id(7)))
+                      .withID(id(1)))
         {
         }
 
@@ -264,7 +274,6 @@ struct Patch
         uint32_t id(int f) const { return idBase + f; }
 
         Param level, pan;
-        Param delay, attack, hold, decay, sustain, release;
 
         std::vector<Param *> params()
         {

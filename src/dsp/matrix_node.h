@@ -30,7 +30,10 @@ struct MatrixNodeFrom
 {
     OpSource &onto, &from;
     SRProvider sr;
-    MatrixNodeFrom(OpSource &on, OpSource &fr) : onto(on), from(fr), env(&sr) {}
+    MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr)
+        : onto(on), from(fr), env(&sr)
+    {
+    }
 
     sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
 
@@ -55,8 +58,9 @@ struct MatrixNodeSelf
 {
     OpSource &onto;
     SRProvider sr;
-    MatrixNodeSelf(OpSource &on) : onto(on), env(&sr){};
+    MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on) : onto(on), env(&sr){};
     float fbBase{0.0};
+    bool active{true};
 
     sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
 
@@ -76,7 +80,16 @@ struct MixerNode
     float output alignas(16)[2][blockSize];
     OpSource &from;
     SRProvider sr;
-    MixerNode(OpSource &f) : from(f), env(&sr) { memset(output, 0, sizeof(output)); }
+
+    const float &level;
+    const float &delay, &attackv, &hold, &decay, &sustain, &release;
+
+    MixerNode(const Patch::MixerNode &mn, OpSource &f)
+        : from(f), env(&sr), level(mn.level), delay(mn.delay), attackv(mn.attack), hold(mn.hold),
+          decay(mn.decay), sustain(mn.sustain), release(mn.release)
+    {
+        memset(output, 0, sizeof(output));
+    }
 
     float baseLevel{1.0};
 
