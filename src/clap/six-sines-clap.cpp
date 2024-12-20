@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -24,9 +24,9 @@
 #include "sst/voicemanager/midi1_to_voicemanager.h"
 #include "sst/clap_juce_shim/clap_juce_shim.h"
 
-#include "ui/ifm-editor.h"
+#include "ui/six-sines-editor.h"
 
-namespace baconpaul::fm
+namespace baconpaul::six_sines
 {
 
 extern const clap_plugin_descriptor *getDescriptor();
@@ -40,16 +40,16 @@ static constexpr clap::helpers::CheckingLevel checkLevel = clap::helpers::Checki
 
 using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
 
-struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
+struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 {
-    FMClap(const clap_host *h) : plugHelper_t(getDescriptor(), h)
+    SixSinesClap(const clap_host *h) : plugHelper_t(getDescriptor(), h)
     {
         engine = std::make_unique<Synth>();
 
         clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
         clapJuceShim->setResizable(false);
     }
-    virtual ~FMClap(){};
+    virtual ~SixSinesClap(){};
 
     std::unique_ptr<Synth> engine;
     size_t blockPos{0};
@@ -176,7 +176,7 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             case CLAP_EVENT_PARAM_VALUE:
             {
                 auto pevt = reinterpret_cast<const clap_event_param_value *>(nextEvent);
-                engine->handleParamValue(static_cast<baconpaul::fm::Param *>(pevt->cookie),
+                engine->handleParamValue(static_cast<baconpaul::six_sines::Param *>(pevt->cookie),
                                          pevt->param_id, pevt->value);
             }
             break;
@@ -201,7 +201,7 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     bool stateSave(const clap_ostream *ostream) noexcept override
     {
         std::ostringstream oss;
-        oss << "FM;V=1\n";
+        oss << "SIXSINES;V=1\n";
         for (auto p : engine->patch.params)
         {
             oss << p->meta.id << "|" << p->value << "\n";
@@ -243,7 +243,7 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         if (totalRd == 0)
         {
-            FMLOG("Received stream size 0. Invalid state");
+            SXSNLOG("Received stream size 0. Invalid state");
             return false;
         }
 
@@ -256,9 +256,9 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             auto ss = data.substr(0, p);
             if (first)
             {
-                if (ss != "FM;V=1")
+                if (ss != "SIXSINES;V=1")
                 {
-                    FMLOG("Bad version string [" << ss << "]");
+                    SXSNLOG("Bad version string [" << ss << "]");
                     return false;
                 }
                 first = false;
@@ -333,7 +333,7 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         auto val = it->second->meta.valueFromString(display, err);
         if (!val.has_value())
         {
-            FMLOG("Error converting '" << display << "' : " << err);
+            SXSNLOG("Error converting '" << display << "' : " << err);
             return false;
         }
         *value = *val;
@@ -351,7 +351,7 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     ADD_SHIM_LINUX_TIMER(clapJuceShim)
     std::unique_ptr<juce::Component> createEditor() override
     {
-        return std::make_unique<baconpaul::fm::ui::IFMEditor>(
+        return std::make_unique<baconpaul::six_sines::ui::SixSinesEditor>(
             engine->audioToUi, engine->uiToAudio, [this]() { _host.paramsRequestFlush(); });
     }
 
@@ -375,14 +375,14 @@ struct FMClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
 const clap_plugin *makePlugin(const clap_host *h)
 {
-    FMLOG("makePlugin");
-    auto res = new baconpaul::fm::clapimpl::FMClap(h);
+    SXSNLOG("makePlugin");
+    auto res = new baconpaul::six_sines::clapimpl::SixSinesClap(h);
     return res->clapPlugin();
 }
-} // namespace baconpaul::fm
+} // namespace baconpaul::six_sines
 
 namespace chlp = clap::helpers;
-namespace bfmc = baconpaul::fm::clapimpl;
+namespace bpss = baconpaul::six_sines::clapimpl;
 
-template class chlp::Plugin<bfmc::misLevel, bfmc::checkLevel>;
-template class chlp::HostProxy<bfmc::misLevel, bfmc::checkLevel>;
+template class chlp::Plugin<bpss::misLevel, bpss::checkLevel>;
+template class chlp::HostProxy<bpss::misLevel, bpss::checkLevel>;

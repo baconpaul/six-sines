@@ -35,3 +35,5 @@ Friday
 - lfo support
 - step support
 - typein
+- auv2
+- vst3

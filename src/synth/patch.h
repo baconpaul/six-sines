@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,8 +11,8 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_SYNTH_PATCH_H
-#define BACONPAUL_FMTHING_SYNTH_PATCH_H
+#ifndef BACONPAUL_SIX_SINES_SYNTH_PATCH_H
+#define BACONPAUL_SIX_SINES_SYNTH_PATCH_H
 
 #include <vector>
 #include <array>
@@ -25,7 +25,7 @@
 #include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
 #include "synth/matrix_index.h"
 
-namespace baconpaul::fm
+namespace baconpaul::six_sines
 {
 namespace scpu = sst::cpputils;
 using md_t = sst::basic_blocks::params::ParamMetaData;
@@ -77,8 +77,8 @@ struct Patch
             {
                 if (paramMap.find(p->meta.id) != paramMap.end())
                 {
-                    FMLOG("Duplicate param id " << p->meta.id << " at " << p->meta.name);
-                    FMLOG("Collision with " << paramMap[p->meta.id]->meta.name);
+                    SXSNLOG("Duplicate param id " << p->meta.id << " at " << p->meta.name);
+                    SXSNLOG("Collision with " << paramMap[p->meta.id]->meta.name);
                     std::terminate();
                 }
                 paramMap.emplace(p->meta.id, p);
@@ -217,7 +217,7 @@ struct Patch
         MatrixNode(size_t idx)
             : level(floatMd()
                         .asPercent()
-                        .withName(name(idx) + " FM Depth")
+                        .withName(name(idx) + " Depth")
                         .withGroupName(name(idx))
                         .withDefault(0.f)
                         .withID(id(0, idx))),
@@ -320,5 +320,5 @@ struct Patch
     std::array<MixerNode, numOps> mixerNodes;
     OutputNode output;
 };
-} // namespace baconpaul::fm
+} // namespace baconpaul::six_sines
 #endif // PATCH_H

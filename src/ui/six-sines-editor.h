@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,8 +11,8 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_UI_IFM_EDITOR_H
-#define BACONPAUL_FMTHING_UI_IFM_EDITOR_H
+#ifndef BACONPAUL_SIX_SINES_UI_SIX_SINES_EDITOR_H
+#define BACONPAUL_SIX_SINES_UI_SIX_SINES_EDITOR_H
 
 #include <functional>
 #include <utility>
@@ -30,7 +30,7 @@
 namespace jcmp = sst::jucegui::components;
 namespace jdat = sst::jucegui::data;
 
-namespace baconpaul::fm::ui
+namespace baconpaul::six_sines::ui
 {
 struct MainPanel;
 struct MainSubPanel;
@@ -42,15 +42,15 @@ struct MixerSubPanel;
 struct SourcePanel;
 struct SourceSubPanel;
 
-struct IFMEditor : jcmp::WindowPanel
+struct SixSinesEditor : jcmp::WindowPanel
 {
     Patch patchCopy;
     Synth::audioToUIQueue_t &audioToUI;
     Synth::uiToAudioQueue_T &uiToAudio;
     std::function<void()> flushOperator;
-    IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &utoa,
-              std::function<void()> flushOperator);
-    virtual ~IFMEditor();
+    SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &utoa,
+                   std::function<void()> flushOperator);
+    virtual ~SixSinesEditor();
 
     void resized() override;
 
@@ -84,8 +84,8 @@ struct IFMEditor : jcmp::WindowPanel
 
 struct HasEditor
 {
-    IFMEditor &editor;
-    HasEditor(IFMEditor &e) : editor(e) {}
+    SixSinesEditor &editor;
+    HasEditor(SixSinesEditor &e) : editor(e) {}
 };
-} // namespace baconpaul::fm::ui
-#endif // IFM_EDITOR_H
+} // namespace baconpaul::six_sines::ui
+#endif

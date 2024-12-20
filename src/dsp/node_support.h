@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,15 +11,15 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_DSP_NODE_SUPPORT_H
-#define BACONPAUL_FMTHING_DSP_NODE_SUPPORT_H
+#ifndef BACONPAUL_SIX_SINES_DSP_NODE_SUPPORT_H
+#define BACONPAUL_SIX_SINES_DSP_NODE_SUPPORT_H
 
 #include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
 
 #include "dsp/sr_provider.h"
 
-namespace baconpaul::fm
+namespace baconpaul::six_sines
 {
 namespace sdsp = sst::basic_blocks::dsp;
 
@@ -44,7 +44,7 @@ template <typename T> struct EnvelopeSupport
         auto mn = sst::basic_blocks::modulators::TenSecondRange::etMin + 0.001;
         auto mx = sst::basic_blocks::modulators::TenSecondRange::etMax - 0.001;
 
-        if (decay < mn && attackv < mn && hold < mn && delay < mn  && release > mx)
+        if (decay < mn && attackv < mn && hold < mn && delay < mn && release > mx)
         {
             constantEnv = true;
         }
@@ -57,7 +57,7 @@ template <typename T> struct EnvelopeSupport
             env.attack(delay);
         else if (constantEnv)
         {
-            for (int i=0; i<blockSize; ++i)
+            for (int i = 0; i < blockSize; ++i)
                 env.outputCache[i] = sustain;
         }
         else
@@ -71,6 +71,6 @@ template <typename T> struct EnvelopeSupport
         env.processBlockScaledAD(delay, attackv, hold, decay, sustain, release, gated);
     }
 };
-} // namespace baconpaul::fm
+} // namespace baconpaul::six_sines
 
 #endif // NODE_SUPPORT_H

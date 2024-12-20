@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,24 +11,24 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_UI_PATCH_DATA_BINDINGS_H
-#define BACONPAUL_FMTHING_UI_PATCH_DATA_BINDINGS_H
+#ifndef BACONPAUL_SIX_SINES_UI_PATCH_DATA_BINDINGS_H
+#define BACONPAUL_SIX_SINES_UI_PATCH_DATA_BINDINGS_H
 
 #include <cstdint>
 #include "sst/jucegui/data/Continuous.h"
 #include "sst/jucegui/data/Discrete.h"
 #include "sst/jucegui/components/Knob.h"
 
-#include "ifm-editor.h"
+#include "six-sines-editor.h"
 
-namespace baconpaul::fm::ui
+namespace baconpaul::six_sines::ui
 {
 struct PatchContinuous : jdat::Continuous
 {
-    IFMEditor &editor;
+    SixSinesEditor &editor;
     uint32_t pid;
     Param *p{nullptr};
-    PatchContinuous(IFMEditor &e, uint32_t id) : editor(e), pid(id)
+    PatchContinuous(SixSinesEditor &e, uint32_t id) : editor(e), pid(id)
     {
         p = e.patchCopy.paramMap.at(id);
     }
@@ -63,10 +63,10 @@ struct PatchContinuous : jdat::Continuous
 
 struct PatchDiscrete : jdat::Discrete
 {
-    IFMEditor &editor;
+    SixSinesEditor &editor;
     uint32_t pid;
     Param *p{nullptr};
-    PatchDiscrete(IFMEditor &e, uint32_t id) : editor(e), pid(id)
+    PatchDiscrete(SixSinesEditor &e, uint32_t id) : editor(e), pid(id)
     {
         p = e.patchCopy.paramMap.at(id);
     }
@@ -94,7 +94,7 @@ struct PatchDiscrete : jdat::Discrete
 };
 
 template <typename P, typename T, typename Q, typename... Args>
-void createComponent(IFMEditor &e, P &panel, uint32_t id, std::unique_ptr<T> &cm,
+void createComponent(SixSinesEditor &e, P &panel, uint32_t id, std::unique_ptr<T> &cm,
                      std::unique_ptr<Q> &pc, Args... args)
 {
     pc = std::make_unique<Q>(e, id);
@@ -124,5 +124,5 @@ void createComponent(IFMEditor &e, P &panel, uint32_t id, std::unique_ptr<T> &cm
     e.componentByID[id] = juce::Component::SafePointer<juce::Component>(cm.get());
 }
 
-} // namespace baconpaul::fm::ui
+} // namespace baconpaul::six_sines::ui
 #endif // PATCH_CONTINUOUS_H

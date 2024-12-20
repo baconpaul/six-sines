@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -13,9 +13,9 @@
 
 #include "matrix-sub-panel.h"
 
-namespace baconpaul::fm::ui
+namespace baconpaul::six_sines::ui
 {
-MatrixSubPanel::MatrixSubPanel(IFMEditor &e) : HasEditor(e){};
+MatrixSubPanel::MatrixSubPanel(SixSinesEditor &e) : HasEditor(e){};
 MatrixSubPanel::~MatrixSubPanel() {}
 void MatrixSubPanel::setSelectedIndex(int idx)
 {
@@ -23,4 +23,4 @@ void MatrixSubPanel::setSelectedIndex(int idx)
     repaint();
 }
 
-} // namespace baconpaul::fm::ui
+} // namespace baconpaul::six_sines::ui

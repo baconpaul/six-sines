@@ -22,7 +22,7 @@ sub findfiles
         $hg =~ s:/:_:g;
         $hg =~ s:\.:_:g;
         $hg =~ s:-:_:g;
-        $hg =~ s:src:baconpaul_fmthing:;
+        $hg =~ s:src:baconpaul_six_sines:;
         $hg = uc($hg);
         print "$f -> $hg\n";
 

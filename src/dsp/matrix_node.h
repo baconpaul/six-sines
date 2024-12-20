@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,8 +11,8 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_DSP_MATRIX_NODE_H
-#define BACONPAUL_FMTHING_DSP_MATRIX_NODE_H
+#ifndef BACONPAUL_SIX_SINES_DSP_MATRIX_NODE_H
+#define BACONPAUL_SIX_SINES_DSP_MATRIX_NODE_H
 
 #include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
@@ -23,7 +23,7 @@
 #include "dsp/node_support.h"
 #include "synth/patch.h"
 
-namespace baconpaul::fm
+namespace baconpaul::six_sines
 {
 namespace mech = sst::basic_blocks::mechanics;
 
@@ -168,14 +168,13 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
 
         envProcess(gated, false);
         mech::scale_by<blockSize>(env.outputCache, output[0], output[1]);
-        mech::scale_by<blockSize>(0.5, output[0], output[1]);
 
         // Apply main output
         auto lv = level;
-        lv = lv * lv * lv;
+        lv = 0.2 * lv * lv * lv;
         mech::scale_by<blockSize>(lv, output[0], output[1]);
     }
 };
-} // namespace baconpaul::fm
+} // namespace baconpaul::six_sines
 
 #endif // MATRIX_NODE_H

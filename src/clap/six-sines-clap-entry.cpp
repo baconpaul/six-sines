@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -12,22 +12,22 @@
  */
 
 #include <clap/clap.h>
-#include "ifm-clap-entry-impl.h"
+#include "six-sines-clap-entry-impl.h"
 
 extern "C"
 {
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wattributes" // other peoples errors are outside my scope
+#pragma GCC diagnostic ignored "-Wattributes"
 #endif
 
     // clang-format off
     const CLAP_EXPORT struct clap_plugin_entry clap_entry = {
         CLAP_VERSION,
-        baconpaul::fm::clap_init,
-        baconpaul::fm::clap_deinit,
-        baconpaul::fm::get_factory
+        baconpaul::six_sines::clap_init,
+        baconpaul::six_sines::clap_deinit,
+        baconpaul::six_sines::get_factory
     };
     // clang-format on
 #ifdef __GNUC__

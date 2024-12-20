@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,13 +11,13 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_SYNTH_MATRIX_INDEX_H
-#define BACONPAUL_FMTHING_SYNTH_MATRIX_INDEX_H
+#ifndef BACONPAUL_SIX_SINES_SYNTH_MATRIX_INDEX_H
+#define BACONPAUL_SIX_SINES_SYNTH_MATRIX_INDEX_H
 
 #include <stddef.h>
 #include "configuration.h"
 
-namespace baconpaul::fm
+namespace baconpaul::six_sines
 {
 struct MatrixIndex
 {
@@ -89,5 +89,5 @@ struct MatrixIndex
         return positionMatrix[source][target];
     }
 };
-} // namespace baconpaul::fm
+} // namespace baconpaul::six_sines
 #endif // MATRIX_INDEX_H

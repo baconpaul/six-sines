@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -16,7 +16,7 @@
 #include "sst/basic-blocks/mechanics/block-ops.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
 
-namespace baconpaul::fm
+namespace baconpaul::six_sines
 {
 
 namespace mech = sst::basic_blocks::mechanics;
@@ -108,11 +108,11 @@ Voice *Synth::removeFromVoiceList(Voice *cvoice)
 
 void Synth::dumpVoiceList()
 {
-    FMLOG("DUMP VOICE LIST : head=" << std::hex << head << std::dec);
+    SXSNLOG("DUMP VOICE LIST : head=" << std::hex << head << std::dec);
     auto c = head;
     while (c)
     {
-        FMLOG("   c=" << std::hex << c << std::dec << " key=" << c->key << " u=" << c->used);
+        SXSNLOG("   c=" << std::hex << c << std::dec << " key=" << c->key << " u=" << c->used);
         c = c->next;
     }
 }
@@ -205,4 +205,4 @@ void Synth::pushFullUIRefresh()
     }
 }
 
-} // namespace baconpaul::fm
+} // namespace baconpaul::six_sines

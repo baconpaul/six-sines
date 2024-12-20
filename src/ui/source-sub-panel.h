@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,17 +11,17 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_UI_SOURCE_SUB_PANEL_H
-#define BACONPAUL_FMTHING_UI_SOURCE_SUB_PANEL_H
+#ifndef BACONPAUL_SIX_SINES_UI_SOURCE_SUB_PANEL_H
+#define BACONPAUL_SIX_SINES_UI_SOURCE_SUB_PANEL_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ifm-editor.h"
+#include "six-sines-editor.h"
 
-namespace baconpaul::fm::ui
+namespace baconpaul::six_sines::ui
 {
 struct SourceSubPanel : juce::Component, HasEditor
 {
-    SourceSubPanel(IFMEditor &);
+    SourceSubPanel(SixSinesEditor &);
     ~SourceSubPanel();
     void paint(juce::Graphics &g)
     {
@@ -38,5 +38,5 @@ struct SourceSubPanel : juce::Component, HasEditor
         repaint();
     }
 };
-} // namespace baconpaul::fm::ui
+} // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

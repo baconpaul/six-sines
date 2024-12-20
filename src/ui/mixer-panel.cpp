@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -13,12 +13,12 @@
 
 #include "mixer-panel.h"
 #include "mixer-sub-panel.h"
-#include "ifm-editor.h"
+#include "six-sines-editor.h"
 #include "ui-constants.h"
 
-namespace baconpaul::fm::ui
+namespace baconpaul::six_sines::ui
 {
-MixerPanel::MixerPanel(IFMEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor(e)
+MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor(e)
 {
     auto &mn = editor.patchCopy.mixerNodes;
     for (auto i = 0U; i < numOps; ++i)
@@ -61,4 +61,4 @@ void MixerPanel::beginEdit(size_t idx)
     editor.singlePanel->setName("Op " + std::to_string(idx + 1) + " Mix");
 }
 
-} // namespace baconpaul::fm::ui
+} // namespace baconpaul::six_sines::ui

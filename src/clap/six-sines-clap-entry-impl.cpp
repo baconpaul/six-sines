@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -12,11 +12,11 @@
  */
 
 #include "configuration.h"
-#include "clap/ifm-clap-entry-impl.h"
+#include "clap/six-sines-clap-entry-impl.h"
 #include <iostream>
 #include <clap/clap.h>
 
-namespace baconpaul::fm
+namespace baconpaul::six_sines
 {
 
 extern const clap_plugin *makePlugin(const clap_host *);
@@ -24,17 +24,17 @@ extern const clap_plugin *makePlugin(const clap_host *);
 const clap_plugin_descriptor *getDescriptor()
 {
     static const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT,
-                                     CLAP_PLUGIN_FEATURE_SYNTHESIZER, "Free and Open Source", "FM",
-                                     nullptr};
+                                     CLAP_PLUGIN_FEATURE_SYNTHESIZER, "Free and Open Source",
+                                     "Audio Rate Modulation", nullptr};
     static clap_plugin_descriptor desc = {CLAP_VERSION,
-                                          "org.baconpaul.ifm",
-                                          "The BaconPaul FM Disaster",
+                                          "org.baconpaul.six-sines",
+                                          PRODUCT_NAME,
                                           "BaconPaul",
                                           "https://baconpaul.org",
                                           "",
                                           "",
                                           "0.0.1",
-                                          "FM architecture madness, or something",
+                                          "Synth with Audio Rate Modulation or something",
                                           &features[0]};
     return &desc;
 }
@@ -56,13 +56,13 @@ const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_h
 
     if (strcmp(plugin_id, getDescriptor()->id) == 0)
     {
-        FMLOG("Asked for desc");
+        SXSNLOG("Asked for desc");
         return makePlugin(host);
     }
     return nullptr;
 }
 
-const struct clap_plugin_factory ifm_clap_factory = {
+const struct clap_plugin_factory six_sines_clap_factory = {
     clap_get_plugin_count,
     clap_get_plugin_descriptor,
     clap_create_plugin,
@@ -70,13 +70,13 @@ const struct clap_plugin_factory ifm_clap_factory = {
 
 const void *get_factory(const char *factory_id)
 {
-    FMLOG("Asking for factory [" << factory_id << "]");
+    SXSNLOG("Asking for factory [" << factory_id << "]");
     if (strcmp(factory_id, CLAP_PLUGIN_FACTORY_ID) == 0)
     {
-        return &ifm_clap_factory;
+        return &six_sines_clap_factory;
     }
     return nullptr;
 }
 bool clap_init(const char *p) { return true; }
 void clap_deinit() {}
-} // namespace baconpaul::fm
+} // namespace baconpaul::six_sines

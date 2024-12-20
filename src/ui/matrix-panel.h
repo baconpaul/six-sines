@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,19 +11,19 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_UI_MATRIX_PANEL_H
-#define BACONPAUL_FMTHING_UI_MATRIX_PANEL_H
+#ifndef BACONPAUL_SIX_SINES_UI_MATRIX_PANEL_H
+#define BACONPAUL_SIX_SINES_UI_MATRIX_PANEL_H
 
 #include <sst/jucegui/components/Label.h>
 #include <sst/jucegui/components/ToggleButton.h>
-#include "ifm-editor.h"
+#include "six-sines-editor.h"
 #include "patch-data-bindings.h"
 
-namespace baconpaul::fm::ui
+namespace baconpaul::six_sines::ui
 {
 struct MatrixPanel : jcmp::NamedPanel, HasEditor
 {
-    MatrixPanel(IFMEditor &);
+    MatrixPanel(SixSinesEditor &);
     ~MatrixPanel();
 
     void resized() override;
@@ -42,5 +42,5 @@ struct MatrixPanel : jcmp::NamedPanel, HasEditor
     std::array<std::unique_ptr<PatchDiscrete>, matrixSize> MpowerData;
     std::array<std::unique_ptr<jcmp::Label>, matrixSize> Mlabels;
 };
-} // namespace baconpaul::fm::ui
+} // namespace baconpaul::six_sines::ui
 #endif // MAIN_PANEL_H

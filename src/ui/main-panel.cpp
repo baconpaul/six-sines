@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -15,9 +15,9 @@
 #include "ui-constants.h"
 #include "main-sub-panel.h"
 
-namespace baconpaul::fm::ui
+namespace baconpaul::six_sines::ui
 {
-MainPanel::MainPanel(IFMEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
+MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
 {
     createComponent(editor, *this, editor.patchCopy.output.level.meta.id, lev, levData);
     lev->setDrawLabel(false);
@@ -43,4 +43,4 @@ void MainPanel::beginEdit()
     editor.singlePanel->setName("Main Output");
 }
 
-} // namespace baconpaul::fm::ui
+} // namespace baconpaul::six_sines::ui

@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,13 +11,13 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_DSP_SINTABLE_H
-#define BACONPAUL_FMTHING_DSP_SINTABLE_H
+#ifndef BACONPAUL_SIX_SINES_DSP_SINTABLE_H
+#define BACONPAUL_SIX_SINES_DSP_SINTABLE_H
 
 #include "configuration.h"
 #include <sst/basic-blocks/simd/setup.h>
 
-namespace baconpaul::fm
+namespace baconpaul::six_sines
 {
 struct SinTable
 {
@@ -126,5 +126,5 @@ struct SinTable
 #endif
     }
 };
-} // namespace baconpaul::fm
+} // namespace baconpaul::six_sines
 #endif // SINTABLE_H

@@ -11,7 +11,9 @@ math(EXPR PART0 "${YEAR}-2023 + 2")
 math(EXPR PART1 "${DAY_OF_YEAR}/2")
 message(STATUS "Using date-driven version while in alpha. 0.${PART0}.${PART1}.0")
 
-project(integer-fm VERSION 0.${PART0}.${PART1}.0 LANGUAGES C CXX)
+project(six-sines-a-sinnin VERSION 0.${PART0}.${PART1}.0 LANGUAGES C CXX)
+
+set(PRODUCT_NAME "Six Sines A-Sinnin")
 
 # use asan as an option (currently mac only)
 option(USE_SANITIZER "Build and link with ASAN" FALSE)
@@ -22,11 +24,12 @@ include(cmake/compile-options.cmake)
 set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
 add_subdirectory(libs)
 
-add_library(ifm-impl STATIC
-        src/clap/ifm-clap.cpp
-        src/clap/ifm-clap-entry-impl.cpp
+add_library(${PROJECT_NAME}-impl STATIC
+        src/clap/six-sines-clap.cpp
+        src/clap/six-sines-clap-entry-impl.cpp
 
-        src/ui/ifm-editor.cpp
+        src/ui/six-sines-editor.cpp
+
         src/ui/main-panel.cpp
         src/ui/main-sub-panel.cpp
         src/ui/matrix-panel.cpp
@@ -41,8 +44,9 @@ add_library(ifm-impl STATIC
         src/synth/voice.cpp
         src/synth/patch.cpp
 )
-target_include_directories(ifm-impl PUBLIC src)
-target_link_libraries(ifm-impl PUBLIC
+target_include_directories(${PROJECT_NAME}-impl PUBLIC src)
+target_compile_definitions(${PROJECT_NAME}-impl PRIVATE PRODUCT_NAME="${PRODUCT_NAME}")
+target_link_libraries(${PROJECT_NAME}-impl PUBLIC
         simde
         clap clap-helpers
         fmt-header-only
@@ -52,12 +56,12 @@ target_link_libraries(ifm-impl PUBLIC
 
 set(CLAP_TARGET ${PROJECT_NAME}_clap)
 add_library(${CLAP_TARGET} MODULE
-        src/clap/ifm-clap-entry.cpp
+        src/clap/six-sines-clap-entry.cpp
 )
-target_link_libraries(${CLAP_TARGET} ifm-impl)
+target_link_libraries(${CLAP_TARGET} ${PROJECT_NAME}-impl)
 target_library_make_clap(TARGET ${CLAP_TARGET}
-        CLAP_NAME "The BaconPaul FM Disaster"
-        CLAP_MACOS_BUNDLE_IDENTIFIER org.baconpaul.ifm.clap
+        CLAP_NAME "${PRODUCT_NAME}"
+        CLAP_MACOS_BUNDLE_IDENTIFIER org.baconpaul.six-sines.clap
         CLAP_MACOS_BUNDLE_VERSION ${PROJECT_VERSION}
         COPY_AFTER_BUILD TRUE
 )
@@ -65,10 +69,10 @@ set_target_properties(${CLAP_TARGET} PROPERTIES BUNDLE TRUE MACOSX_BUNDLE TRUE)
 
 set(VST3_TARGET ${PROJECT_NAME}_vst3)
 add_library(${VST3_TARGET} MODULE)
-target_sources(${VST3_TARGET} PRIVATE src/clap/ifm-clap-entry.cpp)
-target_link_libraries(${VST3_TARGET} PRIVATE ifm-impl)
+target_sources(${VST3_TARGET} PRIVATE src/clap/six-sines-clap-entry.cpp)
+target_link_libraries(${VST3_TARGET} PRIVATE ${PROJECT_NAME}-impl)
 target_add_vst3_wrapper(TARGET ${VST3_TARGET}
-        OUTPUT_NAME "The BaconPaul FM Disaster"
+        OUTPUT_NAME "${PRODUCT_NAME}"
         SUPPORTS_ALL_NOTE_EXPRESSIONS TRUE
 )
 if (WIN32)
@@ -85,13 +89,13 @@ endif()
 if (APPLE)
     set(AUV2_TARGET ${PROJECT_NAME}_auv2)
     add_library(${AUV2_TARGET} MODULE)
-    target_sources(${AUV2_TARGET} PRIVATE src/clap/ifm-clap-entry.cpp)
-    target_link_libraries(${AUV2_TARGET} PRIVATE ifm-impl)
+    target_sources(${AUV2_TARGET} PRIVATE src/clap/six-sines-clap-entry.cpp)
+    target_link_libraries(${AUV2_TARGET} PRIVATE ${PROJECT_NAME}-impl)
     message(STATUS "Adding AUv2 with ${PROJECT_VERSION}")
     target_add_auv2_wrapper(
             TARGET ${AUV2_TARGET}
-            OUTPUT_NAME "The BaconPaul FM Disaster"
-            BUNDLE_IDENTIFIER "org.baconpaul.ifm.auv2"
+            OUTPUT_NAME "${PRODUCT_NAME}"
+            BUNDLE_IDENTIFIER "org.baconpaul.six-sines.auv2"
             BUNDLE_VERSION ${PROJECT_VERSION}
 
             CLAP_TARGET_FOR_CONFIG ${PROJECT_NAME}_clap
@@ -106,12 +110,12 @@ endif()
 
 set(sat ${PROJECT_NAME}_standalone)
 add_executable(${sat})
-target_sources(${sat} PRIVATE src/clap/ifm-clap-entry.cpp)
-target_link_libraries(${sat} PRIVATE ifm-impl)
+target_sources(${sat} PRIVATE src/clap/six-sines-clap-entry.cpp)
+target_link_libraries(${sat} PRIVATE ${PROJECT_NAME}-impl)
 target_add_standalone_wrapper(TARGET ${sat}
-        OUTPUT_NAME "The BaconPaul FM Disaster"
+        OUTPUT_NAME "${PRODUCT_NAME}"
         STATICALLY_LINKED_CLAP_ENTRY True
-        PLUGIN_ID "org.baconpaul.ifm")
+        PLUGIN_ID "org.baconpaul.six-sines")
 
 
 

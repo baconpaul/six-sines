@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,8 +11,8 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_UI_DAHDSR_COMPONENTS_H
-#define BACONPAUL_FMTHING_UI_DAHDSR_COMPONENTS_H
+#ifndef BACONPAUL_SIX_SINES_UI_DAHDSR_COMPONENTS_H
+#define BACONPAUL_SIX_SINES_UI_DAHDSR_COMPONENTS_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <sst/jucegui/components/VSlider.h>
@@ -20,14 +20,14 @@
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
 
-namespace baconpaul::fm::ui
+namespace baconpaul::six_sines::ui
 {
 namespace jcmp = sst::jucegui::components;
 template <typename Comp, typename Patch> struct DAHDSRComponents
 {
     Comp *asComp() { return static_cast<Comp *>(this); }
     DAHDSRComponents() {}
-    void setupDAHDSR(IFMEditor &e, const Patch &v)
+    void setupDAHDSR(SixSinesEditor &e, const Patch &v)
     {
         auto mk = [&e, this](auto id, auto idx, auto lb)
         {
@@ -72,5 +72,5 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
     std::array<std::unique_ptr<PatchContinuous>, nels> sliderD;
     std::array<std::unique_ptr<jcmp::Label>, nels> lab;
 };
-} // namespace baconpaul::fm::ui
+} // namespace baconpaul::six_sines::ui
 #endif // DAHDSR_COMPONENTS_H

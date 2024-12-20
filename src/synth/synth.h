@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,8 +11,8 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_SYNTH_SYNTH_H
-#define BACONPAUL_FMTHING_SYNTH_SYNTH_H
+#ifndef BACONPAUL_SIX_SINES_SYNTH_SYNTH_H
+#define BACONPAUL_SIX_SINES_SYNTH_SYNTH_H
 
 #include <memory>
 #include <array>
@@ -29,7 +29,7 @@
 #include "synth/voice.h"
 #include "synth/patch.h"
 
-namespace baconpaul::fm
+namespace baconpaul::six_sines
 {
 struct Synth
 {
@@ -78,8 +78,9 @@ struct Synth
             typename sst::voicemanager::VoiceInitBufferEntry<VMConfig>::buffer_t &obuf, uint16_t pt,
             uint16_t ch, uint16_t key, int32_t nid, float vel, float rt)
         {
-            if (ibuf[0].instruction != sst::voicemanager::VoiceInitInstructionsEntry<
-                                           baconpaul::fm::Synth::VMConfig>::Instruction::SKIP)
+            if (ibuf[0].instruction !=
+                sst::voicemanager::VoiceInitInstructionsEntry<
+                    baconpaul::six_sines::Synth::VMConfig>::Instruction::SKIP)
             {
                 for (int i = 0; i < VMConfig::maxVoiceCount; ++i)
                 {
@@ -126,7 +127,7 @@ struct Synth
     double realSampleRate{0};
     void setSampleRate(double sampleRate)
     {
-        FMLOG("Creating resampler at " << sampleRate << " from " << gSampleRate);
+        SXSNLOG("Creating resampler at " << sampleRate << " from " << gSampleRate);
         realSampleRate = sampleRate;
         resampler = std::make_unique<resampler_t>(gSampleRate, realSampleRate);
     }
@@ -171,5 +172,5 @@ struct Synth
 
     void pushFullUIRefresh();
 };
-} // namespace baconpaul::fm
+} // namespace baconpaul::six_sines
 #endif // SYNTH_H

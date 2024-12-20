@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,12 +11,12 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_UI_UI_CONSTANTS_H
-#define BACONPAUL_FMTHING_UI_UI_CONSTANTS_H
+#ifndef BACONPAUL_SIX_SINES_UI_UI_CONSTANTS_H
+#define BACONPAUL_SIX_SINES_UI_UI_CONSTANTS_H
 
 #include <cstdint>
 
-namespace baconpaul::fm::ui
+namespace baconpaul::six_sines::ui
 {
 static constexpr uint32_t uicKnobSize{50};
 static constexpr uint32_t uicPowerButtonSize{24};
@@ -45,5 +45,5 @@ inline void positionPowerKnobAndLabel(uint32_t x, uint32_t y, const T &t, const 
                      .withTrimmedBottom((uicKnobSize - uicPowerButtonSize) / 2));
     l->setBounds(b.translated(0, uicKnobSize + uicLabelGap).withHeight(uicLabelHeight));
 }
-} // namespace baconpaul::fm::ui
+} // namespace baconpaul::six_sines::ui
 #endif // UI_CONSTANTS_H

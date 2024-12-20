@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -16,7 +16,7 @@
 #include "synth/matrix_index.h"
 #include "synth/patch.h"
 
-namespace baconpaul::fm
+namespace baconpaul::six_sines
 {
 
 namespace scpu = sst::cpputils;
@@ -85,4 +85,4 @@ static_assert(numOps == 6, "Rebuild this table if not");
 OpSource &Voice::sourceAtMatrix(size_t pos) { return src[MatrixIndex::sourceIndexAt(pos)]; }
 OpSource &Voice::targetAtMatrix(size_t pos) { return src[MatrixIndex::targetIndexAt(pos)]; }
 
-} // namespace baconpaul::fm
+} // namespace baconpaul::six_sines

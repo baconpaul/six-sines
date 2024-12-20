@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,7 +11,7 @@
  * released under GPL3. You know the drill.
  */
 
-#include "ifm-editor.h"
+#include "six-sines-editor.h"
 #include "patch-data-bindings.h"
 #include "main-panel.h"
 #include "main-sub-panel.h"
@@ -24,17 +24,17 @@
 #include "source-sub-panel.h"
 #include "ui-constants.h"
 
-namespace baconpaul::fm::ui
+namespace baconpaul::six_sines::ui
 {
 struct IdleTimer : juce::Timer
 {
-    IFMEditor &editor;
-    IdleTimer(IFMEditor &e) : editor(e) {}
+    SixSinesEditor &editor;
+    IdleTimer(SixSinesEditor &e) : editor(e) {}
     void timerCallback() override { editor.idle(); }
 };
 
-IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &utoa,
-                     std::function<void()> fo)
+SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &utoa,
+                               std::function<void()> fo)
     : audioToUI(atou), uiToAudio(utoa), flushOperator(fo)
 {
     sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
@@ -78,9 +78,9 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
 
     auto q = std::make_unique<PatchContinuous>(*this, patchCopy.output.level.meta.id);
 }
-IFMEditor::~IFMEditor() { idleTimer->stopTimer(); }
+SixSinesEditor::~SixSinesEditor() { idleTimer->stopTimer(); }
 
-void IFMEditor::idle()
+void SixSinesEditor::idle()
 {
     auto aum = audioToUI.pop();
     while (aum.has_value())
@@ -96,7 +96,7 @@ void IFMEditor::idle()
     }
 }
 
-void IFMEditor::resized()
+void SixSinesEditor::resized()
 {
     auto rdx{1};
 
@@ -130,7 +130,7 @@ void IFMEditor::resized()
     sourceSubPanel->setBounds(singlePanel->getContentArea());
 }
 
-void IFMEditor::hideAllSubPanels()
+void SixSinesEditor::hideAllSubPanels()
 {
     for (auto &c : singlePanel->getChildren())
     {
@@ -138,7 +138,7 @@ void IFMEditor::hideAllSubPanels()
     }
 }
 
-void IFMEditor::showTooltipOn(juce::Component *c)
+void SixSinesEditor::showTooltipOn(juce::Component *c)
 {
     int x = 0;
     int y = 0;
@@ -161,16 +161,16 @@ void IFMEditor::showTooltipOn(juce::Component *c)
     toolTip->setTopLeftPosition(x, y);
     toolTip->setVisible(true);
 }
-void IFMEditor::updateTooltip(jdat::Continuous *c)
+void SixSinesEditor::updateTooltip(jdat::Continuous *c)
 {
     toolTip->setTooltipTitleAndData(c->getLabel(), {c->getValueAsString()});
     toolTip->resetSizeFromData();
 }
-void IFMEditor::updateTooltip(jdat::Discrete *d)
+void SixSinesEditor::updateTooltip(jdat::Discrete *d)
 {
     toolTip->setTooltipTitleAndData(d->getLabel(), {d->getValueAsString()});
     toolTip->resetSizeFromData();
 }
-void IFMEditor::hideTooltip() { toolTip->setVisible(false); }
+void SixSinesEditor::hideTooltip() { toolTip->setVisible(false); }
 
-} // namespace baconpaul::fm::ui
+} // namespace baconpaul::six_sines::ui

@@ -1,7 +1,7 @@
 /*
- * BaconPaul's FM Atrocity
+ * Six Sines A Sinnin'
  *
- * A mess, with FM.
+ * A mess, with audio rate modulation.
  *
  * Copyright 2024, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -11,18 +11,18 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_UI_SOURCE_PANEL_H
-#define BACONPAUL_FMTHING_UI_SOURCE_PANEL_H
+#ifndef BACONPAUL_SIX_SINES_UI_SOURCE_PANEL_H
+#define BACONPAUL_SIX_SINES_UI_SOURCE_PANEL_H
 
 #include <sst/jucegui/components/Label.h>
-#include "ifm-editor.h"
+#include "six-sines-editor.h"
 #include "patch-data-bindings.h"
 
-namespace baconpaul::fm::ui
+namespace baconpaul::six_sines::ui
 {
 struct SourcePanel : jcmp::NamedPanel, HasEditor
 {
-    SourcePanel(IFMEditor &);
+    SourcePanel(SixSinesEditor &);
     ~SourcePanel();
 
     void resized() override;
@@ -35,5 +35,5 @@ struct SourcePanel : jcmp::NamedPanel, HasEditor
     std::array<std::unique_ptr<PatchDiscrete>, numOps> powerData;
     std::array<std::unique_ptr<jcmp::Label>, numOps> labels;
 };
-} // namespace baconpaul::fm::ui
+} // namespace baconpaul::six_sines::ui
 #endif // MAIN_PANEL_H
