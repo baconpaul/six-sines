@@ -74,10 +74,8 @@ struct alignas(16) OpSource
             for (int i = 0; i < blockSize; ++i)
             {
                 phase[ch] += dPhase[ch];
-                auto rm = rmInput[ch][i];
                 auto out =
-                    st.at(phase[ch] + phaseInput[ch][i] + (int32_t)(feedbackLevel[i] * fbVal[ch])) *
-                    rm;
+                    st.at(phase[ch] + phaseInput[ch][i] + (int32_t)(feedbackLevel[i] * fbVal[ch]));
                 output[ch][i] = out;
                 fbVal[ch] = out;
             }
