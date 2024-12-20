@@ -62,7 +62,7 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
             lab[i]->setBounds(bx.withTrimmedTop(q + uicLabelGap));
             bx = bx.translated(uicSliderWidth, 0);
         }
-        return {};
+        return juce::Rectangle<int>(x, y, 0, 0).withLeft(bx.getRight()).withBottom(bx.getBottom());
     }
 
     void beginEdit() {}

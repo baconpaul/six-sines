@@ -31,7 +31,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
     float output alignas(16)[blockSize];
 
     bool keytrack{true};
-    const float &ratio, &activeV, envToRatio; // in  frequency multiple
+    const float &ratio, &activeV, &envToRatio; // in  frequency multiple
     bool active{false};
 
     // todo waveshape
@@ -49,6 +49,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
     {
         zeroInputs();
         snapActive();
+        envAttack();
         phase = 4 << 27;
     }
 
@@ -63,11 +64,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
 
     void snapActive() { active = activeV > 0.5; }
 
-    void setBaseFrequency(float freq)
-    {
-        auto rf = pow(2.f, ratio);
-        dPhase = st.dPhase(freq * rf);
-    }
+    float baseFrequency{0};
+    void setBaseFrequency(float freq) { baseFrequency = freq; }
 
     void renderBlock(bool gated)
     {
@@ -77,8 +75,12 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
             fbVal = 0.f;
             return;
         }
+        envProcess(gated);
+        auto rf = pow(2.f, ratio + envToRatio * env.output);
+
         for (int i = 0; i < blockSize; ++i)
         {
+            dPhase = st.dPhase(baseFrequency * rf);
             phase += dPhase;
             auto out = st.at(phase + phaseInput[i] + (int32_t)(feedbackLevel[i] * fbVal));
             output[i] = out;

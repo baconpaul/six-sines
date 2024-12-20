@@ -167,6 +167,7 @@ struct Patch
                          .withID(id(1, idx))),
               envToRatio(floatMd()
                              .withRange(-2, 2)
+                             .withLinearScaleFormatting("offset")
                              .withName(name(idx) + " Env to Ratio")
                              .withGroupName(name(idx))
                              .withDefault(0.f)
@@ -185,7 +186,7 @@ struct Patch
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&ratio, &active};
+            std::vector<Param *> res{&ratio, &active, &envToRatio};
             appendDAHDSRParams(res);
             return res;
         }
