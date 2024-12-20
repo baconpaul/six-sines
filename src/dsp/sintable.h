@@ -28,8 +28,8 @@ struct SinTable
     float cubicHermiteCoefficients[4][nPoints];
     float linterpCoefficients[2][nPoints];
 
-    SIMD_M128 simdQuad alignas(16) [4][nPoints]; // for each quad it is q, q+1, dq + 1
-    SIMD_M128 simdCubic alignas(16) [nPoints]; // it is cq, cq+1, cdq, cd1+1
+    SIMD_M128 simdQuad alignas(16)[4 * nPoints]; // for each quad it is q, q+1, dq + 1
+    SIMD_M128 simdCubic alignas(16)[nPoints];    // it is cq, cq+1, cdq, cd1+1
 
     SinTable()
     {
@@ -62,21 +62,21 @@ struct SinTable
             linterpCoefficients[1][i] = t;
         }
 
-        for (int i=0; i<nPoints; ++i)
+        for (int i = 0; i < nPoints; ++i)
         {
-            for (int j=0; j<4; ++j)
+            for (int j = 0; j < 4; ++j)
             {
                 float r alignas(16)[4];
                 r[0] = quadrantTable[j][i];
                 r[1] = dQuadrantTable[j][i];
-                r[2] = quadrantTable[j][i+1];
-                r[3] = dQuadrantTable[j][i+1];
-                simdQuad[j][i] = SIMD_MM(load_ps)(r);
+                r[2] = quadrantTable[j][i + 1];
+                r[3] = dQuadrantTable[j][i + 1];
+                simdQuad[nPoints * j + i] = SIMD_MM(load_ps)(r);
             }
 
             {
-                float r alignas(16) [4];
-                for (int j=0; j<4; ++j)
+                float r alignas(16)[4];
+                for (int j = 0; j < 4; ++j)
                 {
                     r[j] = cubicHermiteCoefficients[j][i];
                 }
@@ -96,20 +96,26 @@ struct SinTable
     float at(uint32_t ph)
     {
         static constexpr uint32_t mask{(1 << 12) - 1};
+        static constexpr uint32_t umask{(1 << 14) - 1};
+
         auto lb = ph & mask;
-        auto ub = (ph >> 12) & mask;
-        auto pitQ = (ph >> 24) & 0x3;
+        auto ub = (ph >> 12) & umask;
+
 #define CUBIC_HERMITE 1
 #if CUBIC_HERMITE
-        auto q = simdQuad[pitQ][ub];
+        auto q = simdQuad[ub];
         auto c = simdCubic[lb];
         auto r = SIMD_MM(mul_ps(q, c));
-        auto h = SIMD_MM(hadd_ps)(r,r);
+        auto h = SIMD_MM(hadd_ps)(r, r);
         auto v = SIMD_MM(hadd_ps)(h, h);
-        return SIMD_MM(cvtss_f32)(v);;
+        return SIMD_MM(cvtss_f32)(v);
+        ;
 #endif
 
 #if LINEAR
+        auto lb = ph & mask;
+        auto ub = (ph >> 12) & mask;
+        auto pitQ = (ph >> 24) & 0x3;
         auto y1 = quadrantTable[pitQ][ub];
         auto y2 = quadrantTable[pitQ][ub + 1];
 
