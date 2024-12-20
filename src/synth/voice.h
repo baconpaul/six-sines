@@ -14,6 +14,7 @@
 #ifndef BACONPAUL_FMTHING_SYNTH_VOICE_H
 #define BACONPAUL_FMTHING_SYNTH_VOICE_H
 
+#include <sst/basic-blocks/tables/EqualTuningProvider.h>
 #include "dsp/op_source.h"
 #include "dsp/matrix_node.h"
 
@@ -24,8 +25,9 @@ struct Patch;
 struct Voice
 {
     const float *const output[2];
+    const sst::basic_blocks::tables::EqualTuningProvider &tuningProvider;
 
-    Voice(const Patch &);
+    Voice(const Patch &, const sst::basic_blocks::tables::EqualTuningProvider &);
     ~Voice() = default;
 
     void attack();

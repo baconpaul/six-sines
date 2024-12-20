@@ -23,8 +23,10 @@ namespace mech = sst::basic_blocks::mechanics;
 namespace sdsp = sst::basic_blocks::dsp;
 
 Synth::Synth()
-    : responder(*this), voices(sst::cpputils::make_array<Voice, VMConfig::maxVoiceCount>(patch))
+    : responder(*this),
+      voices(sst::cpputils::make_array<Voice, VMConfig::maxVoiceCount>(patch, tuningProvider))
 {
+    tuningProvider.init();
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
     lagHandler.setRate(60, blockSize, gSampleRate);
 }

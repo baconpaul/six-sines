@@ -1,41 +1,34 @@
 Individual Oscillator
 
-- power
 - Keytrack
   - if on: ratio
   - if off: absolute frequency
 - Waveshape (quadrant picker)
-- feedback
-- will need gated somewhere
-- lfo with power and depth to frequency
-- dahdsr with power and depth to frequency
+- lfo with power and depth to ratio
+- dahdsr with power and depth to ratio
+- ratio uses 2^x table
 
 FM Matrix Node
-+ Has a reference to an input and output 
-+ float depth
-- pan (for application)
-- RM or FM
 - DAHDSR to scale float depth
 - LFO to scale float depth
-- (its a product if both are on)
 
 Self matrix node
 - basically just an FM level with an envelope and LFO
 
 Mixer
-- Each node gets an envelope an LFO and a pan and level control
+- Each node gets an envelope an LFO and a pan - do stereo here not in the output node
 
 MIDI mappings what to do
 - velocity to amplitude everywhere of course
+- Note expressions?
 
 Other ToDos
 - Envelope Rate Linear to 2x provider
-
-Patch object
-- basically working 
-- attach to voice properly is still un-done
-
-CLAP edge
-- begin/end edit
+- MTS/ESP support
 
 Installer
+
+Friday
+- subeditors
+- lfo support
+- step support

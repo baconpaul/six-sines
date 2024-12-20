@@ -21,7 +21,7 @@ namespace baconpaul::fm
 
 namespace scpu = sst::cpputils;
 
-Voice::Voice(const Patch &p)
+Voice::Voice(const Patch &p, const sst::basic_blocks::tables::EqualTuningProvider &tp)
     : out(p.output, mixerNode), output{out.output[0], out.output[1]},
       src(scpu::make_array_lambda<OpSource, numOps>([this, &p](auto i)
                                                     { return OpSource(p.sourceNodes[i]); })),
@@ -33,7 +33,8 @@ Voice::Voice(const Patch &p)
           [&p, this](auto i) {
               return MatrixNodeFrom(p.matrixNodes[i], this->targetAtMatrix(i),
                                     this->sourceAtMatrix(i));
-          }))
+          })),
+      tuningProvider(tp)
 {
     std::fill(isKeytrack.begin(), isKeytrack.end(), true);
     std::fill(cmRatio.begin(), cmRatio.end(), 1.0);
@@ -56,40 +57,28 @@ void Voice::attack()
 
 void Voice::renderBlock()
 {
-    for (auto &s : src)
-        s.zeroInputs();
-
-    auto baseFreq = 440.0 * pow(2.0, (key - 69) / 12.0);
+    auto baseFreq = tuningProvider.note_to_pitch(key - 69) * 440.0;
 
     for (int i = 0; i < numOps; ++i)
     {
+        if (!src[i].activeV)
+        {
+            continue;
+        }
+        src[i].zeroInputs();
         src[i].setBaseFrequency(baseFreq);
-        src[i].renderBlock();
+        for (auto j = 0; j < i; ++j)
+        {
+            auto pos = MatrixIndex::positionForSourceTarget(j, i);
+            matrixNode[pos].applyBlock(gated);
+        }
+        selfNode[i].applyBlock(gated);
+        src[i].renderBlock(gated);
         mixerNode[i].renderBlock(gated);
     }
 
     out.renderBlock(gated);
 }
-
-/*
- * Indexing works as follows.
- * n-1 sources onto n oscillators
- * upper diagonal
- *
- *   SRC
- * T 0 1  2  3  4  5
- * 0 x 0  1  2  3  4
- * 1   x  5  6  7  8
- * 2      x 10 11 12
- * 3         x 13 14
- * 4           x  15
- * 5               x
- *
- * for 6 operators 6 * 5 / 2 = 15 so this tracks
- *
- * OK so how do you get hat lookup quickly? Well I think
- * you just make a static table and look up to be honest
- */
 
 static_assert(numOps == 6, "Rebuild this table if not");
 

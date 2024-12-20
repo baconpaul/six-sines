@@ -20,32 +20,12 @@
 #include "sst/basic-blocks/dsp/PanLaws.h"
 #include "dsp/op_source.h"
 #include "dsp/sr_provider.h"
+#include "dsp/node_support.h"
 #include "synth/patch.h"
 
 namespace baconpaul::fm
 {
 namespace mech = sst::basic_blocks::mechanics;
-namespace sdsp = sst::basic_blocks::dsp;
-
-template <typename T> struct EnvelopeSupport
-{
-    SRProvider sr;
-
-    const float &delay, &attackv, &hold, &decay, &sustain, &release;
-    EnvelopeSupport(const T &mn)
-        : env(&sr), delay(mn.delay), attackv(mn.attack), hold(mn.hold), decay(mn.decay),
-          sustain(mn.sustain), release(mn.release)
-    {
-    }
-
-    sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
-
-    void envAttack() { env.attack(delay); }
-    void envProcess(bool gated)
-    {
-        env.processBlockScaledAD(delay, attackv, hold, decay, sustain, release, gated);
-    }
-};
 
 struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>
 {
@@ -72,10 +52,8 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>
         envProcess(gated);
         for (int j = 0; j < blockSize; ++j)
         {
-            onto.phaseInput[0][j] +=
-                (int32_t)((1 << 27) * level * env.outputCache[j] * from.output[0][j]);
-            onto.phaseInput[1][j] +=
-                (int32_t)((1 << 27) * level * env.outputCache[j] * from.output[1][j]);
+            onto.phaseInput[j] +=
+                (int32_t)((1 << 27) * level * env.outputCache[j] * from.output[j]);
         }
     }
 };
@@ -110,7 +88,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>
 
 struct MixerNode : EnvelopeSupport<Patch::MixerNode>
 {
-    float output alignas(16)[2][blockSize];
+    float output alignas(16)[blockSize];
     OpSource &from;
     SRProvider sr;
 
@@ -141,8 +119,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>
         for (int j = 0; j < blockSize; ++j)
         {
             // use mech blah
-            output[0][j] = level * env.outputCache[j] * from.output[0][j];
-            output[1][j] = level * env.outputCache[j] * from.output[1][j];
+            output[j] = level * env.outputCache[j] * from.output[j];
         }
     }
 };
@@ -165,39 +142,36 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
 
     void renderBlock(bool gated)
     {
-        memset(output, 0, sizeof(output));
+        float vSum alignas(16)[blockSize];
+        memset(vSum, 0, sizeof(vSum));
         for (const auto &from : fromArr)
         {
-            for (int j = 0; j < blockSize; ++j)
-            {
-                output[0][j] += from.output[0][j];
-                output[1][j] += from.output[1][j];
-            }
+            mech::accumulate_from_to<blockSize>(from.output, vSum);
         }
 
         envProcess(gated);
-        mech::scale_by<blockSize>(env.outputCache, output[0], output[1]);
-        mech::scale_by<blockSize>(0.5, output[0], output[1]);
+        mech::scale_by<blockSize>(env.outputCache, vSum);
+        mech::scale_by<blockSize>(0.5, vSum);
 
         // Apply main output
         auto lv = level;
         lv = lv * lv * lv;
-        mech::scale_by<blockSize>(lv, output[0], output[1]);
+        mech::scale_by<blockSize>(lv, vSum);
 
         auto pn = pan;
         if (pn != 0.f)
         {
             pn = (pn + 1) * 0.5;
             sdsp::pan_laws::panmatrix_t pmat;
-            sdsp::pan_laws::stereoEqualPower(pn, pmat);
+            sdsp::pan_laws::monoEqualPower(pn, pmat);
 
-            for (int i = 0; i < blockSize; ++i)
-            {
-                auto il = output[0][i];
-                auto ir = output[1][i];
-                output[0][i] = pmat[0] * il + pmat[2] * ir;
-                output[1][i] = pmat[1] * ir + pmat[3] * il;
-            }
+            mech::mul_block<blockSize>(vSum, pmat[0], output[0]);
+            mech::mul_block<blockSize>(vSum, pmat[3], output[1]);
+        }
+        else
+        {
+            mech::copy_from_to<blockSize>(vSum, output[0]);
+            mech::copy_from_to<blockSize>(vSum, output[1]);
         }
     }
 };

@@ -20,6 +20,7 @@
 #include <clap/clap.h>
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
 #include "sst/basic-blocks/dsp/Lag.h"
+#include "sst/basic-blocks/tables/EqualTuningProvider.h"
 #include "sst/voicemanager/voicemanager.h"
 #include "sst/cpputils/ring_buffer.h"
 
@@ -166,6 +167,8 @@ struct Synth
     uiToAudioQueue_T uiToAudio;
     std::atomic<bool> doFullRefresh{false};
     sst::basic_blocks::dsp::UIComponentLagHandler lagHandler;
+    sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
+
     void pushFullUIRefresh();
 };
 } // namespace baconpaul::fm

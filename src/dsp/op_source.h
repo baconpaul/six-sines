@@ -19,68 +19,71 @@
 #include "configuration.h"
 
 #include "dsp/sintable.h"
+#include "dsp/node_support.h"
 #include "synth/patch.h"
 
 namespace baconpaul::fm
 {
 struct alignas(16) OpSource
 {
-    int32_t phaseInput alignas(16)[2][blockSize];
+    int32_t phaseInput alignas(16)[blockSize];
     int32_t feedbackLevel alignas(16)[blockSize];
-    float output alignas(16)[2][blockSize];
+    float output alignas(16)[blockSize];
 
     bool keytrack{true};
-    const float &ratio; // in  frequency multiple
+    const float &ratio, &activeV; // in  frequency multiple
+    bool active{false};
 
     // todo waveshape
 
-    uint32_t phase[2];
-    uint32_t dPhase[2];
+    uint32_t phase;
+    uint32_t dPhase;
 
-    OpSource(const Patch::SourceNode &sn) : ratio(sn.ratio) { reset(); }
+    OpSource(const Patch::SourceNode &sn) : ratio(sn.ratio), activeV(sn.active) { reset(); }
 
     void reset()
     {
         zeroInputs();
-        phase[0] = 4 << 27;
-        phase[1] = 4 << 27;
+        snapActive();
+        phase = 4 << 27;
     }
 
     void zeroInputs()
     {
         for (int i = 0; i < blockSize; ++i)
         {
-            phaseInput[0][i] = 0;
-            phaseInput[1][i] = 0;
-
+            phaseInput[i] = 0;
             feedbackLevel[i] = 0;
         }
     }
 
+    void snapActive() { active = activeV > 0.5; }
+
     void setBaseFrequency(float freq)
     {
         auto rf = pow(2.f, ratio);
-        dPhase[0] = st.dPhase(freq * rf);
-        dPhase[1] = st.dPhase(freq * rf);
+        dPhase = st.dPhase(freq * rf);
     }
 
-    void renderBlock()
+    void renderBlock(bool gated)
     {
-        for (int ch = 0; ch < 2; ++ch)
+        if (!active)
         {
-            for (int i = 0; i < blockSize; ++i)
-            {
-                phase[ch] += dPhase[ch];
-                auto out =
-                    st.at(phase[ch] + phaseInput[ch][i] + (int32_t)(feedbackLevel[i] * fbVal[ch]));
-                output[ch][i] = out;
-                fbVal[ch] = out;
-            }
+            memset(output, 0, sizeof(output));
+            fbVal = 0.f;
+            return;
+        }
+        for (int i = 0; i < blockSize; ++i)
+        {
+            phase += dPhase;
+            auto out = st.at(phase + phaseInput[i] + (int32_t)(feedbackLevel[i] * fbVal));
+            output[i] = out;
+            fbVal = out;
         }
     }
 
     SinTable st;
-    float fbVal[2]{0.f, 0.f};
+    float fbVal{0.f};
 };
 } // namespace baconpaul::fm
 
