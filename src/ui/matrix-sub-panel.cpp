@@ -20,7 +20,19 @@ MatrixSubPanel::~MatrixSubPanel() {}
 void MatrixSubPanel::setSelectedIndex(int idx)
 {
     index = idx;
+
+    removeAllChildren();
+
+    setupDAHDSR(editor, editor.patchCopy.matrixNodes[idx]);
+    resized();
+
     repaint();
+}
+
+void MatrixSubPanel::resized()
+{
+    auto p = getLocalBounds().reduced(uicMargin, 0);
+    layoutDAHDSRAt(p.getX(), p.getY());
 }
 
 } // namespace baconpaul::six_sines::ui
