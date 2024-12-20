@@ -120,7 +120,7 @@ struct Patch
                           .asPercent()
                           .withName(name + " Sustain")
                           .withGroupName(name)
-                          .withDefault(longAdsr? 0.7f : 1.f)
+                          .withDefault(longAdsr ? 0.7f : 1.f)
                           .withID(id0 + 4)),
               release(floatEnvRateMd()
                           .withName(name + " Release")
@@ -258,11 +258,11 @@ struct Patch
         static constexpr uint32_t idBase{500};
         OutputNode()
             : DAHDSRMixin(name(), id(2), true), level(floatMd()
-                                                    .asPercent()
-                                                    .withName(name() + " Level")
-                                                    .withGroupName(name())
-                                                    .withDefault(1.0)
-                                                    .withID(id(0))),
+                                                          .asPercent()
+                                                          .withName(name() + " Level")
+                                                          .withGroupName(name())
+                                                          .withDefault(1.0)
+                                                          .withID(id(0))),
               pan(floatMd()
                       .asPercentBipolar()
                       .withName(name() + " Pan")

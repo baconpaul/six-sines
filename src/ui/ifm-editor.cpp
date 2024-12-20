@@ -68,6 +68,9 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
     idleTimer = std::make_unique<IdleTimer>(*this);
     idleTimer->startTimer(1000. / 60.);
 
+    toolTip = std::make_unique<jcmp::ToolTip>();
+    addChildComponent(*toolTip);
+
     setSize(800, 830);
 
     auto q = std::make_unique<PatchContinuous>(*this, patchCopy.output.level.meta.id);
@@ -130,5 +133,40 @@ void IFMEditor::hideAllSubPanels()
         c->setVisible(false);
     }
 }
+
+void IFMEditor::showTooltipOn(juce::Component *c)
+{
+    int x = 0;
+    int y = 0;
+    juce::Component *component = c;
+    while (component != this)
+    {
+        auto bounds = component->getBoundsInParent();
+        x += bounds.getX();
+        y += bounds.getY();
+
+        component = component->getParentComponent();
+    }
+    y += c->getHeight();
+    toolTip->resetSizeFromData();
+    if (y + toolTip->getHeight() > getHeight())
+    {
+        y -= c->getHeight() - 3 - toolTip->getHeight();
+    }
+
+    toolTip->setTopLeftPosition(x, y);
+    toolTip->setVisible(true);
+}
+void IFMEditor::updateTooltip(jdat::Continuous *c)
+{
+    toolTip->setTooltipTitleAndData(c->getLabel(), {c->getValueAsString()});
+    toolTip->resetSizeFromData();
+}
+void IFMEditor::updateTooltip(jdat::Discrete *d)
+{
+    toolTip->setTooltipTitleAndData(d->getLabel(), {d->getValueAsString()});
+    toolTip->resetSizeFromData();
+}
+void IFMEditor::hideTooltip() { toolTip->setVisible(false); }
 
 } // namespace baconpaul::fm::ui

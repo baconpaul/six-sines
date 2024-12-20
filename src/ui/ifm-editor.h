@@ -21,6 +21,8 @@
 #include <sst/jucegui/components/NamedPanel.h>
 #include <sst/jucegui/components/WindowPanel.h>
 #include <sst/jucegui/components/Knob.h>
+#include <sst/jucegui/components/ToolTip.h>
+#include <sst/jucegui/components/ToggleButton.h>
 #include <sst/jucegui/data/Continuous.h>
 
 #include "synth/synth.h"
@@ -67,6 +69,12 @@ struct IFMEditor : jcmp::WindowPanel
 
     std::unique_ptr<SourcePanel> sourcePanel;
     std::unique_ptr<SourceSubPanel> sourceSubPanel;
+
+    std::unique_ptr<jcmp::ToolTip> toolTip;
+    void showTooltipOn(juce::Component *c);
+    void updateTooltip(jdat::Continuous *c);
+    void updateTooltip(jdat::Discrete *d);
+    void hideTooltip();
 
     void hideAllSubPanels();
     std::unordered_map<uint32_t, juce::Component::SafePointer<juce::Component>> componentByID;

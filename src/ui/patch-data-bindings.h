@@ -36,21 +36,23 @@ struct PatchContinuous : jdat::Continuous
 
     std::string getLabel() const override
     {
-        auto g = p->meta.groupName;
         auto r = p->meta.name;
-        auto gp = r.find(g);
-        if (gp != std::string::npos)
-        {
-            r = r.substr(g.size() + 1); // trailing space
-        }
         return r;
     }
     float getValue() const override { return p->value; }
+    std::string getValueAsStringFor(float f) const override
+    {
+        auto r = p->meta.valueToString(f);
+        if (r.has_value())
+            return *r;
+        return "error";
+    }
     void setValueFromGUI(const float &f) override
     {
         p->value = f;
         editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pid, f});
         editor.flushOperator();
+        editor.updateTooltip(this);
     }
     void setValueFromModel(const float &f) override { p->value = f; }
     float getDefaultValue() const override { return p->meta.defaultVal; }
@@ -72,13 +74,7 @@ struct PatchDiscrete : jdat::Discrete
 
     std::string getLabel() const override
     {
-        auto g = p->meta.groupName;
         auto r = p->meta.name;
-        auto gp = r.find(g);
-        if (gp != std::string::npos)
-        {
-            r = r.substr(g.size() + 1); // trailing space
-        }
         return r;
     }
     int getValue() const override { return static_cast<int>(std::round(p->value)); }
@@ -104,13 +100,24 @@ void createComponent(IFMEditor &e, P &panel, uint32_t id, std::unique_ptr<T> &cm
     pc = std::make_unique<Q>(e, id);
     cm = std::make_unique<T>();
 
-    cm->onBeginEdit = [&e, args..., id, &panel]()
+    cm->onBeginEdit = [&e, &cm, &pc, args..., id, &panel]()
     {
         e.uiToAudio.push({Synth::UIToAudioMsg::Action::BEGIN_EDIT, id});
+        if (std::is_same_v<Q, PatchContinuous>)
+        {
+            e.showTooltipOn(cm.get());
+            e.updateTooltip(pc.get());
+        }
+
         panel.beginEdit(args...);
     };
-    cm->onEndEdit = [&e, id, &panel]() {
+    cm->onEndEdit = [&e, id, &panel]()
+    {
         e.uiToAudio.push({Synth::UIToAudioMsg::Action::END_EDIT, id});
+        if (std::is_same_v<Q, PatchContinuous>)
+        {
+            e.hideTooltip();
+        }
     };
     cm->setSource(pc.get());
 
