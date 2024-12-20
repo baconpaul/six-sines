@@ -55,7 +55,7 @@ void MixerPanel::resized()
 void MixerPanel::beginEdit(size_t idx)
 {
     editor.hideAllSubPanels();
-    editor.mixerSubPanel->setIndex(idx);
+    editor.mixerSubPanel->setSelectedIndex(idx);
     editor.mixerSubPanel->setVisible(true);
 
     editor.singlePanel->setName("Op " + std::to_string(idx + 1) + " Mix");

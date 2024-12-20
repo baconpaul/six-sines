@@ -16,27 +16,24 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ifm-editor.h"
+#include "dahdsr-components.h"
 
 namespace baconpaul::fm::ui
 {
-struct MixerSubPanel : juce::Component, HasEditor
+struct MixerSubPanel : juce::Component, HasEditor, DAHDSRComponents<MixerSubPanel, Patch::MixerNode>
 {
     MixerSubPanel(IFMEditor &);
     ~MixerSubPanel();
-    void paint(juce::Graphics &g)
+    void paint(juce::Graphics &g) override
     {
-        g.fillAll(juce::Colours::green);
         g.setFont(juce::FontOptions(40));
-        g.setColour(juce::Colours::red);
+        g.setColour(juce::Colours::white);
         g.drawText(std::to_string(index), getLocalBounds(), juce::Justification::centred);
     }
+    void resized() override;
 
     size_t index{0};
-    void setIndex(size_t i)
-    {
-        index = i;
-        repaint();
-    }
+    void setSelectedIndex(int i);
 };
 } // namespace baconpaul::fm::ui
 #endif // MIXER_SUB_PANE_H

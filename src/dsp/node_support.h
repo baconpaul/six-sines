@@ -34,32 +34,41 @@ template <typename T> struct EnvelopeSupport
     {
     }
 
-    bool active{true};
+    bool active{true}, constantEnv{false};
     sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
 
     void envAttack()
     {
         active = powerV > 0.5;
-        if (active)
+
+        auto mn = sst::basic_blocks::modulators::TenSecondRange::etMin + 0.001;
+        auto mx = sst::basic_blocks::modulators::TenSecondRange::etMax - 0.001;
+
+        if (decay < mn && attackv < mn && hold < mn && delay < mn  && release > mx)
+        {
+            constantEnv = true;
+        }
+        else
+        {
+            constantEnv = false;
+        }
+
+        if (active && !constantEnv)
             env.attack(delay);
+        else if (constantEnv)
+        {
+            for (int i=0; i<blockSize; ++i)
+                env.outputCache[i] = sustain;
+        }
         else
             memset(env.outputCache, 0, sizeof(env.outputCache));
     }
     void envProcess(bool gated, bool maxIsForever = true)
     {
-        if (!active)
+        if (!active || constantEnv)
             return;
 
-        if (!gated && maxIsForever &&
-            release > sst::basic_blocks::modulators::TenSecondRange::etMax - 0.0001)
-        {
-            for (int i = 0; i < blockSize; ++i)
-                env.outputCache[i] = 1.f;
-        }
-        else
-        {
-            env.processBlockScaledAD(delay, attackv, hold, decay, sustain, release, gated);
-        }
+        env.processBlockScaledAD(delay, attackv, hold, decay, sustain, release, gated);
     }
 };
 } // namespace baconpaul::fm

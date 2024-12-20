@@ -20,17 +20,18 @@
 
 namespace baconpaul::fm::ui
 {
-struct SelfSubPanel : juce::Component, HasEditor
+struct SelfSubPanel : juce::Component, HasEditor, DAHDSRComponents<SelfSubPanel, Patch::SelfNode>
 {
     SelfSubPanel(IFMEditor &);
     ~SelfSubPanel();
-    void paint(juce::Graphics &g)
+    void paint(juce::Graphics &g) override
     {
-        g.fillAll(juce::Colours::darkblue);
         g.setFont(juce::FontOptions(40));
         g.setColour(juce::Colours::white);
-        g.drawText(std::to_string(index), getLocalBounds(), juce::Justification::centred);
+        g.drawText("Self " + std::to_string(index), getLocalBounds(), juce::Justification::centred);
     }
+
+    void resized() override;
 
     size_t index{0};
     void setSelectedIndex(int idx);

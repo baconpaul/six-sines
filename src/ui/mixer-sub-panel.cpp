@@ -17,4 +17,22 @@ namespace baconpaul::fm::ui
 {
 MixerSubPanel::MixerSubPanel(IFMEditor &e) : HasEditor(e){};
 MixerSubPanel::~MixerSubPanel() {}
+
+void MixerSubPanel::setSelectedIndex(int idx)
+{
+    index = idx;
+    repaint();
+
+    removeAllChildren();
+
+    setupDAHDSR(editor, editor.patchCopy.mixerNodes[idx]);
+    resized();
+}
+
+void MixerSubPanel::resized()
+{
+    auto p = getLocalBounds().reduced(uicMargin, 0);
+    layoutDAHDSRAt(p.getX(), p.getY());
+}
+
 } // namespace baconpaul::fm::ui

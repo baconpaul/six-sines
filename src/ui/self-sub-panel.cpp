@@ -21,6 +21,18 @@ void SelfSubPanel::setSelectedIndex(int idx)
 {
     index = idx;
     repaint();
+
+    removeAllChildren();
+
+    setupDAHDSR(editor, editor.patchCopy.selfNodes[idx]);
+    resized();
 }
+
+void SelfSubPanel::resized()
+{
+    auto p = getLocalBounds().reduced(uicMargin, 0);
+    layoutDAHDSRAt(p.getX(), p.getY());
+}
+
 
 } // namespace baconpaul::fm::ui
