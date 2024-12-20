@@ -93,7 +93,7 @@ struct PatchDiscrete : jdat::Discrete
     int getMax() const override { return static_cast<int>(std::round(p->meta.maxVal)); }
 };
 
-template <typename P, typename T = jcmp::ToggleButton, typename Q, typename... Args>
+template <typename P, typename T, typename Q, typename... Args>
 void createComponent(IFMEditor &e, P &panel, uint32_t id, std::unique_ptr<T> &cm,
                      std::unique_ptr<Q> &pc, Args... args)
 {

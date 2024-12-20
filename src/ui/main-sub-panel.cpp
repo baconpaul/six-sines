@@ -12,9 +12,20 @@
  */
 
 #include "main-sub-panel.h"
+#include "ui-constants.h"
 
 namespace baconpaul::fm::ui
 {
-MainSubPanel::MainSubPanel(IFMEditor &e) : HasEditor(e){};
+MainSubPanel::MainSubPanel(IFMEditor &e) : HasEditor(e), DAHDSRComponents()
+{
+    setupDAHDSR(e, e.patchCopy.output);
+};
 MainSubPanel::~MainSubPanel() {}
+
+void MainSubPanel::resized()
+{
+    auto p = getLocalBounds().reduced(uicMargin, 0);
+    layoutDAHDSRAt(p.getX(), p.getY());
+}
+
 } // namespace baconpaul::fm::ui

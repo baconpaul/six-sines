@@ -88,15 +88,15 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>
 
 struct MixerNode : EnvelopeSupport<Patch::MixerNode>
 {
-    float output alignas(16)[blockSize];
+    float output alignas(16)[2][blockSize];
     OpSource &from;
     SRProvider sr;
 
-    const float &level, &activeF;
+    const float &level, &activeF, &pan;
     bool active{false};
 
     MixerNode(const Patch::MixerNode &mn, OpSource &f)
-        : from(f), level(mn.level), activeF(mn.active), EnvelopeSupport(mn)
+        : from(f), pan(mn.pan), level(mn.level), activeF(mn.active), EnvelopeSupport(mn)
     {
         memset(output, 0, sizeof(output));
     }
@@ -115,48 +115,14 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>
         {
             return;
         }
+        float vSum alignas(16)[blockSize];
+
         envProcess(gated);
         for (int j = 0; j < blockSize; ++j)
         {
             // use mech blah
-            output[j] = level * env.outputCache[j] * from.output[j];
+            vSum[j] = level * env.outputCache[j] * from.output[j];
         }
-    }
-};
-
-struct OutputNode : EnvelopeSupport<Patch::OutputNode>
-{
-    float output alignas(16)[2][blockSize];
-    std::array<MixerNode, numOps> &fromArr;
-    SRProvider sr;
-
-    const float &level, &pan;
-
-    OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f)
-        : fromArr(f), level(on.level), pan(on.pan), EnvelopeSupport(on)
-    {
-        memset(output, 0, sizeof(output));
-    }
-
-    void attack() { envAttack(); }
-
-    void renderBlock(bool gated)
-    {
-        float vSum alignas(16)[blockSize];
-        memset(vSum, 0, sizeof(vSum));
-        for (const auto &from : fromArr)
-        {
-            mech::accumulate_from_to<blockSize>(from.output, vSum);
-        }
-
-        envProcess(gated);
-        mech::scale_by<blockSize>(env.outputCache, vSum);
-        mech::scale_by<blockSize>(0.5, vSum);
-
-        // Apply main output
-        auto lv = level;
-        lv = lv * lv * lv;
-        mech::scale_by<blockSize>(lv, vSum);
 
         auto pn = pan;
         if (pn != 0.f)
@@ -173,6 +139,41 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
             mech::copy_from_to<blockSize>(vSum, output[0]);
             mech::copy_from_to<blockSize>(vSum, output[1]);
         }
+    }
+};
+
+struct OutputNode : EnvelopeSupport<Patch::OutputNode>
+{
+    float output alignas(16)[2][blockSize];
+    std::array<MixerNode, numOps> &fromArr;
+    SRProvider sr;
+
+    const float &level;
+
+    OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f)
+        : fromArr(f), level(on.level), EnvelopeSupport(on)
+    {
+        memset(output, 0, sizeof(output));
+    }
+
+    void attack() { envAttack(); }
+
+    void renderBlock(bool gated)
+    {
+        for (const auto &from : fromArr)
+        {
+            mech::accumulate_from_to<blockSize>(from.output[0], output[0]);
+            mech::accumulate_from_to<blockSize>(from.output[1], output[1]);
+        }
+
+        envProcess(gated, false);
+        mech::scale_by<blockSize>(env.outputCache, output[0], output[1]);
+        mech::scale_by<blockSize>(0.5, output[0], output[1]);
+
+        // Apply main output
+        auto lv = level;
+        lv = lv * lv * lv;
+        mech::scale_by<blockSize>(lv, output[0], output[1]);
     }
 };
 } // namespace baconpaul::fm

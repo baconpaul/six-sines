@@ -37,9 +37,18 @@ template <typename T> struct EnvelopeSupport
     sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
 
     void envAttack() { env.attack(delay); }
-    void envProcess(bool gated)
+    void envProcess(bool gated, bool maxIsForever = true)
     {
-        env.processBlockScaledAD(delay, attackv, hold, decay, sustain, release, gated);
+        if (!gated && maxIsForever &&
+            release > sst::basic_blocks::modulators::TenSecondRange::etMax - 0.0001)
+        {
+            for (int i = 0; i < blockSize; ++i)
+                env.outputCache[i] = 1.f;
+        }
+        else
+        {
+            env.processBlockScaledAD(delay, attackv, hold, decay, sustain, release, gated);
+        }
     }
 };
 } // namespace baconpaul::fm

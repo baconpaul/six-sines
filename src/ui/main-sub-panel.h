@@ -16,14 +16,15 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ifm-editor.h"
+#include "dahdsr-components.h"
 
 namespace baconpaul::fm::ui
 {
-struct MainSubPanel : juce::Component, HasEditor
+struct MainSubPanel : juce::Component, HasEditor, DAHDSRComponents<MainSubPanel, Patch::OutputNode>
 {
     MainSubPanel(IFMEditor &);
     ~MainSubPanel();
-    void paint(juce::Graphics &g) { g.fillAll(juce::Colours::orchid); }
+    void resized() override;
 };
 } // namespace baconpaul::fm::ui
 #endif // MAIN_SUB_PANEL_H

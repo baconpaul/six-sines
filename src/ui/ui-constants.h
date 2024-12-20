@@ -23,6 +23,7 @@ static constexpr uint32_t uicPowerButtonSize{24};
 static constexpr uint32_t uicLabelHeight{18};
 static constexpr uint32_t uicLabelGap{2};
 static constexpr uint32_t uicMargin{4};
+static constexpr uint32_t uicSliderWidth{24};
 static constexpr uint32_t uicLabeledKnobHeight{uicKnobSize + uicLabelHeight + uicLabelGap};
 static constexpr uint32_t uicPowerKnobWidth{uicKnobSize + uicPowerButtonSize + uicMargin};
 

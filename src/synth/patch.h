@@ -125,12 +125,22 @@ struct Patch
               release(floatEnvRateMd()
                           .withName(name + " Release")
                           .withGroupName(name)
-                          .withDefault(longAdsr ? 0.5f : tsr::etMin)
+                          .withDefault(longAdsr ? 0.5f : tsr::etMax)
                           .withID(id0 + 5))
         {
         }
 
         Param delay, attack, hold, decay, sustain, release;
+
+        void appendDAHDSRParams(std::vector<Param *> &res)
+        {
+            res.push_back(&delay);
+            res.push_back(&attack);
+            res.push_back(&hold);
+            res.push_back(&decay);
+            res.push_back(&sustain);
+            res.push_back(&release);
+        }
     };
 
     struct SourceNode
@@ -165,106 +175,111 @@ struct Patch
     {
         // Once streamed you cant change these bases or the individual ids inside
         static constexpr uint32_t idBase{10000}, idStride{100};
-        int index;
         SelfNode(size_t idx)
-            : index(idx), fbLevel(floatMd()
-                                      .asPercent()
-                                      .withName(name() + " Feedback Level")
-                                      .withGroupName(name())
-                                      .withDefault(0.0)
-                                      .withID(id(0))),
+            : fbLevel(floatMd()
+                          .asPercent()
+                          .withName(name(idx) + " Feedback Level")
+                          .withGroupName(name(idx))
+                          .withDefault(0.0)
+                          .withID(id(0, idx))),
               active(boolMd()
-                         .withName(name() + " Feedback Active")
-                         .withGroupName(name())
+                         .withName(name(idx) + " Feedback Active")
+                         .withGroupName(name(idx))
                          .withDefault(false)
-                         .withID(id(1))),
-              DAHDSRMixin(name(idx) + " Feedback", id(2), false)
+                         .withID(id(1, idx))),
+              DAHDSRMixin(name(idx) + " Feedback", id(2, idx), false)
         {
         }
 
-        std::string name(int idx = -1) const
-        {
-            if (idx < 0)
-                idx = index;
-            return "Op " + std::to_string(idx + 1);
-        }
-        uint32_t id(int f) const { return idBase + idStride * index + f; }
+        std::string name(int idx) const { return "Op " + std::to_string(idx + 1); }
+        uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
         Param fbLevel;
         Param active;
 
-        std::vector<Param *> params() { return {&fbLevel, &active}; }
+        std::vector<Param *> params()
+        {
+            std::vector<Param *> res{&fbLevel, &active};
+            appendDAHDSRParams(res);
+            return res;
+        }
     };
 
     struct MatrixNode : public DAHDSRMixin
     {
         static constexpr uint32_t idBase{30000}, idStride{200};
-        int index;
         MatrixNode(size_t idx)
-            : index(idx), level(floatMd()
-                                    .asPercent()
-                                    .withName(name() + " FM Depth")
-                                    .withGroupName(name())
-                                    .withDefault(0.f)
-                                    .withID(id(0))),
+            : level(floatMd()
+                        .asPercent()
+                        .withName(name(idx) + " FM Depth")
+                        .withGroupName(name(idx))
+                        .withDefault(0.f)
+                        .withID(id(0, idx))),
               active(boolMd()
-                         .withName(name() + " Active")
-                         .withGroupName(name())
+                         .withName(name(idx) + " Active")
+                         .withGroupName(name(idx))
                          .withFlags(CLAP_PARAM_IS_STEPPED)
                          .withDefault(false)
-                         .withID(id(1))),
-              DAHDSRMixin(name(idx), id(2), false)
+                         .withID(id(1, idx))),
+              DAHDSRMixin(name(idx), id(2, idx), false)
         {
         }
 
         Param level;
         Param active;
 
-        std::string name(int idx = -1) const
+        std::string name(int idx) const
         {
-            if (idx < 0)
-                idx = index;
             return "Op " + std::to_string(MatrixIndex::sourceIndexAt(idx) + 1) + " to Op " +
                    std::to_string(MatrixIndex::targetIndexAt(idx) + 1);
-            ;
         }
-        uint32_t id(int f) const { return idBase + idStride * index + f; }
-        std::vector<Param *> params() { return {&level, &active}; }
+        uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
+        std::vector<Param *> params()
+        {
+            std::vector<Param *> res{&level, &active};
+            appendDAHDSRParams(res);
+            return res;
+        }
     };
 
     struct MixerNode : public DAHDSRMixin
     {
         static constexpr uint32_t idBase{20000}, idStride{100};
-        int index;
         MixerNode(size_t idx)
-            : index(idx), level(floatMd()
-                                    .asPercent()
-                                    .withName(name() + " Mixer Level")
-                                    .withGroupName(name())
-                                    .withDefault(idx == 0 ? 1.f : 0.f)
-                                    .withID(id(0))),
+            : level(floatMd()
+                        .asPercent()
+                        .withName(name(idx) + " Mixer Level")
+                        .withGroupName(name(idx))
+                        .withDefault(idx == 0 ? 1.f : 0.f)
+                        .withID(id(0, idx))),
               active(boolMd()
-                         .withName(name() + " Mixer Active")
-                         .withGroupName(name())
+                         .withName(name(idx) + " Mixer Active")
+                         .withGroupName(name(idx))
                          .withFlags(CLAP_PARAM_IS_STEPPED)
                          .withDefault(idx == 0 ? true : false)
-                         .withID(id(1))),
-              DAHDSRMixin(name(idx), id(2), false)
+                         .withID(id(1, idx))),
+              DAHDSRMixin(name(idx), id(2, idx), false), pan(floatMd()
+                                                                 .asPercentBipolar()
+                                                                 .withName(name(idx) + " Pan")
+                                                                 .withGroupName(name(idx))
+                                                                 .withDefault(0.f)
+                                                                 .withID(id(15, idx)))
+
         {
         }
 
-        std::string name(int idx = -1) const
-        {
-            if (idx < 0)
-                idx = index;
-            return "Op " + std::to_string(idx + 1);
-        }
-        uint32_t id(int f) const { return idBase + idStride * index + f; }
+        std::string name(int idx) const { return "Op " + std::to_string(idx + 1); }
+        uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
-        Param level;
+        Param level, pan;
         Param active;
 
-        std::vector<Param *> params() { return {&level, &active}; }
+        std::vector<Param *> params()
+        {
+            std::vector<Param *> res{&level, &active, &pan};
+            appendDAHDSRParams(res);
+            return res;
+        }
     };
 
     struct OutputNode : public DAHDSRMixin
@@ -276,24 +291,20 @@ struct Patch
                                                           .withName(name() + " Level")
                                                           .withGroupName(name())
                                                           .withDefault(1.0)
-                                                          .withID(id(0))),
-              pan(floatMd()
-                      .asPercentBipolar()
-                      .withName(name() + " Pan")
-                      .withGroupName(name())
-                      .withDefault(0.f)
-                      .withID(id(1)))
+                                                          .withID(id(0)))
         {
         }
 
         std::string name() const { return "Main"; }
         uint32_t id(int f) const { return idBase + f; }
 
-        Param level, pan;
+        Param level;
 
         std::vector<Param *> params()
         {
-            return {&level, &pan, &delay, &attack, &hold, &decay, &sustain, &release};
+            std::vector<Param *> res{&level};
+            appendDAHDSRParams(res);
+            return res;
         }
     };
 
