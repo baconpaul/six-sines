@@ -30,5 +30,8 @@ Installer
 
 Friday
 - subeditors
+- envelope power for subs
+- simple lfo in feedback
 - lfo support
 - step support
+- typein

@@ -39,6 +39,8 @@ void MainPanel::beginEdit()
 {
     editor.hideAllSubPanels();
     editor.mainSubPanel->setVisible(true);
+
+    editor.singlePanel->setName("Main Output");
 }
 
 } // namespace baconpaul::fm::ui

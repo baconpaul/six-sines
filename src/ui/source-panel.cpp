@@ -56,6 +56,7 @@ void SourcePanel::beginEdit(size_t idx)
     editor.hideAllSubPanels();
     editor.sourceSubPanel->setVisible(true);
     editor.sourceSubPanel->setIndex(idx);
+    editor.singlePanel->setName("Op " + std::to_string(idx + 1) + " Source");
 }
 
 } // namespace baconpaul::fm::ui

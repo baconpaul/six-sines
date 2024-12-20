@@ -70,7 +70,6 @@ void MatrixPanel::resized()
         positionPowerKnobAndLabel(x, y, Spower[i], Sknobs[i], Slabels[i]);
         y += uicLabeledKnobHeight + uicMargin;
         x += uicPowerKnobWidth + uicMargin;
-        ;
     }
 
     for (auto i = 0U; i < matrixSize; ++i)
@@ -88,6 +87,19 @@ void MatrixPanel::beginEdit(size_t idx, bool self)
     editor.hideAllSubPanels();
     editor.matrixSubPanel->setVisible(true);
     editor.matrixSubPanel->setSelectedIndex(idx, self);
+
+    if (self)
+    {
+        editor.singlePanel->setName("Op " + std::to_string(idx + 1) + " feedback");
+    }
+    else
+    {
+        auto si = MatrixIndex::sourceIndexAt(idx);
+        auto ti = MatrixIndex::targetIndexAt(idx);
+        std::string glyph = u8"\U00002192";
+        auto nm = "Op " + std::to_string(si + 1) + " " + glyph + " Op " + std::to_string(ti + 1);
+        editor.singlePanel->setName(nm);
+    }
 }
 
 } // namespace baconpaul::fm::ui
