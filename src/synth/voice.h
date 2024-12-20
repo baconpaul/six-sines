@@ -18,6 +18,8 @@
 #include "dsp/op_source.h"
 #include "dsp/matrix_node.h"
 
+struct MTSClient;
+
 namespace baconpaul::six_sines
 {
 struct Patch;
@@ -27,6 +29,8 @@ struct Voice
     const float *const output[2];
     const sst::basic_blocks::tables::EqualTuningProvider &tuningProvider;
 
+    MTSClient *mtsClient{nullptr};
+
     Voice(const Patch &, const sst::basic_blocks::tables::EqualTuningProvider &);
     ~Voice() = default;
 
@@ -35,6 +39,7 @@ struct Voice
 
     bool gated{false}, used{false};
     int key{0};
+    int channel{0};
 
     std::array<OpSource, numOps> src;
     std::array<bool, numOps> isKeytrack;

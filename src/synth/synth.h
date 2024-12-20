@@ -29,6 +29,8 @@
 #include "synth/voice.h"
 #include "synth/patch.h"
 
+struct MTSClient;
+
 namespace baconpaul::six_sines
 {
 struct Synth
@@ -39,6 +41,7 @@ struct Synth
     std::unique_ptr<resampler_t> resampler;
 
     Patch patch;
+    MTSClient *mtsClient{nullptr};
 
     struct VMConfig
     {
@@ -90,7 +93,10 @@ struct Synth
                         synth.voices[i].used = true;
                         synth.voices[i].gated = true;
                         synth.voices[i].key = key;
+                        synth.voices[i].channel = ch;
+                        synth.voices[i].mtsClient = synth.mtsClient;
                         synth.voices[i].attack();
+
                         synth.addToVoiceList(&synth.voices[i]);
 
                         return 1;
@@ -122,7 +128,7 @@ struct Synth
     std::unique_ptr<voiceManager_t> voiceManager;
 
     Synth();
-    ~Synth() = default;
+    ~Synth();
 
     double realSampleRate{0};
     void setSampleRate(double sampleRate)

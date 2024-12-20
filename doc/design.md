@@ -24,12 +24,10 @@ MIDI mappings what to do
 
 Other ToDos
 - Envelope Rate Linear to 2x provider
-- MTS/ESP support
 
 Installer
 
 Friday
-- subeditors
 - envelope power for subs
 - simple lfo in feedback
 - lfo support
@@ -37,3 +35,4 @@ Friday
 - typein
 - auv2
 - vst3
+- a build

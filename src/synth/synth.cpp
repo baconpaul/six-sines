@@ -16,6 +16,8 @@
 #include "sst/basic-blocks/mechanics/block-ops.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
 
+#include "libMTSClient.h"
+
 namespace baconpaul::six_sines
 {
 
@@ -29,7 +31,18 @@ Synth::Synth()
     tuningProvider.init();
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
     lagHandler.setRate(60, blockSize, gSampleRate);
+
+    mtsClient = MTS_RegisterClient();
 }
+
+Synth::~Synth()
+{
+    if (mtsClient)
+    {
+        MTS_DeregisterClient(mtsClient);
+    }
+}
+
 void Synth::process(const clap_output_events_t *outq)
 {
     assert(resampler);

@@ -15,6 +15,7 @@
 #include "sst/cpputils/constructors.h"
 #include "synth/matrix_index.h"
 #include "synth/patch.h"
+#include "libMTSClient.h"
 
 namespace baconpaul::six_sines
 {
@@ -57,7 +58,12 @@ void Voice::attack()
 
 void Voice::renderBlock()
 {
-    auto baseFreq = tuningProvider.note_to_pitch(key - 69) * 440.0;
+    float retuneKey = key;
+    if (mtsClient && MTS_HasMaster(mtsClient))
+    {
+        retuneKey += MTS_RetuningInSemitones(mtsClient, key, channel);
+    }
+    auto baseFreq = tuningProvider.note_to_pitch(retuneKey - 69) * 440.0;
 
     for (int i = 0; i < numOps; ++i)
     {

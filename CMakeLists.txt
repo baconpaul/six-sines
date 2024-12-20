@@ -50,6 +50,7 @@ target_link_libraries(${PROJECT_NAME}-impl PUBLIC
         simde
         clap clap-helpers
         fmt-header-only
+        mts-esp-client
         sst-basic-blocks sst-voicemanager sst-jucegui sst-cpputils
         sst::clap_juce_shim sst::clap_juce_shim_headers)
 
