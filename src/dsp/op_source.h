@@ -24,14 +24,14 @@
 
 namespace baconpaul::six_sines
 {
-struct alignas(16) OpSource
+struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
 {
     int32_t phaseInput alignas(16)[blockSize];
     int32_t feedbackLevel alignas(16)[blockSize];
     float output alignas(16)[blockSize];
 
     bool keytrack{true};
-    const float &ratio, &activeV; // in  frequency multiple
+    const float &ratio, &activeV, envToRatio; // in  frequency multiple
     bool active{false};
 
     // todo waveshape
@@ -39,7 +39,11 @@ struct alignas(16) OpSource
     uint32_t phase;
     uint32_t dPhase;
 
-    OpSource(const Patch::SourceNode &sn) : ratio(sn.ratio), activeV(sn.active) { reset(); }
+    OpSource(const Patch::SourceNode &sn)
+        : EnvelopeSupport(sn), ratio(sn.ratio), activeV(sn.active), envToRatio(sn.envToRatio)
+    {
+        reset();
+    }
 
     void reset()
     {

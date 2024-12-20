@@ -149,33 +149,46 @@ struct Patch
         }
     };
 
-    struct SourceNode
+    struct SourceNode : public DAHDSRMixin
     {
         static constexpr uint32_t idBase{1500}, idStride{250};
-        int index;
         SourceNode(size_t idx)
-            : index(idx), ratio(floatMd()
-                                    .withRange(-4, 4)
-                                    .withATwoToTheBFormatting(1, 1, "x")
-                                    .withName(name() + " Ratio")
-                                    .withGroupName(name())
-                                    .withDefault(0.0)
-                                    .withID(id(0))),
+            : ratio(floatMd()
+                        .withRange(-4, 4)
+                        .withATwoToTheBFormatting(1, 1, "x")
+                        .withName(name(idx) + " Ratio")
+                        .withGroupName(name(idx))
+                        .withDefault(0.0)
+                        .withID(id(0, idx))),
               active(boolMd()
-                         .withGroupName(name())
-                         .withName(name() + " Active")
+                         .withGroupName(name(idx))
+                         .withName(name(idx) + " Active")
                          .withDefault(1.0)
-                         .withID(id(1)))
+                         .withID(id(1, idx))),
+              envToRatio(floatMd()
+                             .withRange(-2, 2)
+                             .withName(name(idx) + " Env to Ratio")
+                             .withGroupName(name(idx))
+                             .withDefault(0.f)
+                             .withID(id(2, idx))),
+              DAHDSRMixin(name(idx) + " Ratio ", id(100, idx), false)
         {
         }
 
-        std::string name() const { return "Op " + std::to_string(index + 1); }
-        uint32_t id(int f) const { return idBase + idStride * index + f; }
+        std::string name(int idx) const { return "Op " + std::to_string(idx + 1); }
+        uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
         Param ratio;
         Param active;
 
-        std::vector<Param *> params() { return {&ratio, &active}; }
+        Param envToRatio;
+
+        std::vector<Param *> params()
+        {
+            std::vector<Param *> res{&ratio, &active};
+            appendDAHDSRParams(res);
+            return res;
+        }
     };
     struct SelfNode : public DAHDSRMixin
     {
