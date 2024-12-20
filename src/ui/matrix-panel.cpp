@@ -13,6 +13,7 @@
 
 #include "matrix-panel.h"
 #include "matrix-sub-panel.h"
+#include "self-sub-panel.h"
 #include "ui-constants.h"
 
 namespace baconpaul::fm::ui
@@ -85,12 +86,12 @@ void MatrixPanel::resized()
 void MatrixPanel::beginEdit(size_t idx, bool self)
 {
     editor.hideAllSubPanels();
-    editor.matrixSubPanel->setVisible(true);
-    editor.matrixSubPanel->setSelectedIndex(idx, self);
 
     if (self)
     {
         editor.singlePanel->setName("Op " + std::to_string(idx + 1) + " feedback");
+        editor.selfSubPanel->setVisible(true);
+        editor.selfSubPanel->setSelectedIndex(idx);
     }
     else
     {
@@ -99,6 +100,9 @@ void MatrixPanel::beginEdit(size_t idx, bool self)
         std::string glyph = u8"\U00002192";
         auto nm = "Op " + std::to_string(si + 1) + " " + glyph + " Op " + std::to_string(ti + 1);
         editor.singlePanel->setName(nm);
+
+        editor.matrixSubPanel->setVisible(true);
+        editor.matrixSubPanel->setSelectedIndex(idx);
     }
 }
 

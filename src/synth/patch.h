@@ -126,11 +126,16 @@ struct Patch
                           .withName(name + " Release")
                           .withGroupName(name)
                           .withDefault(longAdsr ? 0.5f : tsr::etMax)
-                          .withID(id0 + 5))
+                          .withID(id0 + 5)),
+              envPower(boolMd()
+                           .withName(name + " Envelope Power")
+                           .withGroupName(name)
+                           .withDefault(true)
+                           .withID(id0 + 6))
         {
         }
 
-        Param delay, attack, hold, decay, sustain, release;
+        Param delay, attack, hold, decay, sustain, release, envPower;
 
         void appendDAHDSRParams(std::vector<Param *> &res)
         {
@@ -140,6 +145,7 @@ struct Patch
             res.push_back(&decay);
             res.push_back(&sustain);
             res.push_back(&release);
+            res.push_back(&envPower);
         }
     };
 

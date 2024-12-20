@@ -17,6 +17,7 @@
 #include "main-sub-panel.h"
 #include "matrix-panel.h"
 #include "matrix-sub-panel.h"
+#include "self-sub-panel.h"
 #include "mixer-panel.h"
 #include "mixer-sub-panel.h"
 #include "source-panel.h"
@@ -55,7 +56,9 @@ IFMEditor::IFMEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &uto
     mainSubPanel = std::make_unique<MainSubPanel>(*this);
     singlePanel->addChildComponent(*mainSubPanel);
     matrixSubPanel = std::make_unique<MatrixSubPanel>(*this);
+    selfSubPanel = std::make_unique<SelfSubPanel>(*this);
     singlePanel->addChildComponent(*matrixSubPanel);
+    singlePanel->addChildComponent(*selfSubPanel);
     mixerSubPanel = std::make_unique<MixerSubPanel>(*this);
     singlePanel->addChildComponent(*mixerSubPanel);
     sourceSubPanel = std::make_unique<SourceSubPanel>(*this);
@@ -122,6 +125,7 @@ void IFMEditor::resized()
 
     mainSubPanel->setBounds(singlePanel->getContentArea());
     matrixSubPanel->setBounds(singlePanel->getContentArea());
+    selfSubPanel->setBounds(singlePanel->getContentArea());
     mixerSubPanel->setBounds(singlePanel->getContentArea());
     sourceSubPanel->setBounds(singlePanel->getContentArea());
 }

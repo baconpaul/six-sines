@@ -36,6 +36,7 @@ struct MainPanel;
 struct MainSubPanel;
 struct MatrixPanel;
 struct MatrixSubPanel;
+struct SelfSubPanel;
 struct MixerPanel;
 struct MixerSubPanel;
 struct SourcePanel;
@@ -63,6 +64,7 @@ struct IFMEditor : jcmp::WindowPanel
 
     std::unique_ptr<MatrixPanel> matrixPanel;
     std::unique_ptr<MatrixSubPanel> matrixSubPanel;
+    std::unique_ptr<SelfSubPanel> selfSubPanel;
 
     std::unique_ptr<MixerPanel> mixerPanel;
     std::unique_ptr<MixerSubPanel> mixerSubPanel;

@@ -11,13 +11,13 @@
  * released under GPL3. You know the drill.
  */
 
-#include "matrix-sub-panel.h"
+#include "self-sub-panel.h"
 
 namespace baconpaul::fm::ui
 {
-MatrixSubPanel::MatrixSubPanel(IFMEditor &e) : HasEditor(e){};
-MatrixSubPanel::~MatrixSubPanel() {}
-void MatrixSubPanel::setSelectedIndex(int idx)
+SelfSubPanel::SelfSubPanel(IFMEditor &e) : HasEditor(e){};
+SelfSubPanel::~SelfSubPanel() {}
+void SelfSubPanel::setSelectedIndex(int idx)
 {
     index = idx;
     repaint();

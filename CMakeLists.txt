@@ -31,6 +31,7 @@ add_library(ifm-impl STATIC
         src/ui/main-sub-panel.cpp
         src/ui/matrix-panel.cpp
         src/ui/matrix-sub-panel.cpp
+        src/ui/self-sub-panel.cpp
         src/ui/mixer-panel.cpp
         src/ui/mixer-sub-panel.cpp
         src/ui/source-panel.cpp

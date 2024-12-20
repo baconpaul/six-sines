@@ -27,18 +27,29 @@ template <typename T> struct EnvelopeSupport
 {
     SRProvider sr;
 
-    const float &delay, &attackv, &hold, &decay, &sustain, &release;
+    const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV;
     EnvelopeSupport(const T &mn)
         : env(&sr), delay(mn.delay), attackv(mn.attack), hold(mn.hold), decay(mn.decay),
-          sustain(mn.sustain), release(mn.release)
+          sustain(mn.sustain), release(mn.release), powerV(mn.envPower)
     {
     }
 
+    bool active{true};
     sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
 
-    void envAttack() { env.attack(delay); }
+    void envAttack()
+    {
+        active = powerV > 0.5;
+        if (active)
+            env.attack(delay);
+        else
+            memset(env.outputCache, 0, sizeof(env.outputCache));
+    }
     void envProcess(bool gated, bool maxIsForever = true)
     {
+        if (!active)
+            return;
+
         if (!gated && maxIsForever &&
             release > sst::basic_blocks::modulators::TenSecondRange::etMax - 0.0001)
         {

@@ -11,8 +11,8 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_FMTHING_UI_MATRIX_SUB_PANEL_H
-#define BACONPAUL_FMTHING_UI_MATRIX_SUB_PANEL_H
+#ifndef BACONPAUL_FMTHING_UI_SELF_SUB_PANEL_H
+#define BACONPAUL_FMTHING_UI_SELF_SUB_PANEL_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ifm-editor.h"
@@ -20,14 +20,13 @@
 
 namespace baconpaul::fm::ui
 {
-struct MatrixSubPanel : juce::Component, HasEditor
+struct SelfSubPanel : juce::Component, HasEditor
 {
-    MatrixSubPanel(IFMEditor &);
-    ~MatrixSubPanel();
+    SelfSubPanel(IFMEditor &);
+    ~SelfSubPanel();
     void paint(juce::Graphics &g)
     {
-        g.fillAll(juce::Colours::darkred);
-
+        g.fillAll(juce::Colours::darkblue);
         g.setFont(juce::FontOptions(40));
         g.setColour(juce::Colours::white);
         g.drawText(std::to_string(index), getLocalBounds(), juce::Justification::centred);
