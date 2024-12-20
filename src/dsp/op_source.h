@@ -19,26 +19,25 @@
 #include "configuration.h"
 
 #include "dsp/sintable.h"
+#include "synth/patch.h"
 
 namespace baconpaul::fm
 {
 struct alignas(16) OpSource
 {
     int32_t phaseInput alignas(16)[2][blockSize];
-    float rmInput alignas(16)[2][blockSize];
     int32_t feedbackLevel alignas(16)[blockSize];
     float output alignas(16)[2][blockSize];
 
     bool keytrack{true};
-    float ratio{1.0};   // in  frequency multiple
-    float absolute{60}; // in midi keys
+    const float &ratio; // in  frequency multiple
 
     // todo waveshape
 
     uint32_t phase[2];
     uint32_t dPhase[2];
 
-    OpSource() { reset(); }
+    OpSource(const Patch::SourceNode &sn) : ratio(sn.ratio) { reset(); }
 
     void reset()
     {
@@ -51,9 +50,6 @@ struct alignas(16) OpSource
     {
         for (int i = 0; i < blockSize; ++i)
         {
-            rmInput[0][i] = 1.f;
-            rmInput[1][i] = 1.f;
-
             phaseInput[0][i] = 0;
             phaseInput[1][i] = 0;
 
@@ -61,10 +57,11 @@ struct alignas(16) OpSource
         }
     }
 
-    void setFrequency(float freq)
+    void setBaseFrequency(float freq)
     {
-        dPhase[0] = st.dPhase(freq);
-        dPhase[1] = st.dPhase(freq);
+        auto rf = pow(2.f, ratio);
+        dPhase[0] = st.dPhase(freq * rf);
+        dPhase[1] = st.dPhase(freq * rf);
     }
 
     void renderBlock()

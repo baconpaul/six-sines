@@ -23,6 +23,8 @@ namespace scpu = sst::cpputils;
 
 Voice::Voice(const Patch &p)
     : out(p.output, mixerNode), output{out.output[0], out.output[1]},
+      src(scpu::make_array_lambda<OpSource, numOps>([this, &p](auto i)
+                                                    { return OpSource(p.sourceNodes[i]); })),
       mixerNode(scpu::make_array_lambda<MixerNode, numOps>(
           [this, &p](auto i) { return MixerNode(p.mixerNodes[i], this->src[i]); })),
       selfNode(scpu::make_array_lambda<MatrixNodeSelf, numOps>(
@@ -58,19 +60,14 @@ void Voice::renderBlock()
         s.zeroInputs();
 
     auto baseFreq = 440.0 * pow(2.0, (key - 69) / 12.0);
-    src[1].setFrequency(baseFreq * 2.61);
-    src[1].renderBlock();
-    matrixNode[0].fmLevel = 0.1;
-    matrixNode[0].applyBlock(gated);
-    selfNode[0].fbBase = 0.4;
+
     for (int i = 0; i < numOps; ++i)
     {
-        selfNode[i].applyBlock(gated);
-
-        src[i].setFrequency(baseFreq * cmRatio[i]);
+        src[i].setBaseFrequency(baseFreq);
         src[i].renderBlock();
+        mixerNode[i].renderBlock(gated);
     }
-    mixerNode[0].renderBlock(gated);
+
     out.renderBlock(gated);
 }
 

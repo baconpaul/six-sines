@@ -125,7 +125,7 @@ struct Patch
               release(floatEnvRateMd()
                           .withName(name + " Release")
                           .withGroupName(name)
-                          .withDefault(longAdsr ? 2.f : tsr::etMin)
+                          .withDefault(longAdsr ? 0.5f : tsr::etMin)
                           .withID(id0 + 5))
         {
         }
@@ -161,7 +161,7 @@ struct Patch
 
         std::vector<Param *> params() { return {&ratio, &active}; }
     };
-    struct SelfNode
+    struct SelfNode : public DAHDSRMixin
     {
         // Once streamed you cant change these bases or the individual ids inside
         static constexpr uint32_t idBase{10000}, idStride{100};
@@ -177,11 +177,17 @@ struct Patch
                          .withName(name() + " Feedback Active")
                          .withGroupName(name())
                          .withDefault(false)
-                         .withID(id(1)))
+                         .withID(id(1))),
+              DAHDSRMixin(name(idx) + " Feedback", id(2), false)
         {
         }
 
-        std::string name() const { return "Op " + std::to_string(index + 1); }
+        std::string name(int idx = -1) const
+        {
+            if (idx < 0)
+                idx = index;
+            return "Op " + std::to_string(idx + 1);
+        }
         uint32_t id(int f) const { return idBase + idStride * index + f; }
 
         Param fbLevel;
@@ -190,7 +196,7 @@ struct Patch
         std::vector<Param *> params() { return {&fbLevel, &active}; }
     };
 
-    struct MatrixNode
+    struct MatrixNode : public DAHDSRMixin
     {
         static constexpr uint32_t idBase{30000}, idStride{200};
         int index;
@@ -206,17 +212,20 @@ struct Patch
                          .withGroupName(name())
                          .withFlags(CLAP_PARAM_IS_STEPPED)
                          .withDefault(false)
-                         .withID(id(1)))
+                         .withID(id(1))),
+              DAHDSRMixin(name(idx), id(2), false)
         {
         }
 
         Param level;
         Param active;
 
-        std::string name() const
+        std::string name(int idx = -1) const
         {
-            return "Op " + std::to_string(MatrixIndex::sourceIndexAt(index) + 1) + " to Op " +
-                   std::to_string(MatrixIndex::targetIndexAt(index) + 1);
+            if (idx < 0)
+                idx = index;
+            return "Op " + std::to_string(MatrixIndex::sourceIndexAt(idx) + 1) + " to Op " +
+                   std::to_string(MatrixIndex::targetIndexAt(idx) + 1);
             ;
         }
         uint32_t id(int f) const { return idBase + idStride * index + f; }
@@ -240,11 +249,16 @@ struct Patch
                          .withFlags(CLAP_PARAM_IS_STEPPED)
                          .withDefault(idx == 0 ? true : false)
                          .withID(id(1))),
-              DAHDSRMixin(name(), id(2), false)
+              DAHDSRMixin(name(idx), id(2), false)
         {
         }
 
-        std::string name() const { return "Op " + std::to_string(index + 1); }
+        std::string name(int idx = -1) const
+        {
+            if (idx < 0)
+                idx = index;
+            return "Op " + std::to_string(idx + 1);
+        }
         uint32_t id(int f) const { return idBase + idStride * index + f; }
 
         Param level;

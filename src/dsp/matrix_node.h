@@ -26,48 +26,81 @@ namespace baconpaul::fm
 {
 namespace mech = sst::basic_blocks::mechanics;
 namespace sdsp = sst::basic_blocks::dsp;
-struct MatrixNodeFrom
+
+template <typename T> struct EnvelopeSupport
 {
-    OpSource &onto, &from;
     SRProvider sr;
-    MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr)
-        : onto(on), from(fr), env(&sr)
+
+    const float &delay, &attackv, &hold, &decay, &sustain, &release;
+    EnvelopeSupport(const T &mn)
+        : env(&sr), delay(mn.delay), attackv(mn.attack), hold(mn.hold), decay(mn.decay),
+          sustain(mn.sustain), release(mn.release)
     {
     }
 
     sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
 
-    float fmLevel{0.0};
+    void envAttack() { env.attack(delay); }
+    void envProcess(bool gated)
+    {
+        env.processBlockScaledAD(delay, attackv, hold, decay, sustain, release, gated);
+    }
+};
 
-    void attack() { env.attack(0.2); }
+struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>
+{
+    OpSource &onto, &from;
+    const float &level, &activeV;
+    MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr)
+        : onto(on), from(fr), level(mn.level), activeV(mn.active), EnvelopeSupport(mn)
+    {
+    }
+
+    bool active{false};
+
+    void attack()
+    {
+        active = activeV > 0.5;
+        envAttack();
+    }
 
     void applyBlock(bool gated)
     {
-        env.processBlock01AD(0.2, 0.4, 0.05, 0.3, 0.3, 0.3, gated);
+        if (!active)
+            return;
+
+        envProcess(gated);
         for (int j = 0; j < blockSize; ++j)
         {
             onto.phaseInput[0][j] +=
-                (int32_t)((1 << 27) * fmLevel * env.outputCache[j] * from.output[0][j]);
+                (int32_t)((1 << 27) * level * env.outputCache[j] * from.output[0][j]);
             onto.phaseInput[1][j] +=
-                (int32_t)((1 << 27) * fmLevel * env.outputCache[j] * from.output[1][j]);
+                (int32_t)((1 << 27) * level * env.outputCache[j] * from.output[1][j]);
         }
     }
 };
 
-struct MatrixNodeSelf
+struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>
 {
     OpSource &onto;
     SRProvider sr;
-    MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on) : onto(on), env(&sr){};
-    float fbBase{0.0};
+    const float &fbBase, &activeV;
+    MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on)
+        : onto(on), fbBase(sn.fbLevel), activeV(sn.active), EnvelopeSupport(sn){};
     bool active{true};
 
-    sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
-
-    void attack() { env.attack(0.1); }
+    void attack()
+    {
+        active = activeV > 0.5;
+        if (active)
+            envAttack();
+    }
     void applyBlock(bool gated)
     {
-        env.processBlock01AD(0.1, 0.1, 0.00, 0.7, 0.2, 0.7, gated);
+        if (!active)
+            return;
+
+        envProcess(gated);
         for (int j = 0; j < blockSize; ++j)
         {
             onto.feedbackLevel[j] = (int32_t)((1 << 24) * env.outputCache[j] * fbBase);
@@ -75,63 +108,63 @@ struct MatrixNodeSelf
     }
 };
 
-struct MixerNode
+struct MixerNode : EnvelopeSupport<Patch::MixerNode>
 {
     float output alignas(16)[2][blockSize];
     OpSource &from;
     SRProvider sr;
 
-    const float &level;
-    const float &delay, &attackv, &hold, &decay, &sustain, &release;
+    const float &level, &activeF;
+    bool active{false};
 
     MixerNode(const Patch::MixerNode &mn, OpSource &f)
-        : from(f), env(&sr), level(mn.level), delay(mn.delay), attackv(mn.attack), hold(mn.hold),
-          decay(mn.decay), sustain(mn.sustain), release(mn.release)
+        : from(f), level(mn.level), activeF(mn.active), EnvelopeSupport(mn)
     {
         memset(output, 0, sizeof(output));
     }
 
-    float baseLevel{1.0};
-
-    sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
-
-    void attack() { env.attack(0.0); }
+    void attack()
+    {
+        active = activeF > 0.5;
+        memset(output, 0, sizeof(output));
+        if (active)
+            envAttack();
+    }
 
     void renderBlock(bool gated)
     {
-        env.processBlock01AD(0.0, 0.6, 0.00, 0.6, 0.2, 0.7, gated);
+        if (!active)
+        {
+            return;
+        }
+        envProcess(gated);
         for (int j = 0; j < blockSize; ++j)
         {
             // use mech blah
-            output[0][j] = baseLevel * env.outputCache[j] * from.output[0][j];
-            output[1][j] = baseLevel * env.outputCache[j] * from.output[1][j];
+            output[0][j] = level * env.outputCache[j] * from.output[0][j];
+            output[1][j] = level * env.outputCache[j] * from.output[1][j];
         }
     }
 };
 
-struct OutputNode
+struct OutputNode : EnvelopeSupport<Patch::OutputNode>
 {
     float output alignas(16)[2][blockSize];
     std::array<MixerNode, numOps> &fromArr;
     SRProvider sr;
 
     const float &level, &pan;
-    const float &delay, &attackv, &hold, &decay, &sustain, &release;
 
     OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f)
-        : fromArr(f), env(&sr), level(on.level), pan(on.pan), delay(on.delay), attackv(on.attack),
-          hold(on.hold), decay(on.decay), sustain(on.sustain), release(on.release)
+        : fromArr(f), level(on.level), pan(on.pan), EnvelopeSupport(on)
     {
         memset(output, 0, sizeof(output));
     }
 
-    sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
-
-    void attack() { env.attack(delay); }
+    void attack() { envAttack(); }
 
     void renderBlock(bool gated)
     {
-        env.processBlockScaledAD(delay, attackv, hold, decay, sustain, release, gated);
         memset(output, 0, sizeof(output));
         for (const auto &from : fromArr)
         {
@@ -142,6 +175,7 @@ struct OutputNode
             }
         }
 
+        envProcess(gated);
         mech::scale_by<blockSize>(env.outputCache, output[0], output[1]);
         mech::scale_by<blockSize>(0.5, output[0], output[1]);
 
