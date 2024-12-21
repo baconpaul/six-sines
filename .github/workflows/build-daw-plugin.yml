@@ -78,7 +78,12 @@ jobs:
           #export MAC_SIGNING_TEAM="${{ secrets.MAC_SIGNING_TEAM }}"
   
           cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release
-          cmake --build ./build --config Release --parallel 3
+          cmake --build ./build --config Release --target six-sines-a-sinnin_standalone six-sines-a-sinnin_clap --parallel 3
+          mkdir build/inst
+          mkdir build/insttmp
+          mv build/CLAP/Release/*.clap build/insttmp
+          mv build/Release/*.exe build/insttmp
+          7z a -r build/inst/windows-nightly.zip build/insttmp/*
 
       - name: Configure pull request version
         if: github.event_name == 'pull_request'
@@ -88,17 +93,23 @@ jobs:
       - name: Build pull request version
         if: github.event_name == 'pull_request'
         run: |
-          cmake --build ./build --config Debug  --parallel 3
+          cmake --build ./build --config Debug --target six-sines-a-sinnin_standalone six-sines-a-sinnin_clap --parallel 3
+          mkdir build/inst
+          mkdir build/insttmp
+          mv build/CLAP/Debug/*.clap build/insttmp
+          mv build/Debug/*.exe build/insttmp
+          7z a -r build/inst/windows-nightly.zip build/insttmp/*
+          
 
       - name: Show Build Directory
         run: |
-          ls -l ./build
+          ls -lR ./build/inst
 
-      #- name: Upload artifact
-      #  uses: actions/upload-artifact@v4
-      #  with:
-      #    path: build/installer
-      #    name: dawplugin-${{ matrix.name }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: build/inst
+          name: dawplugin-${{ matrix.name }}
 
   publish-dawplugin-nightly:
     name: Publish DAWPlugin
@@ -118,18 +129,18 @@ jobs:
         uses: mknejp/delete-release-assets@v1
         with:
           token: ${{ github.token }}
-          tag: DAWPlugin # This may also be of the form 'refs/tags/staging'
+          tag: Nightly # This may also be of the form 'refs/tags/staging'
           assets: '*'
       - name: Upload release assets
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: artifacts/**/**/**
-          tag: DAWPlugin
+          tag: Nightly
           file_glob: true
       - name: Tag Repo
         uses: richardsimko/update-tag@v1.0.7
         with:
-          tag_name: DAWPlugin
+          tag_name: Nightly
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
