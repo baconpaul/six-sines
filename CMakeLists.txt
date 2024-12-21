@@ -60,6 +60,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/synth/synth.cpp
         src/synth/voice.cpp
         src/synth/patch.cpp
+        src/synth/preset-manager.cpp
 )
 target_include_directories(${PROJECT_NAME}-impl PUBLIC src)
 target_compile_definitions(${PROJECT_NAME}-impl PRIVATE PRODUCT_NAME="${PRODUCT_NAME}" BUILD_HASH="${BUILD_HASH}")
@@ -68,7 +69,7 @@ target_link_libraries(${PROJECT_NAME}-impl PUBLIC
         clap clap-helpers
         fmt-header-only
         mts-esp-client
-        sst-basic-blocks sst-voicemanager sst-jucegui sst-cpputils
+        sst-basic-blocks sst-voicemanager sst-jucegui sst-cpputils sst-plugininfra sst-plugininfra::filesystem
         sst::clap_juce_shim sst::clap_juce_shim_headers)
 
 
