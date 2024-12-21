@@ -83,7 +83,7 @@ jobs:
           mkdir build/insttmp
           mv build/CLAP/Release/*.clap build/insttmp
           mv build/Release/*.exe build/insttmp
-          7z a -r build/inst/windows-nightly.zip build/insttmp/*
+          7z a -r build/inst/windows-`git rev-parse --short HEAD`-nightly.zip build/insttmp/*
 
       - name: Configure pull request version
         if: github.event_name == 'pull_request'
@@ -98,7 +98,7 @@ jobs:
           mkdir build/insttmp
           mv build/CLAP/Debug/*.clap build/insttmp
           mv build/Debug/*.exe build/insttmp
-          7z a -r build/inst/windows-nightly.zip build/insttmp/*
+          7z a -r build/inst/windows-`git rev-parse --short HEAD`-nightly.zip build/insttmp/*
           
 
       - name: Show Build Directory

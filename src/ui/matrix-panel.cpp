@@ -49,6 +49,10 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         Mpower[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*Mpower[i]);
 
+        createComponent(editor, *this, mx[i].pmOrRM.meta.id, Mpmrm[i], MpmrmD[i], i, false);
+        Mpmrm[i]->direction = sst::jucegui::components::MultiSwitch::HORIZONTAL;
+        addAndMakeVisible(*Mpmrm[i]);
+
         auto si = MatrixIndex::sourceIndexAt(i);
         auto ti = MatrixIndex::targetIndexAt(i);
         std::string glyph = "+";
@@ -68,7 +72,7 @@ void MatrixPanel::resized()
     auto y = b.getY();
     for (auto i = 0U; i < numOps; ++i)
     {
-        positionPowerKnobAndLabel(x, y, Spower[i], Sknobs[i], Slabels[i]);
+        positionPowerKnobAndLabel(x, y, Spower[i], Sknobs[i], Slabels[i], false);
         y += uicLabeledKnobHeight + uicMargin;
         x += uicPowerKnobWidth + uicMargin;
     }
@@ -79,7 +83,44 @@ void MatrixPanel::resized()
         auto ti = MatrixIndex::targetIndexAt(i);
         auto y = b.getY() + ti * (uicLabeledKnobHeight + uicMargin);
         auto x = b.getX() + si * (uicPowerKnobWidth + uicMargin);
-        positionPowerKnobAndLabel(x, y, Mpower[i], Mknobs[i], Mlabels[i]);
+        positionPowerKnobSwitchAndLabel(x, y, Mpower[i], Mpmrm[i], Mknobs[i], Mlabels[i]);
+    }
+}
+
+void MatrixPanel::paint(juce::Graphics &g)
+{
+    jcmp::NamedPanel::paint(g);
+    auto b = getContentArea().reduced(0, 0);
+    auto x = b.getX();
+    auto y = b.getY();
+    auto fillCol = getColour(Styles::background).brighter(0.1).withAlpha(0.3f);
+    auto strokeCol = getColour(Styles::background).brighter(0.2);
+    auto r = juce::Rectangle<int>(x + uicMargin / 2, y - uicMargin, b.getWidth() - uicMargin / 2,
+                                  uicLabeledKnobHeight + uicMargin)
+                 .reduced(1);
+    for (auto i = 0U; i < numOps; ++i)
+    {
+        if (i % 2 == 1)
+        {
+            g.setColour(fillCol);
+            g.fillRoundedRectangle(r.toFloat(), 4);
+            g.setColour(strokeCol);
+            g.drawRoundedRectangle(r.toFloat(), 4, 1);
+        }
+        r = r.translated(0, uicLabeledKnobHeight + uicMargin);
+    }
+    r = juce::Rectangle<int>(x + uicMargin / 2, y - uicMargin, uicPowerKnobWidth + uicMargin,
+                             b.getHeight());
+    for (auto i = 0U; i < numOps; ++i)
+    {
+        if (i % 2 == 1)
+        {
+            g.setColour(fillCol);
+            g.fillRoundedRectangle(r.toFloat(), 4);
+            g.setColour(strokeCol);
+            g.drawRoundedRectangle(r.toFloat(), 4, 1);
+        }
+        r = r.translated(uicPowerKnobWidth + uicMargin, 0);
     }
 }
 

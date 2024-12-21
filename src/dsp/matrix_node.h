@@ -30,17 +30,19 @@ namespace mech = sst::basic_blocks::mechanics;
 struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>
 {
     OpSource &onto, &from;
-    const float &level, &activeV;
+    const float &level, &activeV, &pmrmV;
     MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr)
-        : onto(on), from(fr), level(mn.level), activeV(mn.active), EnvelopeSupport(mn)
+        : onto(on), from(fr), level(mn.level), pmrmV(mn.pmOrRM), activeV(mn.active),
+          EnvelopeSupport(mn)
     {
     }
 
-    bool active{false};
+    bool active{false}, isrm{false};
 
     void attack()
     {
         active = activeV > 0.5;
+        isrm = pmrmV > 0.5;
         envAttack();
     }
 
@@ -50,10 +52,31 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>
             return;
 
         envProcess(gated);
-        for (int j = 0; j < blockSize; ++j)
+        if (isrm)
         {
-            onto.phaseInput[j] +=
-                (int32_t)((1 << 27) * level * env.outputCache[j] * from.output[j]);
+            if (onto.rmAssigned)
+            {
+                for (int j = 0; j < blockSize; ++j)
+                {
+                    onto.rmLevel[j] += level * env.outputCache[j] * from.output[j];
+                }
+            }
+            else
+            {
+                onto.rmAssigned = true;
+                for (int j = 0; j < blockSize; ++j)
+                {
+                    onto.rmLevel[j] = level * env.outputCache[j] * from.output[j];
+                }
+            }
+        }
+        else
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                onto.phaseInput[j] +=
+                    (int32_t)((1 << 27) * level * env.outputCache[j] * from.output[j]);
+            }
         }
     }
 };

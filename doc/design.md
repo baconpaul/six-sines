@@ -29,11 +29,10 @@ Other ToDos
 
 Installer
 
-Friday
-- envelope power for subs
-- simple lfo in feedback
+Saturday
 - typeins
-- lfo support
+- envelope power for subs
+- temposync lfo
 - restore rm with each matrix node having a to-rm-or-to-fm option
 - auv2
 - vst3

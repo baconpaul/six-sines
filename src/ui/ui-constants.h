@@ -36,13 +36,39 @@ inline void positionKnobAndLabel(uint32_t x, uint32_t y, const K &k, const L &l)
 }
 
 template <typename T, typename K, typename L>
-inline void positionPowerKnobAndLabel(uint32_t x, uint32_t y, const T &t, const K &k, const L &l)
+inline void positionPowerKnobAndLabel(uint32_t x, uint32_t y, const T &t, const K &k, const L &l,
+                                      bool centerPower = true)
+{
+    auto b = juce::Rectangle<int>(x, y, uicKnobSize + uicPowerButtonSize + uicMargin, uicKnobSize);
+    k->setBounds(b.withTrimmedLeft(uicPowerButtonSize + uicMargin));
+    if (centerPower)
+    {
+        t->setBounds(b.withWidth(uicPowerButtonSize)
+                         .withTrimmedTop((uicKnobSize - uicPowerButtonSize) / 2)
+                         .withTrimmedBottom((uicKnobSize - uicPowerButtonSize) / 2));
+    }
+    else
+    {
+        t->setBounds(b.withWidth(uicPowerButtonSize)
+                         .withTrimmedTop(uicMargin)
+                         .withTrimmedBottom(uicKnobSize - uicPowerButtonSize - uicMargin));
+    }
+    l->setBounds(b.translated(0, uicKnobSize + uicLabelGap).withHeight(uicLabelHeight));
+}
+
+template <typename T, typename S, typename K, typename L>
+inline void positionPowerKnobSwitchAndLabel(uint32_t x, uint32_t y, const T &t, const S &s,
+                                            const K &k, const L &l)
 {
     auto b = juce::Rectangle<int>(x, y, uicKnobSize + uicPowerButtonSize + uicMargin, uicKnobSize);
     k->setBounds(b.withTrimmedLeft(uicPowerButtonSize + uicMargin));
     t->setBounds(b.withWidth(uicPowerButtonSize)
-                     .withTrimmedTop((uicKnobSize - uicPowerButtonSize) / 2)
-                     .withTrimmedBottom((uicKnobSize - uicPowerButtonSize) / 2));
+                     .withTrimmedTop(uicMargin)
+                     .withTrimmedBottom(uicKnobSize - uicPowerButtonSize - uicMargin));
+    s->setBounds(b.withWidth(uicPowerButtonSize)
+                     .withTrimmedTop(t->getHeight() + uicMargin)
+                     .withTrimmedBottom(uicMargin));
+
     l->setBounds(b.translated(0, uicKnobSize + uicLabelGap).withHeight(uicLabelHeight));
 }
 } // namespace baconpaul::six_sines::ui

@@ -16,6 +16,7 @@
 
 #include <sst/jucegui/components/Label.h>
 #include <sst/jucegui/components/ToggleButton.h>
+#include <sst/jucegui/components/MultiSwitch.h>
 #include "six-sines-editor.h"
 #include "patch-data-bindings.h"
 
@@ -27,6 +28,7 @@ struct MatrixPanel : jcmp::NamedPanel, HasEditor
     ~MatrixPanel();
 
     void resized() override;
+    void paint(juce::Graphics &g) override;
 
     void beginEdit(size_t, bool);
 
@@ -40,6 +42,8 @@ struct MatrixPanel : jcmp::NamedPanel, HasEditor
     std::array<std::unique_ptr<PatchContinuous>, matrixSize> MknobsData;
     std::array<std::unique_ptr<jcmp::ToggleButton>, matrixSize> Mpower;
     std::array<std::unique_ptr<PatchDiscrete>, matrixSize> MpowerData;
+    std::array<std::unique_ptr<jcmp::MultiSwitch>, matrixSize> Mpmrm;
+    std::array<std::unique_ptr<PatchDiscrete>, matrixSize> MpmrmD;
     std::array<std::unique_ptr<jcmp::Label>, matrixSize> Mlabels;
 };
 } // namespace baconpaul::six_sines::ui
