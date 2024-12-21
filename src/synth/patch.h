@@ -91,6 +91,39 @@ struct Patch
         std::for_each(selfNodes.begin(), selfNodes.end(), pushParams);
         std::for_each(mixerNodes.begin(), mixerNodes.end(), pushParams);
         std::for_each(matrixNodes.begin(), matrixNodes.end(), pushParams);
+
+        std::sort(params.begin(), params.end(),
+                  [](const Param *a, const Param *b)
+                  {
+                      auto ga = a->meta.groupName;
+                      auto gb = b->meta.groupName;
+                      if (ga != gb)
+                      {
+                          if (ga == "Main")
+                              return true;
+                          if (gb == "Main")
+                              return false;
+
+                          return ga < gb;
+                      }
+
+                      auto an = a->meta.name;
+                      auto bn = b->meta.name;
+                      auto ane = an.find("Env ") != std::string::npos;
+                      auto bne = bn.find("Env ") != std::string::npos;
+
+                      if (ane != bne)
+                      {
+                          if (ane)
+                              return false;
+
+                          return true;
+                      }
+                      if (ane && bne)
+                          return a->meta.id < b->meta.id;
+
+                      return a->meta.name < b->meta.name;
+                  });
     }
 
     struct LFOMixin
@@ -108,15 +141,19 @@ struct Patch
                             .withGroupName(name)
                             .withDefault(0)
                             .withID(id0 + 2)),
-              lfoShape(
-                  intMd().withRange(0, 6).withDefault(0).withID(id0 + 3).withUnorderedMapFormatting(
-                      {{0, "Sine"},
-                       {1, "Ramp"},
-                       {2, "RampNeg"},
-                       {3, "Tri"},
-                       {4, "Pulse"},
-                       {5, "Noise"},
-                       {6, "SnH"}})),
+              lfoShape(intMd()
+                           .withName(name + " LFO Shape")
+                           .withGroupName(name)
+                           .withRange(0, 6)
+                           .withDefault(0)
+                           .withID(id0 + 3)
+                           .withUnorderedMapFormatting({{0, "Sine"},
+                                                        {1, "Ramp"},
+                                                        {2, "RampNeg"},
+                                                        {3, "Tri"},
+                                                        {4, "Pulse"},
+                                                        {5, "Noise"},
+                                                        {6, "SnH"}})),
               lfoActive(boolMd()
                             .withDefault(true)
                             .withID(id0 + 4)
@@ -140,38 +177,38 @@ struct Patch
         using tsr = sst::basic_blocks::modulators::TenSecondRange;
         DAHDSRMixin(const std::string name, int id0, bool longAdsr)
             : delay(floatEnvRateMd()
-                        .withName(name + " Delay")
+                        .withName(name + " Env Delay")
                         .withGroupName(name)
                         .withDefault(tsr::etMin)
                         .withID(id0 + 0)),
               attack(floatEnvRateMd()
-                         .withName(name + " Attack")
+                         .withName(name + " Env Attack")
                          .withGroupName(name)
                          .withDefault(longAdsr ? -1.f : tsr::etMin)
                          .withID(id0 + 1)),
               hold(floatEnvRateMd()
-                       .withName(name + " Hold")
+                       .withName(name + " Env Hold")
                        .withGroupName(name)
                        .withDefault(tsr::etMin)
                        .withID(id0 + 2)),
               decay(floatEnvRateMd()
-                        .withName(name + " Decay")
+                        .withName(name + " Env Decay")
                         .withGroupName(name)
                         .withDefault(longAdsr ? 1.f : tsr::etMin)
                         .withID(id0 + 3)),
               sustain(floatMd()
                           .asPercent()
-                          .withName(name + " Sustain")
+                          .withName(name + " Env Sustain")
                           .withGroupName(name)
                           .withDefault(longAdsr ? 0.7f : 1.f)
                           .withID(id0 + 4)),
               release(floatEnvRateMd()
-                          .withName(name + " Release")
+                          .withName(name + " Env Release")
                           .withGroupName(name)
                           .withDefault(longAdsr ? 0.5f : tsr::etMax)
                           .withID(id0 + 5)),
               envPower(boolMd()
-                           .withName(name + " Envelope Power")
+                           .withName(name + " Env Power")
                            .withGroupName(name)
                            .withDefault(true)
                            .withID(id0 + 6))
@@ -201,6 +238,7 @@ struct Patch
                         .withATwoToTheBFormatting(1, 1, "x")
                         .withName(name(idx) + " Ratio")
                         .withGroupName(name(idx))
+                        .withDecimalPlaces(4)
                         .withDefault(0.0)
                         .withID(id(0, idx))),
               active(boolMd()
@@ -213,13 +251,14 @@ struct Patch
                              .withLinearScaleFormatting("offset")
                              .withName(name(idx) + " Env to Ratio")
                              .withGroupName(name(idx))
+                             .withDecimalPlaces(4)
                              .withDefault(0.f)
                              .withID(id(2, idx))),
-              DAHDSRMixin(name(idx) + " Ratio ", id(100, idx), false)
+              DAHDSRMixin(name(idx), id(100, idx), false)
         {
         }
 
-        std::string name(int idx) const { return "Op " + std::to_string(idx + 1); }
+        std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Source"; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
         Param ratio;
@@ -241,17 +280,16 @@ struct Patch
         SelfNode(size_t idx)
             : fbLevel(floatMd()
                           .asPercent()
-                          .withName(name(idx) + " Feedback Level")
+                          .withName(name(idx) + " Level")
                           .withGroupName(name(idx))
                           .withDefault(0.0)
                           .withID(id(0, idx))),
               active(boolMd()
-                         .withName(name(idx) + " Feedback Active")
+                         .withName(name(idx) + " Active")
                          .withGroupName(name(idx))
                          .withDefault(false)
                          .withID(id(1, idx))),
-              DAHDSRMixin(name(idx) + " Feedback", id(2, idx), false),
-              LFOMixin(name(idx) + " Feedback", id(15, idx)),
+              DAHDSRMixin(name(idx), id(2, idx), false), LFOMixin(name(idx), id(15, idx)),
               lfoToFB(floatMd()
                           .asPercentBipolar()
                           .withName(name(idx) + " LFO to FB Amplitude")
@@ -261,7 +299,7 @@ struct Patch
         {
         }
 
-        std::string name(int idx) const { return "Op " + std::to_string(idx + 1); }
+        std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Feedback"; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
         Param fbLevel, lfoToFB;
@@ -328,12 +366,12 @@ struct Patch
         MixerNode(size_t idx)
             : level(floatMd()
                         .asPercent()
-                        .withName(name(idx) + " Mixer Level")
+                        .withName(name(idx) + " Level")
                         .withGroupName(name(idx))
                         .withDefault(idx == 0 ? 1.f : 0.f)
                         .withID(id(0, idx))),
               active(boolMd()
-                         .withName(name(idx) + " Mixer Active")
+                         .withName(name(idx) + " Active")
                          .withGroupName(name(idx))
                          .withFlags(CLAP_PARAM_IS_STEPPED)
                          .withDefault(idx == 0 ? true : false)
@@ -348,7 +386,7 @@ struct Patch
         {
         }
 
-        std::string name(int idx) const { return "Op " + std::to_string(idx + 1); }
+        std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Mixer"; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
         Param level, pan;
