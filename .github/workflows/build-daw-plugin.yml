@@ -79,8 +79,13 @@ jobs:
   
           cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release
           cmake --build ./build --config Release --target six-sines-a-sinnin_standalone six-sines-a-sinnin_clap --parallel 3
+          mkdir buid/inst
+          mkdir buid/insttmp
+          mv build/CLAP/Release/*.clap build/insttmp
+          mv build/Release/*.exe build/insttmp
+          7z a -r build/inst/windows-nightly.zip build/insttmp/*
 
-      - name: Configure pull request version
+- name: Configure pull request version
         if: github.event_name == 'pull_request'
         run: |
           cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Debug 
@@ -89,16 +94,22 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           cmake --build ./build --config Debug --target six-sines-a-sinnin_standalone six-sines-a-sinnin_clap --parallel 3
+          mkdir buid/inst
+          mkdir buid/insttmp
+          mv build/CLAP/Debug/*.clap build/insttmp
+          mv build/Debug/*.exe build/insttmp
+          7z a -r build/inst/windows-nightly.zip build/insttmp/*
+          
 
       - name: Show Build Directory
         run: |
-          ls -lR ./build
+          ls -lR ./build/inst
 
-      #- name: Upload artifact
-      #  uses: actions/upload-artifact@v4
-      #  with:
-      #    path: build/installer
-      #    name: dawplugin-${{ matrix.name }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: build/inst
+          name: dawplugin-${{ matrix.name }}
 
   publish-dawplugin-nightly:
     name: Publish DAWPlugin
