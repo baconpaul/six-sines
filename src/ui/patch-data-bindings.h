@@ -47,6 +47,15 @@ struct PatchContinuous : jdat::Continuous
             return *r;
         return "error";
     }
+    void setValueAsString(const std::string &s) override
+    {
+        std::string em;
+        auto v = p->meta.valueFromString(s, em);
+        if (v.has_value())
+        {
+            setValueFromGUI(*v);
+        }
+    }
     void setValueFromGUI(const float &f) override
     {
         p->value = f;
@@ -107,6 +116,14 @@ void createComponent(SixSinesEditor &e, P &panel, uint32_t id, std::unique_ptr<T
     pc = std::make_unique<Q>(e, id);
     cm = std::make_unique<T>();
 
+    if constexpr (std::is_same_v<Q, PatchContinuous>)
+    {
+        cm->onPopupMenu = [&e, ptr = cm.get()](auto &mods)
+        {
+            e.hideTooltip();
+            e.popupMenuForContinuous(ptr);
+        };
+    }
     cm->onBeginEdit = [&e, &cm, &pc, args..., id, &panel]()
     {
         e.uiToAudio.push({Synth::UIToAudioMsg::Action::BEGIN_EDIT, id});

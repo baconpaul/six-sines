@@ -219,4 +219,111 @@ void SixSinesEditor::updateTooltip(jdat::Discrete *d)
 }
 void SixSinesEditor::hideTooltip() { toolTip->setVisible(false); }
 
+struct MenuValueTypein : HasEditor, juce::PopupMenu::CustomComponent, juce::TextEditor::Listener
+{
+    std::unique_ptr<juce::TextEditor> textEditor;
+    juce::Component::SafePointer<jcmp::ContinuousParamEditor> underComp;
+
+    MenuValueTypein(SixSinesEditor &editor,
+                    juce::Component::SafePointer<jcmp::ContinuousParamEditor> under)
+        : HasEditor(editor), underComp(under)
+    {
+        textEditor = std::make_unique<juce::TextEditor>();
+        textEditor->setWantsKeyboardFocus(true);
+        textEditor->addListener(this);
+        textEditor->setIndents(2, 0);
+
+        addAndMakeVisible(*textEditor);
+    }
+
+    void getIdealSize(int &w, int &h) override
+    {
+        w = 180;
+        h = 22;
+    }
+    void resized() override { textEditor->setBounds(getLocalBounds().reduced(3, 1)); }
+
+    void visibilityChanged() override
+    {
+        juce::Timer::callAfterDelay(
+            2,
+            [this]()
+            {
+                if (textEditor->isVisible())
+                {
+                    textEditor->setText(getInitialText(),
+                                        juce::NotificationType::dontSendNotification);
+                    auto valCol = juce::Colour(0xFF, 0x90, 0x00);
+                    textEditor->setColour(juce::TextEditor::ColourIds::backgroundColourId,
+                                          valCol.withAlpha(0.1f));
+                    textEditor->setColour(juce::TextEditor::ColourIds::highlightColourId,
+                                          valCol.withAlpha(0.15f));
+                    textEditor->setJustification(juce::Justification::centredLeft);
+                    textEditor->setColour(juce::TextEditor::ColourIds::outlineColourId,
+                                          juce::Colours::black.withAlpha(0.f));
+                    textEditor->setColour(juce::TextEditor::ColourIds::focusedOutlineColourId,
+                                          juce::Colours::black.withAlpha(0.f));
+                    textEditor->setBorder(juce::BorderSize<int>(3));
+                    textEditor->applyColourToAllText(valCol, true);
+                    textEditor->grabKeyboardFocus();
+                    textEditor->selectAll();
+                }
+            });
+    }
+
+    std::string getInitialText() const { return underComp->continuous()->getValueAsString(); }
+
+    void setValueString(const std::string &s)
+    {
+        if (underComp && underComp->continuous())
+        {
+            if (s.empty())
+            {
+                underComp->continuous()->setValueFromGUI(
+                    underComp->continuous()->getDefaultValue());
+            }
+            else
+            {
+                underComp->continuous()->setValueAsString(s);
+            }
+        }
+    }
+
+    void textEditorReturnKeyPressed(juce::TextEditor &ed) override
+    {
+        auto s = ed.getText().toStdString();
+        setValueString(s);
+        triggerMenuItem();
+    }
+    void textEditorEscapeKeyPressed(juce::TextEditor &) override { triggerMenuItem(); }
+};
+
+void SixSinesEditor::popupMenuForContinuous(jcmp::ContinuousParamEditor *e)
+{
+    auto data = e->continuous();
+    if (!data)
+    {
+        return;
+    }
+
+    if (!e->isEnabled())
+    {
+        return;
+    }
+
+    auto p = juce::PopupMenu();
+    p.addSectionHeader(data->getLabel());
+    p.addSeparator();
+    p.addCustomItem(-1, std::make_unique<MenuValueTypein>(*this, juce::Component::SafePointer(e)));
+    p.addSeparator();
+    p.addItem("Set to Default",
+              [w = juce::Component::SafePointer(e)]()
+              {
+                  if (!w)
+                      return;
+                  w->continuous()->setValueFromGUI(w->continuous()->getDefaultValue());
+              });
+
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
+}
 } // namespace baconpaul::six_sines::ui

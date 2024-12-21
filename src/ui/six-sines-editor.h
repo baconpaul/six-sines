@@ -79,6 +79,8 @@ struct SixSinesEditor : jcmp::WindowPanel
     void updateTooltip(jdat::Discrete *d);
     void hideTooltip();
 
+    void popupMenuForContinuous(jcmp::ContinuousParamEditor *e);
+
     void hideAllSubPanels();
     std::unordered_map<uint32_t, juce::Component::SafePointer<juce::Component>> componentByID;
 };
