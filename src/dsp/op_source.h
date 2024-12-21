@@ -28,6 +28,9 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
 {
     int32_t phaseInput alignas(16)[blockSize];
     int32_t feedbackLevel alignas(16)[blockSize];
+    float rmLevel alignas(16)[blockSize];
+    bool rmAssigned{false};
+
     float output alignas(16)[blockSize];
 
     bool keytrack{true};
@@ -59,7 +62,9 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
         {
             phaseInput[i] = 0;
             feedbackLevel[i] = 0;
+            rmLevel[i] = 1.f;
         }
+        rmAssigned = false;
     }
 
     void snapActive() { active = activeV > 0.5; }
@@ -82,7 +87,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
         {
             dPhase = st.dPhase(baseFrequency * rf);
             phase += dPhase;
-            auto out = st.at(phase + phaseInput[i] + (int32_t)(feedbackLevel[i] * fbVal));
+            auto out =
+                st.at(phase + phaseInput[i] + (int32_t)(feedbackLevel[i] * fbVal)) * rmLevel[i];
             output[i] = out;
             fbVal = out;
         }

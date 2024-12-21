@@ -19,11 +19,13 @@ Mixer
 - Each node gets an envelope an LFO and a pan - do stereo here not in the output node
 
 MIDI mappings what to do
-- velocity to amplitude everywhere of course
+- velocity to amplitude in main
 - Note expressions?
+- Other MIDI?
 
 Other ToDos
 - Envelope Rate Linear to 2x provider
+- General UI
 
 Installer
 
@@ -32,6 +34,8 @@ Friday
 - simple lfo in feedback
 - typeins
 - lfo support
+- restore rm with each matrix node having a to-rm-or-to-fm option
 - auv2
 - vst3
 - a build
+- deal with ui attached or not for messages

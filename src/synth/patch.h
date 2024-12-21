@@ -292,12 +292,21 @@ struct Patch
                          .withFlags(CLAP_PARAM_IS_STEPPED)
                          .withDefault(false)
                          .withID(id(1, idx))),
+              pmOrRM(
+                  intMd()
+                      .withRange(0, 1)
+                      .withDefault(0)
+                      .withName(name(idx) + " PM or RM")
+                      .withGroupName(name(idx))
+                      .withID(id(35, idx))
+                      .withUnorderedMapFormatting({{0, std::string() + u8"\U000003C6"}, {1, "A"}})),
               DAHDSRMixin(name(idx), id(2, idx), false)
         {
         }
 
         Param level;
         Param active;
+        Param pmOrRM;
 
         std::string name(int idx) const
         {
@@ -307,7 +316,7 @@ struct Patch
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &active};
+            std::vector<Param *> res{&level, &active, &pmOrRM};
             appendDAHDSRParams(res);
             return res;
         }

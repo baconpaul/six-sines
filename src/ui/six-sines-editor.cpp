@@ -74,7 +74,7 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     toolTip = std::make_unique<jcmp::ToolTip>();
     addChildComponent(*toolTip);
 
-    setSize(800, 830);
+    setSize(608, 830);
 
     auto q = std::make_unique<PatchContinuous>(*this, patchCopy.output.level.meta.id);
 }
@@ -92,21 +92,63 @@ void SixSinesEditor::idle()
             if (pit != componentByID.end() && pit->second)
                 pit->second->repaint();
         }
+        else if (aum->action == Synth::AudioToUIMsg::UPDATE_VU)
+        {
+            mainPanel->vuMeter->setLevels(aum->value, aum->value2);
+        }
         aum = audioToUI.pop();
     }
+}
+
+void SixSinesEditor::paint(juce::Graphics &g)
+{
+    jcmp::WindowPanel::paint(g);
+    auto ft = style()->getFont(jcmp::Label::Styles::styleClass, jcmp::Label::Styles::labelfont);
+
+    g.setColour(juce::Colours::white.withAlpha(0.9f));
+    auto q = ft.withHeight(30);
+    g.setFont(q);
+    // g.drawText("Six", getLocalBounds().reduced(3,1), juce::Justification::topLeft);
+    auto xp = 3;
+    auto ht = 30;
+
+    for (int fr = 1; fr < 6; ++fr)
+    {
+        juce::Path p;
+        int np{80};
+        for (int i = 0; i < np; ++i)
+        {
+            auto sx = sin(2.0 * M_PI * fr * i / np);
+            if (i == 0)
+                p.startNewSubPath(xp + i, 0.45 * (-sx + 1) * ht + 4);
+            else
+                p.lineTo(xp + i, 0.45 * (-sx + 1) * ht + 4);
+        }
+        g.setColour(juce::Colours::white.withAlpha(0.9f - sqrt((fr - 1) / 7.0f)));
+        g.strokePath(p, juce::PathStrokeType(1));
+    }
+
+    g.setColour(juce::Colours::white.withAlpha(0.5f));
+    q = ft.withHeight(12);
+    g.setFont(q);
+    g.drawText("https://github.com/baconpaul/six-sines", getLocalBounds().reduced(3, 3),
+               juce::Justification::bottomLeft);
+
+    auto bi = std::string(__DATE__) + " " + std::string(__TIME__) + " " + BUILD_HASH;
+    g.drawText(bi, getLocalBounds().reduced(3, 3), juce::Justification::bottomRight);
 }
 
 void SixSinesEditor::resized()
 {
     auto rdx{1};
 
-    int tpt{40};
-    auto area = getLocalBounds().withTrimmedTop(tpt);
+    int tpt{33}, tpb{15};
+    auto area = getLocalBounds().withTrimmedTop(tpt).withTrimmedBottom(tpb);
 
     auto tp = 100;
 
     auto rb = area.withTrimmedTop(tp);
-    auto edH = 250 - tpt;
+    auto edH = 250 - tpt - tpb;
     ;
     auto mp = rb.withTrimmedBottom(edH);
     mp = mp.withWidth(numOps * (uicPowerKnobWidth + uicMargin) + 2 * uicMargin + 10);

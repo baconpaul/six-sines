@@ -15,6 +15,7 @@
 #define BACONPAUL_SIX_SINES_UI_MAIN_PANEL_H
 
 #include "sst/jucegui/components/Label.h"
+#include "sst/jucegui/components/VUMeter.h"
 
 #include "six-sines-editor.h"
 #include "patch-data-bindings.h"
@@ -33,6 +34,7 @@ struct MainPanel : jcmp::NamedPanel, HasEditor
     std::unique_ptr<PatchContinuous> levData;
     std::unique_ptr<jcmp::Knob> lev;
     std::unique_ptr<jcmp::Label> levLabel;
+    std::unique_ptr<jcmp::VUMeter> vuMeter;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_PANEL_H

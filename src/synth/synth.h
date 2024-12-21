@@ -20,6 +20,7 @@
 #include <clap/clap.h>
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
 #include "sst/basic-blocks/dsp/Lag.h"
+#include "sst/basic-blocks/dsp/VUPeak.h"
 #include "sst/basic-blocks/tables/EqualTuningProvider.h"
 #include "sst/voicemanager/voicemanager.h"
 #include "sst/cpputils/ring_buffer.h"
@@ -152,9 +153,10 @@ struct Synth
         enum Action : uint32_t
         {
             UPDATE_PARAM,
+            UPDATE_VU,
         } action;
         uint32_t paramId{0};
-        float value{0};
+        float value{0}, value2{0};
     };
     struct UIToAudioMsg
     {
@@ -177,6 +179,10 @@ struct Synth
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
 
     void pushFullUIRefresh();
+
+    sst::basic_blocks::dsp::VUPeak vuPeak;
+    int32_t updateVuEvery{(int32_t)(gSampleRate / 60 / blockSize)};
+    int32_t lastVuUpdate{updateVuEvery};
 };
 } // namespace baconpaul::six_sines
 #endif // SYNTH_H

@@ -31,7 +31,7 @@ Synth::Synth()
     tuningProvider.init();
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
     lagHandler.setRate(60, blockSize, gSampleRate);
-
+    vuPeak.setSampleRate(gSampleRate);
     mtsClient = MTS_RegisterClient();
 }
 
@@ -81,6 +81,18 @@ void Synth::process(const clap_output_events_t *outq)
         for (int i = 0; i < blockSize; ++i)
         {
             resampler->push(lOutput[0][i], lOutput[1][i]);
+            vuPeak.process(lOutput[0][i], lOutput[1][i]);
+        }
+
+        if (lastVuUpdate >= updateVuEvery)
+        {
+            AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
+            audioToUi.push(msg);
+            lastVuUpdate = 0;
+        }
+        else
+        {
+            lastVuUpdate++;
         }
     }
 

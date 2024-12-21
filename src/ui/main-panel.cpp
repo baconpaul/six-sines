@@ -23,8 +23,11 @@ MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
     lev->setDrawLabel(false);
     addAndMakeVisible(*lev);
     levLabel = std::make_unique<jcmp::Label>();
-    levLabel->setText("Level");
+    levLabel->setText("Main Level");
     addAndMakeVisible(*levLabel);
+
+    vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::VERTICAL);
+    addAndMakeVisible(*vuMeter);
 }
 MainPanel::~MainPanel() = default;
 
@@ -32,7 +35,11 @@ void MainPanel::resized()
 {
     auto b = getContentArea().reduced(uicMargin, 0);
 
-    positionKnobAndLabel(b.getX(), b.getY(), lev, levLabel);
+    b = juce::Rectangle<int>(b.getX(), b.getY(), uicKnobSize + uicPowerButtonSize + uicMargin,
+                             uicKnobSize);
+    lev->setBounds(b.withTrimmedLeft(uicPowerButtonSize + uicMargin));
+    vuMeter->setBounds(b.withWidth(uicPowerButtonSize).withTrimmedRight(2));
+    levLabel->setBounds(b.translated(0, uicKnobSize + uicLabelGap).withHeight(uicLabelHeight));
 }
 
 void MainPanel::beginEdit()

@@ -21,6 +21,23 @@ option(COPY_AFTER_BUILD "Will copy after build" TRUE)
 
 include(cmake/compile-options.cmake)
 
+
+find_package(Git)
+
+if (Git_FOUND)
+    execute_process(
+            COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            OUTPUT_VARIABLE BUILD_HASH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+else ()
+    set(BUILD_HASH "unknown")
+endif ()
+
+message(STATUS "Compiling with git hash ${BUILD_HASH}")
+
+
 set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
 add_subdirectory(libs)
 
@@ -45,7 +62,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/synth/patch.cpp
 )
 target_include_directories(${PROJECT_NAME}-impl PUBLIC src)
-target_compile_definitions(${PROJECT_NAME}-impl PRIVATE PRODUCT_NAME="${PRODUCT_NAME}")
+target_compile_definitions(${PROJECT_NAME}-impl PRIVATE PRODUCT_NAME="${PRODUCT_NAME}" BUILD_HASH="${BUILD_HASH}")
 target_link_libraries(${PROJECT_NAME}-impl PUBLIC
         simde
         clap clap-helpers
