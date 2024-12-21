@@ -78,7 +78,7 @@ jobs:
           #export MAC_SIGNING_TEAM="${{ secrets.MAC_SIGNING_TEAM }}"
   
           cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release
-          cmake --build ./build --config Release --parallel 3
+          cmake --build ./build --config Release --target six-sines-a-sinnin_standalone six-sines-a-sinnin_clap --parallel 3
 
       - name: Configure pull request version
         if: github.event_name == 'pull_request'
@@ -88,11 +88,11 @@ jobs:
       - name: Build pull request version
         if: github.event_name == 'pull_request'
         run: |
-          cmake --build ./build --config Debug  --parallel 3
+          cmake --build ./build --config Debug --target six-sines-a-sinnin_standalone six-sines-a-sinnin_clap --parallel 3
 
       - name: Show Build Directory
         run: |
-          ls -l ./build
+          ls -lR ./build
 
       #- name: Upload artifact
       #  uses: actions/upload-artifact@v4
