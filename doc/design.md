@@ -4,24 +4,27 @@ Individual Oscillator
   - if on: ratio
   - if off: absolute frequency
 - Waveshape (quadrant picker)
-- lfo with power and depth to ratio
-- dahdsr with power and depth to ratio
+- lfo with depth to ratio
++ dahdsr with depth to ratio
 - ratio uses 2^x table
 
 FM Matrix Node
-- DAHDSR to scale float depth
-- LFO to scale float depth
++ DAHDSR to scale float depth
+- LFO to add to float depth
 
 Self matrix node
-- basically just an FM level with an envelope and LFO
++ DAHDSR to scale fb depth
++ LFO to add to fb depth
 
 Mixer
-- Each node gets an envelope an LFO and a pan - do stereo here not in the output node
++ Each node gets an envelope 
+- Each node an LFO to level or a pan
 
-MIDI mappings what to do
+Macros and MIDI
+- A macros section - 6 macros each with a target list of 4 params at depth?
+- and maybe do midi routing the same way? (put a midi button above the macro vertical)
 - velocity to amplitude in main
-- Note expressions?
-- Other MIDI?
+- Other (monophonic) MIDI?
 
 Other ToDos
 - Envelope Rate Linear to 2x provider
@@ -29,8 +32,18 @@ Other ToDos
 
 Installer
 
+Probably ship at this point but then
+
+Non-monophonic voice level modulation
+- CLAP advanced features like polymod
+- Note expressions?
+- MPE?
+
+
 Saturday
-- typeins
++ typeins
+- preset save/restore
+- sort params more natrually
 - envelope power for subs
 - temposync lfo
 - restore rm with each matrix node having a to-rm-or-to-fm option
