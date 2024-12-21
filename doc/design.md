@@ -43,7 +43,8 @@ Non-monophonic voice level modulation
 Saturday
 + typeins
 - preset save/restore
-- sort params more natrually
+- param split for voices and base/top
++ sort params more natrually
 - envelope power for subs
 - temposync lfo
 - restore rm with each matrix node having a to-rm-or-to-fm option

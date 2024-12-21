@@ -17,8 +17,6 @@
 #include "sst/basic-blocks/dsp/PanLaws.h"
 
 #include "libMTSClient.h"
-#include "preset-manager.h"
-#include "sst/plugininfra/paths.h"
 
 namespace baconpaul::six_sines
 {
@@ -35,20 +33,6 @@ Synth::Synth()
     lagHandler.setRate(60, blockSize, gSampleRate);
     vuPeak.setSampleRate(gSampleRate);
     mtsClient = MTS_RegisterClient();
-
-    try
-    {
-        userPath = sst::plugininfra::paths::bestDocumentsFolderPathFor("SixSines");
-        fs::create_directories(userPath);
-        userPatchesPath = userPath / "Patches";
-        fs::create_directories(userPatchesPath);
-
-        presetManager = std::make_unique<PresetManager>(userPatchesPath);
-    }
-    catch (fs::filesystem_error &e)
-    {
-        SXSNLOG("Unable to create user dir " << e.what());
-    }
 }
 
 Synth::~Synth()
@@ -244,60 +228,6 @@ void Synth::pushFullUIRefresh()
         AudioToUIMsg au = {AudioToUIMsg::UPDATE_PARAM, p->meta.id, p->value};
         audioToUi.push(au);
     }
-}
-
-std::string Synth::toState() const
-{
-    std::ostringstream oss;
-    oss << "SIXSINES;V=1\n";
-    for (auto p : patch.params)
-    {
-        oss << p->meta.id << "|" << p->value << "\n";
-    }
-    return oss.str();
-}
-bool Synth::fromState(const std::string &idata)
-{
-    std::string data = idata;
-    auto p = data.find('\n');
-    bool first{true};
-    while (p != std::string::npos && !data.empty())
-    {
-        auto ss = data.substr(0, p);
-        if (first)
-        {
-            if (ss != "SIXSINES;V=1")
-            {
-                SXSNLOG("Bad version string [" << ss << "]");
-                return false;
-            }
-            first = false;
-        }
-        else
-        {
-            auto sl = ss.find('|');
-            auto id = ss.substr(0, sl);
-            auto v = ss.substr(sl + 1);
-
-            auto idv = std::atoi(id.c_str());
-            auto vv = std::atof(v.c_str());
-
-            auto it = patch.paramMap.find(idv);
-            if (it == patch.paramMap.end())
-            {
-                SXSNLOG("Ignoring vestigal param " << idv);
-            }
-            else
-            {
-                it->second->value = vv;
-            }
-        }
-        data = data.substr(p + 1);
-        p = data.find('\n');
-    }
-
-    doFullRefresh = true;
-    return true;
 }
 
 } // namespace baconpaul::six_sines

@@ -200,7 +200,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     bool implementsState() const noexcept override { return true; }
     bool stateSave(const clap_ostream *ostream) noexcept override
     {
-        auto ss = engine->toState();
+        auto ss = engine->patch.toState();
         auto c = ss.c_str();
         auto s = ss.length() + 1; // write the null terminator
         while (s > 0)
@@ -242,7 +242,8 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         }
 
         auto data = std::string(buffer.data());
-        engine->fromState(data);
+        engine->patch.fromState(data);
+        engine->doFullRefresh = true;
         _host.paramsRequestFlush();
         return true;
     }

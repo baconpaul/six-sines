@@ -23,9 +23,11 @@
 #include <sst/jucegui/components/Knob.h>
 #include <sst/jucegui/components/ToolTip.h>
 #include <sst/jucegui/components/ToggleButton.h>
+#include <sst/jucegui/components/MenuButton.h>
 #include <sst/jucegui/data/Continuous.h>
 
 #include "synth/synth.h"
+#include "preset-manager.h"
 
 namespace jcmp = sst::jucegui::components;
 namespace jdat = sst::jucegui::data;
@@ -41,6 +43,7 @@ struct MixerPanel;
 struct MixerSubPanel;
 struct SourcePanel;
 struct SourceSubPanel;
+struct SixSinesJuceLookAndFeel;
 
 struct SixSinesEditor : jcmp::WindowPanel
 {
@@ -73,6 +76,10 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::unique_ptr<SourcePanel> sourcePanel;
     std::unique_ptr<SourceSubPanel> sourceSubPanel;
 
+    std::unique_ptr<PresetManager> presetManager;
+    std::unique_ptr<jcmp::MenuButton> presetButton;
+    void showPresetPopup();
+
     std::unique_ptr<jcmp::ToolTip> toolTip;
     void showTooltipOn(juce::Component *c);
     void updateTooltip(jdat::Continuous *c);
@@ -83,6 +90,8 @@ struct SixSinesEditor : jcmp::WindowPanel
 
     void hideAllSubPanels();
     std::unordered_map<uint32_t, juce::Component::SafePointer<juce::Component>> componentByID;
+
+    std::shared_ptr<SixSinesJuceLookAndFeel> lnf;
 };
 
 struct HasEditor

@@ -12,13 +12,28 @@
  */
 
 #include <fstream>
+#include "sst/plugininfra/paths.h"
 #include "preset-manager.h"
-#include "synth.h"
 
-namespace baconpaul::six_sines
+namespace baconpaul::six_sines::ui
 {
+PresetManager::PresetManager()
+{
+    try
+    {
+        auto userPath = sst::plugininfra::paths::bestDocumentsFolderPathFor("SixSines");
+        fs::create_directories(userPath);
+        userPatchesPath = userPath / "Patches";
+        fs::create_directories(userPatchesPath);
+    }
+    catch (fs::filesystem_error &e)
+    {
+        SXSNLOG("Unable to create user dir " << e.what());
+    }
+}
+
 void PresetManager::rescanUserPresets() {}
-void PresetManager::saveUserPreset(const fs::path &category, const fs::path &name, Synth &synth)
+void PresetManager::saveUserPreset(const fs::path &category, const fs::path &name, Patch &patch)
 {
     try
     {
@@ -28,7 +43,7 @@ void PresetManager::saveUserPreset(const fs::path &category, const fs::path &nam
         std::ofstream ofs(pt);
         if (ofs.is_open())
         {
-            ofs << synth.toState();
+            ofs << patch.toState();
         }
     }
     catch (fs::filesystem_error &e)
@@ -36,10 +51,8 @@ void PresetManager::saveUserPreset(const fs::path &category, const fs::path &nam
         SXSNLOG(e.what());
     }
 }
-void PresetManager::loadPreset(const Preset &p, Synth &synth)
+void PresetManager::loadPreset(const Preset &p, Patch &synth)
 {
-    // Super sloopy. This should happen on the audio thread.
-    synth.voiceManager->allSoundsOff();
 
     if (p.isFactory)
     {
@@ -48,4 +61,4 @@ void PresetManager::loadPreset(const Preset &p, Synth &synth)
     {
     }
 }
-} // namespace baconpaul::six_sines
+} // namespace baconpaul::six_sines::ui

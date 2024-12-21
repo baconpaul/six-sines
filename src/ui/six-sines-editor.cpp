@@ -23,6 +23,8 @@
 #include "source-panel.h"
 #include "source-sub-panel.h"
 #include "ui-constants.h"
+#include "juce-lnf.h"
+#include "preset-manager.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -33,6 +35,9 @@ struct IdleTimer : juce::Timer
     void timerCallback() override { editor.idle(); }
 };
 
+static std::weak_ptr<SixSinesJuceLookAndFeel> sixSinesLookAndFeelWeakPointer;
+static std::mutex sixSinesLookAndFeelSetupMutex;
+
 SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &utoa,
                                std::function<void()> fo)
     : audioToUI(atou), uiToAudio(utoa), flushOperator(fo)
@@ -41,6 +46,13 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
 
     setStyle(sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
         sst::jucegui::style::StyleSheet::DARK));
+    style()->setColour(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::fill,
+                       juce::Colour(0x15, 0x15, 0x15));
+    style()->setFont(
+        jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont,
+        style()
+            ->getFont(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont)
+            .withHeight(18));
 
     matrixPanel = std::make_unique<MatrixPanel>(*this);
     mixerPanel = std::make_unique<MixerPanel>(*this);
@@ -74,9 +86,29 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     toolTip = std::make_unique<jcmp::ToolTip>();
     addChildComponent(*toolTip);
 
-    setSize(608, 830);
+    presetButton = std::make_unique<jcmp::MenuButton>();
+    presetButton->setLabel("init");
+    presetButton->setOnCallback([this]() { showPresetPopup(); });
+    addAndMakeVisible(*presetButton);
 
-    auto q = std::make_unique<PatchContinuous>(*this, patchCopy.output.level.meta.id);
+    {
+        std::lock_guard<std::mutex> grd(sixSinesLookAndFeelSetupMutex);
+        if (auto sp = sixSinesLookAndFeelWeakPointer.lock())
+        {
+            lnf = sp;
+        }
+        else
+        {
+            lnf = std::make_shared<SixSinesJuceLookAndFeel>(
+                style()->getFont(jcmp::Label::Styles::styleClass, jcmp::Label::Styles::labelfont));
+            sixSinesLookAndFeelWeakPointer = lnf;
+
+            juce::LookAndFeel::setDefaultLookAndFeel(lnf.get());
+        }
+    }
+
+    // Make sure to do this last
+    setSize(608, 830);
 }
 SixSinesEditor::~SixSinesEditor() { idleTimer->stopTimer(); }
 
@@ -128,6 +160,23 @@ void SixSinesEditor::paint(juce::Graphics &g)
         g.strokePath(p, juce::PathStrokeType(1));
     }
 
+    xp = getWidth() - 83;
+    for (int fr = 1; fr < 6; ++fr)
+    {
+        juce::Path p;
+        int np{80};
+        for (int i = 0; i < np; ++i)
+        {
+            auto sx = -sin(2.0 * M_PI * fr * i / np);
+            if (i == 0)
+                p.startNewSubPath(xp + i, 0.45 * (-sx + 1) * ht + 4);
+            else
+                p.lineTo(xp + i, 0.45 * (-sx + 1) * ht + 4);
+        }
+        g.setColour(juce::Colours::white.withAlpha(0.9f - sqrt((fr - 1) / 7.0f)));
+        g.strokePath(p, juce::PathStrokeType(1));
+    }
+
     g.setColour(juce::Colours::white.withAlpha(0.5f));
     q = ft.withHeight(12);
     g.setFont(q);
@@ -143,13 +192,17 @@ void SixSinesEditor::resized()
     auto rdx{1};
 
     int tpt{33}, tpb{15};
+
+    auto but = getLocalBounds().withHeight(tpt).reduced(110, 0).withTrimmedTop(2);
+    presetButton->setBounds(but);
+
     auto area = getLocalBounds().withTrimmedTop(tpt).withTrimmedBottom(tpb);
 
     auto tp = 100;
 
     auto rb = area.withTrimmedTop(tp);
     auto edH = 250 - tpt - tpb;
-    ;
+
     auto mp = rb.withTrimmedBottom(edH);
     mp = mp.withWidth(numOps * (uicPowerKnobWidth + uicMargin) + 2 * uicMargin + 10);
 
@@ -326,4 +379,17 @@ void SixSinesEditor::popupMenuForContinuous(jcmp::ContinuousParamEditor *e)
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
 }
+
+void SixSinesEditor::showPresetPopup()
+{
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("Presets - Coming Soon");
+    p.addSeparator();
+    p.addSectionHeader("Factory");
+    p.addSeparator();
+    p.addSectionHeader("User");
+
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
+}
+
 } // namespace baconpaul::six_sines::ui

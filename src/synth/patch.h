@@ -431,6 +431,9 @@ struct Patch
     std::array<MatrixNode, matrixSize> matrixNodes;
     std::array<MixerNode, numOps> mixerNodes;
     OutputNode output;
+
+    std::string toState() const;
+    bool fromState(const std::string &);
 };
 } // namespace baconpaul::six_sines
 #endif // PATCH_H

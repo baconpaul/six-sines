@@ -187,14 +187,6 @@ struct Synth
     sst::basic_blocks::dsp::VUPeak vuPeak;
     int32_t updateVuEvery{(int32_t)(gSampleRate / 60 / blockSize)};
     int32_t lastVuUpdate{updateVuEvery};
-
-    fs::path userPath;
-    fs::path userPatchesPath;
-
-    std::string toState() const;
-    bool fromState(const std::string &);
-
-    std::unique_ptr<PresetManager> presetManager;
 };
 } // namespace baconpaul::six_sines
 #endif // SYNTH_H

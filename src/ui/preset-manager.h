@@ -11,21 +11,17 @@
  * released under GPL3. You know the drill.
  */
 
-#ifndef BACONPAUL_SIX_SINES_SYNTH_PRESET_MANAGER_H
-#define BACONPAUL_SIX_SINES_SYNTH_PRESET_MANAGER_H
+#ifndef BACONPAUL_SIX_SINES_UI_PRESET_MANAGER_H
+#define BACONPAUL_SIX_SINES_UI_PRESET_MANAGER_H
 
 #include "filesystem/import.h"
-namespace baconpaul::six_sines
+#include "synth/patch.h"
+namespace baconpaul::six_sines::ui
 {
-struct Synth;
 struct PresetManager
 {
     fs::path userPatchPath;
-    PresetManager(const fs::path &p)
-    {
-        userPatchPath = p;
-        rescanUserPresets();
-    }
+    PresetManager();
 
     struct Preset
     {
@@ -38,8 +34,11 @@ struct PresetManager
     std::vector<Preset> userPresets;
 
     void rescanUserPresets();
-    void loadPreset(const Preset &, Synth &);
-    void saveUserPreset(const fs::path &category, const fs::path &name, Synth &);
+    void loadPreset(const Preset &, Patch &);
+    void saveUserPreset(const fs::path &category, const fs::path &name, Patch &);
+
+    fs::path userPath;
+    fs::path userPatchesPath;
 };
-} // namespace baconpaul::six_sines
+} // namespace baconpaul::six_sines::ui
 #endif // PRESET_MANAGER_H
