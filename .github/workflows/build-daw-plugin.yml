@@ -129,18 +129,18 @@ jobs:
         uses: mknejp/delete-release-assets@v1
         with:
           token: ${{ github.token }}
-          tag: DAWPlugin # This may also be of the form 'refs/tags/staging'
+          tag: Nightly # This may also be of the form 'refs/tags/staging'
           assets: '*'
       - name: Upload release assets
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: artifacts/**/**/**
-          tag: DAWPlugin
+          tag: Nightly
           file_glob: true
       - name: Tag Repo
         uses: richardsimko/update-tag@v1.0.7
         with:
-          tag_name: DAWPlugin
+          tag_name: Nightly
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
