@@ -71,6 +71,24 @@ template <typename T> struct EnvelopeSupport
         env.processBlockScaledAD(delay, attackv, hold, decay, sustain, release, gated);
     }
 };
+
+template <typename T> struct LFOSupport
+{
+    SRProvider sr;
+
+    const float &lfoRate, &lfoDeform, &lfoShape, &lfoActiveV;
+    bool active;
+    sst::basic_blocks::modulators::SimpleLFO<SRProvider, blockSize> lfo;
+
+    LFOSupport(const T &mn)
+        : lfo(&sr), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform), lfoShape(mn.lfoShape),
+          lfoActiveV(mn.lfoActive)
+    {
+    }
+
+    void lfoAttack() {}
+    void lfoProcess() {}
+};
 } // namespace baconpaul::six_sines
 
 #endif // NODE_SUPPORT_H

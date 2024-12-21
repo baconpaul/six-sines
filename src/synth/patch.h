@@ -62,6 +62,7 @@ struct Patch
                                 sst::basic_blocks::modulators::TenSecondRange::etMax);
     }
     static md_t boolMd() { return md_t().asBool().withFlags(boolFlags); }
+    static md_t intMd() { return md_t().asInt().withFlags(boolFlags); }
 
     Patch()
         : sourceNodes(scpu::make_array_bind_first_index<SourceNode, numOps>()),
@@ -91,6 +92,48 @@ struct Patch
         std::for_each(mixerNodes.begin(), mixerNodes.end(), pushParams);
         std::for_each(matrixNodes.begin(), matrixNodes.end(), pushParams);
     }
+
+    struct LFOMixin
+    {
+        LFOMixin(const std::string name, int id0)
+            : lfoRate(floatMd()
+                          .asLfoRate()
+                          .withName(name + " LFO Rate")
+                          .withGroupName(name)
+                          .withDefault(0)
+                          .withID(id0 + 1)),
+              lfoDeform(floatMd()
+                            .asPercentBipolar()
+                            .withName(name + " LFO Deform")
+                            .withGroupName(name)
+                            .withDefault(0)
+                            .withID(id0 + 2)),
+              lfoShape(
+                  intMd().withRange(0, 6).withDefault(0).withID(id0 + 3).withUnorderedMapFormatting(
+                      {{0, "Sine"},
+                       {1, "Ramp"},
+                       {2, "RampNeg"},
+                       {3, "Tri"},
+                       {4, "Pulse"},
+                       {5, "Noise"},
+                       {6, "SnH"}})),
+              lfoActive(boolMd()
+                            .withDefault(true)
+                            .withID(id0 + 4)
+                            .withName(name + " LFO Active")
+                            .withGroupName(name))
+        {
+        }
+
+        Param lfoRate, lfoDeform, lfoShape, lfoActive;
+
+        void appendLFOParams(std::vector<Param *> &res)
+        {
+            res.push_back(&lfoRate);
+            res.push_back(&lfoDeform);
+            res.push_back(&lfoShape);
+        }
+    };
 
     struct DAHDSRMixin
     {
@@ -191,7 +234,7 @@ struct Patch
             return res;
         }
     };
-    struct SelfNode : public DAHDSRMixin
+    struct SelfNode : public DAHDSRMixin, LFOMixin
     {
         // Once streamed you cant change these bases or the individual ids inside
         static constexpr uint32_t idBase{10000}, idStride{100};
@@ -207,20 +250,28 @@ struct Patch
                          .withGroupName(name(idx))
                          .withDefault(false)
                          .withID(id(1, idx))),
-              DAHDSRMixin(name(idx) + " Feedback", id(2, idx), false)
+              DAHDSRMixin(name(idx) + " Feedback", id(2, idx), false),
+              LFOMixin(name(idx) + " Feedback", id(15, idx)),
+              lfoToFB(floatMd()
+                          .asPercentBipolar()
+                          .withName(name(idx) + " LFO to FB Amplitude")
+                          .withGroupName(name(idx))
+                          .withDefault(0.0)
+                          .withID(id(25, idx)))
         {
         }
 
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1); }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
-        Param fbLevel;
+        Param fbLevel, lfoToFB;
         Param active;
 
         std::vector<Param *> params()
         {
             std::vector<Param *> res{&fbLevel, &active};
             appendDAHDSRParams(res);
+            appendLFOParams(res);
             return res;
         }
     };
