@@ -5,11 +5,9 @@ Individual Oscillator
   - if off: absolute frequency
 - Waveshape (quadrant picker)
 - lfo with depth to ratio
-+ dahdsr with depth to ratio
 - ratio uses 2^x table
 
 FM Matrix Node
-+ DAHDSR to scale float depth
 - LFO to add to float depth
 
 Self matrix node
@@ -41,10 +39,9 @@ Non-monophonic voice level modulation
 
 
 Saturday
-+ typeins
-- preset save/restore
+- preset factory set with cmakerc
+- preset scan user directory to make tree
 - param split for voices and base/top
-+ sort params more natrually
 - envelope power for subs
 - temposync lfo
 - restore rm with each matrix node having a to-rm-or-to-fm option

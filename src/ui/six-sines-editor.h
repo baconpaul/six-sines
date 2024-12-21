@@ -79,6 +79,9 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::unique_ptr<PresetManager> presetManager;
     std::unique_ptr<jcmp::MenuButton> presetButton;
     void showPresetPopup();
+    void doLoadPatch();
+    void doSavePatch();
+    std::unique_ptr<juce::FileChooser> fileChooser;
 
     std::unique_ptr<jcmp::ToolTip> toolTip;
     void showTooltipOn(juce::Component *c);
@@ -92,6 +95,8 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::unordered_map<uint32_t, juce::Component::SafePointer<juce::Component>> componentByID;
 
     std::shared_ptr<SixSinesJuceLookAndFeel> lnf;
+
+    void sendEntirePatchToAudio();
 };
 
 struct HasEditor

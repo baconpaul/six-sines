@@ -11,6 +11,7 @@
  * released under GPL3. You know the drill.
  */
 
+#include <sstream>
 #include <fstream>
 #include "sst/plugininfra/paths.h"
 #include "preset-manager.h"
@@ -40,20 +41,37 @@ void PresetManager::saveUserPreset(const fs::path &category, const fs::path &nam
         auto dir = userPatchPath / category;
         fs::create_directories(dir);
         auto pt = (dir / name).replace_extension(".sxsnp");
-        std::ofstream ofs(pt);
-        if (ofs.is_open())
-        {
-            ofs << patch.toState();
-        }
+        saveUserPresetDirect(pt, patch);
     }
     catch (fs::filesystem_error &e)
     {
         SXSNLOG(e.what());
     }
 }
+
+void PresetManager::saveUserPresetDirect(const fs::path &pt, Patch &patch)
+{
+    std::ofstream ofs(pt);
+    if (ofs.is_open())
+    {
+        ofs << patch.toState();
+    }
+    ofs.close();
+}
+
+void PresetManager::loadUserPresetDirect(const fs::path &p, Patch &patch)
+{
+    std::ifstream t(p);
+    if (!t.is_open())
+        return;
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+
+    patch.fromState(buffer.str());
+}
+
 void PresetManager::loadPreset(const Preset &p, Patch &synth)
 {
-
     if (p.isFactory)
     {
     }

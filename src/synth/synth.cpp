@@ -49,6 +49,12 @@ void Synth::process(const clap_output_events_t *outq)
 
     processUIQueue(outq);
 
+    if (!audioRunning)
+    {
+        memset(output, 0, sizeof(output));
+        return;
+    }
+
     while (resampler->inputsRequiredToGenerateOutputs(blockSize) > 0)
     {
         lagHandler.process();
@@ -202,6 +208,17 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             p.param_id = uiM->paramId;
 
             outq->try_push(outq, &p.header);
+        }
+        break;
+        case UIToAudioMsg::STOP_AUDIO:
+        {
+            voiceManager->allSoundsOff();
+            audioRunning = false;
+        }
+        break;
+        case UIToAudioMsg::START_AUDIO:
+        {
+            audioRunning = true;
         }
         break;
         }

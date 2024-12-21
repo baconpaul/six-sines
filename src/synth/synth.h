@@ -79,7 +79,12 @@ struct Synth
             return 1;
         };
         void endVoiceCreationTransaction(uint16_t, uint16_t, uint16_t, int32_t, float) {}
-        void terminateVoice(Voice *) {}
+        void terminateVoice(Voice *voice)
+        {
+            voice->used = false;
+            voice->gated = false;
+            synth.removeFromVoiceList(voice);
+        }
         int32_t initializeMultipleVoices(
             int32_t ct,
             const typename sst::voicemanager::VoiceInitInstructionsEntry<VMConfig>::buffer_t &ibuf,
@@ -135,6 +140,8 @@ struct Synth
     Synth();
     ~Synth();
 
+    bool audioRunning{true};
+
     double realSampleRate{0};
     void setSampleRate(double sampleRate)
     {
@@ -169,13 +176,15 @@ struct Synth
             REQUEST_REFRESH,
             SET_PARAM,
             BEGIN_EDIT,
-            END_EDIT
+            END_EDIT,
+            STOP_AUDIO,
+            START_AUDIO
         } action;
         uint32_t paramId{0};
         float value{0};
     };
     using audioToUIQueue_t = sst::cpputils::SimpleRingBuffer<AudioToUIMsg, 1024 * 16>;
-    using uiToAudioQueue_T = sst::cpputils::SimpleRingBuffer<UIToAudioMsg, 1024 * 16>;
+    using uiToAudioQueue_T = sst::cpputils::SimpleRingBuffer<UIToAudioMsg, 1024 * 64>;
     audioToUIQueue_t audioToUi;
     uiToAudioQueue_T uiToAudio;
     std::atomic<bool> doFullRefresh{false};

@@ -91,6 +91,8 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     presetButton->setOnCallback([this]() { showPresetPopup(); });
     addAndMakeVisible(*presetButton);
 
+    presetManager = std::make_unique<PresetManager>();
+
     {
         std::lock_guard<std::mutex> grd(sixSinesLookAndFeelSetupMutex);
         if (auto sp = sixSinesLookAndFeelWeakPointer.lock())
@@ -385,11 +387,75 @@ void SixSinesEditor::showPresetPopup()
     auto p = juce::PopupMenu();
     p.addSectionHeader("Presets - Coming Soon");
     p.addSeparator();
-    p.addSectionHeader("Factory");
-    p.addSeparator();
-    p.addSectionHeader("User");
+    p.addItem("Load Patch",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                      w->doLoadPatch();
+              });
+    p.addItem("Save Patch",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                      w->doSavePatch();
+              });
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
+}
+
+void SixSinesEditor::doSavePatch()
+{
+    fileChooser = std::make_unique<juce::FileChooser>(
+        "Save Patch", juce::File(presetManager->userPatchesPath.u8string()), "*.sxsnp");
+    fileChooser->launchAsync(
+        juce::FileBrowserComponent::canSelectFiles | juce::FileBrowserComponent::saveMode |
+            juce::FileBrowserComponent::warnAboutOverwriting,
+        [w = juce::Component::SafePointer(this)](const juce::FileChooser &c)
+        {
+            if (!w)
+                return;
+            auto result = c.getResults();
+            if (result.isEmpty() || result.size() > 1)
+            {
+                return;
+            }
+            w->presetManager->saveUserPresetDirect(
+                fs::path{result[0].getFullPathName().toStdString()}, w->patchCopy);
+        });
+}
+
+void SixSinesEditor::doLoadPatch()
+{
+    fileChooser = std::make_unique<juce::FileChooser>(
+        "Load Patch", juce::File(presetManager->userPatchesPath.u8string()), "*.sxsnp");
+    fileChooser->launchAsync(
+        juce::FileBrowserComponent::canSelectFiles | juce::FileBrowserComponent::openMode,
+        [w = juce::Component::SafePointer(this)](const juce::FileChooser &c)
+        {
+            if (!w)
+                return;
+            auto result = c.getResults();
+            if (result.isEmpty() || result.size() > 1)
+            {
+                return;
+            }
+            auto loadPath = fs::path{result[0].getFullPathName().toStdString()};
+            w->presetManager->loadUserPresetDirect(loadPath, w->patchCopy);
+            w->sendEntirePatchToAudio();
+            w->repaint();
+        });
+}
+
+void SixSinesEditor::sendEntirePatchToAudio()
+{
+    uiToAudio.push({Synth::UIToAudioMsg::STOP_AUDIO});
+    for (const auto &p : patchCopy.params)
+    {
+        uiToAudio.push({Synth::UIToAudioMsg::BEGIN_EDIT, p->meta.id});
+        uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM, p->meta.id, p->value});
+        uiToAudio.push({Synth::UIToAudioMsg::END_EDIT, p->meta.id});
+    }
+    uiToAudio.push({Synth::UIToAudioMsg::START_AUDIO});
 }
 
 } // namespace baconpaul::six_sines::ui
