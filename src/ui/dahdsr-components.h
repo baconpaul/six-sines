@@ -65,8 +65,6 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
         return juce::Rectangle<int>(x, y, 0, 0).withLeft(bx.getRight()).withBottom(bx.getBottom());
     }
 
-    void beginEdit() {}
-
     static constexpr int nels{6}; // dahdsr
     std::array<std::unique_ptr<jcmp::VSlider>, nels> slider;
     std::array<std::unique_ptr<PatchContinuous>, nels> sliderD;

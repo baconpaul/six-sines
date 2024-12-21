@@ -17,24 +17,33 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
+#include "lfo-components.h"
 
 namespace baconpaul::six_sines::ui
 {
-struct SelfSubPanel : juce::Component, HasEditor, DAHDSRComponents<SelfSubPanel, Patch::SelfNode>
+struct SelfSubPanel : juce::Component,
+                      HasEditor,
+                      DAHDSRComponents<SelfSubPanel, Patch::SelfNode>,
+                      LFOComponents<SelfSubPanel, Patch::SelfNode>
 {
     SelfSubPanel(SixSinesEditor &);
     ~SelfSubPanel();
     void paint(juce::Graphics &g) override
     {
         g.setFont(juce::FontOptions(40));
-        g.setColour(juce::Colours::white);
+        g.setColour(juce::Colours::white.withAlpha(0.2f));
         g.drawText("Self " + std::to_string(index), getLocalBounds(), juce::Justification::centred);
     }
 
     void resized() override;
+    void beginEdit() {}
 
     size_t index{0};
     void setSelectedIndex(int idx);
+
+    std::unique_ptr<jcmp::Knob> lfoToFb;
+    std::unique_ptr<PatchContinuous> lfoToFbD;
+    std::unique_ptr<jcmp::Label> lfoToFbL;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

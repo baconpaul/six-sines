@@ -25,6 +25,8 @@ struct MainSubPanel : juce::Component, HasEditor, DAHDSRComponents<MainSubPanel,
     MainSubPanel(SixSinesEditor &);
     ~MainSubPanel();
     void resized() override;
+
+    void beginEdit() {}
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

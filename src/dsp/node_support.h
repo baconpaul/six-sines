@@ -86,8 +86,13 @@ template <typename T> struct LFOSupport
     {
     }
 
-    void lfoAttack() {}
-    void lfoProcess() {}
+    int shape;
+    void lfoAttack()
+    {
+        shape = static_cast<int>(std::round(lfoShape));
+        lfo.attack(shape);
+    }
+    void lfoProcess() { lfo.process_block(lfoRate, lfoDeform, shape); }
 };
 } // namespace baconpaul::six_sines
 

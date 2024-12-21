@@ -100,10 +100,14 @@ void SixSinesEditor::resized()
 {
     auto rdx{1};
 
+    int tpt{40};
+    auto area = getLocalBounds().withTrimmedTop(tpt);
+
     auto tp = 100;
 
-    auto rb = getLocalBounds().withTrimmedTop(tp);
-    auto edH = 250;
+    auto rb = area.withTrimmedTop(tp);
+    auto edH = 250 - tpt;
+    ;
     auto mp = rb.withTrimmedBottom(edH);
     mp = mp.withWidth(numOps * (uicPowerKnobWidth + uicMargin) + 2 * uicMargin + 10);
 
@@ -116,7 +120,7 @@ void SixSinesEditor::resized()
     auto mx = rb.withTrimmedBottom(edH).withTrimmedLeft(mp.getWidth());
     mixerPanel->setBounds(mx.reduced(rdx));
 
-    auto ta = getLocalBounds().withHeight(tp);
+    auto ta = area.withHeight(tp);
     auto sr = ta.withWidth(mp.getWidth());
     sourcePanel->setBounds(sr.reduced(rdx));
 

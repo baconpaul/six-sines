@@ -78,6 +78,13 @@ struct PatchDiscrete : jdat::Discrete
         return r;
     }
     int getValue() const override { return static_cast<int>(std::round(p->value)); }
+    std::string getValueAsStringFor(int i) const override
+    {
+        auto res = p->meta.valueToString(i);
+        if (res.has_value())
+            return *res;
+        return "error";
+    }
     void setValueFromGUI(const int &f) override
     {
         p->value = f;

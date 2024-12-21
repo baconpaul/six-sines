@@ -269,7 +269,7 @@ struct Patch
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&fbLevel, &active};
+            std::vector<Param *> res{&fbLevel, &active, &lfoToFB};
             appendDAHDSRParams(res);
             appendLFOParams(res);
             return res;

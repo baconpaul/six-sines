@@ -30,9 +30,8 @@ Installer
 Friday
 - envelope power for subs
 - simple lfo in feedback
+- typeins
 - lfo support
-- step support
-- typein
 - auv2
 - vst3
 - a build

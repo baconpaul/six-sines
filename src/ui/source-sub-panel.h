@@ -29,7 +29,7 @@ struct SourceSubPanel : juce::Component,
     void paint(juce::Graphics &g) override
     {
         g.setFont(juce::FontOptions(40));
-        g.setColour(juce::Colours::white);
+        g.setColour(juce::Colours::white.withAlpha(0.2f));
         g.drawText("Source " + std::to_string(index), getLocalBounds(),
                    juce::Justification::centred);
     }
@@ -38,6 +38,8 @@ struct SourceSubPanel : juce::Component,
 
     size_t index{0};
     void setSelectedIndex(size_t i);
+
+    void beginEdit() {}
 
     std::unique_ptr<jcmp::Knob> envToRatio;
     std::unique_ptr<PatchContinuous> envToRatioD;
