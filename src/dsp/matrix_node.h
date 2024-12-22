@@ -61,6 +61,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         lfoProcess();
         float mod alignas(16)[blockSize], modB alignas(16)[blockSize];
         mech::mul_block<blockSize>(env.outputCache, from.output, mod);
+        mech::scale_by<blockSize>(level, mod);
 
         if (!mulLfo)
         {

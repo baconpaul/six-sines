@@ -91,25 +91,21 @@ static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint3
     return true;
 }
 
-const struct clap_plugin_factory_as_auv2 six_sines_auv2_factory = {
-    "BcPL",             // manu
-    "BaconPaul", // manu name
-    clap_get_auv2_info};
+const struct clap_plugin_factory_as_auv2 six_sines_auv2_factory = {"BcPL",      // manu
+                                                                   "BaconPaul", // manu name
+                                                                   clap_get_auv2_info};
 
 /*
  * Clap Wrapper VST3 Factory API
  */
-static const clap_plugin_info_as_vst3 *clap_get_vst3_info(const clap_plugin_factory_as_vst3 *f, uint32_t index)
+static const clap_plugin_info_as_vst3 *clap_get_vst3_info(const clap_plugin_factory_as_vst3 *f,
+                                                          uint32_t index)
 {
     return nullptr;
 }
 
 const struct clap_plugin_factory_as_vst3 six_sines_vst3_factory = {
-    "BaconPaul",
-    "https://baconpaul.org",
-    "",
-    clap_get_vst3_info
-};
+    "BaconPaul", "https://baconpaul.org", "", clap_get_vst3_info};
 
 const void *get_factory(const char *factory_id)
 {
