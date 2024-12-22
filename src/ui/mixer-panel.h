@@ -35,6 +35,13 @@ struct MixerPanel : jcmp::NamedPanel, HasEditor
 
     void beginEdit(size_t idx);
 
+    std::unique_ptr<juce::Component> highlight;
+    void clearHighlight()
+    {
+        if (highlight)
+            highlight->setVisible(false);
+    }
+
     std::array<std::unique_ptr<jcmp::Knob>, numOps> knobs;
     std::array<std::unique_ptr<PatchContinuous>, numOps> knobsData;
     std::array<std::unique_ptr<jcmp::ToggleButton>, numOps> power;

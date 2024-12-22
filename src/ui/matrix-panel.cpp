@@ -15,6 +15,7 @@
 #include "matrix-sub-panel.h"
 #include "self-sub-panel.h"
 #include "ui-constants.h"
+#include "knob-highlight.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -62,6 +63,9 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         Mlabels[i]->setText("Op " + std::to_string(si + 1) + " " + glyph);
         addAndMakeVisible(*Mlabels[i]);
     }
+
+    highlight = std::make_unique<KnobHighlight>();
+    addChildComponent(*highlight);
 }
 MatrixPanel::~MatrixPanel() = default;
 
@@ -93,10 +97,10 @@ void MatrixPanel::paint(juce::Graphics &g)
     auto b = getContentArea().reduced(0, 0);
     auto x = b.getX();
     auto y = b.getY();
-    auto fillCol = getColour(Styles::background).brighter(0.1).withAlpha(0.3f);
+    auto fillCol = getColour(Styles::background).brighter(0.1).withAlpha(0.35f);
     auto strokeCol = getColour(Styles::background).brighter(0.2);
-    auto r = juce::Rectangle<int>(x + uicMargin / 2, y - uicMargin, b.getWidth() - uicMargin / 2,
-                                  uicLabeledKnobHeight + uicMargin)
+    auto r = juce::Rectangle<int>(x + uicMargin, y, numOps * (uicPowerKnobWidth + uicMargin),
+                                  uicLabeledKnobHeight)
                  .reduced(1);
     for (auto i = 0U; i < numOps; ++i)
     {
@@ -105,12 +109,12 @@ void MatrixPanel::paint(juce::Graphics &g)
             g.setColour(fillCol);
             g.fillRoundedRectangle(r.toFloat(), 4);
             g.setColour(strokeCol);
-            g.drawRoundedRectangle(r.toFloat(), 4, 1);
+            // g.drawRoundedRectangle(r.toFloat(), 4, 1);
         }
         r = r.translated(0, uicLabeledKnobHeight + uicMargin);
     }
-    r = juce::Rectangle<int>(x + uicMargin / 2, y - uicMargin, uicPowerKnobWidth + uicMargin,
-                             b.getHeight());
+    r = juce::Rectangle<int>(x + uicMargin, y, uicPowerKnobWidth,
+                             numOps * (uicLabeledKnobHeight + uicMargin) - uicMargin);
     for (auto i = 0U; i < numOps; ++i)
     {
         if (i % 2 == 1)
@@ -118,7 +122,7 @@ void MatrixPanel::paint(juce::Graphics &g)
             g.setColour(fillCol);
             g.fillRoundedRectangle(r.toFloat(), 4);
             g.setColour(strokeCol);
-            g.drawRoundedRectangle(r.toFloat(), 4, 1);
+            // g.drawRoundedRectangle(r.toFloat(), 4, 1);
         }
         r = r.translated(uicPowerKnobWidth + uicMargin, 0);
     }
@@ -144,6 +148,28 @@ void MatrixPanel::beginEdit(size_t idx, bool self)
 
         editor.matrixSubPanel->setVisible(true);
         editor.matrixSubPanel->setSelectedIndex(idx);
+    }
+
+    if (self)
+    {
+        highlight->setVisible(true);
+        auto b = getContentArea().reduced(uicMargin, 0);
+        highlight->setBounds(b.getX() + idx * (uicPowerKnobWidth + uicMargin),
+                             b.getY() + idx * (uicLabeledKnobHeight + uicMargin),
+                             uicPowerKnobWidth + 2, uicLabeledKnobHeight);
+        highlight->toBack();
+    }
+    else
+    {
+        highlight->setVisible(true);
+        auto b = getContentArea().reduced(uicMargin, 0);
+        auto si = MatrixIndex::sourceIndexAt(idx);
+        auto ti = MatrixIndex::targetIndexAt(idx);
+        auto y = b.getY() + ti * (uicLabeledKnobHeight + uicMargin);
+        auto x = b.getX() + si * (uicPowerKnobWidth + uicMargin);
+
+        highlight->setBounds(x, y, uicPowerKnobWidth + 2, uicLabeledKnobHeight);
+        highlight->toBack();
     }
 }
 

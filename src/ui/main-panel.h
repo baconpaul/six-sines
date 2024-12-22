@@ -31,6 +31,13 @@ struct MainPanel : jcmp::NamedPanel, HasEditor
 
     void beginEdit();
 
+    std::unique_ptr<juce::Component> highlight;
+    void clearHighlight()
+    {
+        if (highlight)
+            highlight->setVisible(false);
+    }
+
     std::unique_ptr<PatchContinuous> levData;
     std::unique_ptr<jcmp::Knob> lev;
     std::unique_ptr<jcmp::Label> levLabel;

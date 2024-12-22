@@ -15,6 +15,7 @@
 #include "source-panel.h"
 #include "source-sub-panel.h"
 #include "ui-constants.h"
+#include "knob-highlight.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -36,6 +37,9 @@ SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEdi
         labels[i]->setText("Op " + std::to_string(i + 1) + " Ratio");
         addAndMakeVisible(*labels[i]);
     }
+
+    highlight = std::make_unique<KnobHighlight>();
+    addChildComponent(*highlight);
 }
 SourcePanel::~SourcePanel() = default;
 
@@ -57,6 +61,12 @@ void SourcePanel::beginEdit(size_t idx)
     editor.sourceSubPanel->setVisible(true);
     editor.sourceSubPanel->setSelectedIndex(idx);
     editor.singlePanel->setName("Op " + std::to_string(idx + 1) + " Source");
+
+    highlight->setVisible(true);
+    auto b = getContentArea().reduced(uicMargin, 0);
+    highlight->setBounds(b.getX() + idx * (uicPowerKnobWidth + uicMargin), b.getY(),
+                         uicPowerKnobWidth + 2, uicLabeledKnobHeight);
+    highlight->toBack();
 }
 
 } // namespace baconpaul::six_sines::ui

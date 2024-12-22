@@ -32,6 +32,13 @@ struct MatrixPanel : jcmp::NamedPanel, HasEditor
 
     void beginEdit(size_t, bool);
 
+    std::unique_ptr<juce::Component> highlight;
+    void clearHighlight()
+    {
+        if (highlight)
+            highlight->setVisible(false);
+    }
+
     std::array<std::unique_ptr<jcmp::Knob>, numOps> Sknobs;
     std::array<std::unique_ptr<PatchContinuous>, numOps> SknobsData;
     std::array<std::unique_ptr<jcmp::ToggleButton>, numOps> Spower;

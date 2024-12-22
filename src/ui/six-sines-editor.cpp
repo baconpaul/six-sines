@@ -237,6 +237,10 @@ void SixSinesEditor::hideAllSubPanels()
     {
         c->setVisible(false);
     }
+    mainPanel->clearHighlight();
+    sourcePanel->clearHighlight();
+    matrixPanel->clearHighlight();
+    mixerPanel->clearHighlight();
 }
 
 void SixSinesEditor::showTooltipOn(juce::Component *c)

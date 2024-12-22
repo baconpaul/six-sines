@@ -14,6 +14,7 @@
 #include "main-panel.h"
 #include "ui-constants.h"
 #include "main-sub-panel.h"
+#include "knob-highlight.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -28,6 +29,9 @@ MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
 
     vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::VERTICAL);
     addAndMakeVisible(*vuMeter);
+
+    highlight = std::make_unique<KnobHighlight>();
+    addChildComponent(*highlight);
 }
 MainPanel::~MainPanel() = default;
 
@@ -38,7 +42,8 @@ void MainPanel::resized()
     b = juce::Rectangle<int>(b.getX(), b.getY(), uicKnobSize + uicPowerButtonSize + uicMargin,
                              uicKnobSize);
     lev->setBounds(b.withTrimmedLeft(uicPowerButtonSize + uicMargin));
-    vuMeter->setBounds(b.withWidth(uicPowerButtonSize).withTrimmedRight(2));
+    vuMeter->setBounds(
+        b.withWidth(uicPowerButtonSize).withTrimmedRight(2).withTrimmedTop(2).withTrimmedLeft(2));
     levLabel->setBounds(b.translated(0, uicKnobSize + uicLabelGap).withHeight(uicLabelHeight));
 }
 
@@ -48,6 +53,11 @@ void MainPanel::beginEdit()
     editor.mainSubPanel->setVisible(true);
 
     editor.singlePanel->setName("Main Output");
+
+    highlight->setVisible(true);
+    auto b = getContentArea().reduced(uicMargin, 0);
+    highlight->setBounds(b.getX(), b.getY(), uicPowerKnobWidth + 2, uicLabeledKnobHeight);
+    highlight->toBack();
 }
 
 } // namespace baconpaul::six_sines::ui

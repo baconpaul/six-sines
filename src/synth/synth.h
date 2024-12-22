@@ -67,9 +67,9 @@ struct Synth
 
         std::function<void(Voice *)> doVoiceEndCallback = [](auto) {};
         void setVoiceEndCallback(std::function<void(Voice *)> f) { doVoiceEndCallback = f; }
-        void retriggerVoiceWithNewNoteID(Voice *, int32_t, float) {}
-        void moveVoice(Voice *, uint16_t, uint16_t, uint16_t, float) {}
-        void moveAndRetriggerVoice(Voice *, uint16_t, uint16_t, uint16_t, float) {}
+        void retriggerVoiceWithNewNoteID(Voice *, int32_t, float) { assert(false); }
+        void moveVoice(Voice *, uint16_t, uint16_t, uint16_t, float) { assert(false); }
+        void moveAndRetriggerVoice(Voice *, uint16_t, uint16_t, uint16_t, float) { assert(false); }
 
         int32_t beginVoiceCreationTransaction(
             typename sst::voicemanager::VoiceBeginBufferEntry<VMConfig>::buffer_t &buffer, uint16_t,
@@ -91,6 +91,8 @@ struct Synth
             typename sst::voicemanager::VoiceInitBufferEntry<VMConfig>::buffer_t &obuf, uint16_t pt,
             uint16_t ch, uint16_t key, int32_t nid, float vel, float rt)
         {
+            assert(ct == 1);
+
             if (ibuf[0].instruction !=
                 sst::voicemanager::VoiceInitInstructionsEntry<
                     baconpaul::six_sines::Synth::VMConfig>::Instruction::SKIP)
