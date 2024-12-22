@@ -1,4 +1,4 @@
-name: Build DAW Plugin
+name: Build Six Sines
 on:
   push:
     branches:
@@ -22,7 +22,7 @@ defaults:
 
 jobs:
   build_plugin:
-    name: DAW Build - ${{ matrix.name }}
+    name: Build - ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -78,7 +78,7 @@ jobs:
           #export MAC_SIGNING_TEAM="${{ secrets.MAC_SIGNING_TEAM }}"
   
           cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release
-          cmake --build ./build --config Release --target six-sines-a-sinnin_standalone six-sines-a-sinnin_clap --parallel 3
+          cmake --build ./build --config Release --target six-sines_standalone six-sines_clap --parallel 3
           mkdir build/inst
           mkdir build/insttmp
           mv build/CLAP/Release/*.clap build/insttmp
@@ -93,7 +93,7 @@ jobs:
       - name: Build pull request version
         if: github.event_name == 'pull_request'
         run: |
-          cmake --build ./build --config Debug --target six-sines-a-sinnin_standalone six-sines-a-sinnin_clap --parallel 3
+          cmake --build ./build --config Debug --target six-sines_standalone six-sines_clap --parallel 3
           mkdir build/inst
           mkdir build/insttmp
           mv build/CLAP/Debug/*.clap build/insttmp
