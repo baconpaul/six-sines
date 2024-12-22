@@ -144,6 +144,16 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 blockPos = 0;
             }
         }
+
+        while (nextEvent)
+        {
+            handleEvent(nextEvent);
+            nextEventIndex++;
+            if (nextEventIndex < sz)
+                nextEvent = ev->get(ev, nextEventIndex);
+            else
+                nextEvent = nullptr;
+        }
         return CLAP_PROCESS_CONTINUE;
     }
     bool handleEvent(const clap_event_header_t *nextEvent)
@@ -192,6 +202,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             break;
             default:
             {
+                SXSNLOG("Unknown inbound event of type " << nextEvent->type);
             }
             break;
             }

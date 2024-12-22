@@ -47,6 +47,7 @@ Sunday
 - LFO on Mixer Node to level or pan
 - LFO mul or plus on consistently on all three nodes
 - LFO Level Built In
+- AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output' 
 - preset factory set with cmakerc
 - preset scan user directory to make tree
 - param split for voices and base/top
