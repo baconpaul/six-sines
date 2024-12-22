@@ -29,6 +29,9 @@ Other ToDos
 - General UI
 
 Installer
+- mac signing
+- win/lin zip only
+- pipelines on all three platforms
 
 Probably ship at this point but then
 
@@ -39,17 +42,13 @@ Non-monophonic voice level modulation
 
 
 Sunday
-- LFO mul or plus on self node
+- LFO mul or plus on self node consistently
+- LFO Level Built In
 - LFO on mixer node and also route to pan
 - LFO on source node ratio woth mul or add
 - preset factory set with cmakerc
 - preset scan user directory to make tree
 - param split for voices and base/top
-- envelope power for subs
 - temposync lfo
-- restore rm with each matrix node having a to-rm-or-to-fm option
-- auv2
-- vst3
-- a build
 - deal with ui attached or not for messages
-- edit area says "click a knbo to edit"
+- edit area says "click a knbo to edit on startup"
