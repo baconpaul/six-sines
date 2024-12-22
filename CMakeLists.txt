@@ -11,9 +11,9 @@ math(EXPR PART0 "${YEAR}-2023 + 2")
 math(EXPR PART1 "${DAY_OF_YEAR}/2")
 message(STATUS "Using date-driven version while in alpha. 0.${PART0}.${PART1}.0")
 
-project(six-sines-a-sinnin VERSION 0.${PART0}.${PART1}.0 LANGUAGES C CXX)
+project(six-sines VERSION 0.${PART0}.${PART1}.0 LANGUAGES C CXX)
 
-set(PRODUCT_NAME "Six Sines A-Sinnin")
+set(PRODUCT_NAME "Six Sines")
 
 # use asan as an option (currently mac only)
 option(USE_SANITIZER "Build and link with ASAN" FALSE)
