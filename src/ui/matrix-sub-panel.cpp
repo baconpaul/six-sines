@@ -37,7 +37,7 @@ void MatrixSubPanel::setSelectedIndex(int idx)
 
     createComponent(editor, *this, m.envLfoSum.meta.id, lfoMul, lfoMulD);
     addAndMakeVisible(*lfoMul);
-    lfoMul->direction = jcmp::MultiSwitch::HORIZONTAL;
+    lfoMul->direction = jcmp::MultiSwitch::VERTICAL;
 
     resized();
 
@@ -47,13 +47,15 @@ void MatrixSubPanel::setSelectedIndex(int idx)
 void MatrixSubPanel::resized()
 {
     auto p = getLocalBounds().reduced(uicMargin, 0);
-    auto r = layoutDAHDSRAt(p.getX(), p.getY());
-    r = layoutLFOAt(r.getX() + uicMargin, p.getY());
-    positionKnobAndLabel(r.getX() + uicMargin, r.getY(), lfoToDepth, lfoToDepthL);
+    auto pn = layoutDAHDSRAt(p.getX(), p.getY());
+    auto gh = (pn.getHeight() - 2 * uicPowerButtonSize) / 2;
+    lfoMul->setBounds(pn.getX() + uicMargin, pn.getY() + gh, uicPowerButtonSize,
+                      2 * uicPowerButtonSize);
+    pn = pn.translated(2 * uicMargin + uicPowerButtonSize, 0);
+    auto r = layoutLFOAt(pn.getX(), p.getY(), uicMargin + uicKnobSize);
 
-    auto bx =
-        lfoToDepthL->getBounds().translated(0, lfoToDepthL->getHeight() + uicMargin).withHeight(30);
-    lfoMul->setBounds(bx);
+    positionKnobAndLabel(r.getX() - uicKnobSize, r.getY() + uicTitleLabelHeight, lfoToDepth,
+                         lfoToDepthL);
 }
 
 } // namespace baconpaul::six_sines::ui

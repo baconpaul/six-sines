@@ -188,7 +188,7 @@ struct Patch
               attack(floatEnvRateMd()
                          .withName(name + " Env Attack")
                          .withGroupName(name)
-                         .withDefault(longAdsr ? -1.f : tsr::etMin)
+                         .withDefault(longAdsr ? -7.f : tsr::etMin)
                          .withID(id0 + 1)),
               hold(floatEnvRateMd()
                        .withName(name + " Env Hold")
@@ -198,7 +198,7 @@ struct Patch
               decay(floatEnvRateMd()
                         .withName(name + " Env Decay")
                         .withGroupName(name)
-                        .withDefault(longAdsr ? 1.f : tsr::etMin)
+                        .withDefault(longAdsr ? 0.f : tsr::etMin)
                         .withID(id0 + 3)),
               sustain(floatMd()
                           .asPercent()
@@ -209,7 +209,7 @@ struct Patch
               release(floatEnvRateMd()
                           .withName(name + " Env Release")
                           .withGroupName(name)
-                          .withDefault(longAdsr ? 0.5f : tsr::etMax)
+                          .withDefault(longAdsr ? -2.f : tsr::etMax)
                           .withID(id0 + 5)),
               envPower(boolMd()
                            .withName(name + " Env Power")
@@ -248,7 +248,7 @@ struct Patch
               active(boolMd()
                          .withGroupName(name(idx))
                          .withName(name(idx) + " Active")
-                         .withDefault(1.0)
+                         .withDefault(idx == 0)
                          .withID(id(1, idx))),
               envToRatio(floatMd()
                              .withRange(-2, 2)
@@ -266,6 +266,13 @@ struct Patch
                              .withDecimalPlaces(4)
                              .withDefault(0.f)
                              .withID(id(3, idx))),
+              envLfoSum(intMd()
+                            .withName(name(idx) + " LFO Env Sum")
+                            .withGroupName(name(idx))
+                            .withID(id(4, idx))
+                            .withRange(0, 1)
+                            .withDefault(0)
+                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}})),
 
               DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx))
         {
@@ -279,10 +286,11 @@ struct Patch
 
         Param envToRatio;
         Param lfoToRatio;
+        Param envLfoSum;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&ratio, &active, &envToRatio, &lfoToRatio};
+            std::vector<Param *> res{&ratio, &active, &envToRatio, &lfoToRatio, &envLfoSum};
             appendDAHDSRParams(res);
             appendLFOParams(res);
             return res;
@@ -310,19 +318,27 @@ struct Patch
                           .withName(name(idx) + " LFO to FB Amplitude")
                           .withGroupName(name(idx))
                           .withDefault(0.0)
-                          .withID(id(25, idx)))
+                          .withID(id(25, idx))),
+              envLfoSum(intMd()
+                            .withName(name(idx) + " LFO Env Sum")
+                            .withGroupName(name(idx))
+                            .withID(id(26, idx))
+                            .withRange(0, 1)
+                            .withDefault(0)
+                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}}))
+
         {
         }
 
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Feedback"; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
-        Param fbLevel, lfoToFB;
+        Param fbLevel, lfoToFB, envLfoSum;
         Param active;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&fbLevel, &active, &lfoToFB};
+            std::vector<Param *> res{&fbLevel, &active, &lfoToFB, &envLfoSum};
             appendDAHDSRParams(res);
             appendLFOParams(res);
             return res;

@@ -34,17 +34,27 @@ void SelfSubPanel::setSelectedIndex(int idx)
     createComponent(editor, *this, n.lfoToFB.meta.id, lfoToFb, lfoToFbD);
     addAndMakeVisible(*lfoToFb);
     lfoToFbL = std::make_unique<jcmp::Label>();
-    lfoToFbL->setText("Lfo Depth");
+    lfoToFbL->setText("Depth");
     addAndMakeVisible(*lfoToFbL);
+
+    createComponent(editor, *this, n.envLfoSum.meta.id, lfoMul, lfoMulD);
+    addAndMakeVisible(*lfoMul);
+    lfoMul->direction = jcmp::MultiSwitch::VERTICAL;
+
     resized();
 }
 
 void SelfSubPanel::resized()
 {
     auto p = getLocalBounds().reduced(uicMargin, 0);
-    auto r = layoutDAHDSRAt(p.getX(), p.getY());
-    r = layoutLFOAt(r.getX() + uicMargin, p.getY());
-    positionKnobAndLabel(r.getX() + uicMargin, r.getY(), lfoToFb, lfoToFbL);
+    auto pn = layoutDAHDSRAt(p.getX(), p.getY());
+    auto gh = (pn.getHeight() - 2 * uicPowerButtonSize) / 2;
+    lfoMul->setBounds(pn.getX() + uicMargin, pn.getY() + gh, uicPowerButtonSize,
+                      2 * uicPowerButtonSize);
+    pn = pn.translated(2 * uicMargin + uicPowerButtonSize, 0);
+    auto r = layoutLFOAt(pn.getX(), p.getY(), uicMargin + uicKnobSize);
+
+    positionKnobAndLabel(r.getX() - uicKnobSize, r.getY() + uicTitleLabelHeight, lfoToFb, lfoToFbL);
 }
 
 } // namespace baconpaul::six_sines::ui

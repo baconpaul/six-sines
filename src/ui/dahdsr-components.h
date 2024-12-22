@@ -21,6 +21,7 @@
 #include <sst/jucegui/components/Label.h>
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
+#include "ruled-label.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -40,22 +41,32 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
             c->addAndMakeVisible(*slider[idx]);
             c->addAndMakeVisible(*lab[idx]);
         };
-        mk(v.delay.meta.id, 0, "del");
-        mk(v.attack.meta.id, 1, "atk");
-        mk(v.hold.meta.id, 2, "hld");
-        mk(v.decay.meta.id, 3, "dcy");
-        mk(v.sustain.meta.id, 4, "sus");
-        mk(v.release.meta.id, 5, "rel");
+        mk(v.delay.meta.id, 0, "D");
+        mk(v.attack.meta.id, 1, "A");
+        mk(v.hold.meta.id, 2, "H");
+        mk(v.decay.meta.id, 3, "D");
+        mk(v.sustain.meta.id, 4, "S");
+        mk(v.release.meta.id, 5, "R");
+
+        titleLab = std::make_unique<RuledLabel>();
+        titleLab->setText("Envelope");
+        asComp()->addAndMakeVisible(*titleLab);
     }
 
     juce::Rectangle<int> layoutDAHDSRAt(int x, int y)
     {
+        if (!titleLab)
+            return {};
+
+        auto lh = uicTitleLabelHeight;
         auto c = asComp();
         auto h = c->getHeight() - y;
-        auto q = h - uicLabelHeight - uicLabelGap;
+        auto q = h - uicLabelHeight - uicLabelGap - lh;
         auto w = uicSliderWidth;
 
-        auto bx = juce::Rectangle<int>(x, y, w, h);
+        positionTitleLabelAt(x, y, nels * uicSliderWidth, titleLab);
+
+        auto bx = juce::Rectangle<int>(x, y + lh, w, h - lh);
         for (int i = 0; i < nels; ++i)
         {
             if (!slider[i])
@@ -64,6 +75,7 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
             lab[i]->setBounds(bx.withTrimmedTop(q + uicLabelGap));
             bx = bx.translated(uicSliderWidth, 0);
         }
+        bx = bx.translated(-uicSliderWidth, 0);
         return juce::Rectangle<int>(x, y, 0, 0).withLeft(bx.getRight()).withBottom(bx.getBottom());
     }
 
@@ -71,6 +83,7 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
     std::array<std::unique_ptr<jcmp::VSlider>, nels> slider;
     std::array<std::unique_ptr<PatchContinuous>, nels> sliderD;
     std::array<std::unique_ptr<jcmp::Label>, nels> lab;
+    std::unique_ptr<RuledLabel> titleLab;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // DAHDSR_COMPONENTS_H

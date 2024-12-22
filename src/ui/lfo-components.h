@@ -22,6 +22,7 @@
 #include <sst/jucegui/components/MultiSwitch.h>
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
+#include "ruled-label.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -47,16 +48,26 @@ template <typename Comp, typename Patch> struct LFOComponents
 
         createComponent(e, *c, v.lfoShape.meta.id, shape, shapeD);
         c->addAndMakeVisible(*shape);
+
+        titleLab = std::make_unique<RuledLabel>();
+        titleLab->setText("LFO");
+        c->addAndMakeVisible(*titleLab);
     }
 
-    juce::Rectangle<int> layoutLFOAt(int x, int y)
+    juce::Rectangle<int> layoutLFOAt(int x, int y, int extraWidth = 0)
     {
+        if (!titleLab)
+            return {};
+
         auto c = asComp();
+        auto lh = uicTitleLabelHeight;
         auto h = c->getHeight() - y;
-        auto q = h;
+        auto q = h - lh;
         auto w = uicKnobSize * 1.5;
 
-        auto bx = juce::Rectangle<int>(x, y, w, h);
+        positionTitleLabelAt(x, y, w + uicMargin + uicKnobSize + extraWidth, titleLab);
+
+        auto bx = juce::Rectangle<int>(x, y + lh, w, h - lh);
         shape->setBounds(bx.withHeight(2 * uicLabeledKnobHeight + uicMargin));
 
         bx = bx.translated(w + uicMargin, 0);
@@ -64,7 +75,7 @@ template <typename Comp, typename Patch> struct LFOComponents
         positionKnobAndLabel(bx.getX(), bx.getY() + uicLabeledKnobHeight + uicMargin, deform,
                              deformL);
         bx = bx.translated(uicKnobSize + uicMargin, 0);
-        return juce::Rectangle<int>(x + w + uicKnobSize + uicMargin, y, 0, 0)
+        return juce::Rectangle<int>(x + w + uicKnobSize + uicMargin + extraWidth, y, 0, 0)
             .withBottom(bx.getBottom());
     }
 
@@ -74,6 +85,7 @@ template <typename Comp, typename Patch> struct LFOComponents
 
     std::unique_ptr<jcmp::MultiSwitch> shape;
     std::unique_ptr<PatchDiscrete> shapeD;
+    std::unique_ptr<RuledLabel> titleLab;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // LFO_COMPONENTS_H

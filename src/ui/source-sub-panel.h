@@ -20,6 +20,7 @@
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
 #include "lfo-components.h"
+#include "ruled-label.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -45,6 +46,11 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::Knob> lfoToRatio;
     std::unique_ptr<PatchContinuous> lfoToRatioD;
     std::unique_ptr<jcmp::Label> lfoToRatioL;
+
+    std::unique_ptr<jcmp::MultiSwitch> lfoMul;
+    std::unique_ptr<PatchDiscrete> lfoMulD;
+
+    std::unique_ptr<RuledLabel> modTitle;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

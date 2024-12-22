@@ -26,6 +26,9 @@ static constexpr uint32_t uicLabelHeight{18};
 static constexpr uint32_t uicLabelGap{2};
 static constexpr uint32_t uicMargin{4};
 static constexpr uint32_t uicSliderWidth{24};
+static constexpr uint32_t uicTitleLabelHeight{22};
+static constexpr uint32_t uicTitleLabelInnerBox{18};
+
 static constexpr uint32_t uicLabeledKnobHeight{uicKnobSize + uicLabelHeight + uicLabelGap};
 static constexpr uint32_t uicPowerKnobWidth{uicKnobSize + uicPowerButtonSize + uicMargin};
 
@@ -72,6 +75,10 @@ inline void positionPowerKnobSwitchAndLabel(uint32_t x, uint32_t y, const T &t, 
                      .withTrimmedBottom(uicMargin));
 
     l->setBounds(b.translated(0, uicKnobSize + uicLabelGap).withHeight(uicLabelHeight));
+}
+template <typename T> inline void positionTitleLabelAt(int x, int y, int w, const T &t)
+{
+    t->setBounds(x, y, w, uicTitleLabelInnerBox);
 }
 } // namespace baconpaul::six_sines::ui
 #endif // UI_CONSTANTS_H

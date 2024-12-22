@@ -37,7 +37,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     float output alignas(16)[blockSize];
 
     bool keytrack{true};
-    const float &ratio, &activeV, &envToRatio, &lfoToRatio; // in  frequency multiple
+    const float &ratio, &activeV, &envToRatio, &lfoToRatio, &lfoByEnv; // in  frequency multiple
     bool active{false};
 
     // todo waveshape
@@ -47,7 +47,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     OpSource(const Patch::SourceNode &sn)
         : EnvelopeSupport(sn), LFOSupport(sn), ratio(sn.ratio), activeV(sn.active),
-          envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio)
+          envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio), lfoByEnv(sn.envLfoSum)
     {
         reset();
     }
@@ -90,7 +90,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         }
         envProcess(gated);
         lfoProcess();
-        auto rf = pow(2.f, ratio + envToRatio * env.output + lfoToRatio * lfo.outputBlock[0]);
+        auto lfoFac = lfoByEnv > 0.5 ? env.output : 1.f;
+
+        auto rf =
+            pow(2.f, ratio + envToRatio * env.output + lfoFac * lfoToRatio * lfo.outputBlock[0]);
 
         for (int i = 0; i < blockSize; ++i)
         {

@@ -102,15 +102,16 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>, LFOSupport<Patch::Self
 {
     OpSource &onto;
     SRProvider sr;
-    const float &fbBase, &lfoToFB, &activeV;
+    const float &fbBase, &lfoToFB, &activeV, &lfoMulV;
     MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on)
         : onto(on), fbBase(sn.fbLevel), lfoToFB(sn.lfoToFB), activeV(sn.active),
-          EnvelopeSupport(sn), LFOSupport(sn){};
-    bool active{true};
+          lfoMulV(sn.envLfoSum), EnvelopeSupport(sn), LFOSupport(sn){};
+    bool active{true}, lfoMul{false};
 
     void attack()
     {
         active = activeV > 0.5;
+        lfoMul = lfoMulV > 0.5;
         if (active)
         {
             envAttack();
@@ -124,10 +125,23 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>, LFOSupport<Patch::Self
 
         envProcess(gated);
         lfoProcess();
-        for (int j = 0; j < blockSize; ++j)
+        if (lfoMul)
         {
-            onto.feedbackLevel[j] =
-                (int32_t)((1 << 24) * (env.outputCache[j] + lfoToFB * lfo.outputBlock[j]) * fbBase);
+            for (int j = 0; j < blockSize; ++j)
+            {
+                onto.feedbackLevel[j] =
+                    (int32_t)((1 << 24) * (env.outputCache[j] * lfoToFB * lfo.outputBlock[j]) *
+                              fbBase);
+            }
+        }
+        else
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                onto.feedbackLevel[j] =
+                    (int32_t)((1 << 24) * (env.outputCache[j] + lfoToFB * lfo.outputBlock[j]) *
+                              fbBase);
+            }
         }
     }
 };

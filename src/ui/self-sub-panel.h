@@ -30,12 +30,6 @@ struct SelfSubPanel : juce::Component,
 {
     SelfSubPanel(SixSinesEditor &);
     ~SelfSubPanel();
-    void paint(juce::Graphics &g) override
-    {
-        g.setFont(juce::FontOptions(40));
-        g.setColour(juce::Colours::white.withAlpha(0.2f));
-        g.drawText("Self " + std::to_string(index), getLocalBounds(), juce::Justification::centred);
-    }
 
     void resized() override;
     void beginEdit() {}
@@ -46,6 +40,9 @@ struct SelfSubPanel : juce::Component,
     std::unique_ptr<jcmp::Knob> lfoToFb;
     std::unique_ptr<PatchContinuous> lfoToFbD;
     std::unique_ptr<jcmp::Label> lfoToFbL;
+
+    std::unique_ptr<jcmp::MultiSwitch> lfoMul;
+    std::unique_ptr<PatchDiscrete> lfoMulD;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

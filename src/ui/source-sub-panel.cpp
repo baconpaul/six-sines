@@ -35,15 +35,23 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
 
     createComponent(editor, *this, sn.envToRatio.meta.id, envToRatio, envToRatioD);
     envToRatioL = std::make_unique<jcmp::Label>();
-    envToRatioL->setText("Env Ratio Mul");
+    envToRatioL->setText("Env");
     addAndMakeVisible(*envToRatioL);
     addAndMakeVisible(*envToRatio);
 
     createComponent(editor, *this, sn.lfoToRatio.meta.id, lfoToRatio, lfoToRatioD);
     addAndMakeVisible(*lfoToRatio);
     lfoToRatioL = std::make_unique<jcmp::Label>();
-    lfoToRatioL->setText("Depth");
+    lfoToRatioL->setText("LFO");
     addAndMakeVisible(*lfoToRatioL);
+
+    createComponent(editor, *this, sn.envLfoSum.meta.id, lfoMul, lfoMulD);
+    addAndMakeVisible(*lfoMul);
+    lfoMul->direction = jcmp::MultiSwitch::VERTICAL;
+
+    modTitle = std::make_unique<RuledLabel>();
+    modTitle->setText("Depth");
+    addAndMakeVisible(*modTitle);
 
     resized();
 }
@@ -52,9 +60,21 @@ void SourceSubPanel::resized()
 {
     auto p = getLocalBounds().reduced(uicMargin, 0);
     auto pn = layoutDAHDSRAt(p.getX(), p.getY());
-    positionKnobAndLabel(pn.getRight() + uicMargin, pn.getY(), envToRatio, envToRatioL);
+    auto gh = (pn.getHeight() - 2 * uicPowerButtonSize) / 2;
+    lfoMul->setBounds(pn.getX() + uicMargin, pn.getY() + gh, uicPowerButtonSize,
+                      2 * uicPowerButtonSize);
+    pn = pn.translated(2 * uicMargin + uicPowerButtonSize, 0);
+    auto r = layoutLFOAt(pn.getX(), p.getY());
 
-    auto r = layoutLFOAt(pn.getX() + 2 * uicMargin + uicKnobSize, p.getY());
-    positionKnobAndLabel(r.getX() + uicMargin, r.getY(), lfoToRatio, lfoToRatioL);
+    auto depx = r.getX() + 2 * uicMargin;
+    auto depy = r.getY();
+    auto xtraW = 4;
+    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, modTitle);
+
+    depx += xtraW;
+    depy += uicTitleLabelHeight;
+    positionKnobAndLabel(depx, depy, envToRatio, envToRatioL);
+    depy += uicLabeledKnobHeight + uicMargin;
+    positionKnobAndLabel(depx, depy, lfoToRatio, lfoToRatioL);
 }
 } // namespace baconpaul::six_sines::ui
