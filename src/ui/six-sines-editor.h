@@ -81,6 +81,7 @@ struct SixSinesEditor : jcmp::WindowPanel
     void showPresetPopup();
     void doLoadPatch();
     void doSavePatch();
+    void resetToDefault();
     std::unique_ptr<juce::FileChooser> fileChooser;
 
     std::unique_ptr<jcmp::ToolTip> toolTip;

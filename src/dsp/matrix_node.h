@@ -27,23 +27,29 @@ namespace baconpaul::six_sines
 {
 namespace mech = sst::basic_blocks::mechanics;
 
-struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>
+struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
+                        public LFOSupport<Patch::MatrixNode>
 {
     OpSource &onto, &from;
-    const float &level, &activeV, &pmrmV;
+    const float &level, &activeV, &pmrmV, &lfoToDepth, &mulLfoV;
     MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr)
         : onto(on), from(fr), level(mn.level), pmrmV(mn.pmOrRM), activeV(mn.active),
-          EnvelopeSupport(mn)
+          EnvelopeSupport(mn), LFOSupport(mn), lfoToDepth(mn.lfoToDepth), mulLfoV(mn.envLfoSum)
     {
     }
 
-    bool active{false}, isrm{false};
+    bool active{false}, isrm{false}, mulLfo{false};
 
     void attack()
     {
         active = activeV > 0.5;
         isrm = pmrmV > 0.5;
-        envAttack();
+        mulLfo = mulLfoV > 0.5;
+        if (active)
+        {
+            envAttack();
+            lfoAttack();
+        }
     }
 
     void applyBlock(bool gated)
@@ -52,30 +58,38 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>
             return;
 
         envProcess(gated);
+        lfoProcess();
+        float mod alignas(16)[blockSize], modB alignas(16)[blockSize];
+        mech::mul_block<blockSize>(env.outputCache, from.output, mod);
+
+        if (!mulLfo)
+        {
+            mech::scale_accumulate_from_to<blockSize>(lfo.outputBlock, lfoToDepth, mod);
+        }
+        else
+        {
+            mech::copy_from_to<blockSize>(lfo.outputBlock, modB);
+            mech::scale_by<blockSize>(lfoToDepth, modB);
+            mech::mul_block<blockSize>(mod, modB, mod);
+        }
         if (isrm)
         {
             if (onto.rmAssigned)
             {
-                for (int j = 0; j < blockSize; ++j)
-                {
-                    onto.rmLevel[j] += level * env.outputCache[j] * from.output[j];
-                }
+                mech::accumulate_from_to<blockSize>(mod, onto.rmLevel);
             }
             else
             {
                 onto.rmAssigned = true;
-                for (int j = 0; j < blockSize; ++j)
-                {
-                    onto.rmLevel[j] = level * env.outputCache[j] * from.output[j];
-                }
+
+                mech::copy_from_to<blockSize>(mod, onto.rmLevel);
             }
         }
         else
         {
             for (int j = 0; j < blockSize; ++j)
             {
-                onto.phaseInput[j] +=
-                    (int32_t)((1 << 27) * level * env.outputCache[j] * from.output[j]);
+                onto.phaseInput[j] += (int32_t)((1 << 27) * (mod[j]));
             }
         }
     }

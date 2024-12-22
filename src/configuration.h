@@ -24,9 +24,10 @@ namespace baconpaul::six_sines
 static constexpr size_t blockSize{8};
 static constexpr float gSampleRate{128000.0};
 static constexpr size_t numOps{6};
-
-// see comment on sourceAtMatrix in voice.cpp
 static constexpr size_t matrixSize{(numOps * (numOps - 1)) / 2};
+static constexpr size_t numMacros{6};
+static constexpr size_t numTargetsPerMacro{4};
+static constexpr size_t numMIDIRoutes{12};
 
 } // namespace baconpaul::six_sines
 

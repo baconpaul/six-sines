@@ -38,7 +38,10 @@ Non-monophonic voice level modulation
 - MPE?
 
 
-Saturday
+Sunday
+- LFO mul or plus on self node
+- LFO on mixer node and also route to pan
+- LFO on source node ratio woth mul or add
 - preset factory set with cmakerc
 - preset scan user directory to make tree
 - param split for voices and base/top
@@ -49,3 +52,4 @@ Saturday
 - vst3
 - a build
 - deal with ui attached or not for messages
+- edit area says "click a knbo to edit"

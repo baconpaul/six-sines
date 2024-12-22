@@ -15,7 +15,7 @@
 
 namespace baconpaul::six_sines::ui
 {
-MatrixSubPanel::MatrixSubPanel(SixSinesEditor &e) : HasEditor(e){};
+MatrixSubPanel::MatrixSubPanel(SixSinesEditor &e) : HasEditor(e) { setSelectedIndex(0); };
 MatrixSubPanel::~MatrixSubPanel() {}
 void MatrixSubPanel::setSelectedIndex(int idx)
 {
@@ -23,7 +23,20 @@ void MatrixSubPanel::setSelectedIndex(int idx)
 
     removeAllChildren();
 
-    setupDAHDSR(editor, editor.patchCopy.matrixNodes[idx]);
+    auto &m = editor.patchCopy.matrixNodes[idx];
+    setupDAHDSR(editor, m);
+    setupLFO(editor, m);
+
+    createComponent(editor, *this, m.lfoToDepth.meta.id, lfoToDepth, lfoToDepthD);
+    addAndMakeVisible(*lfoToDepth);
+    lfoToDepthL = std::make_unique<jcmp::Label>();
+    lfoToDepthL->setText("Depth");
+    addAndMakeVisible(*lfoToDepthL);
+
+    createComponent(editor, *this, m.envLfoSum.meta.id, lfoMul, lfoMulD);
+    addAndMakeVisible(*lfoMul);
+    lfoMul->direction = jcmp::MultiSwitch::HORIZONTAL;
+
     resized();
 
     repaint();
@@ -32,7 +45,13 @@ void MatrixSubPanel::setSelectedIndex(int idx)
 void MatrixSubPanel::resized()
 {
     auto p = getLocalBounds().reduced(uicMargin, 0);
-    layoutDAHDSRAt(p.getX(), p.getY());
+    auto r = layoutDAHDSRAt(p.getX(), p.getY());
+    r = layoutLFOAt(r.getX() + uicMargin, p.getY());
+    positionKnobAndLabel(r.getX() + uicMargin, r.getY(), lfoToDepth, lfoToDepthL);
+
+    auto bx =
+        lfoToDepthL->getBounds().translated(0, lfoToDepthL->getHeight() + uicMargin).withHeight(30);
+    lfoMul->setBounds(bx);
 }
 
 } // namespace baconpaul::six_sines::ui

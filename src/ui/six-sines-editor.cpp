@@ -399,6 +399,14 @@ void SixSinesEditor::showPresetPopup()
                   if (w)
                       w->doSavePatch();
               });
+    p.addItem("Reset",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                  {
+                      w->resetToDefault();
+                  }
+              });
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
 }
@@ -444,6 +452,17 @@ void SixSinesEditor::doLoadPatch()
             w->sendEntirePatchToAudio();
             w->repaint();
         });
+}
+
+void SixSinesEditor::resetToDefault()
+{
+    SXSNLOG("Resetting to default");
+    for (auto [id, p] : patchCopy.paramMap)
+    {
+        p->value = p->meta.defaultVal;
+    }
+    sendEntirePatchToAudio();
+    repaint();
 }
 
 void SixSinesEditor::sendEntirePatchToAudio()

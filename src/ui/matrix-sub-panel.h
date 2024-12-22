@@ -17,28 +17,31 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
+#include "lfo-components.h"
 
 namespace baconpaul::six_sines::ui
 {
 struct MatrixSubPanel : juce::Component,
                         HasEditor,
-                        DAHDSRComponents<MatrixSubPanel, Patch::MatrixNode>
+                        DAHDSRComponents<MatrixSubPanel, Patch::MatrixNode>,
+                        LFOComponents<MatrixSubPanel, Patch::MatrixNode>
 {
     MatrixSubPanel(SixSinesEditor &);
     ~MatrixSubPanel();
-    void paint(juce::Graphics &g) override
-    {
-        g.setFont(juce::FontOptions(40));
-        g.setColour(juce::Colours::white.withAlpha(0.2f));
-        g.drawText("Matrix " + std::to_string(index), getLocalBounds(),
-                   juce::Justification::centred);
-    }
+
     void resized() override;
 
     void beginEdit() {}
 
     size_t index{0};
     void setSelectedIndex(int idx);
+
+    std::unique_ptr<jcmp::Knob> lfoToDepth;
+    std::unique_ptr<PatchContinuous> lfoToDepthD;
+    std::unique_ptr<jcmp::Label> lfoToDepthL;
+
+    std::unique_ptr<jcmp::MultiSwitch> lfoMul;
+    std::unique_ptr<PatchDiscrete> lfoMulD;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

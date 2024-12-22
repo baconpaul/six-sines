@@ -68,7 +68,8 @@ struct Patch
         : sourceNodes(scpu::make_array_bind_first_index<SourceNode, numOps>()),
           selfNodes(scpu::make_array_bind_first_index<SelfNode, numOps>()),
           matrixNodes(scpu::make_array_bind_first_index<MatrixNode, matrixSize>()),
-          mixerNodes(scpu::make_array_bind_first_index<MixerNode, numOps>())
+          mixerNodes(scpu::make_array_bind_first_index<MixerNode, numOps>()),
+          macroNodes(scpu::make_array_bind_first_index<MacroNode, numMacros>())
     {
         auto pushParams = [this](auto &from)
         {
@@ -91,6 +92,7 @@ struct Patch
         std::for_each(selfNodes.begin(), selfNodes.end(), pushParams);
         std::for_each(mixerNodes.begin(), mixerNodes.end(), pushParams);
         std::for_each(matrixNodes.begin(), matrixNodes.end(), pushParams);
+        std::for_each(macroNodes.begin(), macroNodes.end(), pushParams);
 
         std::sort(params.begin(), params.end(),
                   [](const Param *a, const Param *b)
@@ -314,7 +316,7 @@ struct Patch
         }
     };
 
-    struct MatrixNode : public DAHDSRMixin
+    struct MatrixNode : public DAHDSRMixin, public LFOMixin
     {
         static constexpr uint32_t idBase{30000}, idStride{200};
         MatrixNode(size_t idx)
@@ -338,13 +340,28 @@ struct Patch
                       .withGroupName(name(idx))
                       .withID(id(35, idx))
                       .withUnorderedMapFormatting({{0, std::string() + u8"\U000003C6"}, {1, "A"}})),
-              DAHDSRMixin(name(idx), id(2, idx), false)
+              DAHDSRMixin(name(idx), id(2, idx), false), LFOMixin(name(idx), id(14, idx)),
+              lfoToDepth(floatMd()
+                             .asPercentBipolar()
+                             .withName(name(idx) + " LFO to Depth")
+                             .withGroupName(name(idx))
+                             .withDefault(0.0)
+                             .withID(id(25, idx))),
+              envLfoSum(intMd()
+                            .withName(name(idx) + " LFO Env Sum")
+                            .withGroupName(name(idx))
+                            .withID(id(26, idx))
+                            .withRange(0, 1)
+                            .withDefault(0)
+                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}}))
         {
         }
 
         Param level;
         Param active;
         Param pmOrRM;
+        Param lfoToDepth;
+        Param envLfoSum;
 
         std::string name(int idx) const
         {
@@ -354,8 +371,9 @@ struct Patch
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &active, &pmOrRM};
+            std::vector<Param *> res{&level, &active, &pmOrRM, &lfoToDepth, &envLfoSum};
             appendDAHDSRParams(res);
+            appendLFOParams(res);
             return res;
         }
     };
@@ -400,6 +418,75 @@ struct Patch
         }
     };
 
+    struct MacroNode
+    {
+        static constexpr uint32_t idBase{40000}, idStride{250};
+
+        MacroNode(size_t idx)
+            : level(floatMd()
+                        .asPercentBipolar()
+                        .withGroupName(name(idx))
+                        .withName(name(idx) + " Level")
+                        .withID(id(0, idx))
+                        .withDefault(0)),
+              targetLevels(sst::cpputils::make_array_lambda<Param, numTargetsPerMacro>(
+                  [this, idx](auto i)
+                  {
+                      return Param(floatMd()
+                                       .withGroupName(name(idx))
+                                       .withName(name(idx) + " Depth " + std::to_string(i + 1))
+                                       .withID(id(i + 2, idx))
+                                       .asPercentBipolar()
+                                       .withDefault(0));
+                  })),
+              targets(sst::cpputils::make_array_lambda<Param, numTargetsPerMacro>(
+                  [this, idx](auto i)
+                  {
+                      // expliciltly non-automatable
+                      return Param(md_t()
+                                       .asInt()
+                                       .withRange(0, std::numeric_limits<uint32_t>::max())
+                                       .withGroupName(name(idx))
+                                       .withName(name(idx) + " Target " + std::to_string(i + 1))
+                                       .withID(id(i + numTargetsPerMacro + 4, idx))
+                                       .withDefault(OutputNode::idBase));
+                  })),
+              // again non-automatable on purpose
+              midiCC(md_t()
+                         .asInt()
+                         .withRange(0, 127)
+                         .withName(name(idx) + " Midi CC")
+                         .withGroupName(name(idx))
+                         .withID(id(2 * numTargetsPerMacro + 8, idx)))
+        {
+        }
+
+        std::string name(int idx) const { return "Macro " + std::to_string(idx + 1); }
+        uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
+
+        Param level;
+        std::array<Param, numTargetsPerMacro> targetLevels;
+        std::array<Param, numTargetsPerMacro> targets;
+        Param midiCC;
+
+        std::vector<Param *> params()
+        {
+            std::vector<Param *> res{&level};
+            for (auto &p : targetLevels)
+                res.push_back(&p);
+            for (auto &p : targets)
+                res.push_back(&p);
+
+            res.push_back(&midiCC);
+            return res;
+        }
+    };
+
+    struct MIDIRouting
+    {
+        static constexpr uint32_t idBase{50000};
+    };
+
     struct OutputNode : public DAHDSRMixin
     {
         static constexpr uint32_t idBase{500};
@@ -430,6 +517,7 @@ struct Patch
     std::array<SelfNode, numOps> selfNodes;
     std::array<MatrixNode, matrixSize> matrixNodes;
     std::array<MixerNode, numOps> mixerNodes;
+    std::array<MacroNode, numMacros> macroNodes;
     OutputNode output;
 
     std::string toState() const;
