@@ -42,10 +42,9 @@ Non-monophonic voice level modulation
 
 
 Sunday
-- LFO mul or plus on self node consistently
+- LFO on Mixer Node to level or pan
+- LFO mul or plus on consistently on all three nodes
 - LFO Level Built In
-- LFO on mixer node and also route to pan
-- LFO on source node ratio woth mul or add
 - preset factory set with cmakerc
 - preset scan user directory to make tree
 - param split for voices and base/top

@@ -231,12 +231,12 @@ struct Patch
         }
     };
 
-    struct SourceNode : public DAHDSRMixin
+    struct SourceNode : public DAHDSRMixin, public LFOMixin
     {
         static constexpr uint32_t idBase{1500}, idStride{250};
         SourceNode(size_t idx)
             : ratio(floatMd()
-                        .withRange(-4, 4)
+                        .withRange(-5, 5)
                         .withATwoToTheBFormatting(1, 1, "x")
                         .withName(name(idx) + " Ratio")
                         .withGroupName(name(idx))
@@ -256,7 +256,16 @@ struct Patch
                              .withDecimalPlaces(4)
                              .withDefault(0.f)
                              .withID(id(2, idx))),
-              DAHDSRMixin(name(idx), id(100, idx), false)
+              lfoToRatio(floatMd()
+                             .withRange(-2, 2)
+                             .withLinearScaleFormatting("offset")
+                             .withName(name(idx) + " LFO to Ratio")
+                             .withGroupName(name(idx))
+                             .withDecimalPlaces(4)
+                             .withDefault(0.f)
+                             .withID(id(3, idx))),
+
+              DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx))
         {
         }
 
@@ -267,11 +276,13 @@ struct Patch
         Param active;
 
         Param envToRatio;
+        Param lfoToRatio;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&ratio, &active, &envToRatio};
+            std::vector<Param *> res{&ratio, &active, &envToRatio, &lfoToRatio};
             appendDAHDSRParams(res);
+            appendLFOParams(res);
             return res;
         }
     };

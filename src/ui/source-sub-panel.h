@@ -17,22 +17,17 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
+#include "lfo-components.h"
 
 namespace baconpaul::six_sines::ui
 {
 struct SourceSubPanel : juce::Component,
                         HasEditor,
-                        DAHDSRComponents<SourceSubPanel, Patch::SourceNode>
+                        DAHDSRComponents<SourceSubPanel, Patch::SourceNode>,
+                        LFOComponents<SourceSubPanel, Patch::SourceNode>
 {
     SourceSubPanel(SixSinesEditor &);
     ~SourceSubPanel();
-    void paint(juce::Graphics &g) override
-    {
-        g.setFont(juce::FontOptions(40));
-        g.setColour(juce::Colours::white.withAlpha(0.2f));
-        g.drawText("Source " + std::to_string(index), getLocalBounds(),
-                   juce::Justification::centred);
-    }
 
     void resized() override;
 
@@ -44,6 +39,10 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::Knob> envToRatio;
     std::unique_ptr<PatchContinuous> envToRatioD;
     std::unique_ptr<jcmp::Label> envToRatioL;
+
+    std::unique_ptr<jcmp::Knob> lfoToRatio;
+    std::unique_ptr<PatchContinuous> lfoToRatioD;
+    std::unique_ptr<jcmp::Label> lfoToRatioL;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

@@ -29,6 +29,12 @@ std::string Patch::toState() const
 }
 bool Patch::fromState(const std::string &idata)
 {
+    // Sweep any new param since this stream to default
+    for (auto [id, p] : paramMap)
+    {
+        p->value = p->meta.defaultVal;
+    }
+
     std::string data = idata;
     auto p = data.find('\n');
     bool first{true};

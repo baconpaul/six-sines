@@ -24,7 +24,8 @@
 
 namespace baconpaul::six_sines
 {
-struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
+struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
+                              LFOSupport<Patch::SourceNode>
 {
     int32_t phaseInput alignas(16)[blockSize];
     int32_t feedbackLevel alignas(16)[blockSize];
@@ -34,7 +35,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
     float output alignas(16)[blockSize];
 
     bool keytrack{true};
-    const float &ratio, &activeV, &envToRatio; // in  frequency multiple
+    const float &ratio, &activeV, &envToRatio, &lfoToRatio; // in  frequency multiple
     bool active{false};
 
     // todo waveshape
@@ -43,7 +44,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
     uint32_t dPhase;
 
     OpSource(const Patch::SourceNode &sn)
-        : EnvelopeSupport(sn), ratio(sn.ratio), activeV(sn.active), envToRatio(sn.envToRatio)
+        : EnvelopeSupport(sn), LFOSupport(sn), ratio(sn.ratio), activeV(sn.active),
+          envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio)
     {
         reset();
     }
@@ -53,6 +55,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
         zeroInputs();
         snapActive();
         envAttack();
+        lfoAttack();
         phase = 4 << 27;
     }
 
@@ -81,7 +84,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>
             return;
         }
         envProcess(gated);
-        auto rf = pow(2.f, ratio + envToRatio * env.output);
+        lfoProcess();
+        auto rf = pow(2.f, ratio + envToRatio * env.output + lfoToRatio * lfo.outputBlock[0]);
 
         for (int i = 0; i < blockSize; ++i)
         {

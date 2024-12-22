@@ -30,6 +30,14 @@ struct PatchContinuous : jdat::Continuous
     Param *p{nullptr};
     PatchContinuous(SixSinesEditor &e, uint32_t id) : editor(e), pid(id)
     {
+        if (e.patchCopy.paramMap.find(id) == e.patchCopy.paramMap.end())
+        {
+            SXSNLOG("You were unable to find param " << id
+                                                     << " - its probably not in patch::params()");
+            assert(false);
+            std::terminate();
+        }
+
         p = e.patchCopy.paramMap.at(id);
     }
     ~PatchContinuous() override = default;
@@ -77,6 +85,13 @@ struct PatchDiscrete : jdat::Discrete
     Param *p{nullptr};
     PatchDiscrete(SixSinesEditor &e, uint32_t id) : editor(e), pid(id)
     {
+        if (e.patchCopy.paramMap.find(id) == e.patchCopy.paramMap.end())
+        {
+            SXSNLOG("You were unable to find param " << id
+                                                     << " - its probably not in patch::params()");
+            assert(false);
+            std::terminate();
+        }
         p = e.patchCopy.paramMap.at(id);
     }
     ~PatchDiscrete() override = default;
