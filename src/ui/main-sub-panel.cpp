@@ -21,13 +21,32 @@ namespace baconpaul::six_sines::ui
 MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
 {
     setupDAHDSR(e, e.patchCopy.output);
+
+    createComponent(editor, *this, e.patchCopy.output.velSensitivity.meta.id, velSen, velSenD);
+    addAndMakeVisible(*velSen);
+    velSenL = std::make_unique<jcmp::Label>();
+    velSenL->setText("Sens");
+    addAndMakeVisible(*velSenL);
+
+    velTitle = std::make_unique<RuledLabel>();
+    velTitle->setText("Vel");
+    addAndMakeVisible(*velTitle);
 };
 MainSubPanel::~MainSubPanel() {}
 
 void MainSubPanel::resized()
 {
     auto p = getLocalBounds().reduced(uicMargin, 0);
-    layoutDAHDSRAt(p.getX(), p.getY());
+    auto r = layoutDAHDSRAt(p.getX(), p.getY());
+
+    auto depx = r.getX() + 2 * uicMargin;
+    auto depy = r.getY();
+    auto xtraW = 4;
+    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, velTitle);
+
+    depx += xtraW;
+    depy += uicTitleLabelHeight;
+    positionKnobAndLabel(depx, depy, velSen, velSenL);
 }
 
 } // namespace baconpaul::six_sines::ui

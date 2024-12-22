@@ -109,6 +109,7 @@ struct Synth
                         synth.voices[i].key = key;
                         synth.voices[i].channel = ch;
                         synth.voices[i].mtsClient = synth.mtsClient;
+                        synth.voices[i].velocity = vel;
                         synth.voices[i].attack();
 
                         synth.addToVoiceList(&synth.voices[i]);

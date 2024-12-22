@@ -538,18 +538,24 @@ struct Patch
                                                           .withName(name() + " Level")
                                                           .withGroupName(name())
                                                           .withDefault(1.0)
-                                                          .withID(id(0)))
+                                                          .withID(id(0))),
+              velSensitivity(floatMd()
+                                 .asPercent()
+                                 .withName(name() + " Velocity Sensitivity")
+                                 .withGroupName(name())
+                                 .withDefault(0.2)
+                                 .withID(id(12)))
         {
         }
 
         std::string name() const { return "Main"; }
         uint32_t id(int f) const { return idBase + f; }
 
-        Param level;
+        Param level, velSensitivity;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level};
+            std::vector<Param *> res{&level, &velSensitivity};
             appendDAHDSRParams(res);
             return res;
         }

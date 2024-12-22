@@ -42,6 +42,7 @@ struct Voice
     bool gated{false}, used{false};
     int key{0};
     int channel{0};
+    float velocity{1.0};
 
     std::array<OpSource, numOps> src;
     std::array<bool, numOps> isKeytrack;

@@ -209,17 +209,17 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
     std::array<MixerNode, numOps> &fromArr;
     SRProvider sr;
 
-    const float &level;
+    const float &level, &velSen;
 
     OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f)
-        : fromArr(f), level(on.level), EnvelopeSupport(on)
+        : fromArr(f), level(on.level), velSen(on.velSensitivity), EnvelopeSupport(on)
     {
         memset(output, 0, sizeof(output));
     }
 
     void attack() { envAttack(); }
 
-    void renderBlock(bool gated)
+    void renderBlock(bool gated, float velocity)
     {
         for (const auto &from : fromArr)
         {
@@ -232,7 +232,8 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
 
         // Apply main output
         auto lv = level;
-        lv = 0.2 * lv * lv * lv;
+        auto v = 1.0 - velSen * (1.0 - velocity);
+        lv = 0.2 * v * lv * lv * lv;
         mech::scale_by<blockSize>(lv, output[0], output[1]);
     }
 };

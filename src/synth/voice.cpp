@@ -85,7 +85,7 @@ void Voice::renderBlock()
         mixerNode[i].renderBlock(gated);
     }
 
-    out.renderBlock(gated);
+    out.renderBlock(gated, velocity);
 }
 
 static_assert(numOps == 6, "Rebuild this table if not");

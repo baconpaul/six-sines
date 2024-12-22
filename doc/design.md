@@ -21,7 +21,6 @@ Mixer
 Macros and MIDI
 - A macros section - 6 macros each with a target list of 4 params at depth?
 - and maybe do midi routing the same way? (put a midi button above the macro vertical)
-- velocity to amplitude in main
 - Other (monophonic) MIDI?
 
 Other ToDos
