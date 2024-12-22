@@ -391,7 +391,7 @@ struct Patch
         }
     };
 
-    struct MixerNode : public DAHDSRMixin
+    struct MixerNode : public DAHDSRMixin, public LFOMixin
     {
         static constexpr uint32_t idBase{20000}, idStride{100};
         MixerNode(size_t idx)
@@ -412,21 +412,34 @@ struct Patch
                                                                  .withName(name(idx) + " Pan")
                                                                  .withGroupName(name(idx))
                                                                  .withDefault(0.f)
-                                                                 .withID(id(15, idx)))
-
+                                                                 .withID(id(15, idx))),
+              LFOMixin(name(idx), id(30, idx)),
+              lfoToLevel(floatMd()
+                             .asPercent()
+                             .withName(name(idx) + " LFO to Level")
+                             .withGroupName(name(idx))
+                             .withID(id(40, idx))
+                             .withDefault(0)),
+              lfoToPan(floatMd()
+                           .asPercent()
+                           .withName(name(idx) + " LFO to Pan")
+                           .withGroupName(name(idx))
+                           .withID(id(41, idx))
+                           .withDefault(0))
         {
         }
 
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Mixer"; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
-        Param level, pan;
+        Param level, pan, lfoToLevel, lfoToPan;
         Param active;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &active, &pan};
+            std::vector<Param *> res{&level, &active, &pan, &lfoToLevel, &lfoToPan};
             appendDAHDSRParams(res);
+            appendLFOParams(res);
             return res;
         }
     };

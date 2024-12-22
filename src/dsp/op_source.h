@@ -59,6 +59,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         envAttack();
         lfoAttack();
         phase = 4 << 27;
+        fbVal[0] = 0.f;
+        fbVal[1] = 0.f;
     }
 
     void zeroInputs()
@@ -82,7 +84,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         if (!active)
         {
             memset(output, 0, sizeof(output));
-            fbVal = 0.f;
+            fbVal[0] = 0.f;
+            fbVal[1] = 0.f;
             return;
         }
         envProcess(gated);
@@ -93,15 +96,16 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         {
             dPhase = st.dPhase(baseFrequency * rf);
             phase += dPhase;
-            auto out =
-                st.at(phase + phaseInput[i] + (int32_t)(feedbackLevel[i] * fbVal)) * rmLevel[i];
+            auto fb = 0.5 * (fbVal[0] + fbVal[1]);
+            auto out = st.at(phase + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb)) * rmLevel[i];
             output[i] = out;
-            fbVal = out;
+            fbVal[1] = fbVal[0];
+            fbVal[0] = out;
         }
     }
 
     SinTable st;
-    float fbVal{0.f};
+    float fbVal[2]{0.f, 0.f};
 };
 } // namespace baconpaul::six_sines
 

@@ -132,17 +132,18 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>, LFOSupport<Patch::Self
     }
 };
 
-struct MixerNode : EnvelopeSupport<Patch::MixerNode>
+struct MixerNode : EnvelopeSupport<Patch::MixerNode>, LFOSupport<Patch::MixerNode>
 {
     float output alignas(16)[2][blockSize];
     OpSource &from;
     SRProvider sr;
 
-    const float &level, &activeF, &pan;
+    const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan;
     bool active{false};
 
     MixerNode(const Patch::MixerNode &mn, OpSource &f)
-        : from(f), pan(mn.pan), level(mn.level), activeF(mn.active), EnvelopeSupport(mn)
+        : from(f), pan(mn.pan), level(mn.level), activeF(mn.active), lfoToLevel(mn.lfoToLevel),
+          lfoToPan(mn.lfoToPan), EnvelopeSupport(mn), LFOSupport(mn)
     {
         memset(output, 0, sizeof(output));
     }
