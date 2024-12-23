@@ -23,6 +23,7 @@
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
 
 #include "dsp/sr_provider.h"
+#include "synth/mono_values.h"
 
 namespace baconpaul::six_sines
 {
@@ -33,8 +34,8 @@ template <typename T> struct EnvelopeSupport
     SRProvider sr;
 
     const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV;
-    EnvelopeSupport(const T &mn)
-        : env(&sr), delay(mn.delay), attackv(mn.attack), hold(mn.hold), decay(mn.decay),
+    EnvelopeSupport(const T &mn, const MonoValues &mv)
+        : sr(mv), env(&sr), delay(mn.delay), attackv(mn.attack), hold(mn.hold), decay(mn.decay),
           sustain(mn.sustain), release(mn.release), powerV(mn.envPower)
     {
     }
@@ -80,24 +81,35 @@ template <typename T> struct EnvelopeSupport
 template <typename T> struct LFOSupport
 {
     SRProvider sr;
+    const T &paramBundle;
+    const MonoValues &monoValues;
 
-    const float &lfoRate, &lfoDeform, &lfoShape, &lfoActiveV;
+    const float &lfoRate, &lfoDeform, &lfoShape, &lfoActiveV, &tempoSyncV;
     bool active;
     sst::basic_blocks::modulators::SimpleLFO<SRProvider, blockSize> lfo;
 
-    LFOSupport(const T &mn)
-        : lfo(&sr), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform), lfoShape(mn.lfoShape),
-          lfoActiveV(mn.lfoActive)
+    LFOSupport(const T &mn, const MonoValues &mv)
+        : sr(mv), paramBundle(mn), lfo(&sr), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform),
+          lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive), tempoSyncV(mn.tempoSync), monoValues(mv)
     {
     }
 
     int shape;
+    bool tempoSync{false};
     void lfoAttack()
     {
+        tempoSync = tempoSyncV > 0.5;
         shape = static_cast<int>(std::round(lfoShape));
         lfo.attack(shape);
     }
-    void lfoProcess() { lfo.process_block(lfoRate, lfoDeform, shape); }
+    void lfoProcess()
+    {
+        auto rate = lfoRate;
+        if (tempoSync)
+            rate = monoValues.tempoSyncRatio * paramBundle.lfoRate.meta.snapToTemposync(rate);
+
+        lfo.process_block(rate, lfoDeform, shape);
+    }
 };
 } // namespace baconpaul::six_sines
 

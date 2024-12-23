@@ -24,20 +24,19 @@ namespace baconpaul::six_sines
 
 namespace scpu = sst::cpputils;
 
-Voice::Voice(const Patch &p, const sst::basic_blocks::tables::EqualTuningProvider &tp)
-    : out(p.output, mixerNode), output{out.output[0], out.output[1]},
-      src(scpu::make_array_lambda<OpSource, numOps>([this, &p](auto i)
-                                                    { return OpSource(p.sourceNodes[i]); })),
+Voice::Voice(const Patch &p, const MonoValues &mv)
+    : monoValues(mv), out(p.output, mixerNode, mv), output{out.output[0], out.output[1]},
+      src(scpu::make_array_lambda<OpSource, numOps>([this, &p, &mv](auto i)
+                                                    { return OpSource(p.sourceNodes[i], mv); })),
       mixerNode(scpu::make_array_lambda<MixerNode, numOps>(
-          [this, &p](auto i) { return MixerNode(p.mixerNodes[i], this->src[i]); })),
+          [this, &p, &mv](auto i) { return MixerNode(p.mixerNodes[i], this->src[i], mv); })),
       selfNode(scpu::make_array_lambda<MatrixNodeSelf, numOps>(
-          [this, &p](auto i) { return MatrixNodeSelf(p.selfNodes[i], this->src[i]); })),
+          [this, &p, &mv](auto i) { return MatrixNodeSelf(p.selfNodes[i], this->src[i], mv); })),
       matrixNode(scpu::make_array_lambda<MatrixNodeFrom, matrixSize>(
-          [&p, this](auto i) {
+          [&p, this, &mv](auto i) {
               return MatrixNodeFrom(p.matrixNodes[i], this->targetAtMatrix(i),
-                                    this->sourceAtMatrix(i));
-          })),
-      tuningProvider(tp)
+                                    this->sourceAtMatrix(i), mv);
+          }))
 {
     std::fill(isKeytrack.begin(), isKeytrack.end(), true);
     std::fill(cmRatio.begin(), cmRatio.end(), 1.0);
@@ -61,11 +60,11 @@ void Voice::attack()
 void Voice::renderBlock()
 {
     float retuneKey = key;
-    if (mtsClient && MTS_HasMaster(mtsClient))
+    if (monoValues.mtsClient && MTS_HasMaster(monoValues.mtsClient))
     {
-        retuneKey += MTS_RetuningInSemitones(mtsClient, key, channel);
+        retuneKey += MTS_RetuningInSemitones(monoValues.mtsClient, key, channel);
     }
-    auto baseFreq = tuningProvider.note_to_pitch(retuneKey - 69) * 440.0;
+    auto baseFreq = monoValues.tuningProvider.note_to_pitch(retuneKey - 69) * 440.0;
 
     for (int i = 0; i < numOps; ++i)
     {

@@ -162,17 +162,24 @@ struct Patch
                             .withDefault(true)
                             .withID(id0 + 4)
                             .withName(name + " LFO Active")
-                            .withGroupName(name))
+                            .withGroupName(name)),
+              tempoSync(md_t() // non-automatable
+                            .asBool()
+                            .withID(id0 + 5)
+                            .withName(name + " Temposync")
+                            .withGroupName(name)
+                            .withDefault(false))
         {
         }
 
-        Param lfoRate, lfoDeform, lfoShape, lfoActive;
+        Param lfoRate, lfoDeform, lfoShape, lfoActive, tempoSync;
 
         void appendLFOParams(std::vector<Param *> &res)
         {
             res.push_back(&lfoRate);
             res.push_back(&lfoDeform);
             res.push_back(&lfoShape);
+            res.push_back(&tempoSync);
         }
     };
 

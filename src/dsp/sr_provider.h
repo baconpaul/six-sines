@@ -17,12 +17,18 @@
 #define BACONPAUL_SIX_SINES_DSP_SR_PROVIDER_H
 
 #include "configuration.h"
+#include "synth/mono_values.h"
 
 namespace baconpaul::six_sines
 {
 struct SRProvider
 {
-    float envelope_rate_linear_nowrap(float f) { return (blockSize / gSampleRate) * pow(2.0, -f); }
+    const MonoValues &monoValues;
+    SRProvider(const MonoValues &mv) : monoValues(mv) {}
+    float envelope_rate_linear_nowrap(float f)
+    {
+        return (blockSize / gSampleRate) * monoValues.twoToTheX.twoToThe(-f);
+    }
     static constexpr float samplerate{gSampleRate};
 };
 } // namespace baconpaul::six_sines

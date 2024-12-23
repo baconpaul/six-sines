@@ -24,6 +24,7 @@
 #include "dsp/sr_provider.h"
 #include "dsp/node_support.h"
 #include "synth/patch.h"
+#include "synth/mono_values.h"
 
 namespace baconpaul::six_sines
 {
@@ -34,9 +35,10 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
 {
     OpSource &onto, &from;
     const float &level, &activeV, &pmrmV, &lfoToDepth, &mulLfoV;
-    MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr)
+    MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr, const MonoValues &mv)
         : onto(on), from(fr), level(mn.level), pmrmV(mn.pmOrRM), activeV(mn.active),
-          EnvelopeSupport(mn), LFOSupport(mn), lfoToDepth(mn.lfoToDepth), mulLfoV(mn.envLfoSum)
+          EnvelopeSupport(mn, mv), LFOSupport(mn, mv), lfoToDepth(mn.lfoToDepth),
+          mulLfoV(mn.envLfoSum)
     {
     }
 
@@ -103,9 +105,9 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>, LFOSupport<Patch::Self
     OpSource &onto;
     SRProvider sr;
     const float &fbBase, &lfoToFB, &activeV, &lfoMulV;
-    MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on)
-        : onto(on), fbBase(sn.fbLevel), lfoToFB(sn.lfoToFB), activeV(sn.active),
-          lfoMulV(sn.envLfoSum), EnvelopeSupport(sn), LFOSupport(sn){};
+    MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, const MonoValues &mv)
+        : sr(mv), onto(on), fbBase(sn.fbLevel), lfoToFB(sn.lfoToFB), activeV(sn.active),
+          lfoMulV(sn.envLfoSum), EnvelopeSupport(sn, mv), LFOSupport(sn, mv){};
     bool active{true}, lfoMul{false};
 
     void attack()
@@ -155,9 +157,10 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>, LFOSupport<Patch::MixerNod
     const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan;
     bool active{false};
 
-    MixerNode(const Patch::MixerNode &mn, OpSource &f)
-        : from(f), pan(mn.pan), level(mn.level), activeF(mn.active), lfoToLevel(mn.lfoToLevel),
-          lfoToPan(mn.lfoToPan), EnvelopeSupport(mn), LFOSupport(mn)
+    MixerNode(const Patch::MixerNode &mn, OpSource &f, const MonoValues &mv)
+        : sr(mv), from(f), pan(mn.pan), level(mn.level), activeF(mn.active),
+          lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan), EnvelopeSupport(mn, mv),
+          LFOSupport(mn, mv)
     {
         memset(output, 0, sizeof(output));
     }
@@ -211,8 +214,8 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
 
     const float &level, &velSen;
 
-    OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f)
-        : fromArr(f), level(on.level), velSen(on.velSensitivity), EnvelopeSupport(on)
+    OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f, const MonoValues &mv)
+        : sr(mv), fromArr(f), level(on.level), velSen(on.velSensitivity), EnvelopeSupport(on, mv)
     {
         memset(output, 0, sizeof(output));
     }

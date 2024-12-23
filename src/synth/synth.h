@@ -33,8 +33,7 @@
 
 #include "synth/voice.h"
 #include "synth/patch.h"
-
-struct MTSClient;
+#include "mono_values.h"
 
 namespace baconpaul::six_sines
 {
@@ -48,7 +47,7 @@ struct Synth
     std::unique_ptr<resampler_t> resampler;
 
     Patch patch;
-    MTSClient *mtsClient{nullptr};
+    MonoValues monoValues;
 
     struct VMConfig
     {
@@ -75,6 +74,7 @@ struct Synth
             v->key = k;
             v->velocity = ve;
         }
+
         void moveAndRetriggerVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
         {
             v->key = k;
@@ -90,7 +90,9 @@ struct Synth
             buffer[0].polyphonyGroup = 0;
             return 1;
         };
+
         void endVoiceCreationTransaction(uint16_t, uint16_t, uint16_t, int32_t, float) {}
+
         void terminateVoice(Voice *voice)
         {
             voice->gated = false;
@@ -117,7 +119,6 @@ struct Synth
                         synth.voices[i].gated = true;
                         synth.voices[i].key = key;
                         synth.voices[i].channel = ch;
-                        synth.voices[i].mtsClient = synth.mtsClient;
                         synth.voices[i].velocity = vel;
                         synth.voices[i].attack();
 
@@ -159,7 +160,6 @@ struct Synth
     double realSampleRate{0};
     void setSampleRate(double sampleRate)
     {
-        SXSNLOG("Creating resampler at " << sampleRate << " from " << gSampleRate);
         realSampleRate = sampleRate;
         resampler = std::make_unique<resampler_t>(gSampleRate, realSampleRate);
     }
@@ -203,7 +203,6 @@ struct Synth
     uiToAudioQueue_T uiToAudio;
     std::atomic<bool> doFullRefresh{false};
     sst::basic_blocks::dsp::UIComponentLagHandler lagHandler;
-    sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
 
     void pushFullUIRefresh();
     void postLoad()

@@ -115,6 +115,11 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             nextEvent = ev->get(ev, nextEventIndex);
         }
 
+        if (process->transport)
+        {
+            engine->monoValues.tempoSyncRatio = process->transport->tempo / 120.0;
+        }
+
         float **out = process->audio_outputs[0].data32;
 
         for (auto s = 0U; s < process->frames_count; ++s)

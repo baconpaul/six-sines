@@ -5,8 +5,6 @@ SOURCE:
 - waveshapes:
   - TX waveshapes
   - maybe a smoothed-saw and smoothed-square if i can figure out an analytic form i like
-- Ratio uses 2^x table rather than pow
-- Ratio lerps across block
 - 90%-100% of internal nyquist mute fades
 
 MAIN:
@@ -29,16 +27,15 @@ PRESETS:
 - preset scan user directory to make tree
 
 PLAY MODE:
-- Voice limit count
+- Voice limit count and Voice Count display
 - Pitch Bend support
 - Portamento maybe
 
 GENERAL AND CLEANUPS
-- AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
 - Temposync the LFO
+- AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
 - Don't send VU etc when editor not attached
 - Edit area says "click a knbo to edit on startup"
-- SRProvider uses table, not pow
 - LFO in Pulse and S&H need a tiny little LPF to avoid super-clicka
 
 INFRASTRUCTURE:

@@ -28,20 +28,19 @@ namespace sdsp = sst::basic_blocks::dsp;
 
 Synth::Synth()
     : responder(*this),
-      voices(sst::cpputils::make_array<Voice, VMConfig::maxVoiceCount>(patch, tuningProvider))
+      voices(sst::cpputils::make_array<Voice, VMConfig::maxVoiceCount>(patch, monoValues))
 {
-    tuningProvider.init();
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
     lagHandler.setRate(60, blockSize, gSampleRate);
     vuPeak.setSampleRate(gSampleRate);
-    mtsClient = MTS_RegisterClient();
+    monoValues.mtsClient = MTS_RegisterClient();
 }
 
 Synth::~Synth()
 {
-    if (mtsClient)
+    if (monoValues.mtsClient)
     {
-        MTS_DeregisterClient(mtsClient);
+        MTS_DeregisterClient(monoValues.mtsClient);
     }
 }
 

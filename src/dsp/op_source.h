@@ -23,6 +23,7 @@
 #include "dsp/sintable.h"
 #include "dsp/node_support.h"
 #include "synth/patch.h"
+#include "synth/mono_values.h"
 
 namespace baconpaul::six_sines
 {
@@ -36,6 +37,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     float output alignas(16)[blockSize];
 
+    const MonoValues &monoValues;
+
     bool keytrack{true};
     const float &ratio, &activeV, &envToRatio, &lfoToRatio, &lfoByEnv; // in  frequency multiple
     bool active{false};
@@ -45,9 +48,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     uint32_t phase;
     uint32_t dPhase;
 
-    OpSource(const Patch::SourceNode &sn)
-        : EnvelopeSupport(sn), LFOSupport(sn), ratio(sn.ratio), activeV(sn.active),
-          envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio), lfoByEnv(sn.envLfoSum)
+    OpSource(const Patch::SourceNode &sn, const MonoValues &mv)
+        : monoValues(mv), EnvelopeSupport(sn, mv), LFOSupport(sn, mv), ratio(sn.ratio),
+          activeV(sn.active), envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio),
+          lfoByEnv(sn.envLfoSum)
     {
         reset();
     }
@@ -79,6 +83,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     float baseFrequency{0};
     void setBaseFrequency(float freq) { baseFrequency = freq; }
 
+    float priorRF{-10000000};
     void renderBlock(bool gated)
     {
         if (!active)
@@ -92,12 +97,18 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         lfoProcess();
         auto lfoFac = lfoByEnv > 0.5 ? env.output : 1.f;
 
-        auto rf =
-            pow(2.f, ratio + envToRatio * env.output + lfoFac * lfoToRatio * lfo.outputBlock[0]);
+        auto rf = monoValues.twoToTheX.twoToThe(ratio + envToRatio * env.output +
+                                                lfoFac * lfoToRatio * lfo.outputBlock[0]);
+        if (priorRF < -10000)
+            priorRF = rf;
+        auto dRF = (priorRF - rf) / blockSize;
+        std::swap(rf, priorRF);
 
         for (int i = 0; i < blockSize; ++i)
         {
             dPhase = st.dPhase(baseFrequency * rf);
+            rf += dRF;
+
             phase += dPhase;
             auto fb = 0.5 * (fbVal[0] + fbVal[1]);
             auto out = st.at(phase + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb)) * rmLevel[i];

@@ -19,6 +19,7 @@
 #include <sst/basic-blocks/tables/EqualTuningProvider.h>
 #include "dsp/op_source.h"
 #include "dsp/matrix_node.h"
+#include "synth/mono_values.h"
 
 struct MTSClient;
 
@@ -29,11 +30,9 @@ struct Patch;
 struct Voice
 {
     const float *const output[2];
-    const sst::basic_blocks::tables::EqualTuningProvider &tuningProvider;
+    const MonoValues &monoValues;
 
-    MTSClient *mtsClient{nullptr};
-
-    Voice(const Patch &, const sst::basic_blocks::tables::EqualTuningProvider &);
+    Voice(const Patch &, const MonoValues &);
     ~Voice() = default;
 
     void attack();
