@@ -31,16 +31,12 @@ jobs:
             name: windows-x64
             cmake_args: -G"Visual Studio 17 2022" -A x64
 
-          #- os: windows-latest
-          #  name: windows-arm64ec
-          #  cmake_args: -G"Visual Studio 17 2022" -A arm64ec -DAWCO_ARM64EC=TRUE -DCMAKE_SYSTEM_VERSION=10
+          - os: macos-latest
+            name: macos
+            cmake_args: -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
 
-          #- os: macos-latest
-          #  name: macos
-          #  cmake_args: -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
-
-          #- os: ubuntu-latest
-          #  name: linux-x64
+          - os: ubuntu-latest
+            name: linux-x64
 
     steps:
       - name: Checkout code
@@ -78,11 +74,18 @@ jobs:
           #export MAC_SIGNING_TEAM="${{ secrets.MAC_SIGNING_TEAM }}"
   
           cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release
-          cmake --build ./build --config Release --target six-sines_standalone six-sines_clap --parallel 3
+          cmake --build ./build --config Release --target six-sines_all --parallel 3
+
+      - name: Make windows zie
+        if: github.event_name != 'pull_request' && runner.os == 'Windows'
+        run: |
           mkdir build/inst
           mkdir build/insttmp
           mv build/CLAP/Release/*.clap build/insttmp
           mv build/Release/*.exe build/insttmp
+          
+          ls -lR ./build/inst
+
           7z a -r build/inst/windows-`git rev-parse --short HEAD`-nightly.zip build/insttmp/*
 
       - name: Configure pull request version
@@ -93,20 +96,15 @@ jobs:
       - name: Build pull request version
         if: github.event_name == 'pull_request'
         run: |
-          cmake --build ./build --config Debug --target six-sines_standalone six-sines_clap --parallel 3
-          mkdir build/inst
-          mkdir build/insttmp
-          mv build/CLAP/Debug/*.clap build/insttmp
-          mv build/Debug/*.exe build/insttmp
-          7z a -r build/inst/windows-`git rev-parse --short HEAD`-nightly.zip build/insttmp/*
-          
+          cmake --build ./build --config Debug --target six-sines_all --parallel 3
 
-      - name: Show Build Directory
+      - name: Find all the six sines
         run: |
-          ls -lR ./build/inst
+          find build -name "Six Sines*" -print
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
         with:
           path: build/inst
           name: dawplugin-${{ matrix.name }}

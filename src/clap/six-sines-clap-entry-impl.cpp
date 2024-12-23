@@ -20,6 +20,8 @@
 #include "clapwrapper/auv2.h"
 
 #include <iostream>
+#include <cstring>
+#include <string.h>
 #include <clap/clap.h>
 
 namespace baconpaul::six_sines

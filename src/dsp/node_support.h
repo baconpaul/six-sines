@@ -16,6 +16,9 @@
 #ifndef BACONPAUL_SIX_SINES_DSP_NODE_SUPPORT_H
 #define BACONPAUL_SIX_SINES_DSP_NODE_SUPPORT_H
 
+#include <cstring>
+#include <string.h>
+
 #include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
 
