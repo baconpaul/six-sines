@@ -78,6 +78,7 @@ jobs:
 
       - name: Make windows zie
         if: github.event_name != 'pull_request' && runner.os == 'Windows'
+        run: |
           mkdir build/inst
           mkdir build/insttmp
           mv build/CLAP/Release/*.clap build/insttmp
