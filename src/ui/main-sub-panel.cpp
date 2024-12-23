@@ -25,12 +25,16 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     createComponent(editor, *this, e.patchCopy.output.velSensitivity.meta.id, velSen, velSenD);
     addAndMakeVisible(*velSen);
     velSenL = std::make_unique<jcmp::Label>();
-    velSenL->setText("Sens");
+    velSenL->setText("Vel Sens");
     addAndMakeVisible(*velSenL);
 
     velTitle = std::make_unique<RuledLabel>();
-    velTitle->setText("Vel");
+    velTitle->setText("Play");
     addAndMakeVisible(*velTitle);
+
+    createComponent(editor, *this, e.patchCopy.output.playMode.meta.id, playMode, playModeD);
+    playMode->direction = sst::jucegui::components::MultiSwitch::VERTICAL;
+    addAndMakeVisible(*playMode);
 };
 MainSubPanel::~MainSubPanel() {}
 
@@ -47,6 +51,8 @@ void MainSubPanel::resized()
     depx += xtraW;
     depy += uicTitleLabelHeight;
     positionKnobAndLabel(depx, depy, velSen, velSenL);
+    auto bx = velSen->getBounds().translated(0, uicLabeledKnobHeight + uicMargin);
+    playMode->setBounds(bx);
 }
 
 } // namespace baconpaul::six_sines::ui

@@ -64,7 +64,7 @@ bool Patch::fromState(const std::string &idata)
             auto it = paramMap.find(idv);
             if (it == paramMap.end())
             {
-                SXSNLOG("Ignoring vestigal param " << idv);
+                // SXSNLOG("Ignoring vestigal param " << idv);
             }
             else
             {

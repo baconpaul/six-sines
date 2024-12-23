@@ -55,6 +55,8 @@ struct Voice
     OpSource &sourceAtMatrix(size_t pos);
     OpSource &targetAtMatrix(size_t pos);
 
+    void retriggerAllEnvelopes();
+
     std::array<MixerNode, numOps> mixerNode;
 
     OutputNode out;

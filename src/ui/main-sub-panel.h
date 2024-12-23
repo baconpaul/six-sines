@@ -18,6 +18,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "sst/jucegui/components/Knob.h"
+#include "sst/jucegui/components/MultiSwitch.h"
 #include "patch-data-bindings.h"
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
@@ -36,6 +37,9 @@ struct MainSubPanel : juce::Component, HasEditor, DAHDSRComponents<MainSubPanel,
     std::unique_ptr<jcmp::Knob> velSen;
     std::unique_ptr<PatchContinuous> velSenD;
     std::unique_ptr<jcmp::Label> velSenL;
+
+    std::unique_ptr<jcmp::MultiSwitch> playMode;
+    std::unique_ptr<PatchDiscrete> playModeD;
 
     std::unique_ptr<RuledLabel> velTitle;
 };

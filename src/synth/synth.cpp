@@ -176,7 +176,10 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
         case UIToAudioMsg::SET_PARAM:
         {
             auto dest = patch.paramMap.at(uiM->paramId);
-            lagHandler.setNewDestination(&(dest->value), uiM->value);
+            if (dest->meta.type == md_t::FLOAT)
+                lagHandler.setNewDestination(&(dest->value), uiM->value);
+            else
+                dest->value = uiM->value;
 
             clap_event_param_value_t p;
             p.header.size = sizeof(clap_event_param_value_t);
@@ -195,6 +198,14 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             p.value = uiM->value;
 
             outq->try_push(outq, &p.header);
+
+            /*
+             * Some params have other side effects
+             */
+            if (dest->meta.id == patch.output.playMode.meta.id)
+            {
+                resetPlaymode();
+            }
         }
         break;
         case UIToAudioMsg::BEGIN_EDIT:
@@ -225,6 +236,25 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
         break;
         }
         uiM = uiToAudio.pop();
+    }
+}
+
+void Synth::resetPlaymode()
+{
+    auto val = (int)std::round(patch.output.playMode.value);
+    if (val == 1)
+    {
+        voiceManager->setPlaymode(0, voiceManager_t::PlayMode::MONO_NOTES,
+                                  (int)voiceManager_t::MonoPlayModeFeatures::NATURAL_MONO);
+    }
+    else if (val == 2)
+    {
+        voiceManager->setPlaymode(0, voiceManager_t::PlayMode::MONO_NOTES,
+                                  (int)voiceManager_t::MonoPlayModeFeatures::NATURAL_LEGATO);
+    }
+    else
+    {
+        voiceManager->setPlaymode(0, voiceManager_t::PlayMode::POLY_VOICES);
     }
 }
 

@@ -470,36 +470,7 @@ struct Patch
                         .withGroupName(name(idx))
                         .withName(name(idx) + " Level")
                         .withID(id(0, idx))
-                        .withDefault(0)),
-              targetLevels(sst::cpputils::make_array_lambda<Param, numTargetsPerMacro>(
-                  [this, idx](auto i)
-                  {
-                      return Param(floatMd()
-                                       .withGroupName(name(idx))
-                                       .withName(name(idx) + " Depth " + std::to_string(i + 1))
-                                       .withID(id(i + 2, idx))
-                                       .asPercentBipolar()
-                                       .withDefault(0));
-                  })),
-              targets(sst::cpputils::make_array_lambda<Param, numTargetsPerMacro>(
-                  [this, idx](auto i)
-                  {
-                      // expliciltly non-automatable
-                      return Param(md_t()
-                                       .asInt()
-                                       .withRange(0, std::numeric_limits<uint32_t>::max())
-                                       .withGroupName(name(idx))
-                                       .withName(name(idx) + " Target " + std::to_string(i + 1))
-                                       .withID(id(i + numTargetsPerMacro + 4, idx))
-                                       .withDefault(OutputNode::idBase));
-                  })),
-              // again non-automatable on purpose
-              midiCC(md_t()
-                         .asInt()
-                         .withRange(0, 127)
-                         .withName(name(idx) + " Midi CC")
-                         .withGroupName(name(idx))
-                         .withID(id(2 * numTargetsPerMacro + 8, idx)))
+                        .withDefault(0))
         {
         }
 
@@ -507,26 +478,12 @@ struct Patch
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
         Param level;
-        std::array<Param, numTargetsPerMacro> targetLevels;
-        std::array<Param, numTargetsPerMacro> targets;
-        Param midiCC;
 
         std::vector<Param *> params()
         {
             std::vector<Param *> res{&level};
-            for (auto &p : targetLevels)
-                res.push_back(&p);
-            for (auto &p : targets)
-                res.push_back(&p);
-
-            res.push_back(&midiCC);
             return res;
         }
-    };
-
-    struct MIDIRouting
-    {
-        static constexpr uint32_t idBase{50000};
     };
 
     struct OutputNode : public DAHDSRMixin
@@ -544,18 +501,26 @@ struct Patch
                                  .withName(name() + " Velocity Sensitivity")
                                  .withGroupName(name())
                                  .withDefault(0.2)
-                                 .withID(id(12)))
+                                 .withID(id(12))),
+              playMode(md_t()
+                           .asInt()
+                           .withRange(0, 2)
+                           .withName(name() + " Play Mode")
+                           .withGroupName(name())
+                           .withDefault(0)
+                           .withID(id(13))
+                           .withUnorderedMapFormatting({{0, "Poly"}, {1, "Mono"}, {2, "Legato"}}))
         {
         }
 
         std::string name() const { return "Main"; }
         uint32_t id(int f) const { return idBase + f; }
 
-        Param level, velSensitivity;
+        Param level, velSensitivity, playMode;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &velSensitivity};
+            std::vector<Param *> res{&level, &velSensitivity, &playMode};
             appendDAHDSRParams(res);
             return res;
         }

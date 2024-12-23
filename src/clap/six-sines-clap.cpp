@@ -256,7 +256,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         auto data = std::string(buffer.data());
         engine->patch.fromState(data);
-        engine->doFullRefresh = true;
+        engine->postLoad();
         _host.paramsRequestFlush();
         return true;
     }

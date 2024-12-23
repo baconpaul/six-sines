@@ -70,8 +70,18 @@ struct Synth
         std::function<void(Voice *)> doVoiceEndCallback = [](auto) {};
         void setVoiceEndCallback(std::function<void(Voice *)> f) { doVoiceEndCallback = f; }
         void retriggerVoiceWithNewNoteID(Voice *, int32_t, float) { assert(false); }
-        void moveVoice(Voice *, uint16_t, uint16_t, uint16_t, float) { assert(false); }
-        void moveAndRetriggerVoice(Voice *, uint16_t, uint16_t, uint16_t, float) { assert(false); }
+        void moveVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
+        {
+            v->key = k;
+            v->velocity = ve;
+        }
+        void moveAndRetriggerVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
+        {
+            v->key = k;
+            v->velocity = ve;
+            v->gated = true;
+            v->retriggerAllEnvelopes();
+        }
 
         int32_t beginVoiceCreationTransaction(
             typename sst::voicemanager::VoiceBeginBufferEntry<VMConfig>::buffer_t &buffer, uint16_t,
@@ -197,6 +207,13 @@ struct Synth
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
 
     void pushFullUIRefresh();
+    void postLoad()
+    {
+        doFullRefresh = true;
+        resetPlaymode();
+    }
+
+    void resetPlaymode();
 
     sst::basic_blocks::dsp::VUPeak vuPeak;
     int32_t updateVuEvery{(int32_t)(gSampleRate / 60 / blockSize)};

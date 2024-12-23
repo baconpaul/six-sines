@@ -93,4 +93,25 @@ static_assert(numOps == 6, "Rebuild this table if not");
 OpSource &Voice::sourceAtMatrix(size_t pos) { return src[MatrixIndex::sourceIndexAt(pos)]; }
 OpSource &Voice::targetAtMatrix(size_t pos) { return src[MatrixIndex::targetIndexAt(pos)]; }
 
+void Voice::retriggerAllEnvelopes()
+{
+    for (auto &s : src)
+        if (s.active)
+            s.envAttack();
+
+    for (auto &s : selfNode)
+        if (s.active)
+            s.envAttack();
+
+    for (auto &s : mixerNode)
+        if (s.active)
+            s.envAttack();
+
+    for (auto &s : matrixNode)
+        if (s.active)
+            s.envAttack();
+
+    out.envAttack();
+}
+
 } // namespace baconpaul::six_sines
