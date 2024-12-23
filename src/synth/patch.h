@@ -533,8 +533,12 @@ struct Patch
     std::array<MacroNode, numMacros> macroNodes;
     OutputNode output;
 
+    void resetToInit();
     std::string toState() const;
     bool fromState(const std::string &);
+
+  private:
+    bool fromStateV1(const std::string &);
 };
 } // namespace baconpaul::six_sines
 #endif // PATCH_H

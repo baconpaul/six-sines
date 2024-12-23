@@ -483,10 +483,7 @@ void SixSinesEditor::doLoadPatch()
 void SixSinesEditor::resetToDefault()
 {
     SXSNLOG("Resetting to default");
-    for (auto [id, p] : patchCopy.paramMap)
-    {
-        p->value = p->meta.defaultVal;
-    }
+    patchCopy.resetToInit();
     sendEntirePatchToAudio();
     repaint();
 }
