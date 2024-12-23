@@ -27,6 +27,7 @@
 #include "ui-constants.h"
 #include "juce-lnf.h"
 #include "preset-manager.h"
+#include "macro-panel.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -58,6 +59,7 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
 
     matrixPanel = std::make_unique<MatrixPanel>(*this);
     mixerPanel = std::make_unique<MixerPanel>(*this);
+    macroPanel = std::make_unique<MacroPanel>(*this);
     singlePanel = std::make_unique<jcmp::NamedPanel>("Edit");
     sourcePanel = std::make_unique<SourcePanel>(*this);
     mainPanel = std::make_unique<MainPanel>(*this);
@@ -66,6 +68,7 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     addAndMakeVisible(*singlePanel);
     addAndMakeVisible(*sourcePanel);
     addAndMakeVisible(*mainPanel);
+    addAndMakeVisible(*macroPanel);
 
     mainSubPanel = std::make_unique<MainSubPanel>(*this);
     singlePanel->addChildComponent(*mainSubPanel);
@@ -112,7 +115,7 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     }
 
     // Make sure to do this last
-    setSize(608, 830);
+    setSize(673, 845);
 }
 SixSinesEditor::~SixSinesEditor() { idleTimer->stopTimer(); }
 
@@ -193,38 +196,50 @@ void SixSinesEditor::paint(juce::Graphics &g)
 
 void SixSinesEditor::resized()
 {
-    auto rdx{1};
+    int presetHeight{33}, footerHeight{15};
 
-    int tpt{33}, tpb{15};
+    auto lb = getLocalBounds();
+    auto presetArea = lb.withHeight(presetHeight);
+    auto panelArea = lb.withTrimmedTop(presetHeight).withTrimmedBottom(footerHeight);
 
-    auto but = getLocalBounds().withHeight(tpt).reduced(110, 0).withTrimmedTop(2);
+    auto panelPadX{2 * uicMargin + 11}, panelPadY{34U};
+    auto sourceHeight = uicLabeledKnobHeight + panelPadY;
+
+    auto matrixWidth = numOps * (uicPowerKnobWidth) + (numOps - 1) * uicMargin + panelPadX;
+    auto matrixHeight = numOps * uicLabeledKnobHeight + (numOps - 1) * uicMargin + panelPadY;
+    auto mixerWidth = uicPowerKnobWidth + panelPadX;
+    auto macroWidth = uicKnobSize + panelPadX;
+    auto mainWidth = mixerWidth + macroWidth;
+
+    auto editHeight = 220;
+
+    auto panelMargin{1};
+
+    // Preset button
+    auto but = presetArea.reduced(110, 0).withTrimmedTop(uicMargin);
     presetButton->setBounds(but);
 
-    auto area = getLocalBounds().withTrimmedTop(tpt).withTrimmedBottom(tpb);
+    auto sourceRect =
+        juce::Rectangle<int>(panelArea.getX(), panelArea.getY(), matrixWidth, sourceHeight);
+    auto matrixRect = juce::Rectangle<int>(panelArea.getX(), panelArea.getY() + sourceHeight,
+                                           matrixWidth, matrixHeight);
+    auto mainRect = juce::Rectangle<int>(panelArea.getX() + matrixWidth, panelArea.getY(),
+                                         mainWidth, sourceHeight);
+    auto mixerRect = juce::Rectangle<int>(
+        panelArea.getX() + matrixWidth, panelArea.getY() + sourceHeight, mixerWidth, matrixHeight);
+    auto macroRect =
+        juce::Rectangle<int>(panelArea.getX() + matrixWidth + mixerWidth,
+                             panelArea.getY() + sourceHeight, macroWidth, matrixHeight);
+    auto editRect =
+        juce::Rectangle<int>(panelArea.getX(), panelArea.getY() + sourceHeight + matrixHeight,
+                             matrixWidth + mainWidth, editHeight);
 
-    auto tp = 100;
-
-    auto rb = area.withTrimmedTop(tp);
-    auto edH = 250 - tpt - tpb;
-
-    auto mp = rb.withTrimmedBottom(edH);
-    mp = mp.withWidth(numOps * (uicPowerKnobWidth + uicMargin) + 2 * uicMargin + 10);
-
-    matrixPanel->setBounds(mp.reduced(rdx));
-
-    auto sp = rb.withTrimmedBottom(mp.getHeight());
-    sp = sp.translated(0, mp.getHeight());
-    singlePanel->setBounds(sp.reduced(rdx));
-
-    auto mx = rb.withTrimmedBottom(edH).withTrimmedLeft(mp.getWidth());
-    mixerPanel->setBounds(mx.reduced(rdx));
-
-    auto ta = area.withHeight(tp);
-    auto sr = ta.withWidth(mp.getWidth());
-    sourcePanel->setBounds(sr.reduced(rdx));
-
-    auto mn = ta.withTrimmedLeft(sr.getWidth());
-    mainPanel->setBounds(mn.reduced(rdx));
+    sourcePanel->setBounds(sourceRect.reduced(panelMargin));
+    matrixPanel->setBounds(matrixRect.reduced(panelMargin));
+    mainPanel->setBounds(mainRect.reduced(panelMargin));
+    mixerPanel->setBounds(mixerRect.reduced(panelMargin));
+    macroPanel->setBounds(macroRect.reduced(panelMargin));
+    singlePanel->setBounds(editRect.reduced(panelMargin));
 
     mainSubPanel->setBounds(singlePanel->getContentArea());
     matrixSubPanel->setBounds(singlePanel->getContentArea());
@@ -263,6 +278,11 @@ void SixSinesEditor::showTooltipOn(juce::Component *c)
     if (y + toolTip->getHeight() > getHeight())
     {
         y -= c->getHeight() - 3 - toolTip->getHeight();
+    }
+
+    if (x + toolTip->getWidth() > getWidth())
+    {
+        x -= toolTip->getWidth() - c->getWidth() / 2;
     }
 
     toolTip->setTopLeftPosition(x, y);

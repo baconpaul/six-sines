@@ -45,6 +45,7 @@ struct MixerPanel;
 struct MixerSubPanel;
 struct SourcePanel;
 struct SourceSubPanel;
+struct MacroPanel;
 struct SixSinesJuceLookAndFeel;
 
 struct SixSinesEditor : jcmp::WindowPanel
@@ -74,6 +75,8 @@ struct SixSinesEditor : jcmp::WindowPanel
 
     std::unique_ptr<MixerPanel> mixerPanel;
     std::unique_ptr<MixerSubPanel> mixerSubPanel;
+
+    std::unique_ptr<MacroPanel> macroPanel;
 
     std::unique_ptr<SourcePanel> sourcePanel;
     std::unique_ptr<SourceSubPanel> sourceSubPanel;

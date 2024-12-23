@@ -57,6 +57,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/ui/source-panel.cpp
         src/ui/source-sub-panel.cpp
         src/ui/preset-manager.cpp
+        src/ui/macro-panel.cpp
 
         src/synth/synth.cpp
         src/synth/voice.cpp
