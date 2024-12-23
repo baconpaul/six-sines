@@ -52,7 +52,7 @@ struct Synth
 
     struct VMConfig
     {
-        static constexpr size_t maxVoiceCount{128};
+        static constexpr size_t maxVoiceCount{maxVoices};
         using voice_t = Voice;
     };
 

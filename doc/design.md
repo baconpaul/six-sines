@@ -2,9 +2,16 @@ TODO BEFORE 1JAN2025
 
 SOURCE:
 - Keytrack on/off, and if off ratio -> offset from 440hz
-- TX waveshapes
+- waveshapes:
+  - TX waveshapes
+  - maybe a smoothed-saw and smoothed-square if i can figure out an analytic form i like
 - Ratio uses 2^x table rather than pow
 - Ratio lerps across block
+- 90%-100% of internal nyquist mute fades
+
+MAIN:
+- Rotate VU meter to use space
+- Put voice count below vU meter along with voice limit editor
 
 MIXER:
 - LFO on Mixer Node to level or pan
@@ -32,10 +39,9 @@ GENERAL AND CLEANUPS
 - Don't send VU etc when editor not attached
 - Edit area says "click a knbo to edit on startup"
 - SRProvider uses table, not pow
+- LFO in Pulse and S&H need a tiny little LPF to avoid super-clicka
 
 INFRASTRUCTURE:
 - mac signing
-- win/lin zip only
-- pipelines on all three platforms
 
 
