@@ -26,8 +26,10 @@ Macros and MIDI
 Other ToDos
 - Envelope Rate Linear to 2x provider
 - General UI
-- Voice Manager has Mono and Mono Legato mode - turn them on?
 - Interpolate ratio across the block in source
+- Max voice count
+- Portamento 
+- Patch to XML
 
 Installer
 - mac signing

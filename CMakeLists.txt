@@ -138,5 +138,13 @@ target_add_standalone_wrapper(TARGET ${sat}
         STATICALLY_LINKED_CLAP_ENTRY True
         PLUGIN_ID "org.baconpaul.six-sines")
 
-
+add_custom_target(${PROJECT_NAME}_all)
+add_dependencies(${PROJECT_NAME}_all
+        ${PROJECT_NAME}_clap
+        ${PROJECT_NAME}_standalone
+        ${PROJECT_NAME}_vst3
+)
+if (APPLE)
+    add_dependencies(${PROJECT_NAME}_all ${PROJECT_NAME}_auv2)
+endif()
 
