@@ -93,9 +93,8 @@ struct Synth
         void endVoiceCreationTransaction(uint16_t, uint16_t, uint16_t, int32_t, float) {}
         void terminateVoice(Voice *voice)
         {
-            voice->used = false;
             voice->gated = false;
-            synth.removeFromVoiceList(voice);
+            voice->fadeBlocks = Voice::fadeOverBlocks;
         }
         int32_t initializeMultipleVoices(
             int32_t ct,

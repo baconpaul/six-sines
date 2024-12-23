@@ -86,6 +86,18 @@ void Voice::renderBlock()
     }
 
     out.renderBlock(gated, velocity);
+
+    if (fadeBlocks > 0)
+    {
+        for (int i = 0; i < blockSize; ++i)
+        {
+            auto fp = fadeBlocks * blockSize - i;
+            auto at = fp * dFade;
+            out.output[0][i] *= at;
+            out.output[1][i] *= at;
+        }
+        fadeBlocks--;
+    }
 }
 
 static_assert(numOps == 6, "Rebuild this table if not");

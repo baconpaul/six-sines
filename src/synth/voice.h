@@ -58,6 +58,9 @@ struct Voice
     void retriggerAllEnvelopes();
 
     std::array<MixerNode, numOps> mixerNode;
+    static constexpr int32_t fadeOverBlocks{32};
+    float dFade{1.0 / (blockSize * fadeOverBlocks)};
+    int32_t fadeBlocks{-1};
 
     OutputNode out;
 
