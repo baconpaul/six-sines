@@ -13,7 +13,7 @@ add_subdirectory(sst/sst-jucegui)
 add_subdirectory(sst/sst-voicemanager)
 add_subdirectory(sst/sst-cpputils)
 
-set(SST_PLUGININFRA_PROVIDE_TINYXML OFF CACHE BOOL "no xml")
+set(SST_PLUGININFRA_PROVIDE_TINYXML ON CACHE BOOL "no xml")
 add_subdirectory(sst/sst-plugininfra)
 
 add_library(mts-esp-client STATIC MTS-ESP/Client/libMTSClient.cpp)

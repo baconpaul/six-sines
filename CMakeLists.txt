@@ -71,7 +71,8 @@ target_link_libraries(${PROJECT_NAME}-impl PUBLIC
         clap clap-helpers clap-wrapper-extensions
         fmt-header-only
         mts-esp-client
-        sst-basic-blocks sst-voicemanager sst-jucegui sst-cpputils sst-plugininfra sst-plugininfra::filesystem
+        sst-basic-blocks sst-voicemanager sst-jucegui sst-cpputils
+        sst-plugininfra sst-plugininfra::filesystem sst-plugininfra::tinyxml
         sst::clap_juce_shim sst::clap_juce_shim_headers)
 
 
