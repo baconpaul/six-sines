@@ -76,17 +76,34 @@ jobs:
           cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release
           cmake --build ./build --config Release --target six-sines_all --parallel 3
 
-      - name: Make windows zie
+      - name: Make windows zip
         if: github.event_name != 'pull_request' && runner.os == 'Windows'
         run: |
           mkdir build/inst
           mkdir build/insttmp
           mv build/CLAP/Release/*.clap build/insttmp
+          mv build/VST3/Release/*.vst3 build/insttmp
           mv build/Release/*.exe build/insttmp
           
-          ls -lR ./build/inst
-
           7z a -r build/inst/windows-`git rev-parse --short HEAD`-nightly.zip build/insttmp/*
+
+      - name: Make linux tgz
+        if: github.event_name != 'pull_request' && runner.os == 'Linux'
+        run: |
+          mkdir build/inst
+          mkdir build/insttmp
+          mv build/*.clap build/insttmp
+          mv "build/Six Sines" build/isnttmp 
+          mv build/Release/*.vst3 build/insttmp
+          cd build/insttmp
+          tar cvzf ../inst/linux-`git rev-parse --short HEAD`-nightly.tgz .
+
+
+      - name: Make Mac
+        if: github.event_name != 'pull_request' && runner.os == 'macOS'
+        run: |
+          mkdir build/inst
+          date > build/inst/macos-build-coming-soon.txt
 
       - name: Configure pull request version
         if: github.event_name == 'pull_request'
@@ -104,7 +121,6 @@ jobs:
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
-        if: runner.os == 'Windows'
         with:
           path: build/inst
           name: dawplugin-${{ matrix.name }}
