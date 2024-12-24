@@ -47,5 +47,6 @@ inline std::string fileTrunc(const std::string &f)
 
 #define SXSNLOG(...)                                                                               \
     std::cout << fileTrunc(__FILE__) << ":" << __LINE__ << " " << __VA_ARGS__ << std::endl;
+#define SXSNV(x) " " << #x << "=" << x
 
 #endif // CONFIGURATION_H

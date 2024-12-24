@@ -48,6 +48,15 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
         mk(v.sustain, 4, "S");
         mk(v.release, 5, "R");
 
+        auto c = asComp();
+        createComponent(e, *c, v.aShape, shapes[0], shapesD[0]);
+        createComponent(e, *c, v.dShape, shapes[1], shapesD[1]);
+        createComponent(e, *c, v.rShape, shapes[2], shapesD[2]);
+
+        c->addAndMakeVisible(*shapes[0]);
+        c->addAndMakeVisible(*shapes[1]);
+        c->addAndMakeVisible(*shapes[2]);
+
         titleLab = std::make_unique<RuledLabel>();
         titleLab->setText("Envelope");
         asComp()->addAndMakeVisible(*titleLab);
@@ -71,7 +80,11 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
         {
             if (!slider[i])
                 continue;
-            slider[i]->setBounds(bx.withHeight(q));
+            slider[i]->setBounds(bx.withHeight(q).withTrimmedTop(uicSliderWidth));
+            if (i % 2)
+            {
+                shapes[i / 2]->setBounds(bx.withHeight(uicSliderWidth));
+            }
             lab[i]->setBounds(bx.withTrimmedTop(q + uicLabelGap));
             bx = bx.translated(uicSliderWidth, 0);
         }
@@ -79,9 +92,12 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
         return juce::Rectangle<int>(x, y, 0, 0).withLeft(bx.getRight()).withBottom(bx.getBottom());
     }
 
-    static constexpr int nels{6}; // dahdsr
+    static constexpr int nels{6};   // dahdsr
+    static constexpr int nShape{3}; // no shape for delay jp;d or release
     std::array<std::unique_ptr<jcmp::VSlider>, nels> slider;
     std::array<std::unique_ptr<PatchContinuous>, nels> sliderD;
+    std::array<std::unique_ptr<jcmp::Knob>, nShape> shapes;
+    std::array<std::unique_ptr<PatchContinuous>, nShape> shapesD;
     std::array<std::unique_ptr<jcmp::Label>, nels> lab;
     std::unique_ptr<RuledLabel> titleLab;
 };

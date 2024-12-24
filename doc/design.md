@@ -35,9 +35,7 @@ GENERAL AND CLEANUPS
 - AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
 - Don't send VU etc when editor not attached
 - Edit area says "click a knbo to edit on startup"
-- LFO in Pulse and S&H need a tiny little LPF to avoid super-clicka
+- LFO in Pulse and S&H need a tiny little LPF to avoid super-clicka on modulation nodes
 
-INFRASTRUCTURE:
-- mac signing
 
 

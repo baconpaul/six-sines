@@ -73,10 +73,7 @@ void Synth::process(const clap_output_events_t *outq)
             mech::accumulate_from_to<blockSize>(cvoice->output[0], lOutput[0]);
             mech::accumulate_from_to<blockSize>(cvoice->output[1], lOutput[1]);
 
-            if (cvoice->out.env.stage >
-                    sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider,
-                                                                  blockSize>::s_release ||
-                cvoice->fadeBlocks == 0)
+            if (cvoice->out.env.stage > OutputNode::env_t::s_release || cvoice->fadeBlocks == 0)
             {
                 responder.doVoiceEndCallback(cvoice);
                 cvoice = removeFromVoiceList(cvoice);

@@ -44,10 +44,17 @@ struct Param
     }
 
     operator const float &() const { return value; }
+
+    uint64_t adhocFeatures{0};
+    enum AdHocFeatureValues
+    {
+        ENVTIME = 1 << 0 // tag for ADSR envs we changed version 2-3
+    };
 };
 
 struct Patch
 {
+    static constexpr uint32_t patchVersion{3};
     std::vector<const Param *> params;
     std::unordered_map<uint32_t, Param *> paramMap;
 
@@ -57,11 +64,7 @@ struct Patch
     static md_t floatMd() { return md_t().asFloat().withFlags(floatFlags); }
     static md_t floatEnvRateMd()
     {
-        return md_t()
-            .asFloat()
-            .withFlags(floatFlags)
-            .asLog2SecondsRange(sst::basic_blocks::modulators::TenSecondRange::etMin,
-                                sst::basic_blocks::modulators::TenSecondRange::etMax);
+        return md_t().asFloat().withFlags(floatFlags).as25SecondExpTime();
     }
     static md_t boolMd() { return md_t().asBool().withFlags(boolFlags); }
     static md_t intMd() { return md_t().asInt().withFlags(boolFlags); }
@@ -81,8 +84,9 @@ struct Patch
             {
                 if (paramMap.find(p->meta.id) != paramMap.end())
                 {
-                    SXSNLOG("Duplicate param id " << p->meta.id << " at " << p->meta.name);
-                    SXSNLOG("Collision with " << paramMap[p->meta.id]->meta.name);
+                    SXSNLOG("Duplicate param id " << p->meta.id);
+                    SXSNLOG(" - New Param   : '" << p->meta.name << "'");
+                    SXSNLOG(" - Other Param : '" << paramMap[p->meta.id]->meta.name << "'");
                     std::terminate();
                 }
                 paramMap.emplace(p->meta.id, p);
@@ -185,27 +189,26 @@ struct Patch
 
     struct DAHDSRMixin
     {
-        using tsr = sst::basic_blocks::modulators::TenSecondRange;
         DAHDSRMixin(const std::string name, int id0, bool longAdsr)
             : delay(floatEnvRateMd()
                         .withName(name + " Env Delay")
                         .withGroupName(name)
-                        .withDefault(tsr::etMin)
+                        .withDefault(0.f)
                         .withID(id0 + 0)),
               attack(floatEnvRateMd()
                          .withName(name + " Env Attack")
                          .withGroupName(name)
-                         .withDefault(longAdsr ? -7.f : tsr::etMin)
+                         .withDefault(longAdsr ? 0.05 : 0.f)
                          .withID(id0 + 1)),
               hold(floatEnvRateMd()
                        .withName(name + " Env Hold")
                        .withGroupName(name)
-                       .withDefault(tsr::etMin)
+                       .withDefault(0.f)
                        .withID(id0 + 2)),
               decay(floatEnvRateMd()
                         .withName(name + " Env Decay")
                         .withGroupName(name)
-                        .withDefault(longAdsr ? 0.f : tsr::etMin)
+                        .withDefault(longAdsr ? 0.3 : 0.f)
                         .withID(id0 + 3)),
               sustain(floatMd()
                           .asPercent()
@@ -216,17 +219,41 @@ struct Patch
               release(floatEnvRateMd()
                           .withName(name + " Env Release")
                           .withGroupName(name)
-                          .withDefault(longAdsr ? -2.f : tsr::etMax)
+                          .withDefault(longAdsr ? 0.4 : 1.f)
                           .withID(id0 + 5)),
               envPower(boolMd()
                            .withName(name + " Env Power")
                            .withGroupName(name)
                            .withDefault(true)
-                           .withID(id0 + 6))
+                           .withID(id0 + 6)),
+              aShape(floatMd()
+                         .asPercentBipolar()
+                         .withName(name + " Attack Shape")
+                         .withGroupName(name)
+                         .withDefault(0)
+                         .withID(id0 + 7)),
+              dShape(floatMd()
+                         .asPercentBipolar()
+                         .withName(name + " Decay Shape")
+                         .withGroupName(name)
+                         .withDefault(0)
+                         .withID(id0 + 8)),
+              rShape(floatMd()
+                         .asPercentBipolar()
+                         .withName(name + " Release Shape")
+                         .withGroupName(name)
+                         .withDefault(0)
+                         .withID(id0 + 9))
         {
+            delay.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
+            attack.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
+            hold.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
+            decay.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
+            release.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
         }
 
         Param delay, attack, hold, decay, sustain, release, envPower;
+        Param aShape, dShape, rShape;
 
         void appendDAHDSRParams(std::vector<Param *> &res)
         {
@@ -237,6 +264,9 @@ struct Patch
             res.push_back(&sustain);
             res.push_back(&release);
             res.push_back(&envPower);
+            res.push_back(&aShape);
+            res.push_back(&dShape);
+            res.push_back(&rShape);
         }
     };
 
@@ -546,6 +576,8 @@ struct Patch
 
   private:
     bool fromStateV1(const std::string &);
+
+    float migrateParamValueFromVersion(Param *p, float value, uint32_t version);
 };
 } // namespace baconpaul::six_sines
 #endif // PATCH_H
