@@ -34,24 +34,31 @@ template <typename Comp, typename Patch> struct LFOComponents
     void setupLFO(SixSinesEditor &e, const Patch &v)
     {
         auto c = asComp();
-        createComponent(e, *c, v.lfoRate.meta.id, rate, rateD);
+        createComponent(e, *c, v.lfoRate, rate, rateD);
         rateL = std::make_unique<jcmp::Label>();
         rateL->setText("Rate");
         c->addAndMakeVisible(*rate);
         c->addAndMakeVisible(*rateL);
 
-        createComponent(e, *c, v.lfoDeform.meta.id, deform, deformD);
+        createComponent(e, *c, v.lfoDeform, deform, deformD);
         deformL = std::make_unique<jcmp::Label>();
         deformL->setText("Deform");
         c->addAndMakeVisible(*deform);
         c->addAndMakeVisible(*deformL);
 
-        createComponent(e, *c, v.lfoShape.meta.id, shape, shapeD);
+        createComponent(e, *c, v.lfoShape, shape, shapeD);
         c->addAndMakeVisible(*shape);
 
         titleLab = std::make_unique<RuledLabel>();
         titleLab->setText("LFO");
         c->addAndMakeVisible(*titleLab);
+
+        createComponent(e, *c, v.tempoSync, tempoSync, tempoSyncD);
+        tempoSync->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
+        tempoSync->setLabel("Sync");
+        c->addAndMakeVisible(*tempoSync);
+
+        rateD->setTemposyncPowerPartner(tempoSyncD.get());
     }
 
     juce::Rectangle<int> layoutLFOAt(int x, int y, int extraWidth = 0)
@@ -68,7 +75,8 @@ template <typename Comp, typename Patch> struct LFOComponents
         positionTitleLabelAt(x, y, w + uicMargin + uicKnobSize + extraWidth, titleLab);
 
         auto bx = juce::Rectangle<int>(x, y + lh, w, h - lh);
-        shape->setBounds(bx.withHeight(2 * uicLabeledKnobHeight + uicMargin));
+        shape->setBounds(bx.withHeight(2 * uicLabeledKnobHeight - uicMargin - lh));
+        tempoSync->setBounds(bx.withTrimmedTop(2 * uicLabeledKnobHeight - lh).withHeight(lh));
 
         bx = bx.translated(w + uicMargin, 0);
         positionKnobAndLabel(bx.getX(), bx.getY(), rate, rateL);
@@ -86,6 +94,9 @@ template <typename Comp, typename Patch> struct LFOComponents
     std::unique_ptr<jcmp::MultiSwitch> shape;
     std::unique_ptr<PatchDiscrete> shapeD;
     std::unique_ptr<RuledLabel> titleLab;
+
+    std::unique_ptr<jcmp::ToggleButton> tempoSync;
+    std::unique_ptr<PatchDiscrete> tempoSyncD;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // LFO_COMPONENTS_H

@@ -26,11 +26,11 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
     auto &mn = editor.patchCopy.mixerNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
-        createComponent(editor, *this, mn[i].level.meta.id, knobs[i], knobsData[i], i);
+        createComponent(editor, *this, mn[i].level, knobs[i], knobsData[i], i);
         knobs[i]->setDrawLabel(false);
         addAndMakeVisible(*knobs[i]);
 
-        createComponent(editor, *this, mn[i].active.meta.id, power[i], powerData[i], i);
+        createComponent(editor, *this, mn[i].active, power[i], powerData[i], i);
         power[i]->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
         power[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*power[i]);

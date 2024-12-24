@@ -31,13 +31,13 @@ void SelfSubPanel::setSelectedIndex(int idx)
     setupDAHDSR(editor, editor.patchCopy.selfNodes[idx]);
     setupLFO(editor, editor.patchCopy.selfNodes[idx]);
 
-    createComponent(editor, *this, n.lfoToFB.meta.id, lfoToFb, lfoToFbD);
+    createComponent(editor, *this, n.lfoToFB, lfoToFb, lfoToFbD);
     addAndMakeVisible(*lfoToFb);
     lfoToFbL = std::make_unique<jcmp::Label>();
     lfoToFbL->setText("Depth");
     addAndMakeVisible(*lfoToFbL);
 
-    createComponent(editor, *this, n.envLfoSum.meta.id, lfoMul, lfoMulD);
+    createComponent(editor, *this, n.envLfoSum, lfoMul, lfoMulD);
     addAndMakeVisible(*lfoMul);
     lfoMul->direction = jcmp::MultiSwitch::VERTICAL;
 

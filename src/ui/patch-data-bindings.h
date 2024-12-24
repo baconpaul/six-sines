@@ -52,6 +52,13 @@ struct PatchContinuous : jdat::Continuous
     float getValue() const override { return p->value; }
     std::string getValueAsStringFor(float f) const override
     {
+        if (tsPowerPartner && tsPowerPartner->getValue())
+        {
+            auto r = p->meta.valueToString(
+                f, sst::basic_blocks::params::ParamMetaData::FeatureState().withTemposync(true));
+            if (r.has_value())
+                return *r;
+        }
         auto r = p->meta.valueToString(f);
         if (r.has_value())
             return *r;
@@ -78,6 +85,9 @@ struct PatchContinuous : jdat::Continuous
     bool isBipolar() const override { return p->meta.isBipolar(); }
     float getMin() const override { return p->meta.minVal; }
     float getMax() const override { return p->meta.maxVal; }
+
+    jdat::Discrete *tsPowerPartner{nullptr};
+    void setTemposyncPowerPartner(jdat::Discrete *d) { tsPowerPartner = d; }
 };
 
 struct PatchDiscrete : jdat::Discrete
@@ -127,9 +137,10 @@ struct PatchDiscrete : jdat::Discrete
 };
 
 template <typename P, typename T, typename Q, typename... Args>
-void createComponent(SixSinesEditor &e, P &panel, uint32_t id, std::unique_ptr<T> &cm,
+void createComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique_ptr<T> &cm,
                      std::unique_ptr<Q> &pc, Args... args)
 {
+    auto id = parm.meta.id;
     pc = std::make_unique<Q>(e, id);
     cm = std::make_unique<T>();
 

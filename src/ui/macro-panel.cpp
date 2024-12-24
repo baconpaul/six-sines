@@ -25,7 +25,7 @@ MacroPanel::MacroPanel(SixSinesEditor &e) : jcmp::NamedPanel("Macros"), HasEdito
     auto &mn = editor.patchCopy.macroNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
-        createComponent(editor, *this, mn[i].level.meta.id, knobs[i], knobsData[i], i);
+        createComponent(editor, *this, mn[i].level, knobs[i], knobsData[i], i);
         knobs[i]->setDrawLabel(false);
         addAndMakeVisible(*knobs[i]);
 

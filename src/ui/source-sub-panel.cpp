@@ -33,19 +33,19 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     setupDAHDSR(editor, sn);
     setupLFO(editor, sn);
 
-    createComponent(editor, *this, sn.envToRatio.meta.id, envToRatio, envToRatioD);
+    createComponent(editor, *this, sn.envToRatio, envToRatio, envToRatioD);
     envToRatioL = std::make_unique<jcmp::Label>();
     envToRatioL->setText("Env");
     addAndMakeVisible(*envToRatioL);
     addAndMakeVisible(*envToRatio);
 
-    createComponent(editor, *this, sn.lfoToRatio.meta.id, lfoToRatio, lfoToRatioD);
+    createComponent(editor, *this, sn.lfoToRatio, lfoToRatio, lfoToRatioD);
     addAndMakeVisible(*lfoToRatio);
     lfoToRatioL = std::make_unique<jcmp::Label>();
     lfoToRatioL->setText("LFO");
     addAndMakeVisible(*lfoToRatioL);
 
-    createComponent(editor, *this, sn.envLfoSum.meta.id, lfoMul, lfoMulD);
+    createComponent(editor, *this, sn.envLfoSum, lfoMul, lfoMulD);
     addAndMakeVisible(*lfoMul);
     lfoMul->direction = jcmp::MultiSwitch::VERTICAL;
 

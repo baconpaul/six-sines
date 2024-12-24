@@ -22,7 +22,7 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
 {
     setupDAHDSR(e, e.patchCopy.output);
 
-    createComponent(editor, *this, e.patchCopy.output.velSensitivity.meta.id, velSen, velSenD);
+    createComponent(editor, *this, e.patchCopy.output.velSensitivity, velSen, velSenD);
     addAndMakeVisible(*velSen);
     velSenL = std::make_unique<jcmp::Label>();
     velSenL->setText("Vel Sens");
@@ -32,7 +32,7 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     velTitle->setText("Play");
     addAndMakeVisible(*velTitle);
 
-    createComponent(editor, *this, e.patchCopy.output.playMode.meta.id, playMode, playModeD);
+    createComponent(editor, *this, e.patchCopy.output.playMode, playMode, playModeD);
     playMode->direction = sst::jucegui::components::MultiSwitch::VERTICAL;
     addAndMakeVisible(*playMode);
 };

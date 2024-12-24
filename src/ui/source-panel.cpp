@@ -26,11 +26,11 @@ SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEdi
     auto &mn = editor.patchCopy.sourceNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
-        createComponent(editor, *this, mn[i].ratio.meta.id, knobs[i], knobsData[i], i);
+        createComponent(editor, *this, mn[i].ratio, knobs[i], knobsData[i], i);
         knobs[i]->setDrawLabel(false);
         addAndMakeVisible(*knobs[i]);
 
-        createComponent(editor, *this, mn[i].active.meta.id, power[i], powerData[i], i);
+        createComponent(editor, *this, mn[i].active, power[i], powerData[i], i);
         power[i]->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
         power[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*power[i]);

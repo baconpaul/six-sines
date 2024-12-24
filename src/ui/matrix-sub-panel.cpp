@@ -29,13 +29,13 @@ void MatrixSubPanel::setSelectedIndex(int idx)
     setupDAHDSR(editor, m);
     setupLFO(editor, m);
 
-    createComponent(editor, *this, m.lfoToDepth.meta.id, lfoToDepth, lfoToDepthD);
+    createComponent(editor, *this, m.lfoToDepth, lfoToDepth, lfoToDepthD);
     addAndMakeVisible(*lfoToDepth);
     lfoToDepthL = std::make_unique<jcmp::Label>();
     lfoToDepthL->setText("Depth");
     addAndMakeVisible(*lfoToDepthL);
 
-    createComponent(editor, *this, m.envLfoSum.meta.id, lfoMul, lfoMulD);
+    createComponent(editor, *this, m.envLfoSum, lfoMul, lfoMulD);
     addAndMakeVisible(*lfoMul);
     lfoMul->direction = jcmp::MultiSwitch::VERTICAL;
 

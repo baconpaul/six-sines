@@ -26,11 +26,11 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
     auto &mn = editor.patchCopy.selfNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
-        createComponent(editor, *this, mn[i].fbLevel.meta.id, Sknobs[i], SknobsData[i], i, true);
+        createComponent(editor, *this, mn[i].fbLevel, Sknobs[i], SknobsData[i], i, true);
         Sknobs[i]->setDrawLabel(false);
         addAndMakeVisible(*Sknobs[i]);
 
-        createComponent(editor, *this, mn[i].active.meta.id, Spower[i], SpowerData[i], i, true);
+        createComponent(editor, *this, mn[i].active, Spower[i], SpowerData[i], i, true);
         Spower[i]->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
         Spower[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*Spower[i]);
@@ -43,16 +43,16 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
     auto &mx = editor.patchCopy.matrixNodes;
     for (auto i = 0U; i < matrixSize; ++i)
     {
-        createComponent(editor, *this, mx[i].level.meta.id, Mknobs[i], MknobsData[i], i, false);
+        createComponent(editor, *this, mx[i].level, Mknobs[i], MknobsData[i], i, false);
         Mknobs[i]->setDrawLabel(false);
         addAndMakeVisible(*Mknobs[i]);
 
-        createComponent(editor, *this, mx[i].active.meta.id, Mpower[i], MpowerData[i], i, false);
+        createComponent(editor, *this, mx[i].active, Mpower[i], MpowerData[i], i, false);
         Mpower[i]->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
         Mpower[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*Mpower[i]);
 
-        createComponent(editor, *this, mx[i].pmOrRM.meta.id, Mpmrm[i], MpmrmD[i], i, false);
+        createComponent(editor, *this, mx[i].pmOrRM, Mpmrm[i], MpmrmD[i], i, false);
         Mpmrm[i]->direction = sst::jucegui::components::MultiSwitch::HORIZONTAL;
         addAndMakeVisible(*Mpmrm[i]);
 

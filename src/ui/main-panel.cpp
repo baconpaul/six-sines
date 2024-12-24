@@ -22,7 +22,7 @@ namespace baconpaul::six_sines::ui
 {
 MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
 {
-    createComponent(editor, *this, editor.patchCopy.output.level.meta.id, lev, levData);
+    createComponent(editor, *this, editor.patchCopy.output.level, lev, levData);
     lev->setDrawLabel(false);
     addAndMakeVisible(*lev);
     levLabel = std::make_unique<jcmp::Label>();

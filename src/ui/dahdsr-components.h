@@ -41,12 +41,12 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
             c->addAndMakeVisible(*slider[idx]);
             c->addAndMakeVisible(*lab[idx]);
         };
-        mk(v.delay.meta.id, 0, "D");
-        mk(v.attack.meta.id, 1, "A");
-        mk(v.hold.meta.id, 2, "H");
-        mk(v.decay.meta.id, 3, "D");
-        mk(v.sustain.meta.id, 4, "S");
-        mk(v.release.meta.id, 5, "R");
+        mk(v.delay, 0, "D");
+        mk(v.attack, 1, "A");
+        mk(v.hold, 2, "H");
+        mk(v.decay, 3, "D");
+        mk(v.sustain, 4, "S");
+        mk(v.release, 5, "R");
 
         titleLab = std::make_unique<RuledLabel>();
         titleLab->setText("Envelope");
