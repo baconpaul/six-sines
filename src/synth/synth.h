@@ -72,15 +72,15 @@ struct Synth
         void retriggerVoiceWithNewNoteID(Voice *, int32_t, float) { assert(false); }
         void moveVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
         {
-            v->key = k;
-            v->velocity = ve;
+            v->voiceValues.key = k;
+            v->voiceValues.velocity = ve;
         }
 
         void moveAndRetriggerVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
         {
-            v->key = k;
-            v->velocity = ve;
-            v->gated = true;
+            v->voiceValues.key = k;
+            v->voiceValues.velocity = ve;
+            v->voiceValues.gated = true;
             v->retriggerAllEnvelopes();
         }
 
@@ -96,7 +96,7 @@ struct Synth
 
         void terminateVoice(Voice *voice)
         {
-            voice->gated = false;
+            voice->voiceValues.gated = false;
             voice->fadeBlocks = Voice::fadeOverBlocks;
         }
         int32_t initializeMultipleVoices(
@@ -117,10 +117,11 @@ struct Synth
                     {
                         obuf[0].voice = &synth.voices[i];
                         synth.voices[i].used = true;
-                        synth.voices[i].gated = true;
-                        synth.voices[i].key = key;
-                        synth.voices[i].channel = ch;
-                        synth.voices[i].velocity = vel;
+                        synth.voices[i].voiceValues.gated = true;
+                        synth.voices[i].voiceValues.key = key;
+                        synth.voices[i].voiceValues.channel = ch;
+                        synth.voices[i].voiceValues.velocity = vel;
+                        synth.voices[i].voiceValues.releaseVelocity = 0;
                         synth.voices[i].attack();
 
                         synth.addToVoiceList(&synth.voices[i]);
@@ -132,7 +133,11 @@ struct Synth
             }
             return 0;
         }
-        void releaseVoice(Voice *v, float) { v->gated = false; }
+        void releaseVoice(Voice *v, float rv)
+        {
+            v->voiceValues.gated = false;
+            v->voiceValues.releaseVelocity = rv;
+        }
         void setNoteExpression(Voice *, int32_t, double) {}
         void setVoicePolyphonicParameterModulation(Voice *, uint32_t, double) {}
         void setPolyphonicAftertouch(Voice *, int8_t) {}

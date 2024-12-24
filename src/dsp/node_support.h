@@ -24,6 +24,7 @@
 
 #include "dsp/sr_provider.h"
 #include "synth/mono_values.h"
+#include "synth/voice_values.h"
 
 namespace baconpaul::six_sines
 {
@@ -33,12 +34,15 @@ template <typename T> struct EnvelopeSupport
 {
     SRProvider sr;
 
+    const MonoValues &monoValues;
+    const VoiceValues &voiceValues;
+
     const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV;
     const float &ash, &dsh, &rsh;
-    EnvelopeSupport(const T &mn, const MonoValues &mv)
-        : sr(mv), env(&sr), delay(mn.delay), attackv(mn.attack), hold(mn.hold), decay(mn.decay),
-          sustain(mn.sustain), release(mn.release), powerV(mn.envPower), ash(mn.aShape),
-          dsh(mn.dShape), rsh(mn.rShape)
+    EnvelopeSupport(const T &mn, const MonoValues &mv, const VoiceValues &vv)
+        : monoValues(mv), voiceValues(vv), sr(mv), env(&sr), delay(mn.delay), attackv(mn.attack),
+          hold(mn.hold), decay(mn.decay), sustain(mn.sustain), release(mn.release),
+          powerV(mn.envPower), ash(mn.aShape), dsh(mn.dShape), rsh(mn.rShape)
     {
     }
 
@@ -74,13 +78,13 @@ template <typename T> struct EnvelopeSupport
         else
             memset(env.outputCache, 0, sizeof(env.outputCache));
     }
-    void envProcess(bool gated, bool maxIsForever = true)
+    void envProcess(bool maxIsForever = true)
     {
         if (!active || constantEnv)
             return;
 
         env.processBlockWithDelay(delay, attackv, hold, decay, sustain, release, ash, dsh, rsh,
-                                  gated, true);
+                                  voiceValues.gated, true);
     }
 };
 

@@ -34,11 +34,15 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
                         public LFOSupport<Patch::MatrixNode>
 {
     OpSource &onto, &from;
+
+    const MonoValues &monoValues;
+    const VoiceValues &voiceValues;
     const float &level, &activeV, &pmrmV, &lfoToDepth, &mulLfoV;
-    MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr, const MonoValues &mv)
-        : onto(on), from(fr), level(mn.level), pmrmV(mn.pmOrRM), activeV(mn.active),
-          EnvelopeSupport(mn, mv), LFOSupport(mn, mv), lfoToDepth(mn.lfoToDepth),
-          mulLfoV(mn.envLfoSum)
+    MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr, const MonoValues &mv,
+                   const VoiceValues &vv)
+        : monoValues(mv), voiceValues(vv), onto(on), from(fr), level(mn.level), pmrmV(mn.pmOrRM),
+          activeV(mn.active), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
+          lfoToDepth(mn.lfoToDepth), mulLfoV(mn.envLfoSum)
     {
     }
 
@@ -56,12 +60,12 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         }
     }
 
-    void applyBlock(bool gated)
+    void applyBlock()
     {
         if (!active)
             return;
 
-        envProcess(gated);
+        envProcess();
         lfoProcess();
         float mod alignas(16)[blockSize], modB alignas(16)[blockSize];
         mech::mul_block<blockSize>(env.outputCache, from.output, mod);
@@ -104,10 +108,16 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>, LFOSupport<Patch::Self
 {
     OpSource &onto;
     SRProvider sr;
+
+    const MonoValues &monoValues;
+    const VoiceValues &voiceValues;
+
     const float &fbBase, &lfoToFB, &activeV, &lfoMulV;
-    MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, const MonoValues &mv)
-        : sr(mv), onto(on), fbBase(sn.fbLevel), lfoToFB(sn.lfoToFB), activeV(sn.active),
-          lfoMulV(sn.envLfoSum), EnvelopeSupport(sn, mv), LFOSupport(sn, mv){};
+    MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, const MonoValues &mv,
+                   const VoiceValues &vv)
+        : monoValues(mv), voiceValues(vv), sr(mv), onto(on), fbBase(sn.fbLevel),
+          lfoToFB(sn.lfoToFB), activeV(sn.active), lfoMulV(sn.envLfoSum),
+          EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv){};
     bool active{true}, lfoMul{false};
 
     void attack()
@@ -120,12 +130,12 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>, LFOSupport<Patch::Self
             lfoAttack();
         }
     }
-    void applyBlock(bool gated)
+    void applyBlock()
     {
         if (!active)
             return;
 
-        envProcess(gated);
+        envProcess();
         lfoProcess();
         if (lfoMul)
         {
@@ -154,13 +164,16 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>, LFOSupport<Patch::MixerNod
     OpSource &from;
     SRProvider sr;
 
+    const MonoValues &monoValues;
+    const VoiceValues &voiceValues;
+
     const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan;
     bool active{false};
 
-    MixerNode(const Patch::MixerNode &mn, OpSource &f, const MonoValues &mv)
-        : sr(mv), from(f), pan(mn.pan), level(mn.level), activeF(mn.active),
-          lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan), EnvelopeSupport(mn, mv),
-          LFOSupport(mn, mv)
+    MixerNode(const Patch::MixerNode &mn, OpSource &f, const MonoValues &mv, const VoiceValues &vv)
+        : monoValues(mv), voiceValues(vv), sr(mv), from(f), pan(mn.pan), level(mn.level),
+          activeF(mn.active), lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan),
+          EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv)
     {
         memset(output, 0, sizeof(output));
     }
@@ -173,7 +186,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>, LFOSupport<Patch::MixerNod
             envAttack();
     }
 
-    void renderBlock(bool gated)
+    void renderBlock()
     {
         if (!active)
         {
@@ -181,7 +194,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>, LFOSupport<Patch::MixerNod
         }
         float vSum alignas(16)[blockSize];
 
-        envProcess(gated);
+        envProcess();
         for (int j = 0; j < blockSize; ++j)
         {
             // use mech blah
@@ -212,17 +225,22 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
     std::array<MixerNode, numOps> &fromArr;
     SRProvider sr;
 
+    const MonoValues &monoValues;
+    const VoiceValues &voiceValues;
+
     const float &level, &velSen;
 
-    OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f, const MonoValues &mv)
-        : sr(mv), fromArr(f), level(on.level), velSen(on.velSensitivity), EnvelopeSupport(on, mv)
+    OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f, const MonoValues &mv,
+               const VoiceValues &vv)
+        : monoValues(mv), voiceValues(vv), sr(mv), fromArr(f), level(on.level),
+          velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv)
     {
         memset(output, 0, sizeof(output));
     }
 
     void attack() { envAttack(); }
 
-    void renderBlock(bool gated, float velocity)
+    void renderBlock()
     {
         for (const auto &from : fromArr)
         {
@@ -230,12 +248,12 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
             mech::accumulate_from_to<blockSize>(from.output[1], output[1]);
         }
 
-        envProcess(gated, false);
+        envProcess(false);
         mech::scale_by<blockSize>(env.outputCache, output[0], output[1]);
 
         // Apply main output
         auto lv = level;
-        auto v = 1.0 - velSen * (1.0 - velocity);
+        auto v = 1.0 - velSen * (1.0 - voiceValues.velocity);
         lv = 0.2 * v * lv * lv * lv;
         mech::scale_by<blockSize>(lv, output[0], output[1]);
     }

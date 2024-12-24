@@ -5,7 +5,7 @@ SOURCE:
 - waveshapes:
   - TX waveshapes
   - maybe a smoothed-saw and smoothed-square if i can figure out an analytic form i like
-- 90%-100% of internal nyquist mute fades
+- 90%-100% of internal nyquist mute fades (maybe ship without this tho)
 
 MAIN:
 - Voice limit in Main Area hooked up
@@ -18,7 +18,7 @@ MODULATION:
 - Each item gets a modulation list from source set
 - Monophonic Midi source
 - Macro source
-- Polyphonic midi source 
+- Polyphonic Voice Source
 - MPE source
 - Note expressions?
 
@@ -35,7 +35,7 @@ GENERAL AND CLEANUPS
 - AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
 - Don't send VU etc when editor not attached
 - Edit area says "click a knbo to edit on startup"
-- LFO in Pulse and S&H need a tiny little LPF to avoid super-clicka on modulation nodes
+- LFO in Pulse and S&H need a tiny little LPF to avoid super-clicka on modulation nodes (but not ratio nodes)
 
 
 

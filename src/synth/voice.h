@@ -20,6 +20,7 @@
 #include "dsp/op_source.h"
 #include "dsp/matrix_node.h"
 #include "synth/mono_values.h"
+#include "synth/voice_values.h"
 
 struct MTSClient;
 
@@ -31,6 +32,7 @@ struct Voice
 {
     const float *const output[2];
     const MonoValues &monoValues;
+    VoiceValues voiceValues;
 
     Voice(const Patch &, const MonoValues &);
     ~Voice() = default;
@@ -38,10 +40,7 @@ struct Voice
     void attack();
     void renderBlock();
 
-    bool gated{false}, used{false};
-    int key{0};
-    int channel{0};
-    float velocity{1.0};
+    bool used{false};
 
     std::array<OpSource, numOps> src;
     std::array<bool, numOps> isKeytrack;

@@ -150,7 +150,8 @@ void Synth::dumpVoiceList()
     auto c = head;
     while (c)
     {
-        SXSNLOG("   c=" << std::hex << c << std::dec << " key=" << c->key << " u=" << c->used);
+        SXSNLOG("   c=" << std::hex << c << std::dec << " key=" << c->voiceValues.key
+                        << " u=" << c->used);
         c = c->next;
     }
 }

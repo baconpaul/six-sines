@@ -25,17 +25,21 @@ namespace baconpaul::six_sines
 namespace scpu = sst::cpputils;
 
 Voice::Voice(const Patch &p, const MonoValues &mv)
-    : monoValues(mv), out(p.output, mixerNode, mv), output{out.output[0], out.output[1]},
-      src(scpu::make_array_lambda<OpSource, numOps>([this, &p, &mv](auto i)
-                                                    { return OpSource(p.sourceNodes[i], mv); })),
+    : monoValues(mv), out(p.output, mixerNode, mv, voiceValues),
+      output{out.output[0], out.output[1]},
+      src(scpu::make_array_lambda<OpSource, numOps>(
+          [this, &p, &mv](auto i) { return OpSource(p.sourceNodes[i], mv, voiceValues); })),
       mixerNode(scpu::make_array_lambda<MixerNode, numOps>(
-          [this, &p, &mv](auto i) { return MixerNode(p.mixerNodes[i], this->src[i], mv); })),
+          [this, &p, &mv](auto i)
+          { return MixerNode(p.mixerNodes[i], this->src[i], mv, voiceValues); })),
       selfNode(scpu::make_array_lambda<MatrixNodeSelf, numOps>(
-          [this, &p, &mv](auto i) { return MatrixNodeSelf(p.selfNodes[i], this->src[i], mv); })),
+          [this, &p, &mv](auto i)
+          { return MatrixNodeSelf(p.selfNodes[i], this->src[i], mv, voiceValues); })),
       matrixNode(scpu::make_array_lambda<MatrixNodeFrom, matrixSize>(
-          [&p, this, &mv](auto i) {
+          [&p, this, &mv](auto i)
+          {
               return MatrixNodeFrom(p.matrixNodes[i], this->targetAtMatrix(i),
-                                    this->sourceAtMatrix(i), mv);
+                                    this->sourceAtMatrix(i), mv, voiceValues);
           }))
 {
     std::fill(isKeytrack.begin(), isKeytrack.end(), true);
@@ -54,15 +58,16 @@ void Voice::attack()
     for (auto &n : matrixNode)
         n.attack();
 
-    gated = true;
+    voiceValues.gated = true;
 }
 
 void Voice::renderBlock()
 {
-    float retuneKey = key;
+    float retuneKey = voiceValues.key;
     if (monoValues.mtsClient && MTS_HasMaster(monoValues.mtsClient))
     {
-        retuneKey += MTS_RetuningInSemitones(monoValues.mtsClient, key, channel);
+        retuneKey +=
+            MTS_RetuningInSemitones(monoValues.mtsClient, voiceValues.key, voiceValues.channel);
     }
     auto baseFreq = monoValues.tuningProvider.note_to_pitch(retuneKey - 69) * 440.0;
 
@@ -77,14 +82,14 @@ void Voice::renderBlock()
         for (auto j = 0; j < i; ++j)
         {
             auto pos = MatrixIndex::positionForSourceTarget(j, i);
-            matrixNode[pos].applyBlock(gated);
+            matrixNode[pos].applyBlock();
         }
-        selfNode[i].applyBlock(gated);
-        src[i].renderBlock(gated);
-        mixerNode[i].renderBlock(gated);
+        selfNode[i].applyBlock();
+        src[i].renderBlock();
+        mixerNode[i].renderBlock();
     }
 
-    out.renderBlock(gated, velocity);
+    out.renderBlock();
 
     if (fadeBlocks > 0)
     {

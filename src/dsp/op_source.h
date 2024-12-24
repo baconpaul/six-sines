@@ -24,6 +24,7 @@
 #include "dsp/node_support.h"
 #include "synth/patch.h"
 #include "synth/mono_values.h"
+#include "synth/voice_values.h"
 
 namespace baconpaul::six_sines
 {
@@ -38,6 +39,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     float output alignas(16)[blockSize];
 
     const MonoValues &monoValues;
+    const VoiceValues &voiceValues;
 
     bool keytrack{true};
     const float &ratio, &activeV, &envToRatio, &lfoToRatio, &lfoByEnv; // in  frequency multiple
@@ -48,9 +50,9 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     uint32_t phase;
     uint32_t dPhase;
 
-    OpSource(const Patch::SourceNode &sn, const MonoValues &mv)
-        : monoValues(mv), EnvelopeSupport(sn, mv), LFOSupport(sn, mv), ratio(sn.ratio),
-          activeV(sn.active), envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio),
+    OpSource(const Patch::SourceNode &sn, const MonoValues &mv, const VoiceValues &vv)
+        : monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv),
+          ratio(sn.ratio), activeV(sn.active), envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio),
           lfoByEnv(sn.envLfoSum)
     {
         reset();
@@ -84,7 +86,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     void setBaseFrequency(float freq) { baseFrequency = freq; }
 
     float priorRF{-10000000};
-    void renderBlock(bool gated)
+    void renderBlock()
     {
         if (!active)
         {
@@ -93,7 +95,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             fbVal[1] = 0.f;
             return;
         }
-        envProcess(gated);
+        envProcess();
         lfoProcess();
         auto lfoFac = lfoByEnv > 0.5 ? env.outputCache[blockSize - 1] : 1.f;
 
