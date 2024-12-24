@@ -33,7 +33,7 @@ std::string Patch::toState() const
     TiXmlDocument doc;
     TiXmlElement rootNode("patch");
     rootNode.SetAttribute("id", "org.baconpaul.six-sines");
-    rootNode.SetAttribute("version", "2");
+    rootNode.SetAttribute("version", Patch::patchVersion);
 
     TiXmlElement paramsNode("params");
 
@@ -80,7 +80,7 @@ bool Patch::fromState(const std::string &idata)
         SXSNLOG("No Version");
         return false;
     }
-    if (ver != 2)
+    if (ver < 2 || ver > Patch::patchVersion)
     {
         SXSNLOG("Unknown version " << ver);
         return false;
@@ -108,6 +108,8 @@ bool Patch::fromState(const std::string &idata)
             }
             else
             {
+                auto *param = it->second;
+                value = migrateParamValueFromVersion(param, value, ver);
                 it->second->value = value;
             }
         }
@@ -154,6 +156,8 @@ bool Patch::fromStateV1(const std::string &idata)
             }
             else
             {
+                auto *param = it->second;
+                vv = migrateParamValueFromVersion(param, vv, 1);
                 it->second->value = vv;
             }
         }
@@ -162,6 +166,46 @@ bool Patch::fromStateV1(const std::string &idata)
     }
 
     return true;
+}
+
+float Patch::migrateParamValueFromVersion(Param *p, float value, uint32_t version)
+{
+    if ((p->adhocFeatures & Param::AdHocFeatureValues::ENVTIME) && version <= 2)
+    {
+        /*
+         * This is a gross way to do this but really its just to not break
+         * Jacky's patches from the very first weekend, so...
+         */
+        static auto oldStyle = md_t().asFloat().asLog2SecondsRange(
+            sst::basic_blocks::modulators::TenSecondRange::etMin,
+            sst::basic_blocks::modulators::TenSecondRange::etMax);
+        ;
+        if (value < oldStyle.minVal + 0.0001)
+            return 0.f;
+        if (value > oldStyle.maxVal - 0.0001)
+            return 1.f;
+        auto osv = oldStyle.valueToString(value);
+        if (osv.has_value())
+        {
+            std::string em;
+            auto nsv = p->meta.valueFromString(*osv, em);
+            if (nsv.has_value())
+            {
+                SXSNLOG("Converting version " << version << " node '" << p->meta.name
+                                              << "' val=" << value << " -> " << *nsv);
+                value = *nsv;
+            }
+            else
+            {
+                value = 0.f;
+            }
+        }
+        else
+        {
+            value = 0.f;
+        }
+    }
+    return value;
 }
 
 } // namespace baconpaul::six_sines

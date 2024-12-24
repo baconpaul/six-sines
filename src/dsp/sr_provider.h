@@ -29,7 +29,9 @@ struct SRProvider
     {
         return (blockSize / gSampleRate) * monoValues.twoToTheX.twoToThe(-f);
     }
-    static constexpr float samplerate{gSampleRate};
+    static constexpr double samplerate{gSampleRate};
+    static constexpr double sampleRate{gSampleRate};
+    static constexpr double sampleRateInv{1.0 / gSampleRate};
 };
 } // namespace baconpaul::six_sines
 #endif // SR_PROVIDER_H

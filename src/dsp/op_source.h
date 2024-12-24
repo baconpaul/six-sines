@@ -95,10 +95,11 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         }
         envProcess(gated);
         lfoProcess();
-        auto lfoFac = lfoByEnv > 0.5 ? env.output : 1.f;
+        auto lfoFac = lfoByEnv > 0.5 ? env.outputCache[blockSize - 1] : 1.f;
 
-        auto rf = monoValues.twoToTheX.twoToThe(ratio + envToRatio * env.output +
-                                                lfoFac * lfoToRatio * lfo.outputBlock[0]);
+        auto rf =
+            monoValues.twoToTheX.twoToThe(ratio + envToRatio * env.outputCache[blockSize - 1] +
+                                          lfoFac * lfoToRatio * lfo.outputBlock[0]);
         if (priorRF < -10000)
             priorRF = rf;
         auto dRF = (priorRF - rf) / blockSize;

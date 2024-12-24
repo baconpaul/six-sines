@@ -19,7 +19,7 @@
 #include <cstring>
 #include <string.h>
 
-#include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
+#include "sst/basic-blocks/modulators/AHDSRShapedSC.h"
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
 
 #include "dsp/sr_provider.h"
@@ -34,21 +34,26 @@ template <typename T> struct EnvelopeSupport
     SRProvider sr;
 
     const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV;
+    const float &ash, &dsh, &rsh;
     EnvelopeSupport(const T &mn, const MonoValues &mv)
         : sr(mv), env(&sr), delay(mn.delay), attackv(mn.attack), hold(mn.hold), decay(mn.decay),
-          sustain(mn.sustain), release(mn.release), powerV(mn.envPower)
+          sustain(mn.sustain), release(mn.release), powerV(mn.envPower), ash(mn.aShape),
+          dsh(mn.dShape), rsh(mn.rShape)
     {
     }
 
     bool active{true}, constantEnv{false};
-    sst::basic_blocks::modulators::DAHDSREnvelope<SRProvider, blockSize> env;
+    using range_t = sst::basic_blocks::modulators::TwentyFiveSecondExp;
+    using env_t = sst::basic_blocks::modulators::AHDSRShapedSC<SRProvider, blockSize, range_t>;
+    env_t env;
 
     void envAttack()
     {
+        env.initializeLuts();
         active = powerV > 0.5;
 
-        auto mn = sst::basic_blocks::modulators::TenSecondRange::etMin + 0.001;
-        auto mx = sst::basic_blocks::modulators::TenSecondRange::etMax - 0.001;
+        auto mn = 0.0001;
+        auto mx = 1 - mn;
 
         if (decay < mn && attackv < mn && hold < mn && delay < mn && release > mx)
         {
@@ -60,7 +65,7 @@ template <typename T> struct EnvelopeSupport
         }
 
         if (active && !constantEnv)
-            env.attack(delay);
+            env.attackFromWithDelay(0.f, delay, attackv);
         else if (constantEnv)
         {
             for (int i = 0; i < blockSize; ++i)
@@ -74,7 +79,8 @@ template <typename T> struct EnvelopeSupport
         if (!active || constantEnv)
             return;
 
-        env.processBlockScaledAD(delay, attackv, hold, decay, sustain, release, gated);
+        env.processBlockWithDelay(delay, attackv, hold, decay, sustain, release, ash, dsh, rsh,
+                                  gated, true);
     }
 };
 

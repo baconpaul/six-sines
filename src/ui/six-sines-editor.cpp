@@ -312,7 +312,7 @@ struct MenuValueTypein : HasEditor, juce::PopupMenu::CustomComponent, juce::Text
 
     MenuValueTypein(SixSinesEditor &editor,
                     juce::Component::SafePointer<jcmp::ContinuousParamEditor> under)
-        : HasEditor(editor), underComp(under)
+        : juce::PopupMenu::CustomComponent(false), HasEditor(editor), underComp(under)
     {
         textEditor = std::make_unique<juce::TextEditor>();
         textEditor->setWantsKeyboardFocus(true);
