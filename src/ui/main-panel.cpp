@@ -26,11 +26,32 @@ MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
     lev->setDrawLabel(false);
     addAndMakeVisible(*lev);
     levLabel = std::make_unique<jcmp::Label>();
-    levLabel->setText("Main Level");
+    levLabel->setText("Level");
     addAndMakeVisible(*levLabel);
 
-    vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::VERTICAL);
+    vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::HORIZONTAL);
     addAndMakeVisible(*vuMeter);
+
+    voiceCount = std::make_unique<jcmp::Label>();
+    voiceCount->setJustification(juce::Justification::centredLeft);
+    addAndMakeVisible(*voiceCount);
+    setVoiceCount(0);
+
+    vcOf = std::make_unique<jcmp::Label>();
+    vcOf->setText("/");
+    vcOf->setJustification(juce::Justification::centredRight);
+    addAndMakeVisible(*vcOf);
+
+    voiceLimit = std::make_unique<jcmp::MenuButton>();
+    voiceLimit->setLabel("64");
+    voiceLimit->setOnCallback(
+        [this]()
+        {
+            auto p = juce::PopupMenu();
+            p.addSectionHeader("Coming Soon");
+            p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
+        });
+    addAndMakeVisible(*voiceLimit);
 
     highlight = std::make_unique<KnobHighlight>();
     addChildComponent(*highlight);
@@ -41,12 +62,15 @@ void MainPanel::resized()
 {
     auto b = getContentArea().reduced(uicMargin, 0);
 
-    b = juce::Rectangle<int>(b.getX(), b.getY(), uicKnobSize + uicPowerButtonSize + uicMargin,
-                             uicKnobSize);
-    lev->setBounds(b.withTrimmedLeft(uicPowerButtonSize + uicMargin));
-    vuMeter->setBounds(
-        b.withWidth(uicPowerButtonSize).withTrimmedRight(2).withTrimmedTop(2).withTrimmedLeft(2));
-    levLabel->setBounds(b.translated(0, uicKnobSize + uicLabelGap).withHeight(uicLabelHeight));
+    positionKnobAndLabel(b.getX(), b.getY(), lev, levLabel);
+
+    auto vum = b.withTrimmedLeft(uicKnobSize + 2 * uicMargin).withHeight(b.getHeight() / 3);
+    vuMeter->setBounds(vum);
+
+    auto lp = vum.translated(0, vum.getHeight() + uicMargin);
+    voiceCount->setBounds(lp);
+    vcOf->setBounds(lp.withTrimmedRight(vum.getWidth() * 0.6));
+    voiceLimit->setBounds(lp.withTrimmedLeft(vum.getWidth() * 0.4 + uicMargin));
 }
 
 void MainPanel::beginEdit()
@@ -58,7 +82,7 @@ void MainPanel::beginEdit()
 
     highlight->setVisible(true);
     auto b = getContentArea().reduced(uicMargin, 0);
-    highlight->setBounds(b.getX(), b.getY(), uicPowerKnobWidth + 2, uicLabeledKnobHeight);
+    highlight->setBounds(b.getX(), b.getY(), uicKnobSize + uicMargin, uicLabeledKnobHeight);
     highlight->toBack();
 }
 

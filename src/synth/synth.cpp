@@ -97,6 +97,9 @@ void Synth::process(const clap_output_events_t *outq)
         {
             AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
             audioToUi.push(msg);
+
+            AudioToUIMsg msg2{AudioToUIMsg::UPDATE_VOICE_COUNT, (uint32_t)voiceCount};
+            audioToUi.push(msg2);
             lastVuUpdate = 0;
         }
         else
@@ -117,6 +120,7 @@ void Synth::addToVoiceList(Voice *v)
         v->next->prior = v;
     }
     head = v;
+    voiceCount++;
 }
 
 Voice *Synth::removeFromVoiceList(Voice *cvoice)
@@ -138,6 +142,8 @@ Voice *Synth::removeFromVoiceList(Voice *cvoice)
     cvoice->fadeBlocks = -1;
     cvoice->next = nullptr;
     cvoice->prior = nullptr;
+
+    voiceCount--;
     return nv;
 }
 

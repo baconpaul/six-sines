@@ -60,6 +60,7 @@ struct Synth
     void addToVoiceList(Voice *);
     Voice *removeFromVoiceList(Voice *); // returns next
     void dumpVoiceList();
+    int voiceCount{0};
 
     struct VMResponder
     {
@@ -179,6 +180,7 @@ struct Synth
         {
             UPDATE_PARAM,
             UPDATE_VU,
+            UPDATE_VOICE_COUNT
         } action;
         uint32_t paramId{0};
         float value{0}, value2{0};

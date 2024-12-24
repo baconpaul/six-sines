@@ -135,6 +135,11 @@ void SixSinesEditor::idle()
         {
             mainPanel->vuMeter->setLevels(aum->value, aum->value2);
         }
+        else if (aum->action == Synth::AudioToUIMsg::UPDATE_VOICE_COUNT)
+        {
+            mainPanel->setVoiceCount(aum->paramId);
+            mainPanel->repaint();
+        }
         aum = audioToUI.pop();
     }
 }
