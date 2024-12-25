@@ -26,6 +26,7 @@
 #include "sst/basic-blocks/params/ParamMetadata.h"
 #include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
 #include "synth/matrix_index.h"
+#include "dsp/sintable.h"
 
 namespace baconpaul::six_sines
 {
@@ -46,7 +47,7 @@ struct Param
     operator const float &() const { return value; }
 
     uint64_t adhocFeatures{0};
-    enum AdHocFeatureValues
+    enum AdHocFeatureValues : uint64_t
     {
         ENVTIME = 1 << 0 // tag for ADSR envs we changed version 2-3
     };
@@ -310,7 +311,16 @@ struct Patch
                             .withRange(0, 1)
                             .withDefault(0)
                             .withUnorderedMapFormatting({{0, "+"}, {1, "x"}})),
-
+              waveForm(intMd()
+                           .withName(name(idx) + " Waveform")
+                           .withGroupName(name(idx))
+                           .withID(id(5, idx))
+                           .withRange(0, SinTable::WaveForm::NUM_WAVEFORMS - 1)
+                           .withDefault(0)
+                           .withUnorderedMapFormatting({
+                               {SinTable::WaveForm::SIN, "Sin"},
+                               {SinTable::WaveForm::SIN_FIFTH, "Sin^5"},
+                           })),
               DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx))
         {
         }
@@ -325,9 +335,12 @@ struct Patch
         Param lfoToRatio;
         Param envLfoSum;
 
+        Param waveForm;
+
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&ratio, &active, &envToRatio, &lfoToRatio, &envLfoSum};
+            std::vector<Param *> res{&ratio,      &active,    &envToRatio,
+                                     &lfoToRatio, &envLfoSum, &waveForm};
             appendDAHDSRParams(res);
             appendLFOParams(res);
             return res;

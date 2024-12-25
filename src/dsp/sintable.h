@@ -16,6 +16,7 @@
 #ifndef BACONPAUL_SIX_SINES_DSP_SINTABLE_H
 #define BACONPAUL_SIX_SINES_DSP_SINTABLE_H
 
+#include <cassert>
 #include "configuration.h"
 #include <sst/basic-blocks/simd/setup.h>
 
@@ -23,26 +24,53 @@ namespace baconpaul::six_sines
 {
 struct SinTable
 {
+    enum WaveForm
+    {
+        SIN = 0, // these stream so you know....
+        SIN_FIFTH,
+
+        NUM_WAVEFORMS
+    };
+
     static constexpr size_t nPoints{1 << 12};
-    float quadrantTable[4][nPoints + 1];
-    float dQuadrantTable[4][nPoints + 1];
+    float quadrantTable[NUM_WAVEFORMS][4][nPoints + 1];
+    float dQuadrantTable[NUM_WAVEFORMS][4][nPoints + 1];
 
     float cubicHermiteCoefficients[4][nPoints];
     float linterpCoefficients[2][nPoints];
 
-    SIMD_M128 simdQuad alignas(16)[4 * nPoints]; // for each quad it is q, q+1, dq + 1
-    SIMD_M128 simdCubic alignas(16)[nPoints];    // it is cq, cq+1, cdq, cd1+1
+    SIMD_M128
+        simdFullQuad alignas(16)[NUM_WAVEFORMS][4 * nPoints]; // for each quad it is q, q+1, dq + 1
+    SIMD_M128 *simdQuad;
+    SIMD_M128 simdCubic alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
 
     SinTable()
     {
+        simdQuad = simdFullQuad[0];
+        memset(quadrantTable, 0, sizeof(quadrantTable));
+        memset(dQuadrantTable, 0, sizeof(dQuadrantTable));
+
+        // Waveform 0: Pure sine
         for (int i = 0; i < nPoints + 1; ++i)
         {
-            for (int j = 0; j < 4; ++j)
+            for (int Q = 0; Q < 4; ++Q)
             {
-                auto s = sin((1.0 * i / (nPoints - 1) + j) * M_PI / 2.0);
-                auto c = cos((1.0 * i / (nPoints - 1) + j) * M_PI / 2.0);
-                quadrantTable[j][i] = s;
-                dQuadrantTable[j][i] = c / (nPoints - 1);
+                auto s = sin((1.0 * i / (nPoints - 1) + Q) * M_PI / 2.0);
+                auto c = cos((1.0 * i / (nPoints - 1) + Q) * M_PI / 2.0);
+                quadrantTable[0][Q][i] = s;
+                dQuadrantTable[0][Q][i] = c / (nPoints - 1);
+            }
+        }
+
+        // Waveform 1: sin(x) ^ 5. Derivative is 5 sin(x)^4 cos(x)
+        for (int i = 0; i < nPoints + 1; ++i)
+        {
+            for (int Q = 0; Q < 4; ++Q)
+            {
+                auto s = sin((1.0 * i / (nPoints - 1) + Q) * M_PI / 2.0);
+                auto c = cos((1.0 * i / (nPoints - 1) + Q) * M_PI / 2.0);
+                quadrantTable[1][Q][i] = s * s * s * s * s;
+                dQuadrantTable[1][Q][i] = 5 * s * s * s * s * c / (nPoints - 1);
             }
         }
 
@@ -64,16 +92,20 @@ struct SinTable
             linterpCoefficients[1][i] = t;
         }
 
+        // Load the SIMD buffers
         for (int i = 0; i < nPoints; ++i)
         {
-            for (int j = 0; j < 4; ++j)
+            for (int WF = 0; WF < NUM_WAVEFORMS; ++WF)
             {
-                float r alignas(16)[4];
-                r[0] = quadrantTable[j][i];
-                r[1] = dQuadrantTable[j][i];
-                r[2] = quadrantTable[j][i + 1];
-                r[3] = dQuadrantTable[j][i + 1];
-                simdQuad[nPoints * j + i] = SIMD_MM(load_ps)(r);
+                for (int Q = 0; Q < 4; ++Q)
+                {
+                    float r alignas(16)[4];
+                    r[0] = quadrantTable[WF][Q][i];
+                    r[1] = dQuadrantTable[WF][Q][i];
+                    r[2] = quadrantTable[WF][Q][i + 1];
+                    r[3] = dQuadrantTable[WF][Q][i + 1];
+                    simdFullQuad[WF][nPoints * Q + i] = SIMD_MM(load_ps)(r);
+                }
             }
 
             {
@@ -85,6 +117,14 @@ struct SinTable
                 simdCubic[i] = SIMD_MM(load_ps)(r);
             }
         }
+    }
+
+    void setWaveForm(WaveForm wf)
+    {
+        auto stwf = size_t(wf);
+        if (stwf >= NUM_WAVEFORMS) // mostly remove ine during dev
+            stwf = 0;
+        simdQuad = simdFullQuad[stwf];
     }
 
     static constexpr double frToPhase{(1 << 26) / gSampleRate};

@@ -43,6 +43,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     bool keytrack{true};
     const float &ratio, &activeV, &envToRatio, &lfoToRatio, &lfoByEnv; // in  frequency multiple
+    const float &waveForm;
     bool active{false};
 
     // todo waveshape
@@ -53,7 +54,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     OpSource(const Patch::SourceNode &sn, const MonoValues &mv, const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv),
           ratio(sn.ratio), activeV(sn.active), envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio),
-          lfoByEnv(sn.envLfoSum)
+          lfoByEnv(sn.envLfoSum), waveForm(sn.waveForm)
     {
         reset();
     }
@@ -67,6 +68,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         phase = 4 << 27;
         fbVal[0] = 0.f;
         fbVal[1] = 0.f;
+        auto wf = (SinTable::WaveForm)std::round(waveForm);
+        st.setWaveForm(wf);
     }
 
     void zeroInputs()

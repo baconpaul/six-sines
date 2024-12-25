@@ -95,6 +95,8 @@ struct PatchDiscrete : jdat::Discrete
     SixSinesEditor &editor;
     uint32_t pid;
     Param *p{nullptr};
+    std::function<void()> onGuiSetValue{nullptr};
+
     PatchDiscrete(SixSinesEditor &e, uint32_t id) : editor(e), pid(id)
     {
         if (e.patchCopy.paramMap.find(id) == e.patchCopy.paramMap.end())
@@ -126,6 +128,9 @@ struct PatchDiscrete : jdat::Discrete
         p->value = f;
         editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pid, static_cast<float>(f)});
         editor.flushOperator();
+
+        if (onGuiSetValue)
+            onGuiSetValue();
     }
     void setValueFromModel(const int &f) override { p->value = f; }
     int getDefaultValue() const override

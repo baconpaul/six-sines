@@ -16,11 +16,41 @@
 #include "source-sub-panel.h"
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
+#include "dsp/sintable.h" // for drawing
 
 namespace baconpaul::six_sines::ui
 {
 SourceSubPanel::SourceSubPanel(SixSinesEditor &e) : HasEditor(e) { setSelectedIndex(0); };
 SourceSubPanel::~SourceSubPanel() {}
+
+struct WavPainter : juce::Component
+{
+    const Param &wf;
+    SinTable st;
+    WavPainter(const Param &w) : wf(w) {}
+
+    void paint(juce::Graphics &g)
+    {
+        st.setWaveForm((SinTable::WaveForm)std::round(wf.value));
+        uint32_t phase{0};
+        int nPixels{getWidth()};
+        auto dPhase = (1 << 27) / (nPixels - 1);
+        auto p = juce::Path();
+        for (int i = 0; i < nPixels; ++i)
+        {
+            auto sv = st.at(phase);
+            auto x = i;
+            auto y = (1 - (sv + 1) * 0.5) * getHeight();
+            if (i == 0)
+                p.startNewSubPath(x, y);
+            else
+                p.lineTo(x, y);
+            phase += dPhase;
+        }
+        g.setColour(juce::Colours::white);
+        g.strokePath(p, juce::PathStrokeType(1));
+    }
+};
 
 void SourceSubPanel::setSelectedIndex(size_t idx)
 {
@@ -53,6 +83,17 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     modTitle->setText("Depth");
     addAndMakeVisible(*modTitle);
 
+    wavTitle = std::make_unique<RuledLabel>();
+    wavTitle->setText("Wave");
+    addAndMakeVisible(*wavTitle);
+
+    createComponent(editor, *this, sn.waveForm, wavButton, wavButtonD);
+    addAndMakeVisible(*wavButton);
+    wavButtonD->onGuiSetValue = [this]() { wavPainter->repaint(); };
+
+    wavPainter = std::make_unique<WavPainter>(sn.waveForm);
+    addAndMakeVisible(*wavPainter);
+
     resized();
 }
 
@@ -68,13 +109,21 @@ void SourceSubPanel::resized()
 
     auto depx = r.getX() + 2 * uicMargin;
     auto depy = r.getY();
-    auto xtraW = 4;
-    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, modTitle);
+    positionTitleLabelAt(depx, depy, uicKnobSize * 2 + uicMargin, modTitle);
 
-    depx += xtraW;
     depy += uicTitleLabelHeight;
     positionKnobAndLabel(depx, depy, envToRatio, envToRatioL);
-    depy += uicLabeledKnobHeight + uicMargin;
+    depx += uicKnobSize + uicMargin;
     positionKnobAndLabel(depx, depy, lfoToRatio, lfoToRatioL);
+
+    depx = r.getX() + 2 * uicMargin;
+    depy += uicLabeledKnobHeight + uicMargin;
+
+    positionTitleLabelAt(depx, depy, uicKnobSize * 2 + uicMargin, wavTitle);
+    depy += uicTitleLabelHeight;
+    wavButton->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight);
+
+    depy += uicLabelHeight + uicMargin;
+    wavPainter->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight * 2.5);
 }
 } // namespace baconpaul::six_sines::ui

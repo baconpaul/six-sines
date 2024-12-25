@@ -17,6 +17,7 @@
 #define BACONPAUL_SIX_SINES_UI_SOURCE_SUB_PANEL_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "sst/jucegui/components/JogUpDownButton.h"
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
 #include "lfo-components.h"
@@ -50,7 +51,12 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::MultiSwitch> lfoMul;
     std::unique_ptr<PatchDiscrete> lfoMulD;
 
-    std::unique_ptr<RuledLabel> modTitle;
+    std::unique_ptr<jcmp::JogUpDownButton> wavButton;
+    std::unique_ptr<PatchDiscrete> wavButtonD;
+
+    std::unique_ptr<RuledLabel> modTitle, wavTitle;
+
+    std::unique_ptr<juce::Component> wavPainter;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H
