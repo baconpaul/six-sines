@@ -18,6 +18,8 @@
 
 #include <cassert>
 #include <cstring>
+#include <functional>
+#include <utility>
 
 #include "configuration.h"
 #include <sst/basic-blocks/simd/setup.h>
@@ -50,7 +52,7 @@ struct SinTable
     SIMD_M128 *simdQuad;
     SIMD_M128 simdCubic alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
 
-    void fillTable(int WF, std::function<std::pair<float, float>(double x, int Q)> der)
+    void fillTable(int WF, std::function<std::pair<double, double>(double x, int Q)> der)
     {
         static constexpr double dxdPhase = 1.0 / (nQuadrants * (nPoints - 1));
         for (int Q = 0; Q < nQuadrants; ++Q)
@@ -58,8 +60,8 @@ struct SinTable
             for (int i = 0; i < nPoints + 1; ++i)
             {
                 auto [v, dvdx] = der(xTable[Q][i], Q);
-                quadrantTable[WF][Q][i] = v;
-                dQuadrantTable[WF][Q][i] = dvdx * dxdPhase;
+                quadrantTable[WF][Q][i] = static_cast<float>(v);
+                dQuadrantTable[WF][Q][i] = static_cast<float>(dvdx * dxdPhase);
             }
         }
     }
