@@ -36,17 +36,33 @@ struct SinTable
         NUM_WAVEFORMS
     };
 
-    static constexpr size_t nPoints{1 << 12};
-    float quadrantTable[NUM_WAVEFORMS][4][nPoints + 1];
-    float dQuadrantTable[NUM_WAVEFORMS][4][nPoints + 1];
+    static constexpr size_t nPoints{1 << 12}, nQuadrants{4};
+    double xTable[nQuadrants][nPoints + 1];
+    float quadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
+    float dQuadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
 
-    float cubicHermiteCoefficients[4][nPoints];
+    float cubicHermiteCoefficients[nQuadrants][nPoints];
     float linterpCoefficients[2][nPoints];
 
     SIMD_M128
-    simdFullQuad alignas(16)[NUM_WAVEFORMS][4 * nPoints]; // for each quad it is q, q+1, dq + 1
+    simdFullQuad alignas(
+        16)[NUM_WAVEFORMS][nQuadrants * nPoints]; // for each quad it is q, q+1, dq + 1
     SIMD_M128 *simdQuad;
     SIMD_M128 simdCubic alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
+
+    void fillTable(int WF, std::function<std::pair<float, float>(double x, int Q)> der)
+    {
+        static constexpr double dxdPhase = 1.0 / (nQuadrants * (nPoints - 1));
+        for (int Q = 0; Q < nQuadrants; ++Q)
+        {
+            for (int i = 0; i < nPoints + 1; ++i)
+            {
+                auto [v, dvdx] = der(xTable[Q][i], Q);
+                quadrantTable[WF][Q][i] = v;
+                dQuadrantTable[WF][Q][i] = dvdx * dxdPhase;
+            }
+        }
+    }
 
     SinTable()
     {
@@ -54,95 +70,90 @@ struct SinTable
         memset(quadrantTable, 0, sizeof(quadrantTable));
         memset(dQuadrantTable, 0, sizeof(dQuadrantTable));
 
-        // Waveform 0: Pure sine
         for (int i = 0; i < nPoints + 1; ++i)
         {
-            for (int Q = 0; Q < 4; ++Q)
+            for (int Q = 0; Q < nQuadrants; ++Q)
             {
-                auto s = sin((1.0 * i / (nPoints - 1) + Q) * M_PI / 2.0);
-                auto c = cos((1.0 * i / (nPoints - 1) + Q) * M_PI / 2.0);
-                quadrantTable[0][Q][i] = s;
-                dQuadrantTable[0][Q][i] = c / (nPoints - 1);
+                xTable[Q][i] = (1.0 * i / (nPoints - 1) + Q) * 0.25;
             }
         }
 
-        // Waveform 1: sin(x) ^ 5. Derivative is 5 sin(x)^4 cos(x)
-        for (int i = 0; i < nPoints + 1; ++i)
-        {
-            for (int Q = 0; Q < 4; ++Q)
-            {
-                auto s = sin((1.0 * i / (nPoints - 1) + Q) * M_PI / 2.0);
-                auto c = cos((1.0 * i / (nPoints - 1) + Q) * M_PI / 2.0);
-                quadrantTable[1][Q][i] = s * s * s * s * s;
-                dQuadrantTable[1][Q][i] = 5 * s * s * s * s * c / (nPoints - 1);
-            }
-        }
+        static constexpr double twoPi{2.0 * M_PI};
+        // Waveform 0: sin(2pix);
+        fillTable(WaveForm::SIN, [](double x, int Q)
+                  { return std::make_pair(sin(twoPi * x), twoPi * cos(twoPi * x)); });
+
+        // Waveform 1: sin(2pix)^4. Deriv is 5 2pix sin(2pix)^4 cos(2pix)
+        fillTable(WaveForm::SIN_FIFTH,
+                  [](double x, int Q)
+                  {
+                      auto s = sin(twoPi * x);
+                      auto c = cos(twoPi * x);
+                      auto v = s * s * s * s * s;
+                      auto dv = 5 * twoPi * s * s * s * s * c;
+                      return std::make_pair(v, dv);
+                  });
 
         // Waveform 2: Square-ish with sin 8 transitions
-        static constexpr float winFreq{8.0};
-        static constexpr float dFr{1.0 / (4 * winFreq)};
-        for (int i = 0; i < nPoints + 1; ++i)
-        {
-            for (int Q = 0; Q < 4; ++Q)
-            {
-                auto x = (1.0 * i / (nPoints - 1) + Q) * 0.25;
-                float v{0}, dv{0};
-                if (x <= dFr || x > 1.0 - dFr)
-                {
-                    v = sin(2.0 * M_PI * winFreq * x);
-                    dv = winFreq * 2.0 * M_PI * cos(2.0 * M_PI * 4 * x);
-                }
-                else if (x <= 0.5 - dFr)
-                {
-                    v = 1.0;
-                    dv = 0.0;
-                }
-                else if (x < 0.5 + dFr)
-                {
-                    v = -sin(2.0 * M_PI * winFreq * x);
-                    dv = winFreq * -2.0 * M_PI * cos(2.0 * M_PI * winFreq * x);
-                }
-                else
-                {
-                    v = -1.0;
-                    dv = 0.0;
-                }
-                quadrantTable[2][Q][i] = v;
-                dQuadrantTable[2][Q][i] = dv / (nPoints - 1);
-            }
-        }
+        fillTable(WaveForm::SQUARISH,
+                  [](double x, int Q)
+                  {
+                      static constexpr double winFreq{8.0};
+                      static constexpr double dFr{1.0 / (4 * winFreq)};
+                      static constexpr double twoPiF{twoPi * winFreq};
+                      float v{0}, dv{0};
+                      if (x <= dFr || x > 1.0 - dFr)
+                      {
+                          v = sin(twoPiF * x);
+                          dv = twoPiF * cos(2.0 * M_PI * 4 * x);
+                      }
+                      else if (x <= 0.5 - dFr)
+                      {
+                          v = 1.0;
+                          dv = 0.0;
+                      }
+                      else if (x < 0.5 + dFr)
+                      {
+                          v = -sin(twoPiF * x);
+                          dv = twoPiF * cos(2.0 * M_PI * winFreq * x);
+                      }
+                      else
+                      {
+                          v = -1.0;
+                          dv = 0.0;
+                      }
+                      return std::make_pair(v, dv);
+                  });
 
-        // Waveform 3: Saw-ish with sin 8 transitions
-        // What we need is the point where the derivatie of sin 16pi x = deriv -2x
-        // or 16pi cos(16pix) = -2
-        // or x = 1/16pix * acos(-2/16pi)
-        static constexpr float sqrFreq{4};
-        auto osp = 1.0 / (sqrFreq * 2 * M_PI);
-        auto co = osp * acos(-2 * osp) / (2.0 * M_PI);
-        for (int i = 0; i < nPoints + 1; ++i)
-        {
-            for (int Q = 0; Q < 4; ++Q)
-            {
-                auto x = (1.0 * i / (nPoints - 1) + Q) * 0.25;
-                float v{0}, dv{0};
-                if (x <= co || x > 1.0 - co)
-                {
-                    v = sin(2.0 * M_PI * sqrFreq * x);
-                    dv = sqrFreq * 2.0 * M_PI * cos(2.0 * M_PI * 4 * x);
-                    if (dv < 0 && dv > -3)
-                        SXSNLOG(x << " " << v << " " << dv);
-                }
-                else
-                {
-                    v = 1.0 - 2 * x;
-                    dv = -2.0;
-                }
+        // Waveform 3: Saw-ish with sin 4 transitions
+        // What we need is the point where the derivatie of sin n 2pi x = deriv -2x
+        // or n 2pi cos(n 2pix) = -2
+        // or x = 1/n 2pix * acos(-2/n 2pi)
+        static constexpr double sqrFreq{4};
+        static constexpr double twoPiS{sqrFreq * twoPi};
+        auto osp = 1.0 / (twoPiS);
+        auto co = osp * acos(-2 * osp) / (twoPi /* rad->0.1 units */);
 
-                quadrantTable[3][Q][i] = -v;
-                dQuadrantTable[3][Q][i] = -dv / (nPoints - 1);
-            }
-        }
+        fillTable(WaveForm::SAWISH,
+                  [co](double x, int Q)
+                  {
+                      float v{0}, dv{0};
+                      if (x <= co || x > 1.0 - co)
+                      {
+                          v = sin(twoPiS * x);
+                          dv = twoPiS * cos(twoPiS * x);
+                      }
+                      else
+                      {
+                          v = 1.0 - 2 * x;
+                          dv = -2.0;
+                      }
 
+                      // Above is a downward saw and we want upward
+                      return std::make_pair(-v, -dv);
+                  });
+
+        // Fill up interp buffers
         for (int i = 0; i < nPoints; ++i)
         {
             auto t = 1.f * i / (1 << 12);
