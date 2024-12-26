@@ -27,7 +27,7 @@ namespace mech = sst::basic_blocks::mechanics;
 namespace sdsp = sst::basic_blocks::dsp;
 
 Synth::Synth()
-    : responder(*this),
+    : responder(*this), monoResponder(*this),
       voices(sst::cpputils::make_array<Voice, VMConfig::maxVoiceCount>(patch, monoValues))
 {
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);

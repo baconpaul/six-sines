@@ -24,11 +24,12 @@ PRESETS:
 - preset scan user directory to make tree
 
 PLAY MODE:
-- Pitch Bend support
 - Portamento maybe
 - An envelope retrigger legato more where envelopes are opt-in to retrigger even on gated voices
 
 GENERAL AND CLEANUPS
+- Ctrl/Knob quantizes on ratio to PO2
+- Show ratios as 1/2.5 not .46 and allow typein in same format
 - AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
 - Don't send VU etc when editor not attached
 - LFO in Pulse and S&H need a tiny little LPF to avoid super-clicka on modulation nodes (but not ratio nodes)

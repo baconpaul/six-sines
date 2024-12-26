@@ -228,12 +228,13 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &level, &velSen;
+    const float &level, &velSen, &bendUp, &bendDown;
+    ;
 
     OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f, const MonoValues &mv,
                const VoiceValues &vv)
-        : monoValues(mv), voiceValues(vv), sr(mv), fromArr(f), level(on.level),
-          velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv)
+        : monoValues(mv), voiceValues(vv), sr(mv), fromArr(f), level(on.level), bendUp(on.bendUp),
+          bendDown(on.bendDown), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv)
     {
         memset(output, 0, sizeof(output));
     }

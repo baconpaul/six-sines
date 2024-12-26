@@ -19,6 +19,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "sst/jucegui/components/Knob.h"
 #include "sst/jucegui/components/MultiSwitch.h"
+#include "sst/jucegui/components/DraggableTextEditableValue.h"
 #include "patch-data-bindings.h"
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
@@ -41,7 +42,11 @@ struct MainSubPanel : juce::Component, HasEditor, DAHDSRComponents<MainSubPanel,
     std::unique_ptr<jcmp::MultiSwitch> playMode;
     std::unique_ptr<PatchDiscrete> playModeD;
 
-    std::unique_ptr<RuledLabel> velTitle;
+    std::unique_ptr<RuledLabel> velTitle, bendTitle;
+
+    std::unique_ptr<jcmp::Label> bUpL, bDnL;
+    std::unique_ptr<PatchContinuous> bUpD, bDnD;
+    std::unique_ptr<jcmp::DraggableTextEditableValue> bUp, bDn;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

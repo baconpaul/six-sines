@@ -69,6 +69,7 @@ void Voice::renderBlock()
         retuneKey +=
             MTS_RetuningInSemitones(monoValues.mtsClient, voiceValues.key, voiceValues.channel);
     }
+    retuneKey += ((monoValues.pitchBend >= 0) ? out.bendUp : out.bendDown) * monoValues.pitchBend;
     auto baseFreq = monoValues.tuningProvider.note_to_pitch(retuneKey - 69) * 440.0;
 
     for (int i = 0; i < numOps; ++i)

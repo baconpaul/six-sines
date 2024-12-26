@@ -148,7 +148,13 @@ struct Synth
     };
     struct VMMonoResponder
     {
-        void setMIDIPitchBend(int16_t, int16_t) {}
+        Synth &synth;
+        VMMonoResponder(Synth &s) : synth(s) {}
+
+        void setMIDIPitchBend(int16_t c, int16_t v)
+        {
+            synth.monoValues.pitchBend = (v - 8192) * 1.0 / 8192;
+        }
         void setMIDI1CC(int16_t, int16_t, int8_t) {}
         void setMIDIChannelPressure(int16_t, int16_t) {}
     };

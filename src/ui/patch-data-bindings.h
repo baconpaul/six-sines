@@ -20,6 +20,7 @@
 #include "sst/jucegui/data/Continuous.h"
 #include "sst/jucegui/data/Discrete.h"
 #include "sst/jucegui/components/Knob.h"
+#include "sst/jucegui/components/DraggableTextEditableValue.h"
 
 #include "six-sines-editor.h"
 
@@ -149,7 +150,8 @@ void createComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique
     pc = std::make_unique<Q>(e, id);
     cm = std::make_unique<T>();
 
-    if constexpr (std::is_same_v<Q, PatchContinuous>)
+    if constexpr (std::is_same_v<Q, PatchContinuous> &&
+                  !std::is_same_v<T, jcmp::DraggableTextEditableValue>) // hack
     {
         cm->onPopupMenu = [&e, ptr = cm.get()](auto &mods)
         {

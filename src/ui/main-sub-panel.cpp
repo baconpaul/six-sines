@@ -35,6 +35,21 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     createComponent(editor, *this, e.patchCopy.output.playMode, playMode, playModeD);
     playMode->direction = sst::jucegui::components::MultiSwitch::VERTICAL;
     addAndMakeVisible(*playMode);
+
+    createComponent(editor, *this, e.patchCopy.output.bendUp, bUp, bUpD);
+    createComponent(editor, *this, e.patchCopy.output.bendDown, bDn, bDnD);
+    bUpL = std::make_unique<jcmp::Label>();
+    bUpL->setText("Up");
+    bDnL = std::make_unique<jcmp::Label>();
+    bDnL->setText("Dn");
+    bendTitle = std::make_unique<RuledLabel>();
+    bendTitle->setText("Bend");
+
+    addAndMakeVisible(*bendTitle);
+    addAndMakeVisible(*bUp);
+    addAndMakeVisible(*bUpL);
+    addAndMakeVisible(*bDn);
+    addAndMakeVisible(*bDnL);
 };
 MainSubPanel::~MainSubPanel() {}
 
@@ -53,6 +68,21 @@ void MainSubPanel::resized()
     positionKnobAndLabel(depx, depy, velSen, velSenL);
     auto bx = velSen->getBounds().translated(0, uicLabeledKnobHeight + uicMargin);
     playMode->setBounds(bx);
+
+    depx = r.getX() + 2 * uicMargin + uicKnobSize + 2 * xtraW + uicMargin;
+    depy = r.getY();
+    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, bendTitle);
+
+    auto bdw = uicKnobSize + 2 * xtraW;
+    depy += uicTitleLabelHeight;
+    auto bbx = juce::Rectangle<int>(depx, depy, bdw, uicLabelHeight);
+    bUp->setBounds(bbx);
+    bbx = bbx.translated(0, uicLabelHeight + uicMargin);
+    bUpL->setBounds(bbx);
+    bbx = bbx.translated(0, uicLabelHeight + uicMargin);
+    bDn->setBounds(bbx);
+    bbx = bbx.translated(0, uicLabelHeight + uicMargin);
+    bDnL->setBounds(bbx);
 }
 
 } // namespace baconpaul::six_sines::ui

@@ -568,7 +568,21 @@ struct Patch
                            .withGroupName(name())
                            .withDefault(0)
                            .withID(id(13))
-                           .withUnorderedMapFormatting({{0, "Poly"}, {1, "Mono"}, {2, "Legato"}}))
+                           .withUnorderedMapFormatting({{0, "Poly"}, {1, "Mono"}, {2, "Legato"}})),
+              bendUp(floatMd()
+                         .withRange(0, 24)
+                         .withName(name() + " PB Up")
+                         .withGroupName(name())
+                         .withDefault(2)
+                         .withID(id(14))
+                         .withLinearScaleFormatting("")),
+              bendDown(floatMd()
+                           .withRange(0, 24)
+                           .withName(name() + " PB Up")
+                           .withGroupName(name())
+                           .withDefault(2)
+                           .withID(id(15))
+                           .withLinearScaleFormatting(""))
         {
         }
 
@@ -576,10 +590,11 @@ struct Patch
         uint32_t id(int f) const { return idBase + f; }
 
         Param level, velSensitivity, playMode;
+        Param bendUp, bendDown;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &velSensitivity, &playMode};
+            std::vector<Param *> res{&level, &velSensitivity, &playMode, &bendUp, &bendDown};
             appendDAHDSRParams(res);
             return res;
         }

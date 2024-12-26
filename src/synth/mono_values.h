@@ -32,6 +32,7 @@ struct MonoValues
     }
 
     float tempoSyncRatio{1};
+    float pitchBend{0.f};
 
     MTSClient *mtsClient{nullptr};
 
