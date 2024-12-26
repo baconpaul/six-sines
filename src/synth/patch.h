@@ -311,18 +311,25 @@ struct Patch
                             .withRange(0, 1)
                             .withDefault(0)
                             .withUnorderedMapFormatting({{0, "+"}, {1, "x"}})),
-              waveForm(intMd()
-                           .withName(name(idx) + " Waveform")
-                           .withGroupName(name(idx))
-                           .withID(id(5, idx))
-                           .withRange(0, SinTable::WaveForm::NUM_WAVEFORMS - 1)
-                           .withDefault(0)
-                           .withUnorderedMapFormatting({
-                               {SinTable::WaveForm::SIN, "Sin"},
-                               {SinTable::WaveForm::SIN_FIFTH, "Sin^5"},
-                               {SinTable::WaveForm::SQUARISH, "Squarish"},
-                               {SinTable::WaveForm::SAWISH, "Sawish"},
-                           })),
+              waveForm(
+                  intMd()
+                      .withName(name(idx) + " Waveform")
+                      .withGroupName(name(idx))
+                      .withID(id(5, idx))
+                      .withRange(0, SinTable::WaveForm::NUM_WAVEFORMS - 1)
+                      .withDefault(0)
+                      .withUnorderedMapFormatting({{SinTable::WaveForm::SIN, "Sin"},
+                                                   {SinTable::WaveForm::SIN_FIFTH, "Sin^5 x"},
+                                                   {SinTable::WaveForm::SQUARISH, "Squarish"},
+                                                   {SinTable::WaveForm::SAWISH, "Sawish"},
+                                                   {SinTable::WaveForm::SIN_OF_CUBED, "Sin(x^3)"},
+                                                   {SinTable::WaveForm::TX2, "TX 2"},
+                                                   {SinTable::WaveForm::TX3, "TX 3"},
+                                                   {SinTable::WaveForm::TX4, "TX 4"},
+                                                   {SinTable::WaveForm::TX5, "TX 5"},
+                                                   {SinTable::WaveForm::TX6, "TX 6"},
+                                                   {SinTable::WaveForm::TX7, "TX 7"},
+                                                   {SinTable::WaveForm::TX8, "TX 8"}})),
               DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx))
         {
         }

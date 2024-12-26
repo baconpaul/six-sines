@@ -34,6 +34,15 @@ struct SinTable
         SIN_FIFTH,
         SQUARISH,
         SAWISH,
+        SIN_OF_CUBED,
+
+        TX2,
+        TX3,
+        TX4,
+        TX5,
+        TX6,
+        TX7,
+        TX8,
 
         NUM_WAVEFORMS
     };
@@ -153,6 +162,227 @@ struct SinTable
 
                       // Above is a downward saw and we want upward
                       return std::make_pair(-v, -dv);
+                  });
+
+        fillTable(WaveForm::SIN_OF_CUBED,
+                  [](double x, int Q)
+                  {
+                      auto z = x * 2 - 1;
+                      auto dzdx = 2;
+                      auto v = sin(twoPi * z * z * z);
+                      auto dvdz = 3 * twoPi * z * z * cos(twoPi * z * z * z);
+                      auto dv = dvdz * dzdx;
+
+                      // Above is a downward saw and we want upward
+                      return std::make_pair(v, dv);
+                  });
+
+        fillTable(SinTable::WaveForm::TX2,
+                  [](double x, int Q)
+                  {
+                      double v, dv;
+                      auto s = sin(twoPi * x);
+                      auto c = cos(twoPi * x);
+
+                      switch (Q)
+                      {
+                      case 0:
+                          v = 1 - c;
+                          dv = twoPi * s;
+                          break;
+                      case 1:
+                          v = 1 + c;
+                          dv = -twoPi * s;
+                          break;
+                      case 2:
+                          v = -1 - c;
+                          dv = twoPi * s;
+                          break;
+                      case 3:
+                          v = c - 1;
+                          dv = -twoPi * s;
+                          break;
+                      }
+
+                      return std::make_pair(v, dv);
+                  });
+
+        fillTable(SinTable::WaveForm::TX3,
+                  [](double x, int Q)
+                  {
+                      double v, dv;
+                      auto s = sin(twoPi * x);
+                      auto c = cos(twoPi * x);
+
+                      switch (Q)
+                      {
+                      case 0:
+                      case 1:
+                          v = s;
+                          dv = twoPi * c;
+                          break;
+                      case 2:
+                      case 3:
+                          v = 0;
+                          dv = 0;
+                          break;
+                      }
+
+                      return std::make_pair(v, dv);
+                  });
+
+        fillTable(SinTable::WaveForm::TX4,
+                  [](double x, int Q)
+                  {
+                      double v, dv;
+                      auto s = sin(twoPi * x);
+                      auto c = cos(twoPi * x);
+
+                      switch (Q)
+                      {
+                      case 0:
+                          v = 1 - c;
+                          dv = twoPi * s;
+                          break;
+                      case 1:
+                          v = 1 + c;
+                          dv = -twoPi * s;
+                          break;
+                      case 2:
+                      case 3:
+                          v = 0;
+                          dv = 0;
+                          break;
+                      }
+
+                      return std::make_pair(v, dv);
+                  });
+
+        fillTable(SinTable::WaveForm::TX5,
+                  [](double x, int Q)
+                  {
+                      double v, dv;
+                      auto s = sin(2 * twoPi * x);
+                      auto c = cos(2 * twoPi * x);
+
+                      switch (Q)
+                      {
+                      case 0:
+                      case 1:
+                          v = s;
+                          dv = 2 * twoPi * c;
+                          break;
+                      case 2:
+                      case 3:
+                          v = 0;
+                          dv = 0;
+                          break;
+                      }
+
+                      return std::make_pair(v, dv);
+                  });
+
+        fillTable(SinTable::WaveForm::TX6,
+                  [](double x, int Q)
+                  {
+                      double v{0}, dv{0};
+                      auto s = sin(2 * twoPi * x);
+                      auto c = cos(2 * twoPi * x);
+
+                      auto OCT = Q * 2;
+                      if (x > .125 && Q == 0)
+                          OCT++;
+                      else if (x > .375 && Q == 1)
+                          OCT++;
+
+                      switch (OCT)
+                      {
+                      case 0:
+                          v = 1 - c;
+                          dv = 2 * twoPi * s;
+                          break;
+                      case 1:
+                          v = 1 + c;
+                          dv = -2 * twoPi * s;
+                          break;
+                      case 2:
+                          v = -1 - c;
+                          dv = 2 * twoPi * s;
+                          break;
+                      case 3:
+                          v = c - 1;
+                          dv = -2 * twoPi * s;
+                          break;
+                      default:
+                          break;
+                      }
+
+                      return std::make_pair(v, dv);
+                  });
+
+        fillTable(SinTable::WaveForm::TX7,
+                  [](double x, int Q)
+                  {
+                      double v, dv;
+                      auto s = sin(2 * twoPi * x);
+                      auto c = cos(2 * twoPi * x);
+
+                      switch (Q)
+                      {
+                      case 0:
+                          v = s;
+                          dv = 2 * twoPi * c;
+                          break;
+                      case 1:
+                          v = -s;
+                          dv = -2 * twoPi * c;
+                          break;
+                      case 2:
+                      case 3:
+                          v = 0;
+                          dv = 0;
+                          break;
+                      }
+
+                      return std::make_pair(v, dv);
+                  });
+
+        fillTable(SinTable::WaveForm::TX8,
+                  [](double x, int Q)
+                  {
+                      double v{0}, dv{0};
+                      auto s = sin(2 * twoPi * x);
+                      auto c = cos(2 * twoPi * x);
+
+                      auto OCT = Q * 2;
+                      if (x > .125 && Q == 0)
+                          OCT++;
+                      else if (x > .375 && Q == 1)
+                          OCT++;
+
+                      switch (OCT)
+                      {
+                      case 0:
+                          v = 1 - c;
+                          dv = 2 * twoPi * s;
+                          break;
+                      case 1:
+                          v = 1 + c;
+                          dv = -2 * twoPi * s;
+                          break;
+                      case 2:
+                          v = 1 + c;
+                          dv = -2 * twoPi * s;
+                          break;
+                      case 3:
+                          v = -c + 1;
+                          dv = 2 * twoPi * s;
+                          break;
+                      default:
+                          break;
+                      }
+
+                      return std::make_pair(v, dv);
                   });
 
         // Fill up interp buffers
