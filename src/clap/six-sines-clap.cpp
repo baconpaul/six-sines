@@ -316,6 +316,15 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     }
     void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override
     {
+        auto sz = in->size(in);
+
+        for (int i = 0; i < sz; ++i)
+        {
+            const clap_event_header_t *nextEvent{nullptr};
+            nextEvent = in->get(in, i);
+            handleEvent(nextEvent);
+        }
+
         engine->processUIQueue(out);
     }
 
