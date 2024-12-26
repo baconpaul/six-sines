@@ -17,6 +17,8 @@
 #define BACONPAUL_SIX_SINES_DSP_SINTABLE_H
 
 #include <cassert>
+#include <cstring>
+
 #include "configuration.h"
 #include <sst/basic-blocks/simd/setup.h>
 
