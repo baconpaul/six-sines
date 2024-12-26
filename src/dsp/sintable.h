@@ -28,6 +28,7 @@ struct SinTable
     {
         SIN = 0, // these stream so you know....
         SIN_FIFTH,
+        SQUARISH,
 
         NUM_WAVEFORMS
     };
@@ -40,7 +41,7 @@ struct SinTable
     float linterpCoefficients[2][nPoints];
 
     SIMD_M128
-        simdFullQuad alignas(16)[NUM_WAVEFORMS][4 * nPoints]; // for each quad it is q, q+1, dq + 1
+    simdFullQuad alignas(16)[NUM_WAVEFORMS][4 * nPoints]; // for each quad it is q, q+1, dq + 1
     SIMD_M128 *simdQuad;
     SIMD_M128 simdCubic alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
 
@@ -71,6 +72,40 @@ struct SinTable
                 auto c = cos((1.0 * i / (nPoints - 1) + Q) * M_PI / 2.0);
                 quadrantTable[1][Q][i] = s * s * s * s * s;
                 dQuadrantTable[1][Q][i] = 5 * s * s * s * s * c / (nPoints - 1);
+            }
+        }
+
+        // Waveform 1: sin(x) ^ 5. Derivative is 5 sin(x)^4 cos(x)
+        static constexpr float winFreq{8.0};
+        static constexpr float dFr{1.0 / (4 * winFreq)};
+        for (int i = 0; i < nPoints + 1; ++i)
+        {
+            for (int Q = 0; Q < 4; ++Q)
+            {
+                auto x = (1.0 * i / (nPoints - 1) + Q) * 0.25;
+                float v{0}, dv{0};
+                if (x <= dFr || x > 1.0 - dFr)
+                {
+                    v = sin(2.0 * M_PI * winFreq * x);
+                    dv = winFreq * 2.0 * M_PI * cos(2.0 * M_PI * 4 * x);
+                }
+                else if (x <= 0.5 - dFr)
+                {
+                    v = 1.0;
+                    dv = 0.0;
+                }
+                else if (x < 0.5 + dFr)
+                {
+                    v = -sin(2.0 * M_PI * winFreq * x);
+                    dv = winFreq * -2.0 * M_PI * cos(2.0 * M_PI * winFreq * x);
+                }
+                else
+                {
+                    v = -1.0;
+                    dv = 0.0;
+                }
+                quadrantTable[2][Q][i] = v;
+                dQuadrantTable[2][Q][i] = dv / (nPoints - 1);
             }
         }
 

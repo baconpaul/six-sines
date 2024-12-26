@@ -34,7 +34,7 @@ struct WavPainter : juce::Component
         st.setWaveForm((SinTable::WaveForm)std::round(wf.value));
         uint32_t phase{0};
         int nPixels{getWidth()};
-        auto dPhase = (1 << 27) / (nPixels - 1);
+        auto dPhase = (1 << 26) / (nPixels - 1);
         auto p = juce::Path();
         for (int i = 0; i < nPixels; ++i)
         {
