@@ -29,6 +29,7 @@ struct SinTable
         SIN = 0, // these stream so you know....
         SIN_FIFTH,
         SQUARISH,
+        SAWISH,
 
         NUM_WAVEFORMS
     };
@@ -75,7 +76,7 @@ struct SinTable
             }
         }
 
-        // Waveform 1: sin(x) ^ 5. Derivative is 5 sin(x)^4 cos(x)
+        // Waveform 2: Square-ish with sin 8 transitions
         static constexpr float winFreq{8.0};
         static constexpr float dFr{1.0 / (4 * winFreq)};
         for (int i = 0; i < nPoints + 1; ++i)
@@ -106,6 +107,37 @@ struct SinTable
                 }
                 quadrantTable[2][Q][i] = v;
                 dQuadrantTable[2][Q][i] = dv / (nPoints - 1);
+            }
+        }
+
+        // Waveform 3: Saw-ish with sin 8 transitions
+        // What we need is the point where the derivatie of sin 16pi x = deriv -2x
+        // or 16pi cos(16pix) = -2
+        // or x = 1/16pix * acos(-2/16pi)
+        static constexpr float sqrFreq{4};
+        auto osp = 1.0 / (sqrFreq * 2 * M_PI);
+        auto co = osp * acos(-2 * osp) / (2.0 * M_PI);
+        for (int i = 0; i < nPoints + 1; ++i)
+        {
+            for (int Q = 0; Q < 4; ++Q)
+            {
+                auto x = (1.0 * i / (nPoints - 1) + Q) * 0.25;
+                float v{0}, dv{0};
+                if (x <= co || x > 1.0 - co)
+                {
+                    v = sin(2.0 * M_PI * sqrFreq * x);
+                    dv = sqrFreq * 2.0 * M_PI * cos(2.0 * M_PI * 4 * x);
+                    if (dv < 0 && dv > -3)
+                        SXSNLOG(x << " " << v << " " << dv);
+                }
+                else
+                {
+                    v = 1.0 - 2 * x;
+                    dv = -2.0;
+                }
+
+                quadrantTable[3][Q][i] = -v;
+                dQuadrantTable[3][Q][i] = -dv / (nPoints - 1);
             }
         }
 

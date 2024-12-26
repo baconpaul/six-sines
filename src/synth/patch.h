@@ -311,16 +311,18 @@ struct Patch
                             .withRange(0, 1)
                             .withDefault(0)
                             .withUnorderedMapFormatting({{0, "+"}, {1, "x"}})),
-              waveForm(
-                  intMd()
-                      .withName(name(idx) + " Waveform")
-                      .withGroupName(name(idx))
-                      .withID(id(5, idx))
-                      .withRange(0, SinTable::WaveForm::NUM_WAVEFORMS - 1)
-                      .withDefault(0)
-                      .withUnorderedMapFormatting({{SinTable::WaveForm::SIN, "Sin"},
-                                                   {SinTable::WaveForm::SIN_FIFTH, "Sin^5"},
-                                                   {SinTable::WaveForm::SQUARISH, "Squarish"}})),
+              waveForm(intMd()
+                           .withName(name(idx) + " Waveform")
+                           .withGroupName(name(idx))
+                           .withID(id(5, idx))
+                           .withRange(0, SinTable::WaveForm::NUM_WAVEFORMS - 1)
+                           .withDefault(0)
+                           .withUnorderedMapFormatting({
+                               {SinTable::WaveForm::SIN, "Sin"},
+                               {SinTable::WaveForm::SIN_FIFTH, "Sin^5"},
+                               {SinTable::WaveForm::SQUARISH, "Squarish"},
+                               {SinTable::WaveForm::SAWISH, "Sawish"},
+                           })),
               DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx))
         {
         }
