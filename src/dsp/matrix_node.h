@@ -229,17 +229,23 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
     const VoiceValues &voiceValues;
 
     const float &level, &velSen, &bendUp, &bendDown;
-    ;
+    const float &defTrigV;
+    TriggerMode defaultTrigger;
 
     OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f, const MonoValues &mv,
                const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), sr(mv), fromArr(f), level(on.level), bendUp(on.bendUp),
-          bendDown(on.bendDown), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv)
+          bendDown(on.bendDown), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),
+          defTrigV(on.defaultTrigger)
     {
         memset(output, 0, sizeof(output));
     }
 
-    void attack() { envAttack(); }
+    void attack()
+    {
+        defaultTrigger = (TriggerMode)std::round(defTrigV);
+        envAttack();
+    }
 
     void renderBlock()
     {

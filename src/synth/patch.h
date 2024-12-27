@@ -246,13 +246,15 @@ struct Patch
                          .withDefault(0)
                          .withID(id0 + 9)),
               triggerMode(intMd()
-                              .withRange(0, 2)
+                              .withRange(0, 3)
                               .withName(name + " Env Trigger Mode")
                               .withGroupName(name)
-                              .withDefault(0)
+                              .withDefault(3)
                               .withID(id0 + 10)
-                              .withUnorderedMapFormatting(
-                                  {{0, "Gate Start"}, {1, "Voice Start"}, {2, "Key Press"}}))
+                              .withUnorderedMapFormatting({{0, "Gate Start"},
+                                                           {1, "Voice Start"},
+                                                           {2, "Key Press"},
+                                                           {3, "Patch Default"}}))
 
         {
             delay.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
@@ -656,7 +658,16 @@ struct Patch
                             .withGroupName(name())
                             .withDefault(maxVoices)
                             .withID(id(26))
-                            .withLinearScaleFormatting(""))
+                            .withLinearScaleFormatting("")),
+              defaultTrigger(md_t()
+                                 .asInt()
+                                 .withRange(0, 2)
+                                 .withName(name() + " Default Env Mode")
+                                 .withGroupName(name())
+                                 .withDefault(0)
+                                 .withID(id(27))
+                                 .withUnorderedMapFormatting(
+                                     {{0, "On Gated"}, {1, "On New Voice"}, {2, "On Key press"}}))
         {
         }
 
@@ -664,12 +675,12 @@ struct Patch
         uint32_t id(int f) const { return idBase + f; }
 
         Param level, velSensitivity, playMode;
-        Param bendUp, bendDown, polyLimit;
+        Param bendUp, bendDown, polyLimit, defaultTrigger;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level,  &velSensitivity, &playMode,
-                                     &bendUp, &bendDown,       &polyLimit};
+            std::vector<Param *> res{&level,    &velSensitivity, &playMode,      &bendUp,
+                                     &bendDown, &polyLimit,      &defaultTrigger};
             appendDAHDSRParams(res);
             return res;
         }
