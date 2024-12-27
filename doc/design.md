@@ -21,8 +21,8 @@ PRESETS:
 
 PLAY MODE:
 - Portamento maybe
-- An envelope retrigger legato more where envelopes are opt-in to retrigger even on gated voices
 - Voice Unison
+- Make piano mode available
 
 CLAP
 - An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)

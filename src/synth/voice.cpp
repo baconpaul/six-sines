@@ -110,25 +110,85 @@ static_assert(numOps == 6, "Rebuild this table if not");
 OpSource &Voice::sourceAtMatrix(size_t pos) { return src[MatrixIndex::sourceIndexAt(pos)]; }
 OpSource &Voice::targetAtMatrix(size_t pos) { return src[MatrixIndex::targetIndexAt(pos)]; }
 
-void Voice::retriggerAllEnvelopes()
+void Voice::retriggerAllEnvelopesForKeyPress()
 {
     for (auto &s : src)
         if (s.active)
-            s.envAttack();
+            if (s.triggerMode == TriggerMode::KEY_PRESS)
+                s.envAttack();
 
     for (auto &s : selfNode)
         if (s.active)
-            s.envAttack();
+            if (s.triggerMode == TriggerMode::KEY_PRESS)
+                s.envAttack();
 
     for (auto &s : mixerNode)
         if (s.active)
-            s.envAttack();
+            if (s.triggerMode == TriggerMode::KEY_PRESS)
+                s.envAttack();
 
     for (auto &s : matrixNode)
         if (s.active)
-            s.envAttack();
+            if (s.triggerMode == TriggerMode::KEY_PRESS)
+                s.envAttack();
 
-    out.envAttack();
+    if (out.triggerMode != TriggerMode::KEY_PRESS)
+        out.envAttack();
+}
+
+void Voice::retriggerAllEnvelopesForReGate()
+{
+    for (auto &s : src)
+        if (s.active)
+            if (s.triggerMode != TriggerMode::NEW_VOICE)
+                s.envAttack();
+
+    for (auto &s : selfNode)
+        if (s.active)
+            if (s.triggerMode != TriggerMode::NEW_VOICE)
+                s.envAttack();
+
+    for (auto &s : mixerNode)
+        if (s.active)
+            if (s.triggerMode != TriggerMode::NEW_VOICE)
+                s.envAttack();
+
+    for (auto &s : matrixNode)
+        if (s.active)
+            if (s.triggerMode != TriggerMode::NEW_VOICE)
+                s.envAttack();
+
+    if (out.triggerMode != TriggerMode::NEW_VOICE)
+        out.envAttack();
+}
+
+void Voice::cleanup()
+{
+    used = false;
+    fadeBlocks = -1;
+    voiceValues.gated = false;
+
+    for (auto &s : src)
+    {
+        s.envCleanup();
+    }
+
+    for (auto &s : selfNode)
+    {
+        s.envCleanup();
+    }
+
+    for (auto &s : mixerNode)
+    {
+        s.envCleanup();
+    }
+
+    for (auto &s : matrixNode)
+    {
+        s.envCleanup();
+    }
+
+    out.envCleanup();
 }
 
 } // namespace baconpaul::six_sines

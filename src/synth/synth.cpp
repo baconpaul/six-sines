@@ -138,11 +138,9 @@ Voice *Synth::removeFromVoiceList(Voice *cvoice)
         head = cvoice->next;
     }
     auto nv = cvoice->next;
-    cvoice->used = false;
-    cvoice->fadeBlocks = -1;
+    cvoice->cleanup();
     cvoice->next = nullptr;
     cvoice->prior = nullptr;
-
     voiceCount--;
     return nv;
 }
@@ -252,12 +250,7 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
 void Synth::resetPlaymode()
 {
     auto val = (int)std::round(patch.output.playMode.value);
-    if (val == 1)
-    {
-        voiceManager->setPlaymode(0, voiceManager_t::PlayMode::MONO_NOTES,
-                                  (int)voiceManager_t::MonoPlayModeFeatures::NATURAL_MONO);
-    }
-    else if (val == 2)
+    if (val != 0)
     {
         voiceManager->setPlaymode(0, voiceManager_t::PlayMode::MONO_NOTES,
                                   (int)voiceManager_t::MonoPlayModeFeatures::NATURAL_LEGATO);

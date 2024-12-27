@@ -179,7 +179,6 @@ float Patch::migrateParamValueFromVersion(Param *p, float value, uint32_t versio
         static auto oldStyle = md_t().asFloat().asLog2SecondsRange(
             sst::basic_blocks::modulators::TenSecondRange::etMin,
             sst::basic_blocks::modulators::TenSecondRange::etMax);
-        ;
         if (value < oldStyle.minVal + 0.0001)
             return 0.f;
         if (value > oldStyle.maxVal - 0.0001)
@@ -204,6 +203,12 @@ float Patch::migrateParamValueFromVersion(Param *p, float value, uint32_t versio
         {
             value = 0.f;
         }
+    }
+
+    if (p == &output.playMode && version <= 3)
+    {
+        if (p->value > 0)
+            return 1;
     }
     return value;
 }

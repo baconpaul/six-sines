@@ -33,6 +33,7 @@ struct MonoValues
 
     float tempoSyncRatio{1};
     float pitchBend{0.f};
+    std::array<int8_t, 128> midiCC;
 
     MTSClient *mtsClient{nullptr};
 
