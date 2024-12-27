@@ -1,11 +1,5 @@
 TODO BEFORE 1JAN2025
 
-BUGS:
-- Voice Manager Bug. Put it in legato mode on gate change
-    - play with gate and its fine
-    - release gate and let ring and regate and it attacks
-    - but keep playing under *that* gate and it retriggers sometimes
-
 SOURCE:
 - Keytrack on/off, and if off ratio -> offset from 440hz
 - 90%-100% of internal nyquist mute fades (maybe ship without this tho)
