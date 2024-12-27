@@ -55,7 +55,7 @@ struct Param
 
 struct Patch
 {
-    static constexpr uint32_t patchVersion{3};
+    static constexpr uint32_t patchVersion{4};
     std::vector<const Param *> params;
     std::unordered_map<uint32_t, Param *> paramMap;
 
@@ -629,12 +629,12 @@ struct Patch
                                  .withID(id(22))),
               playMode(md_t()
                            .asInt()
-                           .withRange(0, 2)
+                           .withRange(0, 1)
                            .withName(name() + " Play Mode")
                            .withGroupName(name())
                            .withDefault(0)
                            .withID(id(23))
-                           .withUnorderedMapFormatting({{0, "Poly"}, {1, "Mono"}, {2, "Legato"}})),
+                           .withUnorderedMapFormatting({{0, "Poly"}, {1, "Mono"}})),
               bendUp(floatMd()
                          .withRange(0, 24)
                          .withName(name() + " PB Up")

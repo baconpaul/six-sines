@@ -67,7 +67,7 @@ void MainSubPanel::resized()
     depy += uicTitleLabelHeight;
     positionKnobAndLabel(depx, depy, velSen, velSenL);
     auto bx = velSen->getBounds().translated(0, uicLabeledKnobHeight + uicMargin);
-    playMode->setBounds(bx);
+    playMode->setBounds(bx.withHeight(2 * uicLabelHeight + uicMargin));
 
     depx = r.getX() + 2 * uicMargin + uicKnobSize + 2 * xtraW + uicMargin;
     depy = r.getY();
