@@ -30,6 +30,9 @@ struct VoiceValues
     bool gated{false};
     int key{0}, channel{0};
     float velocity{0}, releaseVelocity{0};
+
+    float portaDiff{0}, dPorta{0};
+    int portaSign{0};
 };
 };     // namespace baconpaul::six_sines
 #endif // MONO_VALUES_H

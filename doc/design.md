@@ -20,7 +20,6 @@ PRESETS:
 - preset scan user directory to make tree
 
 PLAY MODE:
-- Portamento maybe
 - Voice Unison
 - Make piano mode available
 

@@ -75,6 +75,7 @@ struct Synth
         void retriggerVoiceWithNewNoteID(Voice *, int32_t, float) { assert(false); }
         void moveVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
         {
+            v->setupPortaTo(k, synth.patch.output.portaTime.value);
             v->voiceValues.key = k;
             v->voiceValues.velocity = ve;
             v->retriggerAllEnvelopesForKeyPress();
@@ -82,6 +83,7 @@ struct Synth
 
         void moveAndRetriggerVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
         {
+            v->setupPortaTo(k, synth.patch.output.portaTime.value);
             v->voiceValues.key = k;
             v->voiceValues.velocity = ve;
             v->voiceValues.gated = true;
