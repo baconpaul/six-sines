@@ -17,6 +17,7 @@
 #define BACONPAUL_SIX_SINES_SYNTH_MOD_MATRIX_H
 
 #include <cstdint>
+#include <array>
 #include "configuration.h"
 
 namespace baconpaul::six_sines
