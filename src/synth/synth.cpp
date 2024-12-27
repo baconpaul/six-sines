@@ -208,7 +208,8 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             /*
              * Some params have other side effects
              */
-            if (dest->meta.id == patch.output.playMode.meta.id)
+            if (dest->meta.id == patch.output.playMode.meta.id ||
+                dest->meta.id == patch.output.polyLimit.meta.id)
             {
                 resetPlaymode();
             }
@@ -262,6 +263,10 @@ void Synth::resetPlaymode()
     {
         voiceManager->setPlaymode(0, voiceManager_t::PlayMode::POLY_VOICES);
     }
+
+    auto lim = (int)std::round(patch.output.polyLimit.value);
+    lim = std::clamp(lim, 1, (int)maxVoices);
+    voiceManager->setPolyphonyGroupVoiceLimit(0, lim);
 }
 
 void Synth::handleParamValue(Param *p, uint32_t pid, float value)

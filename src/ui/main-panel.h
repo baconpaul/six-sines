@@ -48,6 +48,10 @@ struct MainPanel : jcmp::NamedPanel, HasEditor
     void setVoiceCount(int vc) { voiceCount->setText("v: " + std::to_string(vc)); }
     std::unique_ptr<jcmp::Label> voiceCount, vcOf;
     std::unique_ptr<jcmp::MenuButton> voiceLimit;
+
+    void showPolyLimitMenu();
+    int getPolyLimit();
+    void setPolyLimit(int pl);
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_PANEL_H

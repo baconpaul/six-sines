@@ -33,6 +33,8 @@ static constexpr size_t numMacros{6};
 
 static constexpr size_t maxVoices{64};
 
+static constexpr size_t numModsPer{3};
+
 } // namespace baconpaul::six_sines
 
 inline std::string fileTrunc(const std::string &f)

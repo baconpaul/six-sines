@@ -34,6 +34,7 @@
 #include "synth/voice.h"
 #include "synth/patch.h"
 #include "mono_values.h"
+#include "mod_matrix.h"
 
 namespace baconpaul::six_sines
 {
@@ -48,6 +49,8 @@ struct Synth
 
     Patch patch;
     MonoValues monoValues;
+
+    ModMatrixConfig modMatrixConfig;
 
     struct VMConfig
     {

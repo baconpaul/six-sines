@@ -43,14 +43,15 @@ MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
     addAndMakeVisible(*vcOf);
 
     voiceLimit = std::make_unique<jcmp::MenuButton>();
-    voiceLimit->setLabel("64");
-    voiceLimit->setOnCallback(
-        [this]()
-        {
-            auto p = juce::PopupMenu();
-            p.addSectionHeader("Coming Soon");
-            p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
-        });
+    voiceLimit->setLabel(std::to_string(getPolyLimit()));
+    voiceLimit->setOnCallback([this]() { showPolyLimitMenu(); });
+    editor.componentRefreshByID[editor.patchCopy.output.polyLimit.meta.id] =
+        [w = juce::Component::SafePointer(this)]()
+    {
+        if (!w)
+            return;
+        w->voiceLimit->setLabel(std::to_string(w->getPolyLimit()));
+    };
     addAndMakeVisible(*voiceLimit);
 
     highlight = std::make_unique<KnobHighlight>();
@@ -84,6 +85,38 @@ void MainPanel::beginEdit()
     auto b = getContentArea().reduced(uicMargin, 0);
     highlight->setBounds(b.getX(), b.getY(), uicKnobSize + uicMargin, uicLabeledKnobHeight);
     highlight->toBack();
+}
+
+void MainPanel::showPolyLimitMenu()
+{
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("Voice Limit");
+    p.addSeparator();
+    auto currentLimit = getPolyLimit();
+    for (auto lim : {4, 6, 8, 12, 16, 24, 32, 48, 64})
+    {
+        p.addItem(std::to_string(lim), true, lim == currentLimit,
+                  [w = juce::Component::SafePointer(this), lim]()
+                  {
+                      if (!w)
+                          return;
+                      w->setPolyLimit(lim);
+                  });
+    }
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
+}
+
+int MainPanel::getPolyLimit() { return (int)std::round(editor.patchCopy.output.polyLimit.value); }
+void MainPanel::setPolyLimit(int plVal)
+{
+    SXSNLOG("Setting val to " << plVal);
+    auto &pl = editor.patchCopy.output.polyLimit;
+    pl.value = plVal;
+    editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pl.meta.id, (float)plVal});
+    editor.flushOperator();
+
+    voiceLimit->setLabel(std::to_string(getPolyLimit()));
+    voiceLimit->repaint();
 }
 
 } // namespace baconpaul::six_sines::ui
