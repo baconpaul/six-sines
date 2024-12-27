@@ -244,7 +244,16 @@ struct Patch
                          .withName(name + " Release Shape")
                          .withGroupName(name)
                          .withDefault(0)
-                         .withID(id0 + 9))
+                         .withID(id0 + 9)),
+              triggerMode(intMd()
+                              .withRange(0, 2)
+                              .withName(name + " Env Trigger Mode")
+                              .withGroupName(name)
+                              .withDefault(0)
+                              .withID(id0 + 10)
+                              .withUnorderedMapFormatting(
+                                  {{0, "Gate Start"}, {1, "Voice Start"}, {2, "Key Press"}}))
+
         {
             delay.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
             attack.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
@@ -254,7 +263,7 @@ struct Patch
         }
 
         Param delay, attack, hold, decay, sustain, release, envPower;
-        Param aShape, dShape, rShape;
+        Param aShape, dShape, rShape, triggerMode;
 
         void appendDAHDSRParams(std::vector<Param *> &res)
         {
@@ -268,6 +277,7 @@ struct Patch
             res.push_back(&aShape);
             res.push_back(&dShape);
             res.push_back(&rShape);
+            res.push_back(&triggerMode);
         }
     };
 
@@ -370,7 +380,7 @@ struct Patch
                                                    {SinTable::WaveForm::TX8, "TX 8"}})),
               DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx)),
               ModulationMixin(name(idx), id(150, idx)),
-              modTargets(scpu::make_array_lambda<Param, numModsPer>(
+              modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
                   {
                       return md_t()
@@ -397,14 +407,14 @@ struct Patch
 
         Param waveForm;
 
-        std::array<Param, numModsPer> modTargets;
+        std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
             std::vector<Param *> res{&ratio,      &active,    &envToRatio,
                                      &lfoToRatio, &envLfoSum, &waveForm};
             for (int i = 0; i < numModsPer; ++i)
-                res.push_back(&modTargets[i]);
+                res.push_back(&modtarget[i]);
             appendDAHDSRParams(res);
             appendLFOParams(res);
             appendModulationParams(res);
@@ -616,28 +626,28 @@ struct Patch
                                  .withName(name() + " Velocity Sensitivity")
                                  .withGroupName(name())
                                  .withDefault(0.2)
-                                 .withID(id(12))),
+                                 .withID(id(22))),
               playMode(md_t()
                            .asInt()
                            .withRange(0, 2)
                            .withName(name() + " Play Mode")
                            .withGroupName(name())
                            .withDefault(0)
-                           .withID(id(13))
+                           .withID(id(23))
                            .withUnorderedMapFormatting({{0, "Poly"}, {1, "Mono"}, {2, "Legato"}})),
               bendUp(floatMd()
                          .withRange(0, 24)
                          .withName(name() + " PB Up")
                          .withGroupName(name())
                          .withDefault(2)
-                         .withID(id(14))
+                         .withID(id(24))
                          .withLinearScaleFormatting("")),
               bendDown(floatMd()
                            .withRange(0, 24)
                            .withName(name() + " PB Up")
                            .withGroupName(name())
                            .withDefault(2)
-                           .withID(id(15))
+                           .withID(id(25))
                            .withLinearScaleFormatting("")),
               polyLimit(md_t()
                             .asInt()
@@ -645,7 +655,7 @@ struct Patch
                             .withName(name() + " PolyLimit")
                             .withGroupName(name())
                             .withDefault(maxVoices)
-                            .withID(id(16))
+                            .withID(id(26))
                             .withLinearScaleFormatting(""))
         {
         }

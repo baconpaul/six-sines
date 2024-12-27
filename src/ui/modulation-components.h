@@ -41,15 +41,35 @@ template <typename Comp, typename Patch> struct ModulationComponents
         {
             createComponent(e, *c, v.moddepth[i], depthSlider[i], depthSliderD[i]);
             sourceMenu[i] = std::make_unique<jcmp::MenuButton>();
-            sourceMenu[i]->setLabel("Src " + std::to_string(i));
+            resetSourceLabel(i);
+            e.componentRefreshByID[v.modsource[i].meta.id] =
+                [i, w = juce::Component::SafePointer(c)]()
+            {
+                if (w)
+                {
+                    w->resetSourceLabel(i);
+                }
+            };
             targetMenu[i] = std::make_unique<jcmp::MenuButton>();
-            targetMenu[i]->setLabel("Tgt " + std::to_string(i));
+            resetTargetLabel(i);
+            e.componentRefreshByID[v.modtarget[i].meta.id] =
+                [i, w = juce::Component::SafePointer(c)]()
+            {
+                if (w)
+                {
+                    w->resetTargetLabel(i);
+                }
+            };
 
             c->addAndMakeVisible(*depthSlider[i]);
             c->addAndMakeVisible(*sourceMenu[i]);
             c->addAndMakeVisible(*targetMenu[i]);
         }
     }
+
+    void resetSourceLabel(int i) { sourceMenu[i]->setLabel("Src " + std::to_string(i + 1)); }
+
+    void resetTargetLabel(int i) { targetMenu[i]->setLabel("Tgt " + std::to_string(i + 1)); }
 
     void layoutModulation(const juce::Rectangle<int> &r)
     {

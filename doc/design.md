@@ -21,7 +21,6 @@ PRESETS:
 
 PLAY MODE:
 - Portamento maybe
-- An envelope retrigger legato more where envelopes are opt-in to retrigger even on gated voices
 - Voice Unison
 
 CLAP

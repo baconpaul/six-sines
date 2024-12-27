@@ -77,6 +77,7 @@ struct Synth
         {
             v->voiceValues.key = k;
             v->voiceValues.velocity = ve;
+            v->retriggerAllEnvelopesForKeyPress();
         }
 
         void moveAndRetriggerVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
@@ -84,7 +85,7 @@ struct Synth
             v->voiceValues.key = k;
             v->voiceValues.velocity = ve;
             v->voiceValues.gated = true;
-            v->retriggerAllEnvelopes();
+            v->retriggerAllEnvelopesForReGate();
         }
 
         int32_t beginVoiceCreationTransaction(
@@ -158,7 +159,7 @@ struct Synth
         {
             synth.monoValues.pitchBend = (v - 8192) * 1.0 / 8192;
         }
-        void setMIDI1CC(int16_t, int16_t, int8_t) {}
+        void setMIDI1CC(int16_t ch, int16_t cc, int8_t v) { synth.monoValues.midiCC[cc] = v; }
         void setMIDIChannelPressure(int16_t, int16_t) {}
     };
     using voiceManager_t = sst::voicemanager::VoiceManager<VMConfig, VMResponder, VMMonoResponder>;

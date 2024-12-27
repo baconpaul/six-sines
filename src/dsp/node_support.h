@@ -31,6 +31,13 @@ namespace baconpaul::six_sines
 {
 namespace sdsp = sst::basic_blocks::dsp;
 
+enum TriggerMode
+{
+    NEW_GATE,
+    NEW_VOICE,
+    KEY_PRESS
+};
+
 template <typename T> struct EnvelopeSupport
 {
     SRProvider sr;
@@ -38,14 +45,16 @@ template <typename T> struct EnvelopeSupport
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV;
+    const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV, &tmV;
     const float &ash, &dsh, &rsh;
     EnvelopeSupport(const T &mn, const MonoValues &mv, const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), sr(mv), env(&sr), delay(mn.delay), attackv(mn.attack),
           hold(mn.hold), decay(mn.decay), sustain(mn.sustain), release(mn.release),
-          powerV(mn.envPower), ash(mn.aShape), dsh(mn.dShape), rsh(mn.rShape)
+          powerV(mn.envPower), ash(mn.aShape), dsh(mn.dShape), rsh(mn.rShape), tmV(mn.triggerMode)
     {
     }
+
+    TriggerMode triggerMode{NEW_GATE};
 
     bool active{true}, constantEnv{false};
     using range_t = sst::basic_blocks::modulators::TwentyFiveSecondExp;
@@ -54,6 +63,19 @@ template <typename T> struct EnvelopeSupport
 
     void envAttack()
     {
+        switch ((int)std::round(tmV))
+        {
+        case 1:
+            triggerMode = NEW_VOICE;
+            break;
+        case 2:
+            triggerMode = KEY_PRESS;
+            break;
+        default:
+        case 0:
+            triggerMode = NEW_GATE;
+            break;
+        }
         env.initializeLuts();
         active = powerV > 0.5;
 
@@ -69,8 +91,15 @@ template <typename T> struct EnvelopeSupport
             constantEnv = false;
         }
 
+        bool running = env.stage <= env_t::s_release;
+        bool nodel = delay < 0.00001;
+
+        bool startingValue = 0.f;
+        if (running && nodel)
+            startingValue = env.outputCache[blockSize - 1];
+
         if (active && !constantEnv)
-            env.attackFromWithDelay(0.f, delay, attackv);
+            env.attackFromWithDelay(startingValue, delay, attackv);
         else if (constantEnv)
         {
             for (int i = 0; i < blockSize; ++i)
@@ -86,6 +115,13 @@ template <typename T> struct EnvelopeSupport
 
         env.processBlockWithDelay(delay, attackv, hold, decay, sustain, release, ash, dsh, rsh,
                                   voiceValues.gated, true);
+    }
+
+    void envCleanup()
+    {
+        memset(env.outputCache, 0, sizeof(env.outputCache));
+        env.stage = env_t::s_complete;
+        active = false;
     }
 };
 

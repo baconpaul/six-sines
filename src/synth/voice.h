@@ -39,6 +39,7 @@ struct Voice
 
     void attack();
     void renderBlock();
+    void cleanup();
 
     bool used{false};
 
@@ -53,7 +54,8 @@ struct Voice
     OpSource &sourceAtMatrix(size_t pos);
     OpSource &targetAtMatrix(size_t pos);
 
-    void retriggerAllEnvelopes();
+    void retriggerAllEnvelopesForKeyPress();
+    void retriggerAllEnvelopesForReGate();
 
     std::array<MixerNode, numOps> mixerNode;
     static constexpr int32_t fadeOverBlocks{32};

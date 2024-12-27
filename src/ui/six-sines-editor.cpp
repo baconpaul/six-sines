@@ -422,6 +422,7 @@ void SixSinesEditor::popupMenuForContinuous(jcmp::ContinuousParamEditor *e)
                   if (!w)
                       return;
                   w->continuous()->setValueFromGUI(w->continuous()->getDefaultValue());
+                  w->repaint();
               });
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));

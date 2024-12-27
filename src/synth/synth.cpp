@@ -138,11 +138,9 @@ Voice *Synth::removeFromVoiceList(Voice *cvoice)
         head = cvoice->next;
     }
     auto nv = cvoice->next;
-    cvoice->used = false;
-    cvoice->fadeBlocks = -1;
+    cvoice->cleanup();
     cvoice->next = nullptr;
     cvoice->prior = nullptr;
-
     voiceCount--;
     return nv;
 }

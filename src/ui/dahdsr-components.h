@@ -19,6 +19,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <sst/jucegui/components/VSlider.h>
 #include <sst/jucegui/components/Label.h>
+#include <sst/jucegui/components/TextPushButton.h>
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
 #include "ruled-label.h"
@@ -26,11 +27,13 @@
 namespace baconpaul::six_sines::ui
 {
 namespace jcmp = sst::jucegui::components;
-template <typename Comp, typename Patch> struct DAHDSRComponents
+template <typename Comp, typename PatchPart> struct DAHDSRComponents
 {
     Comp *asComp() { return static_cast<Comp *>(this); }
     DAHDSRComponents() {}
-    void setupDAHDSR(SixSinesEditor &e, const Patch &v)
+
+    const Param *triggerModePtr{nullptr}; // bit of a hack since refs arent mutable
+    void setupDAHDSR(SixSinesEditor &e, const PatchPart &v)
     {
         auto mk = [&e, this](auto id, auto idx, auto lb)
         {
@@ -60,6 +63,24 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
         titleLab = std::make_unique<RuledLabel>();
         titleLab->setText("Envelope");
         asComp()->addAndMakeVisible(*titleLab);
+
+        triggerButton = std::make_unique<jcmp::TextPushButton>();
+        triggerButton->setOnCallback(
+            [w = juce::Component::SafePointer(asComp())]()
+            {
+                if (!w)
+                    return;
+                w->showTriggerPopup();
+            });
+        setTriggerLabel();
+        asComp()->addAndMakeVisible(*triggerButton);
+        e.componentRefreshByID[v.triggerMode.meta.id] =
+            [w = juce::Component::SafePointer(asComp())]()
+        {
+            if (w)
+                w->setTriggerLabel();
+        };
+        triggerModePtr = &v.triggerMode;
     }
 
     juce::Rectangle<int> layoutDAHDSRAt(int x, int y)
@@ -81,6 +102,8 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
             if (!slider[i])
                 continue;
             slider[i]->setBounds(bx.withHeight(q).withTrimmedTop(uicSliderWidth));
+            if (i == 0)
+                triggerButton->setBounds(bx.withHeight(uicSliderWidth).reduced(2));
             if (i % 2)
             {
                 shapes[i / 2]->setBounds(bx.withHeight(uicSliderWidth));
@@ -100,6 +123,56 @@ template <typename Comp, typename Patch> struct DAHDSRComponents
     std::array<std::unique_ptr<PatchContinuous>, nShape> shapesD;
     std::array<std::unique_ptr<jcmp::Label>, nels> lab;
     std::unique_ptr<RuledLabel> titleLab;
+
+    std::unique_ptr<jcmp::TextPushButton> triggerButton;
+    void setTriggerLabel()
+    {
+        if (!triggerModePtr)
+            return;
+        auto tmv = (int)std::round(triggerModePtr->value);
+        switch (tmv)
+        {
+        case 0:
+            triggerButton->setLabel("G");
+            break;
+        case 1:
+            triggerButton->setLabel("V");
+            break;
+        case 2:
+            triggerButton->setLabel("K");
+            break;
+        }
+        triggerButton->repaint();
+    }
+    void showTriggerPopup()
+    {
+        if (!triggerModePtr)
+            return;
+        auto tmv = (int)std::round(triggerModePtr->value);
+
+        auto genSet = [w = juce::Component::SafePointer(asComp())](int nv)
+        {
+            auto that = w;
+            return [nv, that]()
+            {
+                auto pid = that->triggerModePtr->meta.id;
+                that->editor.patchCopy.paramMap.at(pid)->value = nv;
+                that->setTriggerLabel();
+
+                that->editor.uiToAudio.push(
+                    {Synth::UIToAudioMsg::Action::SET_PARAM, pid, (float)nv});
+                that->editor.flushOperator();
+            };
+        };
+        auto p = juce::PopupMenu();
+        p.addSectionHeader("Trigger Mode");
+        p.addSeparator();
+        p.addItem("On New Gated", true, tmv == 0, genSet(0));
+        p.addItem("On New Voice", true, tmv == 1, genSet(1));
+        p.addItem("On Key Press", true, tmv == 2, genSet(2));
+
+        p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
+    }
 };
 } // namespace baconpaul::six_sines::ui
 #endif // DAHDSR_COMPONENTS_H
