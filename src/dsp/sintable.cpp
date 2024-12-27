@@ -17,19 +17,18 @@
 
 namespace baconpaul::six_sines
 {
-double SinTable::xTable[nQuadrants][nPoints + 1];
-float SinTable::quadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
-float SinTable::dQuadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
+thread_local double SinTable::xTable[nQuadrants][nPoints + 1];
+thread_local float SinTable::quadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
+thread_local float SinTable::dQuadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
 
-float SinTable::cubicHermiteCoefficients[nQuadrants][nPoints];
-float SinTable::linterpCoefficients[2][nPoints];
+thread_local float SinTable::cubicHermiteCoefficients[nQuadrants][nPoints];
+thread_local float SinTable::linterpCoefficients[2][nPoints];
 
-SIMD_M128
-SinTable::simdFullQuadS alignas(
-    16)[NUM_WAVEFORMS][nQuadrants * nPoints];        // for each quad it is q, q+1, dq + 1
-SIMD_M128 SinTable::simdCubicS alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
+thread_local SIMD_M128 SinTable::simdFullQuad alignas(
+    16)[NUM_WAVEFORMS][nQuadrants * nPoints]; // for each quad it is q, q+1, dq + 1
+thread_local SIMD_M128 SinTable::simdCubic alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
 
-bool SinTable::staticsInitialized{false};
+thread_local bool SinTable::staticsInitialized{false};
 
 void SinTable::fillTable(int WF, std::function<std::pair<double, double>(double x, int Q)> der)
 {
@@ -49,6 +48,8 @@ void SinTable::initializeStatics()
 {
     if (staticsInitialized)
         return;
+
+    SXSNLOG("Iniitalizing Sintable");
 
     memset(quadrantTable, 0, sizeof(quadrantTable));
     memset(dQuadrantTable, 0, sizeof(dQuadrantTable));
@@ -388,7 +389,7 @@ void SinTable::initializeStatics()
                 r[1] = dQuadrantTable[WF][Q][i];
                 r[2] = quadrantTable[WF][Q][i + 1];
                 r[3] = dQuadrantTable[WF][Q][i + 1];
-                simdFullQuadS[WF][nPoints * Q + i] = SIMD_MM(load_ps)(r);
+                simdFullQuad[WF][nPoints * Q + i] = SIMD_MM(load_ps)(r);
             }
         }
 
@@ -398,7 +399,7 @@ void SinTable::initializeStatics()
             {
                 r[j] = cubicHermiteCoefficients[j][i];
             }
-            simdCubicS[i] = SIMD_MM(load_ps)(r);
+            simdCubic[i] = SIMD_MM(load_ps)(r);
         }
     }
     staticsInitialized = true;

@@ -46,6 +46,9 @@ Synth::~Synth()
 
 void Synth::process(const clap_output_events_t *outq)
 {
+    if (!SinTable::staticsInitialized)
+        SinTable::initializeStatics();
+
     assert(resampler);
 
     processUIQueue(outq);
