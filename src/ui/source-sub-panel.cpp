@@ -62,6 +62,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     auto &sn = editor.patchCopy.sourceNodes[idx];
     setupDAHDSR(editor, sn);
     setupLFO(editor, sn);
+    setupModulation(editor, sn);
 
     createComponent(editor, *this, sn.envToRatio, envToRatio, envToRatioD);
     envToRatioL = std::make_unique<jcmp::Label>();
@@ -125,5 +126,7 @@ void SourceSubPanel::resized()
 
     depy += uicLabelHeight + uicMargin;
     wavPainter->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight * 2.5);
+
+    layoutModulation(p);
 }
 } // namespace baconpaul::six_sines::ui

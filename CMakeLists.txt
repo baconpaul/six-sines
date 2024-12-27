@@ -59,9 +59,12 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/ui/preset-manager.cpp
         src/ui/macro-panel.cpp
 
+        src/dsp/sintable.cpp
+
         src/synth/synth.cpp
         src/synth/voice.cpp
         src/synth/patch.cpp
+        src/synth/mod_matrix.cpp
 
 )
 target_include_directories(${PROJECT_NAME}-impl PUBLIC src)

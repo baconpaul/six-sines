@@ -271,7 +271,45 @@ struct Patch
         }
     };
 
-    struct SourceNode : public DAHDSRMixin, public LFOMixin
+    struct ModulationMixin
+    {
+        ModulationMixin(const std::string name, int id0)
+            : modsource(scpu::make_array_lambda<Param, numModsPer>(
+                  [id0, name](int i)
+                  {
+                      return md_t()
+                          .asInt()
+                          .withRange(0, 2048)
+                          .withID(id0 + 2 * i)
+                          .withName(name + " Mod Source " + std::to_string(i))
+                          .withGroupName(name)
+                          .withDefault(0);
+                  })),
+              moddepth(scpu::make_array_lambda<Param, numModsPer>(
+                  [id0, name](int i)
+                  {
+                      return floatMd()
+                          .asPercentBipolar()
+                          .withID(id0 + 2 * i + 1)
+                          .withName(name + " Mod Depth " + std::to_string(i))
+                          .withGroupName(name)
+                          .withDefault(0);
+                  }))
+        {
+        }
+        std::array<Param, numModsPer> modsource, moddepth;
+
+        void appendModulationParams(std::vector<Param *> &res)
+        {
+            for (int i = 0; i < numModsPer; ++i)
+            {
+                res.push_back(&modsource[i]);
+                res.push_back(&moddepth[i]);
+            }
+        }
+    };
+
+    struct SourceNode : public DAHDSRMixin, public LFOMixin, public ModulationMixin
     {
         static constexpr uint32_t idBase{1500}, idStride{250};
         SourceNode(size_t idx)
@@ -330,7 +368,20 @@ struct Patch
                                                    {SinTable::WaveForm::TX6, "TX 6"},
                                                    {SinTable::WaveForm::TX7, "TX 7"},
                                                    {SinTable::WaveForm::TX8, "TX 8"}})),
-              DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx))
+              DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx)),
+              ModulationMixin(name(idx), id(150, idx)),
+              modTargets(scpu::make_array_lambda<Param, numModsPer>(
+                  [this, idx](int i)
+                  {
+                      return md_t()
+                          .withName(name(idx) + " Mod Target " + std::to_string(i))
+                          .withGroupName(name(idx))
+                          .withRange(0, 2)
+                          .withDefault(0)
+                          .withID(id(160 + i, idx))
+                          .withUnorderedMapFormatting(
+                              {{0, "Env Atten"}, {1, "LFO Amp"}, {2, "Direct"}});
+                  }))
         {
         }
 
@@ -346,12 +397,17 @@ struct Patch
 
         Param waveForm;
 
+        std::array<Param, numModsPer> modTargets;
+
         std::vector<Param *> params()
         {
             std::vector<Param *> res{&ratio,      &active,    &envToRatio,
                                      &lfoToRatio, &envLfoSum, &waveForm};
+            for (int i = 0; i < numModsPer; ++i)
+                res.push_back(&modTargets[i]);
             appendDAHDSRParams(res);
             appendLFOParams(res);
+            appendModulationParams(res);
             return res;
         }
     };
@@ -582,7 +638,15 @@ struct Patch
                            .withGroupName(name())
                            .withDefault(2)
                            .withID(id(15))
-                           .withLinearScaleFormatting(""))
+                           .withLinearScaleFormatting("")),
+              polyLimit(md_t()
+                            .asInt()
+                            .withRange(1, maxVoices)
+                            .withName(name() + " PolyLimit")
+                            .withGroupName(name())
+                            .withDefault(maxVoices)
+                            .withID(id(16))
+                            .withLinearScaleFormatting(""))
         {
         }
 
@@ -590,11 +654,12 @@ struct Patch
         uint32_t id(int f) const { return idBase + f; }
 
         Param level, velSensitivity, playMode;
-        Param bendUp, bendDown;
+        Param bendUp, bendDown, polyLimit;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &velSensitivity, &playMode, &bendUp, &bendDown};
+            std::vector<Param *> res{&level,  &velSensitivity, &playMode,
+                                     &bendUp, &bendDown,       &polyLimit};
             appendDAHDSRParams(res);
             return res;
         }

@@ -19,6 +19,7 @@
 #include <cstring>
 #include <string.h>
 
+#include "sst/cpputils/constructors.h"
 #include "sst/basic-blocks/modulators/AHDSRShapedSC.h"
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
 
@@ -120,6 +121,27 @@ template <typename T> struct LFOSupport
 
         lfo.process_block(rate, lfoDeform, shape);
     }
+};
+
+template <typename T> struct ModulationSupport
+{
+    const T &paramBundle;
+    const MonoValues &monoValues;
+    const VoiceValues &voiceValues;
+
+    // array makes ref clumsy so show pointers instead
+    std::array<const float *, numModsPer> sourcePointers;
+    std::array<const float *, numModsPer> depthPointers;
+
+    ModulationSupport(const T &mn, const MonoValues &mv, const VoiceValues &vv)
+        : paramBundle(mn), monoValues(mv), voiceValues(vv),
+          depthPointers(sst::cpputils::make_array_lambda<const float *, numModsPer>(
+              [this](int i) { return &paramBundle.moddepth[i].value; }))
+    {
+        std::fill(sourcePointers.begin(), sourcePointers.end(), nullptr);
+    }
+
+    void bindModulation() {}
 };
 } // namespace baconpaul::six_sines
 

@@ -29,7 +29,8 @@
 namespace baconpaul::six_sines
 {
 struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
-                              LFOSupport<Patch::SourceNode>
+                              LFOSupport<Patch::SourceNode>,
+                              ModulationSupport<Patch::SourceNode>
 {
     int32_t phaseInput alignas(16)[blockSize];
     int32_t feedbackLevel alignas(16)[blockSize];
@@ -53,8 +54,9 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     OpSource(const Patch::SourceNode &sn, const MonoValues &mv, const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv),
-          ratio(sn.ratio), activeV(sn.active), envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio),
-          lfoByEnv(sn.envLfoSum), waveForm(sn.waveForm)
+          ModulationSupport(sn, mv, vv), ratio(sn.ratio), activeV(sn.active),
+          envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio), lfoByEnv(sn.envLfoSum),
+          waveForm(sn.waveForm)
     {
         reset();
     }
@@ -65,6 +67,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         snapActive();
         envAttack();
         lfoAttack();
+        bindModulation();
+
         phase = 4 << 27;
         fbVal[0] = 0.f;
         fbVal[1] = 0.f;

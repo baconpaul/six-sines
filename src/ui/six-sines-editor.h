@@ -99,6 +99,7 @@ struct SixSinesEditor : jcmp::WindowPanel
 
     void hideAllSubPanels();
     std::unordered_map<uint32_t, juce::Component::SafePointer<juce::Component>> componentByID;
+    std::unordered_map<uint32_t, std::function<void()>> componentRefreshByID;
 
     std::shared_ptr<SixSinesJuceLookAndFeel> lnf;
 

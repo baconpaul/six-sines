@@ -21,6 +21,7 @@
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
 #include "lfo-components.h"
+#include "modulation-components.h"
 #include "ruled-label.h"
 
 namespace baconpaul::six_sines::ui
@@ -28,6 +29,7 @@ namespace baconpaul::six_sines::ui
 struct SourceSubPanel : juce::Component,
                         HasEditor,
                         DAHDSRComponents<SourceSubPanel, Patch::SourceNode>,
+                        ModulationComponents<SourceSubPanel, Patch::SourceNode>,
                         LFOComponents<SourceSubPanel, Patch::SourceNode>
 {
     SourceSubPanel(SixSinesEditor &);

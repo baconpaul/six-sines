@@ -41,18 +41,24 @@ struct IdleTimer : juce::Timer
 static std::weak_ptr<SixSinesJuceLookAndFeel> sixSinesLookAndFeelWeakPointer;
 static std::mutex sixSinesLookAndFeelSetupMutex;
 
+namespace jstl = sst::jucegui::style;
+using sheet_t = jstl::StyleSheet;
+static constexpr sheet_t::Class PatchMenu("six-sines.patch-menu");
+
 SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &utoa,
                                std::function<void()> fo)
     : audioToUI(atou), uiToAudio(utoa), flushOperator(fo)
 {
     sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
+    sheet_t::addClass(PatchMenu).withBaseClass(jcmp::MenuButton::Styles::styleClass);
 
     setStyle(sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
         sst::jucegui::style::StyleSheet::DARK));
     style()->setColour(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::fill,
                        juce::Colour(0x15, 0x15, 0x15));
+
     style()->setFont(
-        jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont,
+        PatchMenu, jcmp::MenuButton::Styles::labelfont,
         style()
             ->getFont(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont)
             .withHeight(18));
@@ -92,6 +98,7 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     addChildComponent(*toolTip);
 
     presetButton = std::make_unique<jcmp::MenuButton>();
+    presetButton->setCustomClass(PatchMenu);
     presetButton->setLabel("init");
     presetButton->setOnCallback([this]() { showPresetPopup(); });
     addAndMakeVisible(*presetButton);
@@ -127,6 +134,13 @@ void SixSinesEditor::idle()
         if (aum->action == Synth::AudioToUIMsg::UPDATE_PARAM)
         {
             patchCopy.paramMap[aum->paramId]->value = aum->value;
+
+            auto rit = componentRefreshByID.find(aum->paramId);
+            if (rit != componentRefreshByID.end())
+            {
+                rit->second();
+            }
+
             auto pit = componentByID.find(aum->paramId);
             if (pit != componentByID.end() && pit->second)
                 pit->second->repaint();
@@ -481,6 +495,9 @@ void SixSinesEditor::doLoadPatch()
             auto loadPath = fs::path{result[0].getFullPathName().toStdString()};
             w->presetManager->loadUserPresetDirect(loadPath, w->patchCopy);
             w->sendEntirePatchToAudio();
+            for (auto [id, f] : w->componentRefreshByID)
+                f();
+
             w->repaint();
         });
 }
@@ -490,6 +507,9 @@ void SixSinesEditor::resetToDefault()
     SXSNLOG("Resetting to default");
     patchCopy.resetToInit();
     sendEntirePatchToAudio();
+    for (auto [id, f] : componentRefreshByID)
+        f();
+
     repaint();
 }
 
