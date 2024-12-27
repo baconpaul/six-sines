@@ -35,7 +35,8 @@ enum TriggerMode
 {
     NEW_GATE,
     NEW_VOICE,
-    KEY_PRESS
+    KEY_PRESS,
+    PATCH_DEFAULT
 };
 
 template <typename T> struct EnvelopeSupport
@@ -65,15 +66,18 @@ template <typename T> struct EnvelopeSupport
     {
         switch ((int)std::round(tmV))
         {
+        case 0:
+            triggerMode = NEW_GATE;
+            break;
         case 1:
             triggerMode = NEW_VOICE;
             break;
         case 2:
             triggerMode = KEY_PRESS;
             break;
+        case 3:
         default:
-        case 0:
-            triggerMode = NEW_GATE;
+            triggerMode = PATCH_DEFAULT;
             break;
         }
         env.initializeLuts();

@@ -112,53 +112,70 @@ OpSource &Voice::targetAtMatrix(size_t pos) { return src[MatrixIndex::targetInde
 
 void Voice::retriggerAllEnvelopesForKeyPress()
 {
+    auto dtm = out.defaultTrigger;
+    auto mtm = [dtm](auto tm)
+    {
+        auto res = (tm == TriggerMode::KEY_PRESS ||
+                    (tm == TriggerMode::PATCH_DEFAULT && dtm == TriggerMode::KEY_PRESS));
+        return res;
+    };
     for (auto &s : src)
         if (s.active)
-            if (s.triggerMode == TriggerMode::KEY_PRESS)
+            if (mtm(s.triggerMode))
                 s.envAttack();
 
     for (auto &s : selfNode)
         if (s.active)
-            if (s.triggerMode == TriggerMode::KEY_PRESS)
+            if (mtm(s.triggerMode))
                 s.envAttack();
 
     for (auto &s : mixerNode)
         if (s.active)
-            if (s.triggerMode == TriggerMode::KEY_PRESS)
+            if (mtm(s.triggerMode))
                 s.envAttack();
 
     for (auto &s : matrixNode)
         if (s.active)
-            if (s.triggerMode == TriggerMode::KEY_PRESS)
+            if (mtm(s.triggerMode))
                 s.envAttack();
 
-    if (out.triggerMode != TriggerMode::KEY_PRESS)
+    if (mtm(out.triggerMode))
         out.envAttack();
 }
 
 void Voice::retriggerAllEnvelopesForReGate()
 {
+    auto dtm = out.defaultTrigger;
+    auto mtm = [dtm](auto tm)
+    {
+        if (tm == TriggerMode::PATCH_DEFAULT)
+        {
+            return dtm != NEW_VOICE;
+        }
+        return tm != NEW_VOICE;
+    };
+
     for (auto &s : src)
         if (s.active)
-            if (s.triggerMode != TriggerMode::NEW_VOICE)
+            if (mtm(s.triggerMode))
                 s.envAttack();
 
     for (auto &s : selfNode)
         if (s.active)
-            if (s.triggerMode != TriggerMode::NEW_VOICE)
+            if (mtm(s.triggerMode))
                 s.envAttack();
 
     for (auto &s : mixerNode)
         if (s.active)
-            if (s.triggerMode != TriggerMode::NEW_VOICE)
+            if (mtm(s.triggerMode))
                 s.envAttack();
 
     for (auto &s : matrixNode)
         if (s.active)
-            if (s.triggerMode != TriggerMode::NEW_VOICE)
+            if (mtm(s.triggerMode))
                 s.envAttack();
 
-    if (out.triggerMode != TriggerMode::NEW_VOICE)
+    if (mtm(out.triggerMode))
         out.envAttack();
 }
 

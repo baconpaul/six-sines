@@ -141,6 +141,9 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         case 2:
             triggerButton->setLabel("K");
             break;
+        case 3:
+            triggerButton->setLabel("D");
+            break;
         }
         triggerButton->repaint();
     }
@@ -167,9 +170,10 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         auto p = juce::PopupMenu();
         p.addSectionHeader("Trigger Mode");
         p.addSeparator();
-        p.addItem("On New Gated", true, tmv == 0, genSet(0));
+        p.addItem("On Gated", true, tmv == 0, genSet(0));
         p.addItem("On New Voice", true, tmv == 1, genSet(1));
         p.addItem("On Key Press", true, tmv == 2, genSet(2));
+        p.addItem("Follow Patch Default", true, tmv == 3, genSet(3));
 
         p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
     }
