@@ -332,7 +332,8 @@ struct Patch
                         .withGroupName(name(idx))
                         .withDecimalPlaces(4)
                         .withDefault(0.0)
-                        .withID(id(0, idx))),
+                        .withID(id(0, idx))
+                        .withFeature(md_t::Features::BELOW_ONE_IS_INVERSE_FRACTION)),
               active(boolMd()
                          .withGroupName(name(idx))
                          .withName(name(idx) + " Active")
