@@ -22,6 +22,7 @@ PRESETS:
 PLAY MODE:
 - Portamento maybe
 - Voice Unison
+- Make piano mode available
 
 CLAP
 - An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)
