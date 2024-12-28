@@ -708,6 +708,8 @@ struct Patch
     std::string toState() const;
     bool fromState(const std::string &);
 
+    char name[256]{"Init"};
+
   private:
     bool fromStateV1(const std::string &);
 

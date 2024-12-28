@@ -242,6 +242,13 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             audioRunning = true;
         }
         break;
+        case UIToAudioMsg::SEND_PATCH_NAME:
+        {
+            memset(patch.name, 0, sizeof(patch.name));
+            strncpy(patch.name, uiM->hackPointer, 255);
+            audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
+        }
+        break;
         }
         uiM = uiToAudio.pop();
     }
@@ -284,6 +291,7 @@ void Synth::pushFullUIRefresh()
         AudioToUIMsg au = {AudioToUIMsg::UPDATE_PARAM, p->meta.id, p->value};
         audioToUi.push(au);
     }
+    audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
 }
 
 } // namespace baconpaul::six_sines

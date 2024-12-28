@@ -30,7 +30,6 @@ struct PresetManager
     PresetManager();
 
     void rescanUserPresets();
-    void saveUserPreset(const fs::path &category, const fs::path &name, Patch &);
 
     void saveUserPresetDirect(const fs::path &p, Patch &);
     void loadUserPresetDirect(const fs::path &p, Patch &);

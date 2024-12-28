@@ -87,6 +87,8 @@ struct SixSinesEditor : jcmp::WindowPanel
     void doLoadPatch();
     void doSavePatch();
     void resetToDefault();
+    void setPatchNameDisplay();
+    void setPatchNameTo(const std::string &);
     std::unique_ptr<juce::FileChooser> fileChooser;
 
     std::unique_ptr<jcmp::ToolTip> toolTip;
@@ -103,7 +105,7 @@ struct SixSinesEditor : jcmp::WindowPanel
 
     std::shared_ptr<SixSinesJuceLookAndFeel> lnf;
 
-    void sendEntirePatchToAudio();
+    void sendEntirePatchToAudio(const std::string &patchName);
     void setParamValueOnCopy(uint32_t id, float value, bool notifyAudio);
 };
 

@@ -15,9 +15,6 @@ MODULATION:
 - MPE source? (later)
 - Note expressions? (later)
 
-PRESETS:
-- preset name on display and stored in patch
-
 PLAY MODE:
 - Voice Unison
 - Make piano mode available
