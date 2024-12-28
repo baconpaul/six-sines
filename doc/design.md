@@ -16,7 +16,6 @@ MODULATION:
 - Note expressions? (later)
 
 PRESETS:
-- preset scan user directory to make tree
 - preset name on display and stored in patch
 
 PLAY MODE:
@@ -28,6 +27,7 @@ CLAP
 
 GENERAL AND CLEANUPS
 - Ctrl/Knob quantizes on ratio to PO2
+- We could have an envelope which trigers as always-gated on release
 - AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
 - Don't send VU etc when editor not attached
 - LFO in Pulse and S&H need a tiny little LPF to avoid super-clicka on modulation nodes (but not ratio nodes)
