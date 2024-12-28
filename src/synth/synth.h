@@ -223,6 +223,12 @@ struct Synth
     std::atomic<bool> doFullRefresh{false};
     sst::basic_blocks::dsp::UIComponentLagHandler lagHandler;
 
+    void prepForStream()
+    {
+        if (lagHandler.active)
+            lagHandler.instantlySnap();
+    }
+
     void pushFullUIRefresh();
     void postLoad()
     {

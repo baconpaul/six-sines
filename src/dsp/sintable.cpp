@@ -49,8 +49,6 @@ void SinTable::initializeStatics()
     if (staticsInitialized)
         return;
 
-    SXSNLOG("Iniitalizing Sintable");
-
     memset(quadrantTable, 0, sizeof(quadrantTable));
     memset(dQuadrantTable, 0, sizeof(dQuadrantTable));
 

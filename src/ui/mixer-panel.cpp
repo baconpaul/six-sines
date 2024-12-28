@@ -38,6 +38,17 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
         labels[i] = std::make_unique<jcmp::Label>();
         labels[i]->setText("Op " + std::to_string(i + 1) + " Level");
         addAndMakeVisible(*labels[i]);
+
+        knobsData[i]->onPullFromMin = [i, w = juce::Component::SafePointer(this)]()
+        {
+            if (!w)
+                return;
+            w->editor.setParamValueOnCopy(w->editor.patchCopy.mixerNodes[i].active.meta.id, true,
+                                          true);
+            w->editor.setParamValueOnCopy(w->editor.patchCopy.sourceNodes[i].active.meta.id, true,
+                                          true);
+            w->repaint();
+        };
     }
 
     highlight = std::make_unique<KnobHighlight>();

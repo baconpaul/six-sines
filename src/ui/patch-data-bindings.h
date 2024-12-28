@@ -76,6 +76,11 @@ struct PatchContinuous : jdat::Continuous
     }
     void setValueFromGUI(const float &f) override
     {
+        if (p->value == p->meta.minVal && f != p->value)
+        {
+            if (onPullFromMin)
+                onPullFromMin();
+        }
         p->value = f;
         editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pid, f});
         editor.flushOperator();
@@ -89,6 +94,8 @@ struct PatchContinuous : jdat::Continuous
 
     jdat::Discrete *tsPowerPartner{nullptr};
     void setTemposyncPowerPartner(jdat::Discrete *d) { tsPowerPartner = d; }
+
+    std::function<void()> onPullFromMin{nullptr};
 };
 
 struct PatchDiscrete : jdat::Discrete
