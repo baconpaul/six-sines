@@ -27,6 +27,7 @@ void Patch::resetToInit()
     {
         p->value = p->meta.defaultVal;
     }
+    strncpy(name, "Init", 255);
 }
 std::string Patch::toState() const
 {
@@ -34,6 +35,7 @@ std::string Patch::toState() const
     TiXmlElement rootNode("patch");
     rootNode.SetAttribute("id", "org.baconpaul.six-sines");
     rootNode.SetAttribute("version", Patch::patchVersion);
+    rootNode.SetAttribute("name", name);
 
     TiXmlElement paramsNode("params");
 
@@ -84,6 +86,11 @@ bool Patch::fromState(const std::string &idata)
     {
         SXSNLOG("Unknown version " << ver);
         return false;
+    }
+    if (rn->Attribute("name"))
+    {
+        memset(name, 0, sizeof(name));
+        strncpy(name, rn->Attribute("name"), 255);
     }
 
     auto pars = rn->FirstChildElement("params");

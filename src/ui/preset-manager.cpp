@@ -60,6 +60,12 @@ PresetManager::PresetManager()
         SXSNLOG(e.what());
     }
 
+    rescanUserPresets();
+}
+
+void PresetManager::rescanUserPresets()
+{
+    userPatches.clear();
     try
     {
         std::function<void(const fs::path &)> itd;
@@ -110,30 +116,9 @@ PresetManager::PresetManager()
                           return a < b;
                       }
                   });
-
-        for (auto &el : userPatches)
-        {
-            SXSNLOG("User : " << el);
-        }
     }
     catch (fs::filesystem_error &)
     {
-    }
-}
-
-void PresetManager::rescanUserPresets() {}
-void PresetManager::saveUserPreset(const fs::path &category, const fs::path &name, Patch &patch)
-{
-    try
-    {
-        auto dir = userPatchPath / category;
-        fs::create_directories(dir);
-        auto pt = (dir / name).replace_extension(".sxsnp");
-        saveUserPresetDirect(pt, patch);
-    }
-    catch (fs::filesystem_error &e)
-    {
-        SXSNLOG(e.what());
     }
 }
 
@@ -145,6 +130,7 @@ void PresetManager::saveUserPresetDirect(const fs::path &pt, Patch &patch)
         ofs << patch.toState();
     }
     ofs.close();
+    rescanUserPresets();
 }
 
 void PresetManager::loadUserPresetDirect(const fs::path &p, Patch &patch)

@@ -197,10 +197,12 @@ struct Synth
         {
             UPDATE_PARAM,
             UPDATE_VU,
-            UPDATE_VOICE_COUNT
+            UPDATE_VOICE_COUNT,
+            SET_PATCH_NAME
         } action;
         uint32_t paramId{0};
         float value{0}, value2{0};
+        const char *hackPointer{0};
     };
     struct UIToAudioMsg
     {
@@ -211,10 +213,12 @@ struct Synth
             BEGIN_EDIT,
             END_EDIT,
             STOP_AUDIO,
-            START_AUDIO
+            START_AUDIO,
+            SEND_PATCH_NAME
         } action;
         uint32_t paramId{0};
         float value{0};
+        const char *hackPointer{nullptr};
     };
     using audioToUIQueue_t = sst::cpputils::SimpleRingBuffer<AudioToUIMsg, 1024 * 16>;
     using uiToAudioQueue_T = sst::cpputils::SimpleRingBuffer<UIToAudioMsg, 1024 * 64>;
