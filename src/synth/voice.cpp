@@ -70,6 +70,12 @@ void Voice::renderBlock()
             MTS_RetuningInSemitones(monoValues.mtsClient, voiceValues.key, voiceValues.channel);
     }
     retuneKey += ((monoValues.pitchBend >= 0) ? out.bendUp : out.bendDown) * monoValues.pitchBend;
+    retuneKey += voiceValues.portaDiff * voiceValues.portaSign;
+
+    if (voiceValues.portaDiff > 1e-5)
+        voiceValues.portaDiff -= voiceValues.dPorta;
+    else
+        voiceValues.portaDiff = 0;
     auto baseFreq = monoValues.tuningProvider.note_to_pitch(retuneKey - 69) * 440.0;
 
     for (int i = 0; i < numOps; ++i)
@@ -184,6 +190,9 @@ void Voice::cleanup()
     used = false;
     fadeBlocks = -1;
     voiceValues.gated = false;
+    voiceValues.portaDiff = 0;
+    voiceValues.portaSign = 0;
+    voiceValues.dPorta = 0;
 
     for (auto &s : src)
     {
@@ -206,6 +215,31 @@ void Voice::cleanup()
     }
 
     out.envCleanup();
+}
+
+void Voice::setupPortaTo(uint16_t newKey, float log2Time)
+{
+    auto sign = newKey > voiceValues.key ? -1 : 1;
+    if (log2Time < -8 + 1e-5)
+    {
+        voiceValues.portaSign = 0;
+        voiceValues.portaDiff = 0;
+        voiceValues.dPorta = 0;
+        return;
+    }
+    auto blocks = monoValues.twoToTheX.twoToThe(log2Time) * gSampleRate / blockSize;
+
+    if (voiceValues.portaDiff > 1e-5)
+    {
+        auto sourceKey = voiceValues.key + voiceValues.portaDiff * voiceValues.portaSign;
+        voiceValues.portaDiff = std::abs(sourceKey - newKey);
+    }
+    else
+    {
+        voiceValues.portaDiff = std::abs(voiceValues.key - newKey);
+    }
+    voiceValues.dPorta = voiceValues.portaDiff / blocks;
+    voiceValues.portaSign = sign;
 }
 
 } // namespace baconpaul::six_sines

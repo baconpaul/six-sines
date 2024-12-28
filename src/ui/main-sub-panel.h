@@ -53,6 +53,11 @@ struct MainSubPanel : juce::Component, HasEditor, DAHDSRComponents<MainSubPanel,
     std::unique_ptr<jcmp::TextPushButton> triggerButton;
     void setTriggerButtonLabel();
     void showTriggerButtonMenu();
+
+    std::unique_ptr<jcmp::Knob> portaTime;
+    std::unique_ptr<PatchContinuous> portaTimeD;
+    std::unique_ptr<jcmp::Label> portaL;
+    void setPortaEnable();
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

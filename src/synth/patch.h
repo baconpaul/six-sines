@@ -668,7 +668,17 @@ struct Patch
                                  .withDefault(0)
                                  .withID(id(27))
                                  .withUnorderedMapFormatting(
-                                     {{0, "On Gated"}, {1, "On New Voice"}, {2, "On Key press"}}))
+                                     {{0, "On Gated"}, {1, "On New Voice"}, {2, "On Key press"}})),
+              portaTime(floatMd()
+                            .withRange(-8, 2)
+                            .withName(name() + " Portamento Time")
+                            .withGroupName(name())
+                            .withDefault(0)
+                            .withID(id(28))
+                            .withDecimalPlaces(4)
+                            .withLog2SecondsFormatting()
+                            .withMilisecondsBelowOneSecond()
+                            .withCustomMinDisplay("Off"))
         {
         }
 
@@ -676,12 +686,12 @@ struct Patch
         uint32_t id(int f) const { return idBase + f; }
 
         Param level, velSensitivity, playMode;
-        Param bendUp, bendDown, polyLimit, defaultTrigger;
+        Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level,    &velSensitivity, &playMode,      &bendUp,
-                                     &bendDown, &polyLimit,      &defaultTrigger};
+            std::vector<Param *> res{&level,    &velSensitivity, &playMode,       &bendUp,
+                                     &bendDown, &polyLimit,      &defaultTrigger, &portaTime};
             appendDAHDSRParams(res);
             return res;
         }

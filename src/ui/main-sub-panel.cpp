@@ -55,6 +55,24 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     playMode->direction = sst::jucegui::components::MultiSwitch::VERTICAL;
     addAndMakeVisible(*playMode);
 
+    createComponent(editor, *this, e.patchCopy.output.portaTime, portaTime, portaTimeD);
+    addAndMakeVisible(*portaTime);
+    portaL = std::make_unique<jcmp::Label>();
+    portaL->setText("Porta");
+    addAndMakeVisible(*portaL);
+    portaTime->setEnabled(false);
+    portaL->setEnabled(false);
+    setPortaEnable();
+
+    auto op = [w = juce::Component::SafePointer(this)]()
+    {
+        if (w)
+            w->setPortaEnable();
+    };
+
+    editor.componentRefreshByID[e.patchCopy.output.playMode.meta.id] = op;
+    playModeD->onGuiSetValue = op;
+
     triggerButton = std::make_unique<jcmp::TextPushButton>();
     triggerButton->setOnCallback(
         [w = juce::Component::SafePointer(this)]()
@@ -111,7 +129,7 @@ void MainSubPanel::resized()
     triggerButton->setBounds(bbx.withHeight(uicLabelHeight));
     bbx = bbx.translated(0, uicLabelHeight + uicMargin);
 
-    // playMode->setBounds(bx.withHeight(2 * uicLabelHeight + uicMargin));
+    positionKnobAndLabel(bbx.getX() + xtraW, bbx.getY() + uicMargin, portaTime, portaL);
 }
 
 void MainSubPanel::setTriggerButtonLabel()
@@ -157,6 +175,15 @@ void MainSubPanel::showTriggerButtonMenu()
     p.addItem("On Key Press", true, tmv == 2, genSet(2));
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
+}
+
+void MainSubPanel::setPortaEnable()
+{
+    auto vm = editor.patchCopy.output.playMode.value;
+    auto en = vm > 0.5;
+    portaL->setEnabled(en);
+    portaTime->setEnabled(en);
+    repaint();
 }
 
 } // namespace baconpaul::six_sines::ui
