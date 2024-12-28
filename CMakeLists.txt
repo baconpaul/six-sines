@@ -37,6 +37,9 @@ endif ()
 
 message(STATUS "Compiling with git hash ${BUILD_HASH}")
 
+include(cmake/CmakeRC.cmake)
+file(GLOB_RECURSE PATCHES  "resources/factory_patches/*.sxsnp")
+cmrc_add_resource_library(${PROJECT_NAME}-patches NAMESPACE sixsines_patches ${PATCHES})
 
 set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
 add_subdirectory(libs)
@@ -76,7 +79,9 @@ target_link_libraries(${PROJECT_NAME}-impl PUBLIC
         mts-esp-client
         sst-basic-blocks sst-voicemanager sst-jucegui sst-cpputils
         sst-plugininfra sst-plugininfra::filesystem sst-plugininfra::tinyxml
-        sst::clap_juce_shim sst::clap_juce_shim_headers)
+        sst::clap_juce_shim sst::clap_juce_shim_headers
+        ${PROJECT_NAME}-patches
+)
 
 
 set(CLAP_TARGET ${PROJECT_NAME}_clap)

@@ -421,7 +421,40 @@ void SixSinesEditor::popupMenuForContinuous(jcmp::ContinuousParamEditor *e)
 void SixSinesEditor::showPresetPopup()
 {
     auto p = juce::PopupMenu();
-    p.addSectionHeader("Presets - Coming Soon");
+    p.addSectionHeader("Presets");
+
+    auto f = juce::PopupMenu();
+    f.addSectionHeader("Factory Patches");
+    f.addSeparator();
+    for (auto &[c, ent] : presetManager->factoryPatchNames)
+    {
+        auto em = juce::PopupMenu();
+        em.addSectionHeader(c);
+        em.addSeparator();
+        for (auto &e : ent)
+        {
+            auto noExt = e;
+            auto ps = noExt.find(".sxsnp");
+            if (ps != std::string::npos)
+            {
+                noExt = noExt.substr(0, ps);
+            }
+            em.addItem(noExt,
+                       [cat = c, pat = e, this]()
+                       {
+                           this->presetManager->loadFactoryPreset(cat, pat, patchCopy);
+                           sendEntirePatchToAudio();
+                           for (auto [id, f] : componentRefreshByID)
+                               f();
+
+                           repaint();
+                       });
+        }
+        f.addSubMenu(c, em);
+    }
+    p.addSeparator();
+    p.addSubMenu("Factory", f);
+    p.addSubMenu("User", juce::PopupMenu());
     p.addSeparator();
     p.addItem("Load Patch",
               [w = juce::Component::SafePointer(this)]()
