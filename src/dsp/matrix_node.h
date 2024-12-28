@@ -38,7 +38,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
     const float &level, &activeV, &pmrmV, &lfoToDepth, &mulLfoV;
-    MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr, const MonoValues &mv,
+    MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr, MonoValues &mv,
                    const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), onto(on), from(fr), level(mn.level), pmrmV(mn.pmOrRM),
           activeV(mn.active), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
@@ -113,8 +113,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>, LFOSupport<Patch::Self
     const VoiceValues &voiceValues;
 
     const float &fbBase, &lfoToFB, &activeV, &lfoMulV;
-    MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, const MonoValues &mv,
-                   const VoiceValues &vv)
+    MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, MonoValues &mv, const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), sr(mv), onto(on), fbBase(sn.fbLevel),
           lfoToFB(sn.lfoToFB), activeV(sn.active), lfoMulV(sn.envLfoSum),
           EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv){};
@@ -170,7 +169,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>, LFOSupport<Patch::MixerNod
     const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan, &lfoMulV;
     bool active{false}, lfoMul{false};
 
-    MixerNode(const Patch::MixerNode &mn, OpSource &f, const MonoValues &mv, const VoiceValues &vv)
+    MixerNode(const Patch::MixerNode &mn, OpSource &f, MonoValues &mv, const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), sr(mv), from(f), pan(mn.pan), level(mn.level),
           activeF(mn.active), lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan),
           EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv), lfoMulV(mn.envLfoSum)
@@ -249,7 +248,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
     const float &defTrigV;
     TriggerMode defaultTrigger;
 
-    OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f, const MonoValues &mv,
+    OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f, MonoValues &mv,
                const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), sr(mv), fromArr(f), level(on.level), bendUp(on.bendUp),
           bendDown(on.bendDown), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),

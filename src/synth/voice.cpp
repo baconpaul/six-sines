@@ -24,7 +24,7 @@ namespace baconpaul::six_sines
 
 namespace scpu = sst::cpputils;
 
-Voice::Voice(const Patch &p, const MonoValues &mv)
+Voice::Voice(const Patch &p, MonoValues &mv)
     : monoValues(mv), out(p.output, mixerNode, mv, voiceValues),
       output{out.output[0], out.output[1]},
       src(scpu::make_array_lambda<OpSource, numOps>(

@@ -142,8 +142,8 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     lfo_t lfo;
     sst::basic_blocks::dsp::OnePoleLag<float, false> lag;
 
-    LFOSupport(const T &mn, const MonoValues &mv)
-        : sr(mv), paramBundle(mn), lfo(&sr), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform),
+    LFOSupport(const T &mn, MonoValues &mv)
+        : sr(mv), paramBundle(mn), lfo(&sr, mv.rng), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform),
           lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive), tempoSyncV(mn.tempoSync), monoValues(mv)
     {
     }

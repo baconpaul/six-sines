@@ -52,7 +52,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     uint32_t phase;
     uint32_t dPhase;
 
-    OpSource(const Patch::SourceNode &sn, const MonoValues &mv, const VoiceValues &vv)
+    OpSource(const Patch::SourceNode &sn, MonoValues &mv, const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv),
           ModulationSupport(sn, mv, vv), ratio(sn.ratio), activeV(sn.active),
           envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio), lfoByEnv(sn.envLfoSum),

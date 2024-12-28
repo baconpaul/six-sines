@@ -18,6 +18,7 @@
 
 #include <sst/basic-blocks/tables/EqualTuningProvider.h>
 #include <sst/basic-blocks/tables/TwoToTheXProvider.h>
+#include <sst/basic-blocks/dsp/RNG.h>
 
 struct MTSClient;
 
@@ -39,6 +40,8 @@ struct MonoValues
 
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
     sst::basic_blocks::tables::TwoToTheXProvider twoToTheX;
+
+    sst::basic_blocks::dsp::RNG rng;
 };
 };     // namespace baconpaul::six_sines
 #endif // MONO_VALUES_H

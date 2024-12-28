@@ -34,7 +34,7 @@ struct Voice
     const MonoValues &monoValues;
     VoiceValues voiceValues;
 
-    Voice(const Patch &, const MonoValues &);
+    Voice(const Patch &, MonoValues &);
     ~Voice() = default;
 
     void attack();
