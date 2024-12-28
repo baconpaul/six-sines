@@ -29,7 +29,7 @@
 namespace baconpaul::six_sines
 {
 struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
-                              LFOSupport<Patch::SourceNode>,
+                              LFOSupport<Patch::SourceNode, false>,
                               ModulationSupport<Patch::SourceNode>
 {
     int32_t phaseInput alignas(16)[blockSize];

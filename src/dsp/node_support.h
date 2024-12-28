@@ -22,6 +22,7 @@
 #include "sst/cpputils/constructors.h"
 #include "sst/basic-blocks/modulators/AHDSRShapedSC.h"
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
+#include "sst/basic-blocks/dsp/Lag.h"
 
 #include "dsp/sr_provider.h"
 #include "synth/mono_values.h"
@@ -129,15 +130,17 @@ template <typename T> struct EnvelopeSupport
     }
 };
 
-template <typename T> struct LFOSupport
+template <typename T, bool needsSmoothing = true> struct LFOSupport
 {
     SRProvider sr;
     const T &paramBundle;
     const MonoValues &monoValues;
 
     const float &lfoRate, &lfoDeform, &lfoShape, &lfoActiveV, &tempoSyncV;
-    bool active;
-    sst::basic_blocks::modulators::SimpleLFO<SRProvider, blockSize> lfo;
+    bool active, doSmooth{false};
+    using lfo_t = sst::basic_blocks::modulators::SimpleLFO<SRProvider, blockSize>;
+    lfo_t lfo;
+    sst::basic_blocks::dsp::OnePoleLag<float, false> lag;
 
     LFOSupport(const T &mn, const MonoValues &mv)
         : sr(mv), paramBundle(mn), lfo(&sr), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform),
@@ -151,7 +154,30 @@ template <typename T> struct LFOSupport
     {
         tempoSync = tempoSyncV > 0.5;
         shape = static_cast<int>(std::round(lfoShape));
+
         lfo.attack(shape);
+        if (needsSmoothing)
+        {
+            auto tshape = (lfo_t::Shape)shape;
+            switch (tshape)
+            {
+            case lfo_t::RAMP:
+            case lfo_t::DOWN_RAMP:
+            case lfo_t::PULSE:
+            case lfo_t::SH_NOISE:
+                doSmooth = true;
+                lag.setRateInMilliseconds(10, gSampleRate, 1.0);
+                lag.snapTo(0.f);
+                break;
+            default:
+                doSmooth = false;
+                break;
+            }
+        }
+        else
+        {
+            doSmooth = false;
+        }
     }
     void lfoProcess()
     {
@@ -160,6 +186,17 @@ template <typename T> struct LFOSupport
             rate = monoValues.tempoSyncRatio * paramBundle.lfoRate.meta.snapToTemposync(rate);
 
         lfo.process_block(rate, lfoDeform, shape);
+
+        if (doSmooth)
+        {
+
+            for (int j = 0; j < blockSize; ++j)
+            {
+                lag.setTarget(lfo.outputBlock[j]);
+                lag.process();
+                lfo.outputBlock[j] = lag.v;
+            }
+        }
     }
 };
 

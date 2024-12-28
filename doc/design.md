@@ -24,7 +24,6 @@ CLAP
 - An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)
 
 GENERAL AND CLEANUPS
-- LFO in Pulse and S&H need a tiny little LPF to avoid super-clicka on modulation nodes (but not ratio nodes)
 - Ctrl/Knob quantizes on ratio to PO2
 - We could have an envelope which trigers as always-gated on release
 - AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
