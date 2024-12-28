@@ -72,7 +72,6 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
                     return;
                 w->showTriggerPopup();
             });
-        setTriggerLabel();
         asComp()->addAndMakeVisible(*triggerButton);
         e.componentRefreshByID[v.triggerMode.meta.id] =
             [w = juce::Component::SafePointer(asComp())]()
@@ -81,6 +80,7 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
                 w->setTriggerLabel();
         };
         triggerModePtr = &v.triggerMode;
+        setTriggerLabel();
     }
 
     juce::Rectangle<int> layoutDAHDSRAt(int x, int y)
