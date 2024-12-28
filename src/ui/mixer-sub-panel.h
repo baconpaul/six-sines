@@ -19,10 +19,14 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
+#include "lfo-components.h"
 
 namespace baconpaul::six_sines::ui
 {
-struct MixerSubPanel : juce::Component, HasEditor, DAHDSRComponents<MixerSubPanel, Patch::MixerNode>
+struct MixerSubPanel : juce::Component,
+                       HasEditor,
+                       DAHDSRComponents<MixerSubPanel, Patch::MixerNode>,
+                       LFOComponents<MixerSubPanel, Patch::MixerNode>
 {
     MixerSubPanel(SixSinesEditor &);
     ~MixerSubPanel();
@@ -33,6 +37,23 @@ struct MixerSubPanel : juce::Component, HasEditor, DAHDSRComponents<MixerSubPane
 
     size_t index{0};
     void setSelectedIndex(int i);
+
+    std::unique_ptr<jcmp::MultiSwitch> lfoMul;
+    std::unique_ptr<PatchDiscrete> lfoMulD;
+
+    std::unique_ptr<jcmp::Knob> lfoToLevel;
+    std::unique_ptr<PatchContinuous> lfoToLevelD;
+    std::unique_ptr<jcmp::Label> lfoToLevelL;
+
+    std::unique_ptr<jcmp::Knob> lfoToPan;
+    std::unique_ptr<PatchContinuous> lfoToPanD;
+    std::unique_ptr<jcmp::Label> lfoToPanL;
+
+    std::unique_ptr<RuledLabel> panTitle;
+
+    std::unique_ptr<jcmp::Knob> pan;
+    std::unique_ptr<PatchContinuous> panD;
+    std::unique_ptr<jcmp::Label> panL;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MIXER_SUB_PANE_H
