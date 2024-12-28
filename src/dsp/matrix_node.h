@@ -277,8 +277,17 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
         // Apply main output
         auto lv = level;
         auto v = 1.0 - velSen * (1.0 - voiceValues.velocity);
-        lv = 0.2 * v * lv * lv * lv;
+        lv = 0.15 * v * lv * lv * lv;
         mech::scale_by<blockSize>(lv, output[0], output[1]);
+#if DEBUG_LEVELS
+        for (int i = 0; i < blockSize; ++i)
+        {
+            if (std::fabs(output[0][i]) > 1 || std::fabs(output[1][i]) > 1)
+            {
+                SXSNLOG(i << " " << output[0][i] << " " << output[1][i]);
+            }
+        }
+#endif
     }
 };
 } // namespace baconpaul::six_sines
