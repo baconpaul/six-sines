@@ -35,7 +35,6 @@ namespace sdsp = sst::basic_blocks::dsp;
 enum TriggerMode
 {
     NEW_GATE,
-    NEW_VOICE,
     KEY_PRESS,
     PATCH_DEFAULT
 };
@@ -65,22 +64,8 @@ template <typename T> struct EnvelopeSupport
 
     void envAttack()
     {
-        switch ((int)std::round(tmV))
-        {
-        case 0:
-            triggerMode = NEW_GATE;
-            break;
-        case 1:
-            triggerMode = NEW_VOICE;
-            break;
-        case 2:
-            triggerMode = KEY_PRESS;
-            break;
-        case 3:
-        default:
-            triggerMode = PATCH_DEFAULT;
-            break;
-        }
+        triggerMode = (TriggerMode)std::round(tmV);
+
         env.initializeLuts();
         active = powerV > 0.5;
 

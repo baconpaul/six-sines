@@ -24,6 +24,7 @@ CLAP
 - An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)
 
 GENERAL AND CLEANUPS
+- Toggle button paint cleaner
 - Ctrl/Knob quantizes on ratio to PO2
 - We could have an envelope which trigers as always-gated on release
 - AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'

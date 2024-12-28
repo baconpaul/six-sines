@@ -178,9 +178,10 @@ void MainSubPanel::showTriggerButtonMenu()
     auto p = juce::PopupMenu();
     p.addSectionHeader("Default Trigger Mode");
     p.addSeparator();
-    p.addItem("On Gated", true, tmv == 0, genSet(0));
-    p.addItem("On New Voice", true, tmv == 1, genSet(1));
-    p.addItem("On Key Press", true, tmv == 2, genSet(2));
+    p.addItem("On Gated", true, tmv == (int)TriggerMode::NEW_GATE,
+              genSet((int)TriggerMode::NEW_GATE));
+    p.addItem("On Key Press", true, tmv == (int)TriggerMode::KEY_PRESS,
+              genSet((int)TriggerMode::KEY_PRESS));
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
 }

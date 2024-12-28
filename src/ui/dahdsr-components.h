@@ -132,17 +132,18 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         auto tmv = (int)std::round(triggerModePtr->value);
         switch (tmv)
         {
-        case 0:
+        case (int)TriggerMode::NEW_GATE:
             triggerButton->setLabel("G");
             break;
-        case 1:
-            triggerButton->setLabel("V");
-            break;
-        case 2:
+        case (int)TriggerMode::KEY_PRESS:
             triggerButton->setLabel("K");
             break;
-        case 3:
+        case (int)TriggerMode::PATCH_DEFAULT:
             triggerButton->setLabel("D");
+            break;
+        default:
+            SXSNLOG("WHAT IS THIS VALUE " << tmv << " " << triggerModePtr->meta.name << " "
+                                          << triggerModePtr->meta.id);
             break;
         }
         triggerButton->repaint();
@@ -170,10 +171,12 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         auto p = juce::PopupMenu();
         p.addSectionHeader("Trigger Mode");
         p.addSeparator();
-        p.addItem("On Gated", true, tmv == 0, genSet(0));
-        p.addItem("On New Voice", true, tmv == 1, genSet(1));
-        p.addItem("On Key Press", true, tmv == 2, genSet(2));
-        p.addItem("Follow Patch Default", true, tmv == 3, genSet(3));
+        p.addItem("On Gated", true, tmv == (int)TriggerMode::NEW_GATE,
+                  genSet((int)TriggerMode::NEW_GATE));
+        p.addItem("On Key Press", true, tmv == (int)TriggerMode::KEY_PRESS,
+                  genSet((int)TriggerMode::KEY_PRESS));
+        p.addItem("Follow Patch Default", true, tmv == (int)TriggerMode::PATCH_DEFAULT,
+                  genSet((int)TriggerMode::PATCH_DEFAULT));
 
         p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
     }

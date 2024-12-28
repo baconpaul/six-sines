@@ -49,13 +49,14 @@ struct Param
     uint64_t adhocFeatures{0};
     enum AdHocFeatureValues : uint64_t
     {
-        ENVTIME = 1 << 0 // tag for ADSR envs we changed version 2-3
+        ENVTIME = 1 << 0,     // tag for ADSR envs we changed version 2-3
+        TRIGGERMODE = 1 << 1, // trigger mode for when we nuked voice
     };
 };
 
 struct Patch
 {
-    static constexpr uint32_t patchVersion{4};
+    static constexpr uint32_t patchVersion{5};
     std::vector<const Param *> params;
     std::unordered_map<uint32_t, Param *> paramMap;
 
@@ -246,15 +247,13 @@ struct Patch
                          .withDefault(0)
                          .withID(id0 + 9)),
               triggerMode(intMd()
-                              .withRange(0, 3)
+                              .withRange(0, 2)
                               .withName(name + " Env Trigger Mode")
                               .withGroupName(name)
-                              .withDefault(3)
+                              .withDefault(2)
                               .withID(id0 + 10)
-                              .withUnorderedMapFormatting({{0, "Gate Start"},
-                                                           {1, "Voice Start"},
-                                                           {2, "Key Press"},
-                                                           {3, "Patch Default"}}))
+                              .withUnorderedMapFormatting(
+                                  {{0, "Gate Start"}, {1, "Key Press"}, {2, "Patch Default"}}))
 
         {
             delay.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
@@ -262,6 +261,8 @@ struct Patch
             hold.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
             decay.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
             release.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
+
+            triggerMode.adhocFeatures = Param::AdHocFeatureValues::TRIGGERMODE;
         }
 
         Param delay, attack, hold, decay, sustain, release, envPower;
@@ -667,15 +668,15 @@ struct Patch
                             .withDefault(maxVoices)
                             .withID(id(26))
                             .withLinearScaleFormatting("")),
-              defaultTrigger(md_t()
-                                 .asInt()
-                                 .withRange(0, 2)
-                                 .withName(name() + " Default Env Mode")
-                                 .withGroupName(name())
-                                 .withDefault(0)
-                                 .withID(id(27))
-                                 .withUnorderedMapFormatting(
-                                     {{0, "On Gated"}, {1, "On New Voice"}, {2, "On Key press"}})),
+              defaultTrigger(
+                  md_t()
+                      .asInt()
+                      .withRange(0, 1)
+                      .withName(name() + " Default Env Mode")
+                      .withGroupName(name())
+                      .withDefault(0)
+                      .withID(id(27))
+                      .withUnorderedMapFormatting({{0, "On Gated"}, {1, "On Key press"}})),
               portaTime(floatMd()
                             .withRange(-8, 2)
                             .withName(name() + " Portamento Time")
@@ -693,6 +694,7 @@ struct Patch
                                   .withDefault(true)
                                   .withID(id(29)))
         {
+            defaultTrigger.adhocFeatures = Param::AdHocFeatureValues::TRIGGERMODE;
         }
 
         std::string name() const { return "Main"; }

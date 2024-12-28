@@ -154,11 +154,7 @@ void Voice::retriggerAllEnvelopesForReGate()
     auto dtm = out.defaultTrigger;
     auto mtm = [dtm](auto tm)
     {
-        if (tm == TriggerMode::PATCH_DEFAULT)
-        {
-            return dtm != NEW_VOICE;
-        }
-        return tm != NEW_VOICE;
+        return true; // used to be where we spport voice mode
     };
 
     for (auto &s : src)
