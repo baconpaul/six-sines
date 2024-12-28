@@ -16,8 +16,8 @@ MODULATION:
 - Note expressions? (later)
 
 PRESETS:
-- preset factory set with cmakerc
 - preset scan user directory to make tree
+- preset name on display and stored in patch
 
 PLAY MODE:
 - Voice Unison

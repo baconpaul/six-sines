@@ -18,6 +18,10 @@
 #include "sst/plugininfra/paths.h"
 #include "preset-manager.h"
 
+#include <cmrc/cmrc.hpp>
+
+CMRC_DECLARE(sixsines_patches);
+
 namespace baconpaul::six_sines::ui
 {
 PresetManager::PresetManager()
@@ -32,6 +36,29 @@ PresetManager::PresetManager()
     catch (fs::filesystem_error &e)
     {
         SXSNLOG("Unable to create user dir " << e.what());
+    }
+
+    try
+    {
+        auto fs = cmrc::sixsines_patches::get_filesystem();
+        for (const auto &d : fs.iterate_directory(factoryPath))
+        {
+            SXSNLOG(d.filename());
+            if (d.is_directory())
+            {
+                std::set<std::string> ents;
+                for (const auto &p :
+                     fs.iterate_directory(std::string() + factoryPath + "/" + d.filename()))
+                {
+                    ents.insert(p.filename());
+                    SXSNLOG("   " << p.filename());
+                }
+                factoryPatchNames[d.filename()] = ents;
+            }
+        }
+    }
+    catch (const std::exception &)
+    {
     }
 }
 
@@ -72,13 +99,19 @@ void PresetManager::loadUserPresetDirect(const fs::path &p, Patch &patch)
     patch.fromState(buffer.str());
 }
 
-void PresetManager::loadPreset(const Preset &p, Patch &synth)
+void PresetManager::loadFactoryPreset(const std::string &cat, const std::string &pat, Patch &patch)
 {
-    if (p.isFactory)
+    try
     {
+        auto fs = cmrc::sixsines_patches::get_filesystem();
+        auto f = fs.open(std::string() + factoryPath + "/" + cat + "/" + pat);
+        auto pb = std::string(f.begin(), f.end());
+        patch.fromState(pb);
     }
-    else
+    catch (const std::exception &e)
     {
+        SXSNLOG(e.what());
     }
 }
+
 } // namespace baconpaul::six_sines::ui

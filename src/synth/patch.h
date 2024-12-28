@@ -673,7 +673,7 @@ struct Patch
                             .withRange(-8, 2)
                             .withName(name() + " Portamento Time")
                             .withGroupName(name())
-                            .withDefault(0)
+                            .withDefault(-8)
                             .withID(id(28))
                             .withDecimalPlaces(4)
                             .withLog2SecondsFormatting()

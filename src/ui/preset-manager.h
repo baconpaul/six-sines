@@ -18,6 +18,10 @@
 
 #include "filesystem/import.h"
 #include "synth/patch.h"
+#include <map>
+#include <set>
+#include <string>
+
 namespace baconpaul::six_sines::ui
 {
 struct PresetManager
@@ -25,25 +29,18 @@ struct PresetManager
     fs::path userPatchPath;
     PresetManager();
 
-    struct Preset
-    {
-        bool isFactory{false};
-        fs::path category;
-        fs::path name;
-    };
-
-    std::vector<Preset> factoryPresets;
-    std::vector<Preset> userPresets;
-
     void rescanUserPresets();
-    void loadPreset(const Preset &, Patch &);
     void saveUserPreset(const fs::path &category, const fs::path &name, Patch &);
 
     void saveUserPresetDirect(const fs::path &p, Patch &);
     void loadUserPresetDirect(const fs::path &p, Patch &);
 
+    void loadFactoryPreset(const std::string &cat, const std::string &pat, Patch &);
     fs::path userPath;
     fs::path userPatchesPath;
+
+    static constexpr const char *factoryPath{"resources/factory_patches"};
+    std::map<std::string, std::set<std::string>> factoryPatchNames;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // PRESET_MANAGER_H
