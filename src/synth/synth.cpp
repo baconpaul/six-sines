@@ -261,10 +261,12 @@ void Synth::resetPlaymode()
     {
         voiceManager->setPlaymode(0, voiceManager_t::PlayMode::MONO_NOTES,
                                   (int)voiceManager_t::MonoPlayModeFeatures::NATURAL_LEGATO);
+        voiceManager->repeatedKeyMode = voiceManager_t::RepeatedKeyMode::MULTI_VOICE;
     }
     else
     {
         voiceManager->setPlaymode(0, voiceManager_t::PlayMode::POLY_VOICES);
+        voiceManager->repeatedKeyMode = voiceManager_t::RepeatedKeyMode::PIANO;
     }
 
     auto lim = (int)std::round(patch.output.polyLimit.value);

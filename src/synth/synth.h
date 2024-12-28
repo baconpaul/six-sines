@@ -72,7 +72,12 @@ struct Synth
 
         std::function<void(Voice *)> doVoiceEndCallback = [](auto) {};
         void setVoiceEndCallback(std::function<void(Voice *)> f) { doVoiceEndCallback = f; }
-        void retriggerVoiceWithNewNoteID(Voice *, int32_t, float) { assert(false); }
+        void retriggerVoiceWithNewNoteID(Voice *v, int32_t nid, float vel)
+        {
+            v->voiceValues.gated = true;
+            v->voiceValues.velocity = vel;
+            v->retriggerAllEnvelopesForReGate();
+        }
         void moveVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
         {
             v->setupPortaTo(k, synth.patch.output.portaTime.value);

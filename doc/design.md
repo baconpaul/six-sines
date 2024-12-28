@@ -18,7 +18,6 @@ PATCH SELECTOR:
 MAIN/PLAY MODE:
 - Global Transpose and Global in-semitone-tuning with LFO routable to tuning
 - Voice Unison
-- Make piano mode available
 - It also occurs to me that the main AEG feels totally dumb in voice mode. default moves to gate
 
 CLAP
