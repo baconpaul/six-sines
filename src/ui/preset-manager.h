@@ -41,6 +41,7 @@ struct PresetManager
 
     static constexpr const char *factoryPath{"resources/factory_patches"};
     std::map<std::string, std::set<std::string>> factoryPatchNames;
+    std::vector<fs::path> userPatches;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // PRESET_MANAGER_H

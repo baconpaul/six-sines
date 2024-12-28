@@ -43,7 +43,6 @@ PresetManager::PresetManager()
         auto fs = cmrc::sixsines_patches::get_filesystem();
         for (const auto &d : fs.iterate_directory(factoryPath))
         {
-            SXSNLOG(d.filename());
             if (d.is_directory())
             {
                 std::set<std::string> ents;
@@ -51,13 +50,73 @@ PresetManager::PresetManager()
                      fs.iterate_directory(std::string() + factoryPath + "/" + d.filename()))
                 {
                     ents.insert(p.filename());
-                    SXSNLOG("   " << p.filename());
                 }
                 factoryPatchNames[d.filename()] = ents;
             }
         }
     }
-    catch (const std::exception &)
+    catch (const std::exception &e)
+    {
+        SXSNLOG(e.what());
+    }
+
+    try
+    {
+        std::function<void(const fs::path &)> itd;
+        itd = [this, &itd](auto &p)
+        {
+            if (fs::is_directory(p))
+            {
+                for (auto &el : fs::directory_iterator(p))
+                {
+                    auto elp = el.path();
+                    if (elp.filename() == "." || elp.filename() == "..")
+                    {
+                        continue;
+                    }
+                    if (fs::is_directory(elp))
+                    {
+                        itd(elp);
+                    }
+                    else if (fs::is_regular_file(elp) && elp.extension() == ".sxsnp")
+                    {
+                        auto pushP = elp.lexically_relative(userPatchesPath);
+                        userPatches.push_back(pushP);
+                    }
+                }
+            }
+        };
+        itd(userPatchesPath);
+        std::sort(userPatches.begin(), userPatches.end(),
+                  [](const fs::path &a, const fs::path &b)
+                  {
+                      auto appe = a.parent_path().empty();
+                      auto bppe = b.parent_path().empty();
+
+                      if (appe && bppe)
+                      {
+                          return a < b;
+                      }
+                      else if (appe)
+                      {
+                          return true;
+                      }
+                      else if (bppe)
+                      {
+                          return false;
+                      }
+                      else
+                      {
+                          return a < b;
+                      }
+                  });
+
+        for (auto &el : userPatches)
+        {
+            SXSNLOG("User : " << el);
+        }
+    }
+    catch (fs::filesystem_error &)
     {
     }
 }

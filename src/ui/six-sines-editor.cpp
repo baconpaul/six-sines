@@ -429,8 +429,6 @@ void SixSinesEditor::showPresetPopup()
     for (auto &[c, ent] : presetManager->factoryPatchNames)
     {
         auto em = juce::PopupMenu();
-        em.addSectionHeader(c);
-        em.addSeparator();
         for (auto &e : ent)
         {
             auto noExt = e;
@@ -452,9 +450,65 @@ void SixSinesEditor::showPresetPopup()
         }
         f.addSubMenu(c, em);
     }
+
+    auto u = juce::PopupMenu();
+    u.addSectionHeader("User Patches");
+    u.addSeparator();
+    auto cat = fs::path();
+    auto s = juce::PopupMenu();
+    for (const auto &up : presetManager->userPatches)
+    {
+        auto pp = up.parent_path();
+        auto dn = up.filename().replace_extension("").u8string();
+        if (pp.empty())
+        {
+            u.addItem(dn,
+                      [this, pth = up]()
+                      {
+                          presetManager->loadUserPresetDirect(presetManager->userPatchesPath / pth,
+                                                              patchCopy);
+                          sendEntirePatchToAudio();
+                          for (auto [id, f] : componentRefreshByID)
+                              f();
+
+                          repaint();
+                      });
+        }
+        else
+        {
+            if (pp != cat)
+            {
+                if (cat.empty())
+                {
+                    u.addSeparator();
+                }
+                if (s.getNumItems() > 0)
+                {
+                    u.addSubMenu(cat.u8string(), s);
+                    s = juce::PopupMenu();
+                }
+                cat = pp;
+            }
+            s.addItem(dn,
+                      [this, pth = up]()
+                      {
+                          presetManager->loadUserPresetDirect(presetManager->userPatchesPath / pth,
+                                                              patchCopy);
+                          sendEntirePatchToAudio();
+                          for (auto [id, f] : componentRefreshByID)
+                              f();
+
+                          repaint();
+                      });
+        }
+    }
+    if (s.getNumItems() > 0 && !cat.empty())
+    {
+        u.addSubMenu(cat.u8string(), s);
+    }
     p.addSeparator();
     p.addSubMenu("Factory", f);
-    p.addSubMenu("User", juce::PopupMenu());
+    p.addSubMenu("User", u);
     p.addSeparator();
     p.addItem("Load Patch",
               [w = juce::Component::SafePointer(this)]()
