@@ -430,8 +430,6 @@ void SixSinesEditor::showPresetPopup()
     p.addSectionHeader("Presets");
 
     auto f = juce::PopupMenu();
-    f.addSectionHeader("Factory Patches");
-    f.addSeparator();
     for (auto &[c, ent] : presetManager->factoryPatchNames)
     {
         auto em = juce::PopupMenu();
@@ -458,8 +456,6 @@ void SixSinesEditor::showPresetPopup()
     }
 
     auto u = juce::PopupMenu();
-    u.addSectionHeader("User Patches");
-    u.addSeparator();
     auto cat = fs::path();
     auto s = juce::PopupMenu();
     for (const auto &up : presetManager->userPatches)
