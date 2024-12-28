@@ -542,8 +542,13 @@ void SixSinesEditor::showPresetPopup()
 
 void SixSinesEditor::doSavePatch()
 {
-    fileChooser = std::make_unique<juce::FileChooser>(
-        "Save Patch", juce::File(presetManager->userPatchesPath.u8string()), "*.sxsnp");
+    auto svP = presetManager->userPatchesPath;
+    if (strcmp(patchCopy.name, "Init") != 0)
+    {
+        svP = (svP / patchCopy.name).replace_extension(".sxsnp");
+    }
+    fileChooser =
+        std::make_unique<juce::FileChooser>("Save Patch", juce::File(svP.u8string()), "*.sxsnp");
     fileChooser->launchAsync(juce::FileBrowserComponent::canSelectFiles |
                                  juce::FileBrowserComponent::saveMode |
                                  juce::FileBrowserComponent::warnAboutOverwriting,
@@ -598,7 +603,6 @@ void SixSinesEditor::doLoadPatch()
 
 void SixSinesEditor::resetToDefault()
 {
-    SXSNLOG("Resetting to default");
     patchCopy.resetToInit();
     sendEntirePatchToAudio("Init");
     for (auto [id, f] : componentRefreshByID)

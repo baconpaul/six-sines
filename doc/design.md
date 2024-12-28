@@ -15,7 +15,11 @@ MODULATION:
 - MPE source? (later)
 - Note expressions? (later)
 
-PLAY MODE:
+PATCH SELECTOR:
+- Jog Buttons for next/prev
+
+MAIN/PLAY MODE:
+- Global Transpose and Global in-semitone-tuning with LFO routable to tuning
 - Voice Unison
 - Make piano mode available
 
