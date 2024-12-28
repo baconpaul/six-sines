@@ -54,6 +54,9 @@ struct MainSubPanel : juce::Component, HasEditor, DAHDSRComponents<MainSubPanel,
     void setTriggerButtonLabel();
     void showTriggerButtonMenu();
 
+    std::unique_ptr<jcmp::ToggleButton> pianoModeButton;
+    std::unique_ptr<PatchDiscrete> pianoModeButtonD;
+
     std::unique_ptr<jcmp::Knob> portaTime;
     std::unique_ptr<PatchContinuous> portaTimeD;
     std::unique_ptr<jcmp::Label> portaL;

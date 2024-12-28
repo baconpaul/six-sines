@@ -685,7 +685,13 @@ struct Patch
                             .withDecimalPlaces(4)
                             .withLog2SecondsFormatting()
                             .withMilisecondsBelowOneSecond()
-                            .withCustomMinDisplay("Off"))
+                            .withCustomMinDisplay("Off")),
+              pianoModeActive(md_t()
+                                  .asBool()
+                                  .withName(name() + " Piano Mode Active")
+                                  .withGroupName(name())
+                                  .withDefault(true)
+                                  .withID(id(29)))
         {
         }
 
@@ -693,12 +699,13 @@ struct Patch
         uint32_t id(int f) const { return idBase + f; }
 
         Param level, velSensitivity, playMode;
-        Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime;
+        Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, pianoModeActive;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level,    &velSensitivity, &playMode,       &bendUp,
-                                     &bendDown, &polyLimit,      &defaultTrigger, &portaTime};
+            std::vector<Param *> res{&level,          &velSensitivity, &playMode,
+                                     &bendUp,         &bendDown,       &polyLimit,
+                                     &defaultTrigger, &portaTime,      &pianoModeActive};
             appendDAHDSRParams(res);
             return res;
         }

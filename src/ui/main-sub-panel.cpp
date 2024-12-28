@@ -62,7 +62,6 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     addAndMakeVisible(*portaL);
     portaTime->setEnabled(false);
     portaL->setEnabled(false);
-    setPortaEnable();
 
     auto op = [w = juce::Component::SafePointer(this)]()
     {
@@ -92,7 +91,13 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
         }
     };
     addAndMakeVisible(*triggerButton);
+
+    createComponent(editor, *this, e.patchCopy.output.pianoModeActive, pianoModeButton,
+                    pianoModeButtonD);
+    addAndMakeVisible(*pianoModeButton);
+    setPortaEnable();
 };
+
 MainSubPanel::~MainSubPanel() {}
 
 void MainSubPanel::resized()
@@ -127,6 +132,9 @@ void MainSubPanel::resized()
     playMode->setBounds(bbx.withHeight(2 * uicLabelHeight + uicMargin));
     bbx = bbx.translated(0, 2 * uicLabelHeight + 2 * uicMargin);
     triggerButton->setBounds(bbx.withHeight(uicLabelHeight));
+    bbx = bbx.translated(0, uicLabelHeight + uicMargin);
+    pianoModeButton->setBounds(bbx.withHeight(uicLabelHeight));
+    pianoModeButton->setLabel("Piano Mode");
     bbx = bbx.translated(0, uicLabelHeight + uicMargin);
 
     positionKnobAndLabel(bbx.getX() + xtraW, bbx.getY() + uicMargin, portaTime, portaL);
@@ -183,6 +191,7 @@ void MainSubPanel::setPortaEnable()
     auto en = vm > 0.5;
     portaL->setEnabled(en);
     portaTime->setEnabled(en);
+    pianoModeButton->setEnabled(!en);
     repaint();
 }
 

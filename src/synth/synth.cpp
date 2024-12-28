@@ -210,7 +210,8 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
              * Some params have other side effects
              */
             if (dest->meta.id == patch.output.playMode.meta.id ||
-                dest->meta.id == patch.output.polyLimit.meta.id)
+                dest->meta.id == patch.output.polyLimit.meta.id ||
+                dest->meta.id == patch.output.pianoModeActive.meta.id)
             {
                 resetPlaymode();
             }
@@ -266,7 +267,14 @@ void Synth::resetPlaymode()
     else
     {
         voiceManager->setPlaymode(0, voiceManager_t::PlayMode::POLY_VOICES);
-        voiceManager->repeatedKeyMode = voiceManager_t::RepeatedKeyMode::PIANO;
+        if (patch.output.pianoModeActive.value > 0.5)
+        {
+            voiceManager->repeatedKeyMode = voiceManager_t::RepeatedKeyMode::PIANO;
+        }
+        else
+        {
+            voiceManager->repeatedKeyMode = voiceManager_t::RepeatedKeyMode::MULTI_VOICE;
+        }
     }
 
     auto lim = (int)std::round(patch.output.polyLimit.value);
