@@ -104,6 +104,7 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::shared_ptr<SixSinesJuceLookAndFeel> lnf;
 
     void sendEntirePatchToAudio();
+    void setParamValueOnCopy(uint32_t id, float value, bool notifyAudio);
 };
 
 struct HasEditor

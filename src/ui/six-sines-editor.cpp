@@ -133,17 +133,7 @@ void SixSinesEditor::idle()
     {
         if (aum->action == Synth::AudioToUIMsg::UPDATE_PARAM)
         {
-            patchCopy.paramMap[aum->paramId]->value = aum->value;
-
-            auto rit = componentRefreshByID.find(aum->paramId);
-            if (rit != componentRefreshByID.end())
-            {
-                rit->second();
-            }
-
-            auto pit = componentByID.find(aum->paramId);
-            if (pit != componentByID.end() && pit->second)
-                pit->second->repaint();
+            setParamValueOnCopy(aum->paramId, aum->value, false);
         }
         else if (aum->action == Synth::AudioToUIMsg::UPDATE_VU)
         {
@@ -524,6 +514,26 @@ void SixSinesEditor::sendEntirePatchToAudio()
         uiToAudio.push({Synth::UIToAudioMsg::END_EDIT, p->meta.id});
     }
     uiToAudio.push({Synth::UIToAudioMsg::START_AUDIO});
+}
+
+void SixSinesEditor::setParamValueOnCopy(uint32_t paramId, float value, bool notifyAudio)
+{
+    patchCopy.paramMap[paramId]->value = value;
+
+    auto rit = componentRefreshByID.find(paramId);
+    if (rit != componentRefreshByID.end())
+    {
+        rit->second();
+    }
+
+    auto pit = componentByID.find(paramId);
+    if (pit != componentByID.end() && pit->second)
+        pit->second->repaint();
+
+    if (notifyAudio)
+    {
+        uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM, paramId, value});
+    }
 }
 
 } // namespace baconpaul::six_sines::ui

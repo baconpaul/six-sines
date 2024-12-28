@@ -38,6 +38,17 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         Slabels[i] = std::make_unique<jcmp::Label>();
         Slabels[i]->setText("Op " + std::to_string(i + 1) + " " + u8"\U000021A9");
         addAndMakeVisible(*Slabels[i]);
+
+        SknobsData[i]->onPullFromMin = [i, w = juce::Component::SafePointer(this)]()
+        {
+            if (!w)
+                return;
+            w->editor.setParamValueOnCopy(w->editor.patchCopy.selfNodes[i].active.meta.id, true,
+                                          true);
+            w->editor.setParamValueOnCopy(w->editor.patchCopy.sourceNodes[i].active.meta.id, true,
+                                          true);
+            w->repaint();
+        };
     }
 
     auto &mx = editor.patchCopy.matrixNodes;
@@ -64,6 +75,17 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         Mlabels[i] = std::make_unique<jcmp::Label>();
         Mlabels[i]->setText("Op " + std::to_string(si + 1) + " " + glyph);
         addAndMakeVisible(*Mlabels[i]);
+
+        MknobsData[i]->onPullFromMin = [i, si, w = juce::Component::SafePointer(this)]()
+        {
+            if (!w)
+                return;
+            w->editor.setParamValueOnCopy(w->editor.patchCopy.matrixNodes[i].active.meta.id, true,
+                                          true);
+            w->editor.setParamValueOnCopy(w->editor.patchCopy.sourceNodes[si].active.meta.id, true,
+                                          true);
+            w->repaint();
+        };
     }
 
     highlight = std::make_unique<KnobHighlight>();

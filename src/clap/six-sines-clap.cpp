@@ -218,6 +218,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     bool implementsState() const noexcept override { return true; }
     bool stateSave(const clap_ostream *ostream) noexcept override
     {
+        engine->prepForStream();
         auto ss = engine->patch.toState();
         auto c = ss.c_str();
         auto s = ss.length() + 1; // write the null terminator
