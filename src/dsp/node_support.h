@@ -99,7 +99,7 @@ template <typename T> struct EnvelopeSupport
         bool running = env.stage <= env_t::s_release;
         bool nodel = delay < 0.00001;
 
-        bool startingValue = 0.f;
+        float startingValue = 0.f;
         if (running && nodel)
             startingValue = env.outputCache[blockSize - 1];
 
