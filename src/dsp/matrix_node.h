@@ -167,23 +167,27 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>, LFOSupport<Patch::MixerNod
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan;
-    bool active{false};
+    const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan, &lfoMulV;
+    bool active{false}, lfoMul{false};
 
     MixerNode(const Patch::MixerNode &mn, OpSource &f, const MonoValues &mv, const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), sr(mv), from(f), pan(mn.pan), level(mn.level),
           activeF(mn.active), lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan),
-          EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv)
+          EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv), lfoMulV(mn.envLfoSum)
     {
         memset(output, 0, sizeof(output));
     }
 
     void attack()
     {
+        lfoMul = lfoMulV > 0.5;
         active = activeF > 0.5;
         memset(output, 0, sizeof(output));
         if (active)
+        {
             envAttack();
+            lfoAttack();
+        }
     }
 
     void renderBlock()
@@ -195,13 +199,26 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>, LFOSupport<Patch::MixerNod
         float vSum alignas(16)[blockSize];
 
         envProcess();
+        lfoProcess();
+
+        if (lfoMul)
+        {
+            mech::scale_by<blockSize>(env.outputCache, lfo.outputBlock);
+        }
+
         for (int j = 0; j < blockSize; ++j)
         {
             // use mech blah
-            vSum[j] = level * env.outputCache[j] * from.output[j];
+            auto amp = level * env.outputCache[j];
+            // LFO is bipolar so
+            auto uniLFO = (lfo.outputBlock[j] + 1) * 0.5;
+            // attenuate amplitude by the LFO
+            amp *= (lfoToLevel * uniLFO) + (1 - lfoToLevel);
+            vSum[j] =
+                level * (env.outputCache[j] + lfoToLevel * lfo.outputBlock[j]) * from.output[j];
         }
 
-        auto pn = pan;
+        auto pn = pan + lfoToPan * lfo.outputBlock[blockSize - 1];
         if (pn != 0.f)
         {
             pn = (pn + 1) * 0.5;

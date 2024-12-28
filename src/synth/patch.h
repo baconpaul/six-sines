@@ -569,19 +569,26 @@ struct Patch
                            .withName(name(idx) + " LFO to Pan")
                            .withGroupName(name(idx))
                            .withID(id(41, idx))
-                           .withDefault(0))
+                           .withDefault(0)),
+              envLfoSum(intMd()
+                            .withName(name(idx) + " LFO Env Sum")
+                            .withGroupName(name(idx))
+                            .withID(id(42, idx))
+                            .withRange(0, 1)
+                            .withDefault(0)
+                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}}))
         {
         }
 
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Mixer"; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
-        Param level, pan, lfoToLevel, lfoToPan;
+        Param level, pan, lfoToLevel, lfoToPan, envLfoSum;
         Param active;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &active, &pan, &lfoToLevel, &lfoToPan};
+            std::vector<Param *> res{&level, &active, &pan, &lfoToLevel, &lfoToPan, &envLfoSum};
             appendDAHDSRParams(res);
             appendLFOParams(res);
             return res;
