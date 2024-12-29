@@ -40,7 +40,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     float output alignas(16)[blockSize];
 
     const Patch::SourceNode &sourceNode;
-    const MonoValues &monoValues;
+    MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
     bool keytrack{true};
@@ -75,6 +75,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             bindModulation();
 
             phase = 4 << 27;
+            if (voiceValues.uniCount > 1 && voiceValues.uniIndex > 0)
+            {
+                phase +=  monoValues.rng.unifU32() & ((1<<27)-1);
+            }
             fbVal[0] = 0.f;
             fbVal[1] = 0.f;
             auto wf = (SinTable::WaveForm)std::round(waveForm);
