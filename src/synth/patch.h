@@ -726,7 +726,7 @@ struct Patch
                                .withRange(0, 2.0 / 12.0)
                                .withName(name() + " Unison Ratio Shift")
                                .withGroupName(name())
-                               .withDefault(0.05)
+                               .withDefault(.1 / 12.0)
                                .withDecimalPlaces(4)
                                .withATwoToTheBFormatting(1, 1, "x")
                                .withID(id(31)))
