@@ -21,6 +21,9 @@ option(COPY_AFTER_BUILD "Will copy after build" TRUE)
 
 include(cmake/compile-options.cmake)
 
+file(READ ${CMAKE_SOURCE_DIR}/VERSION VERSION_FILE)
+message(STATUS "Version is ${VERSION_FILE}")
+
 
 find_package(Git)
 
@@ -71,7 +74,11 @@ add_library(${PROJECT_NAME}-impl STATIC
 
 )
 target_include_directories(${PROJECT_NAME}-impl PUBLIC src)
-target_compile_definitions(${PROJECT_NAME}-impl PRIVATE PRODUCT_NAME="${PRODUCT_NAME}" BUILD_HASH="${BUILD_HASH}")
+target_compile_definitions(${PROJECT_NAME}-impl PRIVATE
+        PRODUCT_NAME="${PRODUCT_NAME}"
+        BUILD_HASH="${BUILD_HASH}"
+        DISPLAY_VERSION="${VERSION_FILE}"
+)
 target_link_libraries(${PROJECT_NAME}-impl PUBLIC
         simde
         clap clap-helpers clap-wrapper-extensions

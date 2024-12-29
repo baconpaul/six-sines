@@ -214,6 +214,8 @@ void SixSinesEditor::paint(juce::Graphics &g)
 
     auto bi = std::string(__DATE__) + " " + std::string(__TIME__) + " " + BUILD_HASH;
     g.drawText(bi, getLocalBounds().reduced(3, 3), juce::Justification::bottomRight);
+
+    g.drawText(DISPLAY_VERSION, getLocalBounds().reduced(3, 3), juce::Justification::centredBottom);
 }
 
 void SixSinesEditor::resized()
