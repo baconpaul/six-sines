@@ -191,7 +191,6 @@ struct Synth
             auto stb = (b - 8192) * 1.0 / 8192;
             v->voiceValues.mpeBendNormalized = stb;
             v->voiceValues.mpeBendInSemis = stb * synth.patch.output.mpeBendRange.value;
-            ;
         }
         void setVoiceMIDIMPEChannelPressure(Voice *v, int8_t p)
         {

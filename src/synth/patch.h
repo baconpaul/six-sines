@@ -447,8 +447,29 @@ struct Patch
             return res;
         }
     };
-    struct SelfNode : public DAHDSRMixin, LFOMixin
+    struct SelfNode : public DAHDSRMixin, LFOMixin, ModulationMixin
     {
+        // These stream
+        enum TargetID
+        {
+            NONE = 0,
+            DIRECT = 10,
+            DEPTH_ATTEN = 20,
+            LFO_DEPTH_ATTEN = 30,
+
+            ENV_ATTACK = 40,
+            LFO_RATE = 50
+        };
+
+        std::vector<std::pair<TargetID, std::string>> targetList{
+            {TargetID::NONE, "Off"},
+            {TargetID::DIRECT, "Feedback Level"},
+            {TargetID::DEPTH_ATTEN, "Mod Depth"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFO Depth"},
+            {TargetID::ENV_ATTACK, "Env Attack"},
+            {TargetID::LFO_RATE, "LFO Rate"},
+        };
+
         // Once streamed you cant change these bases or the individual ids inside
         static constexpr uint32_t idBase{10000}, idStride{100};
         SelfNode(size_t idx)
@@ -476,8 +497,18 @@ struct Patch
                             .withID(id(26, idx))
                             .withRange(0, 1)
                             .withDefault(0)
-                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}}))
-
+                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}})),
+              ModulationMixin(name(idx), id(40, idx)),
+              modtarget(scpu::make_array_lambda<Param, numModsPer>(
+                  [this, idx](int i)
+                  {
+                      return md_t()
+                          .withName(name(idx) + " Mod Target " + std::to_string(i))
+                          .withGroupName(name(idx))
+                          .withRange(0, 2000)
+                          .withDefault(TargetID::NONE)
+                          .withID(id(55 + i, idx));
+                  }))
         {
         }
 
@@ -487,11 +518,18 @@ struct Patch
         Param fbLevel, lfoToFB, envLfoSum;
         Param active;
 
+        std::array<Param, numModsPer> modtarget;
+
         std::vector<Param *> params()
         {
             std::vector<Param *> res{&fbLevel, &active, &lfoToFB, &envLfoSum};
             appendDAHDSRParams(res);
             appendLFOParams(res);
+
+            for (int i = 0; i < numModsPer; ++i)
+                res.push_back(&modtarget[i]);
+            appendModulationParams(res);
+
             return res;
         }
     };

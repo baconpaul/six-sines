@@ -20,6 +20,7 @@
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
 #include "lfo-components.h"
+#include "modulation-components.h"
 
 namespace baconpaul::six_sines::ui
 {

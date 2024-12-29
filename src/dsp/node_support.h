@@ -204,6 +204,7 @@ template <typename T> struct ModulationSupport
     const VoiceValues &voiceValues;
 
     // array makes ref clumsy so show pointers instead
+    bool anySources{false};
     std::array<const float *, numModsPer> sourcePointers;
     std::array<const float *, numModsPer> depthPointers;
     std::array<float, numModsPer> priorModulation;
@@ -219,12 +220,22 @@ template <typename T> struct ModulationSupport
 
     void bindModulation()
     {
+        bool changed{false};
         for (int i = 0; i < numModsPer; ++i)
         {
             if (priorModulation[i] != paramBundle.modsource[i].value)
             {
                 rebindPointer(i);
+                changed = true;
                 priorModulation[i] = paramBundle.modsource[i].value;
+            }
+        }
+        if (changed)
+        {
+            anySources = false;
+            for (int i = 0; i < numModsPer; ++i)
+            {
+                anySources |= (sourcePointers[i] != nullptr);
             }
         }
     }
