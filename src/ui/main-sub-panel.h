@@ -44,7 +44,7 @@ struct MainSubPanel : juce::Component, HasEditor, DAHDSRComponents<MainSubPanel,
     std::unique_ptr<jcmp::MultiSwitch> playMode;
     std::unique_ptr<PatchDiscrete> playModeD;
 
-    std::unique_ptr<RuledLabel> velTitle, bendTitle;
+    std::unique_ptr<RuledLabel> velTitle, bendTitle, uniTitle;
 
     std::unique_ptr<jcmp::Label> bUpL, bDnL;
     std::unique_ptr<PatchContinuous> bUpD, bDnD;
@@ -60,7 +60,14 @@ struct MainSubPanel : juce::Component, HasEditor, DAHDSRComponents<MainSubPanel,
     std::unique_ptr<jcmp::Knob> portaTime;
     std::unique_ptr<PatchContinuous> portaTimeD;
     std::unique_ptr<jcmp::Label> portaL;
-    void setPortaEnable();
+    void setEnabledState();
+
+    std::unique_ptr<jcmp::MultiSwitch> uniCt;
+    std::unique_ptr<PatchDiscrete> uniCtD;
+
+    std::unique_ptr<jcmp::Knob> uniSpread;
+    std::unique_ptr<PatchContinuous> uniSpreadD;
+    std::unique_ptr<jcmp::Label> uniSpreadL;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

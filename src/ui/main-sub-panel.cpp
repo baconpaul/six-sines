@@ -67,7 +67,7 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     auto op = [w = juce::Component::SafePointer(this)]()
     {
         if (w)
-            w->setPortaEnable();
+            w->setEnabledState();
     };
 
     editor.componentRefreshByID[e.patchCopy.output.playMode.meta.id] = op;
@@ -96,7 +96,23 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     createComponent(editor, *this, e.patchCopy.output.pianoModeActive, pianoModeButton,
                     pianoModeButtonD);
     addAndMakeVisible(*pianoModeButton);
-    setPortaEnable();
+
+    createComponent(editor, *this, e.patchCopy.output.unisonCount, uniCt, uniCtD);
+    addAndMakeVisible(*uniCt);
+    uniCtD->onGuiSetValue = op;
+
+    createComponent(editor, *this, e.patchCopy.output.unisonSpread, uniSpread, uniSpreadD);
+    addAndMakeVisible(*uniSpread);
+    uniSpreadL = std::make_unique<jcmp::Label>();
+    uniSpreadL->setText("Spread");
+    addAndMakeVisible(*uniSpreadL);
+
+    uniTitle = std::make_unique<RuledLabel>();
+    uniTitle->setText("Unison");
+    addAndMakeVisible(*uniTitle);
+    editor.componentRefreshByID[e.patchCopy.output.unisonCount.meta.id] = op;
+
+    setEnabledState();
 };
 
 MainSubPanel::~MainSubPanel() {}
@@ -139,6 +155,14 @@ void MainSubPanel::resized()
     bbx = bbx.translated(0, uicLabelHeight + uicMargin);
 
     positionKnobAndLabel(bbx.getX() + xtraW, bbx.getY() + uicMargin, portaTime, portaL);
+
+    depx += bbx.getWidth() + uicMargin;
+    depy = r.getY();
+    positionTitleLabelAt(depx, depy, bbx.getWidth(), uniTitle);
+    bbx = juce::Rectangle<int>(depx, depy + uicTitleLabelHeight, bbx.getWidth(), uicLabelHeight);
+    uniCt->setBounds(bbx.withHeight(uicLabeledKnobHeight + uicLabelHeight));
+    bbx = bbx.translated(0, uicLabeledKnobHeight + uicMargin + uicLabelHeight);
+    positionKnobAndLabel(bbx.getX() + xtraW, bbx.getY(), uniSpread, uniSpreadL);
 }
 
 void MainSubPanel::setTriggerButtonLabel()
@@ -187,13 +211,16 @@ void MainSubPanel::showTriggerButtonMenu()
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
 }
 
-void MainSubPanel::setPortaEnable()
+void MainSubPanel::setEnabledState()
 {
     auto vm = editor.patchCopy.output.playMode.value;
     auto en = vm > 0.5;
     portaL->setEnabled(en);
     portaTime->setEnabled(en);
     pianoModeButton->setEnabled(!en);
+
+    auto uc = editor.patchCopy.output.unisonCount.value;
+    uniSpread->setEnabled(uc > 1.5);
     repaint();
 }
 

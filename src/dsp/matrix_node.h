@@ -217,7 +217,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>, LFOSupport<Patch::MixerNod
                 level * (env.outputCache[j] + lfoToLevel * lfo.outputBlock[j]) * from.output[j];
         }
 
-        auto pn = pan + lfoToPan * lfo.outputBlock[blockSize - 1];
+        auto pn = pan + lfoToPan * lfo.outputBlock[blockSize - 1] + voiceValues.uniPanShift;
         if (pn != 0.f)
         {
             pn = (pn + 1) * 0.5;

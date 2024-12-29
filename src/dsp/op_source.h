@@ -109,6 +109,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         auto rf =
             monoValues.twoToTheX.twoToThe(ratio + envToRatio * env.outputCache[blockSize - 1] +
                                           lfoFac * lfoToRatio * lfo.outputBlock[0]);
+        rf *= voiceValues.uniRatioMul;
         if (priorRF < -10000)
             priorRF = rf;
         auto dRF = (priorRF - rf) / blockSize;

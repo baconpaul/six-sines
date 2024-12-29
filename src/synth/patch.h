@@ -694,7 +694,22 @@ struct Patch
                                   .withName(name() + " Piano Mode Active")
                                   .withGroupName(name())
                                   .withDefault(true)
-                                  .withID(id(29)))
+                                  .withID(id(29))),
+              unisonCount(intMd()
+                              .withName(name() + " Unison Count")
+                              .withGroupName(name())
+                              .withRange(1, 5)
+                              .withDefault(1)
+                              .withLinearScaleFormatting("voices")
+                              .withID(id(30))),
+              unisonSpread(floatMd()
+                               .withRange(0, 2.0 / 12.0)
+                               .withName(name() + " Unison Ratio Shift")
+                               .withGroupName(name())
+                               .withDefault(0.05)
+                               .withDecimalPlaces(4)
+                               .withATwoToTheBFormatting(1, 1, "x")
+                               .withID(id(31)))
         {
             defaultTrigger.adhocFeatures = Param::AdHocFeatureValues::TRIGGERMODE;
         }
@@ -704,12 +719,13 @@ struct Patch
 
         Param level, velSensitivity, playMode;
         Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, pianoModeActive;
+        Param unisonCount, unisonSpread;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level,          &velSensitivity, &playMode,
-                                     &bendUp,         &bendDown,       &polyLimit,
-                                     &defaultTrigger, &portaTime,      &pianoModeActive};
+            std::vector<Param *> res{&level,           &velSensitivity, &playMode,       &bendUp,
+                                     &bendDown,        &polyLimit,      &defaultTrigger, &portaTime,
+                                     &pianoModeActive, &unisonCount,    &unisonSpread};
             appendDAHDSRParams(res);
             return res;
         }

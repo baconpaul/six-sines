@@ -99,8 +99,10 @@ struct Synth
             typename sst::voicemanager::VoiceBeginBufferEntry<VMConfig>::buffer_t &buffer, uint16_t,
             uint16_t, uint16_t, int32_t, float)
         {
-            buffer[0].polyphonyGroup = 0;
-            return 1;
+            auto vc = (int)std::round(synth.patch.output.unisonCount.value);
+            for (int i = 0; i < vc; ++i)
+                buffer[i].polyphonyGroup = 0;
+            return vc;
         };
 
         void endVoiceCreationTransaction(uint16_t, uint16_t, uint16_t, int32_t, float) {}
@@ -116,33 +118,64 @@ struct Synth
             typename sst::voicemanager::VoiceInitBufferEntry<VMConfig>::buffer_t &obuf, uint16_t pt,
             uint16_t ch, uint16_t key, int32_t nid, float vel, float rt)
         {
-            assert(ct == 1);
+            int made{0};
 
-            if (ibuf[0].instruction !=
-                sst::voicemanager::VoiceInitInstructionsEntry<
-                    baconpaul::six_sines::Synth::VMConfig>::Instruction::SKIP)
+            int lastStart{0};
+            auto usp = synth.patch.output.unisonSpread.value;
+            usp = synth.monoValues.twoToTheX.twoToThe(usp);
+            float uniVal[5]{1.0};
+            float uniPan[5]{0.0};
+            assert(ct <= 5);
+            if (ct > 1)
             {
-                for (int i = 0; i < VMConfig::maxVoiceCount; ++i)
+                auto dUni = 2 * (usp - 1) / (ct - 1);
+                for (int i = 0; i < ct; ++i)
                 {
-                    if (synth.voices[i].used == false)
+                    auto val = (1.0 - (usp - 1)) + dUni * i;
+                    if (val < 1)
                     {
-                        obuf[0].voice = &synth.voices[i];
-                        synth.voices[i].used = true;
-                        synth.voices[i].voiceValues.gated = true;
-                        synth.voices[i].voiceValues.key = key;
-                        synth.voices[i].voiceValues.channel = ch;
-                        synth.voices[i].voiceValues.velocity = vel;
-                        synth.voices[i].voiceValues.releaseVelocity = 0;
-                        synth.voices[i].attack();
+                        val = 1.0 / ((1.0 + (usp - 1)) - dUni * i);
+                    }
+                    uniVal[i] = val;
+                    uniPan[i] = 2 * (i - 1.0 * (ct - 1) / 2) / (ct - 1);
+                    uniPan[i] *= 0.8; // bring it in a bit
+                }
+            }
 
-                        synth.addToVoiceList(&synth.voices[i]);
+            for (int vc = 0; vc < ct; ++vc)
+            {
+                if (ibuf[vc].instruction !=
+                    sst::voicemanager::VoiceInitInstructionsEntry<
+                        baconpaul::six_sines::Synth::VMConfig>::Instruction::SKIP)
+                {
+                    for (int i = lastStart; i < VMConfig::maxVoiceCount; ++i)
+                    {
+                        if (synth.voices[i].used == false)
+                        {
+                            obuf[vc].voice = &synth.voices[i];
+                            synth.voices[i].used = true;
+                            synth.voices[i].voiceValues.gated = true;
+                            synth.voices[i].voiceValues.key = key;
+                            synth.voices[i].voiceValues.channel = ch;
+                            synth.voices[i].voiceValues.velocity = vel;
+                            synth.voices[i].voiceValues.releaseVelocity = 0;
+                            synth.voices[i].voiceValues.uniCount = ct;
+                            synth.voices[i].voiceValues.uniIndex = vc;
+                            synth.voices[i].voiceValues.uniRatioMul = uniVal[vc];
+                            synth.voices[i].voiceValues.uniPanShift = uniPan[vc];
+                            synth.voices[i].attack();
 
-                        return 1;
+                            synth.addToVoiceList(&synth.voices[i]);
+
+                            made++;
+                            lastStart = i + 1;
+                            break;
+                            ;
+                        }
                     }
                 }
-                return 0;
             }
-            return 0;
+            return made;
         }
         void releaseVoice(Voice *v, float rv)
         {

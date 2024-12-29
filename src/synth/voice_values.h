@@ -33,6 +33,11 @@ struct VoiceValues
 
     float portaDiff{0}, dPorta{0};
     int portaSign{0};
+
+    float uniRatioMul{1.0};
+    float uniPanShift{0.0};
+    int uniIndex{0};
+    int uniCount{1};
 };
 };     // namespace baconpaul::six_sines
 #endif // MONO_VALUES_H
