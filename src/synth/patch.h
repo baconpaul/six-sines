@@ -56,7 +56,7 @@ struct Param
 
 struct Patch
 {
-    static constexpr uint32_t patchVersion{5};
+    static constexpr uint32_t patchVersion{6};
     std::vector<const Param *> params;
     std::unordered_map<uint32_t, Param *> paramMap;
 
@@ -247,13 +247,15 @@ struct Patch
                          .withDefault(0)
                          .withID(id0 + 9)),
               triggerMode(intMd()
-                              .withRange(0, 2)
+                              .withRange(0, 3)
                               .withName(name + " Env Trigger Mode")
                               .withGroupName(name)
-                              .withDefault(2)
+                              .withDefault(3)
                               .withID(id0 + 10)
-                              .withUnorderedMapFormatting(
-                                  {{0, "Gate Start"}, {1, "Key Press"}, {2, "Patch Default"}}))
+                              .withUnorderedMapFormatting({{0, "Gate Start"},
+                                                           {1, "Voice Start"},
+                                                           {3, "Key Press"},
+                                                           {2, "Patch Default"}}))
 
         {
             delay.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;

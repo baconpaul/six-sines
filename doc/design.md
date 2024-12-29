@@ -26,7 +26,7 @@ CLAP
 GENERAL AND CLEANUPS
 - Toggle button paint cleaner
 - Ctrl/Knob quantizes on ratio to PO2
-- We could have an envelope which trigers as always-gated on release
+- We could have an envelope which trigers as !gated on release (and then ungates in mono-retrigger)
 - AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
 - Don't send VU etc when editor not attached
 - Main DAHDSR at DAHD=0 SR=1 means voice lifetime is longest active op mixer DAHDSR and main DAHDSR bypassed

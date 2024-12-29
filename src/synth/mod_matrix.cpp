@@ -19,20 +19,26 @@
 namespace baconpaul::six_sines
 {
 ModMatrixConfig::ModMatrixConfig()
-    : off(*this, 0, "Off"),
-      midiCCs(sst::cpputils::make_array_lambda<Source, 128>(
-          [this](int i) { return Source(*this, i + 400, "CC " + std::to_string(i + 1)); })),
-      channelAT(*this, 100, "Channel AT"),
-      macros(sst::cpputils::make_array_lambda<Source, numMacros>(
-          [this](int i) { return Source(*this, i + 200, "Macro " + std::to_string(i + 1)); })),
-      velocity(*this, voiceLevel + 1, "Velocity"),
-
-      polyAT(*this, voiceLevel + 10, "PolyAT"),
-
-      gated(*this, voiceLevel + 50, "Gated"), released(*this, voiceLevel + 51, "Released")
 {
+    add(OFF, "", "OFF");
+    add(CHANNEL_AT, "MIDI", "Channel AT");
+    add(PITCH_BEND, "MIDI", "Pitch Bend");
+
+    for (int cc = 0; cc < 128; ++cc)
+        add(MIDICC_0 + cc, "MIDI CC", "CC " + std::to_string(cc + 1));
+    for (int mc = 0; mc < numMacros; ++mc)
+        add(MACRO_0 + mc, "Macros", "Macro " + std::to_string(mc + 1));
+
+    add(VELOCITY, "MIDI", "Velocity");
+    add(RELEASE_VELOCITY, "MIDI", "Release Velocity");
+    add(POLY_AT, "MIDI", "Poly AT");
+    add(GATED, "Voice", "Gated");
+    add(RELEASED, "Voice", "Released");
+
+    add(MPE_PRESSURE, "MPE", "Pressure");
+    add(MPE_TIMBRE, "MPE", "Timbre");
 }
 
-ModMatrixConfig::Source::Source(ModMatrixConfig &, uint32_t id, const std::string &v) {}
+void ModMatrixConfig::add(int s, const std::string &group, const std::string &nm) {}
 
 } // namespace baconpaul::six_sines

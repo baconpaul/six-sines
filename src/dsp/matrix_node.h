@@ -255,6 +255,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
           defTrigV(on.defaultTrigger)
     {
         memset(output, 0, sizeof(output));
+        allowVoiceTrigger = false;
     }
 
     void attack()

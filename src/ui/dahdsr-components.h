@@ -29,6 +29,7 @@ namespace baconpaul::six_sines::ui
 namespace jcmp = sst::jucegui::components;
 template <typename Comp, typename PatchPart> struct DAHDSRComponents
 {
+    bool voiceTrigerAllowed{true};
     Comp *asComp() { return static_cast<Comp *>(this); }
     DAHDSRComponents() {}
 
@@ -135,15 +136,14 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         case (int)TriggerMode::NEW_GATE:
             triggerButton->setLabel("G");
             break;
+        case (int)TriggerMode::NEW_VOICE:
+            triggerButton->setLabel("V");
+            break;
         case (int)TriggerMode::KEY_PRESS:
             triggerButton->setLabel("K");
             break;
         case (int)TriggerMode::PATCH_DEFAULT:
             triggerButton->setLabel("D");
-            break;
-        default:
-            SXSNLOG("WHAT IS THIS VALUE " << tmv << " " << triggerModePtr->meta.name << " "
-                                          << triggerModePtr->meta.id);
             break;
         }
         triggerButton->repaint();
@@ -171,12 +171,16 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         auto p = juce::PopupMenu();
         p.addSectionHeader("Trigger Mode");
         p.addSeparator();
-        p.addItem("On Gated", true, tmv == (int)TriggerMode::NEW_GATE,
-                  genSet((int)TriggerMode::NEW_GATE));
-        p.addItem("On Key Press", true, tmv == (int)TriggerMode::KEY_PRESS,
-                  genSet((int)TriggerMode::KEY_PRESS));
-        p.addItem("Follow Patch Default", true, tmv == (int)TriggerMode::PATCH_DEFAULT,
-                  genSet((int)TriggerMode::PATCH_DEFAULT));
+        for (auto v : {(int)TriggerMode::KEY_PRESS, (int)TriggerMode::NEW_GATE,
+                       (int)TriggerMode::NEW_VOICE, (int)TriggerMode::PATCH_DEFAULT})
+        {
+            bool enabled = true;
+            if (v == (int)TriggerMode::NEW_VOICE && !voiceTrigerAllowed)
+                enabled = false;
+            if (v == (int)TriggerMode::PATCH_DEFAULT)
+                p.addSeparator();
+            p.addItem(TriggerModeName[v], enabled, tmv == v, genSet(v));
+        }
 
         p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
     }
