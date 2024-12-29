@@ -154,7 +154,8 @@ void Voice::retriggerAllEnvelopesForReGate()
     auto dtm = out.defaultTrigger;
     auto mtm = [dtm](auto tm)
     {
-        return true; // used to be where we spport voice mode
+        // DTM can only be key or gate and both will trigger here
+        return (tm != TriggerMode::NEW_VOICE);
     };
 
     for (auto &s : src)

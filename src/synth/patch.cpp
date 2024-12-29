@@ -218,11 +218,13 @@ float Patch::migrateParamValueFromVersion(Param *p, float value, uint32_t versio
             return 1;
     }
 
-    if ((p->adhocFeatures & (uint64_t)Param::AdHocFeatureValues::TRIGGERMODE) && version <= 4)
+    if ((p->adhocFeatures & (uint64_t)Param::AdHocFeatureValues::TRIGGERMODE))
     {
-        SXSNLOG("Restating patch mode " << p->value << " " << p->meta.name << " " << version);
-        if (value > 0)
-            return value - 1;
+        if (version == 5)
+        {
+            if (value == 2)
+                return value + 1;
+        }
     }
     return value;
 }

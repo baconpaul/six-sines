@@ -35,9 +35,13 @@ namespace sdsp = sst::basic_blocks::dsp;
 enum TriggerMode
 {
     NEW_GATE,
+    NEW_VOICE,
     KEY_PRESS,
     PATCH_DEFAULT
 };
+
+static const char *TriggerModeName[4]{"On Start or In Release ('Legato')", "On Start Only",
+                                      "On Any Key Press ('Mono')", "Patch Default"};
 
 template <typename T> struct EnvelopeSupport
 {
@@ -56,6 +60,7 @@ template <typename T> struct EnvelopeSupport
     }
 
     TriggerMode triggerMode{NEW_GATE};
+    bool allowVoiceTrigger{true};
 
     bool active{true}, constantEnv{false};
     using range_t = sst::basic_blocks::modulators::TwentyFiveSecondExp;
@@ -65,6 +70,8 @@ template <typename T> struct EnvelopeSupport
     void envAttack()
     {
         triggerMode = (TriggerMode)std::round(tmV);
+        if (triggerMode == NEW_VOICE && !allowVoiceTrigger)
+            triggerMode = NEW_GATE;
 
         env.initializeLuts();
         active = powerV > 0.5;

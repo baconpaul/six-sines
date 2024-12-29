@@ -20,6 +20,7 @@ namespace baconpaul::six_sines::ui
 {
 MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
 {
+    voiceTrigerAllowed = false;
     setupDAHDSR(e, e.patchCopy.output);
 
     createComponent(editor, *this, e.patchCopy.output.velSensitivity, velSen, velSenD);
@@ -145,15 +146,15 @@ void MainSubPanel::setTriggerButtonLabel()
     auto v = (int)std::round(editor.patchCopy.output.defaultTrigger.value);
     switch (v)
     {
-    case 1:
-        triggerButton->setLabel("On Voice");
+    case NEW_VOICE:
+        triggerButton->setLabel("On Start");
         break;
-    case 2:
+    case KEY_PRESS:
         triggerButton->setLabel("On Key");
         break;
     default:
-    case 0:
-        triggerButton->setLabel("On Gated");
+    case NEW_GATE:
+        triggerButton->setLabel("On Str/Rel");
         break;
     }
 }
@@ -178,10 +179,10 @@ void MainSubPanel::showTriggerButtonMenu()
     auto p = juce::PopupMenu();
     p.addSectionHeader("Default Trigger Mode");
     p.addSeparator();
-    p.addItem("On Gated", true, tmv == (int)TriggerMode::NEW_GATE,
-              genSet((int)TriggerMode::NEW_GATE));
-    p.addItem("On Key Press", true, tmv == (int)TriggerMode::KEY_PRESS,
-              genSet((int)TriggerMode::KEY_PRESS));
+    for (int g : {(int)TriggerMode::KEY_PRESS, (int)TriggerMode::NEW_GATE})
+    {
+        p.addItem(TriggerModeName[g], true, tmv == g, genSet(g));
+    }
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
 }
