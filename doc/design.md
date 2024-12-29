@@ -37,6 +37,9 @@ GENERAL AND CLEANUPS
 - We could have an envelope which trigers as !gated on release (and then ungates in mono-retrigger)
 - AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
 - Don't send VU etc when editor not attached
+- Write a better README
+- Write some semblance of documentation
+- Make pipeline have a release stage
 
 THINGS I DIDNT DO
 - 90%-100% of internal nyquist mute fades (maybe ship without this tho)

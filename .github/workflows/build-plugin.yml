@@ -77,7 +77,7 @@ jobs:
           mv build/VST3/Release/*.vst3 build/insttmp
           mv build/Release/*.exe build/insttmp
           
-          7z a -r build/inst/windows-`git rev-parse --short HEAD`-nightly.zip build/insttmp/*
+          7z a -r build/inst/windows-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip build/insttmp/*
 
       - name: Make linux tgz
         if: github.event_name != 'pull_request' && runner.os == 'Linux'
@@ -88,7 +88,7 @@ jobs:
           mv "build/Six Sines" build/isnttmp 
           mv build/Release/*.vst3 build/insttmp
           cd build/insttmp
-          tar cvzf ../inst/linux-`git rev-parse --short HEAD`-nightly.tgz .
+          tar cvzf ../inst/linux-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.tgz .
 
 
       - name: Make Mac
@@ -104,7 +104,7 @@ jobs:
           
           mkdir build/inst
           cd build
-          ../libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh "Six Sines" . ../resources inst `git rev-parse --short HEAD`
+          ../libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh "Six Sines" . ../resources inst `date +"%Y-%m-%d"`-`git rev-parse --short HEAD`
 
       - name: Configure pull request version
         if: github.event_name == 'pull_request'
@@ -127,7 +127,7 @@ jobs:
           name: dawplugin-${{ matrix.name }}
 
   publish-dawplugin-nightly:
-    name: Publish DAWPlugin
+    name: Publish Nightlu
     # only create a release if a tag was created that is called e.g. v1.2.3
     # see also https://vcvrack.com/manual/Manifest#version
     if: ${{ github.ref == 'refs/heads/main' && github.repository_owner == 'baconpaul' }}
