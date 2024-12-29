@@ -30,8 +30,11 @@ template <typename Comp, typename Patch> struct ModulationComponents
 {
     Comp *asComp() { return static_cast<Comp *>(this); }
     ModulationComponents() {}
+
+    const Patch *patchPtr{nullptr};
     void setupModulation(SixSinesEditor &e, const Patch &v)
     {
+        patchPtr = &v;
         auto c = asComp();
         modTitleLab = std::make_unique<RuledLabel>();
         modTitleLab->setText("Modulation");
@@ -42,6 +45,13 @@ template <typename Comp, typename Patch> struct ModulationComponents
             createComponent(e, *c, v.moddepth[i], depthSlider[i], depthSliderD[i]);
             sourceMenu[i] = std::make_unique<jcmp::MenuButton>();
             resetSourceLabel(i);
+            sourceMenu[i]->setOnCallback(
+                [w = juce::Component::SafePointer(asComp())]()
+                {
+                    if (!w)
+                        return;
+                    w->showSourceMenu();
+                });
             e.componentRefreshByID[v.modsource[i].meta.id] =
                 [i, w = juce::Component::SafePointer(c)]()
             {
@@ -67,7 +77,25 @@ template <typename Comp, typename Patch> struct ModulationComponents
         }
     }
 
-    void resetSourceLabel(int i) { sourceMenu[i]->setLabel("Src " + std::to_string(i + 1)); }
+    void resetSourceLabel(int i)
+    {
+        if (!patchPtr)
+        {
+            sourceMenu[i]->setLabel("");
+            return;
+        }
+        auto v = (uint32_t)std::round(patchPtr->modsource[i].value);
+
+        auto p = asComp()->editor.modMatrixConfig.sourceByID.find(v);
+        if (p != asComp()->editor.modMatrixConfig.sourceByID.end())
+        {
+            sourceMenu[i]->setLabel(p->second.name);
+        }
+        else
+        {
+            sourceMenu[i]->setLabel("UNK " + std::to_string(v));
+        }
+    }
 
     void resetTargetLabel(int i) { targetMenu[i]->setLabel("Tgt " + std::to_string(i + 1)); }
 
@@ -91,6 +119,38 @@ template <typename Comp, typename Patch> struct ModulationComponents
             targetMenu[i]->setBounds(bq.withTrimmedRight(mks));
             bq = bq.translated(0, uicLabelHeight + 3 * uicMargin);
         }
+    }
+
+    void showSourceMenu()
+    {
+        SXSNLOG("Show Source Menu");
+        auto p = juce::PopupMenu();
+        p.addSectionHeader("Modulation Source");
+        p.addSeparator();
+        std::string currCat{};
+        auto s = juce::PopupMenu();
+        for (const auto &so : asComp()->editor.modMatrixConfig.sources)
+        {
+            if (so.group.empty())
+            {
+                p.addItem(so.name, [i = so.id]() { SXSNLOG("With " << i); });
+            }
+            else
+            {
+                if (so.group != currCat && s.getNumItems() > 0)
+                {
+                    p.addSubMenu(currCat, s);
+                    s = juce::PopupMenu();
+                }
+                currCat = so.group;
+                s.addItem(so.name, [i = so.id]() { SXSNLOG("With " << i); });
+            }
+        }
+        if (s.getNumItems() > 0)
+        {
+            p.addSubMenu(currCat, s);
+        }
+        p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
     }
 
     std::unique_ptr<RuledLabel> modTitleLab;

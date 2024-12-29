@@ -14,18 +14,18 @@
  */
 
 #include "mod_matrix.h"
-#include "sst/cpputils/constructors.h"
+#include <fmt/core.h>
 
 namespace baconpaul::six_sines
 {
 ModMatrixConfig::ModMatrixConfig()
 {
-    add(OFF, "", "OFF");
+    add(OFF, "", "Off");
     add(CHANNEL_AT, "MIDI", "Channel AT");
     add(PITCH_BEND, "MIDI", "Pitch Bend");
 
     for (int cc = 0; cc < 128; ++cc)
-        add(MIDICC_0 + cc, "MIDI CC", "CC " + std::to_string(cc + 1));
+        add(MIDICC_0 + cc, "MIDI CC", fmt::format("CC {:03d}", cc + 1));
     for (int mc = 0; mc < numMacros; ++mc)
         add(MACRO_0 + mc, "Macros", "Macro " + std::to_string(mc + 1));
 
@@ -37,8 +37,25 @@ ModMatrixConfig::ModMatrixConfig()
 
     add(MPE_PRESSURE, "MPE", "Pressure");
     add(MPE_TIMBRE, "MPE", "Timbre");
+
+    std::sort(sources.begin(), sources.end(),
+              [](const SourceObj &a, const SourceObj &b)
+              {
+                  if (a.group != b.group)
+                      return a.group < b.group;
+                  if (a.name != b.name)
+                      return a.name < b.name;
+                  return a.id < b.id;
+              });
+    for (auto &s : sources)
+    {
+        sourceByID[s.id] = s;
+    }
 }
 
-void ModMatrixConfig::add(int s, const std::string &group, const std::string &nm) {}
+void ModMatrixConfig::add(int s, const std::string &group, const std::string &nm)
+{
+    sources.push_back({s, group, nm});
+}
 
 } // namespace baconpaul::six_sines

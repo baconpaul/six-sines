@@ -57,6 +57,14 @@ struct ModMatrixConfig
     ModMatrixConfig();
 
     void add(int s, const std::string &group, const std::string &nm);
+    struct SourceObj
+    {
+        int id;
+        std::string group;
+        std::string name;
+    };
+    std::vector<SourceObj> sources;
+    std::unordered_map<uint32_t, SourceObj> sourceByID;
 };
 } // namespace baconpaul::six_sines
 #endif // MOD_MATRIX_H

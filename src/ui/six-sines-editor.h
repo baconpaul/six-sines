@@ -51,6 +51,8 @@ struct SixSinesJuceLookAndFeel;
 struct SixSinesEditor : jcmp::WindowPanel
 {
     Patch patchCopy;
+    ModMatrixConfig modMatrixConfig;
+
     Synth::audioToUIQueue_t &audioToUI;
     Synth::uiToAudioQueue_T &uiToAudio;
     std::function<void()> flushOperator;
