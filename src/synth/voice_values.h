@@ -43,6 +43,8 @@ struct VoiceValues
     float portaDiff{0}, dPorta{0};
     int portaSign{0};
 
+    float mpeBendInSemis{0}, mpeBendNormalized{0}, mpeTimbre{0}, mpePressure{0};
+
     float uniRatioMul{1.0};
     float uniPanShift{0.0};
     int uniIndex{0};

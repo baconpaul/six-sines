@@ -186,9 +186,18 @@ struct Synth
         void setVoicePolyphonicParameterModulation(Voice *, uint32_t, double) {}
         void setPolyphonicAftertouch(Voice *v, int8_t a) { v->voiceValues.polyAt = a / 127.0; }
 
-        void setVoiceMIDIMPEChannelPitchBend(Voice *, uint16_t) {}
-        void setVoiceMIDIMPEChannelPressure(Voice *, int8_t) {}
-        void setVoiceMIDIMPETimbre(Voice *, int8_t) {}
+        void setVoiceMIDIMPEChannelPitchBend(Voice *v, uint16_t b)
+        {
+            auto stb = (b - 8192) * 1.0 / 8192;
+            v->voiceValues.mpeBendNormalized = stb;
+            v->voiceValues.mpeBendInSemis = stb * synth.patch.output.mpeBendRange.value;
+            ;
+        }
+        void setVoiceMIDIMPEChannelPressure(Voice *v, int8_t p)
+        {
+            v->voiceValues.mpePressure = p / 127.0;
+        }
+        void setVoiceMIDIMPETimbre(Voice *v, int8_t t) { v->voiceValues.mpeTimbre = t / 127.0; }
     };
     struct VMMonoResponder
     {

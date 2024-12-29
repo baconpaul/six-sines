@@ -62,13 +62,14 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
         style()
             ->getFont(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont)
             .withHeight(18));
-    auto bg = style()->getColour(jcmp::base_styles::Base::styleClass, jcmp::base_styles::Base::background);
-    style()->setColour(jcmp::base_styles::PushButton::styleClass, jcmp::base_styles::PushButton::fill,
-bg.brighter(0.1));
-    style()->setColour(jcmp::base_styles::PushButton::styleClass, jcmp::base_styles::PushButton::fill_hover, bg.brighter(0.2));
-    style()->setColour(jcmp::base_styles::PushButton::styleClass, jcmp::base_styles::PushButton::fill_pressed,
-                    bg.brighter(0.3));
-
+    auto bg = style()->getColour(jcmp::base_styles::Base::styleClass,
+                                 jcmp::base_styles::Base::background);
+    style()->setColour(jcmp::base_styles::PushButton::styleClass,
+                       jcmp::base_styles::PushButton::fill, bg.brighter(0.1));
+    style()->setColour(jcmp::base_styles::PushButton::styleClass,
+                       jcmp::base_styles::PushButton::fill_hover, bg.brighter(0.2));
+    style()->setColour(jcmp::base_styles::PushButton::styleClass,
+                       jcmp::base_styles::PushButton::fill_pressed, bg.brighter(0.3));
 
     matrixPanel = std::make_unique<MatrixPanel>(*this);
     mixerPanel = std::make_unique<MixerPanel>(*this);

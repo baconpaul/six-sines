@@ -281,9 +281,13 @@ template <typename T> struct ModulationSupport
             break;
 
         case ModMatrixConfig::Source::MPE_PRESSURE:
+            sourcePointers[which] = &voiceValues.mpePressure;
+            break;
         case ModMatrixConfig::Source::MPE_TIMBRE:
+            sourcePointers[which] = &voiceValues.mpeTimbre;
+            break;
         case ModMatrixConfig::Source::MPE_PITCHBEND:
-            SXSNLOG("Unimplemented source " << sv);
+            sourcePointers[which] = &voiceValues.mpeBendInSemis;
             break;
 
         default:

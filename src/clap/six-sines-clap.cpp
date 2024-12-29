@@ -162,10 +162,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         return CLAP_PROCESS_CONTINUE;
     }
 
-    void reset() noexcept override
-    {
-        engine->voiceManager->allSoundsOff();
-    }
+    void reset() noexcept override { engine->voiceManager->allSoundsOff(); }
 
     bool handleEvent(const clap_event_header_t *nextEvent)
     {

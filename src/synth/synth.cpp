@@ -216,7 +216,8 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
              */
             if (dest->meta.id == patch.output.playMode.meta.id ||
                 dest->meta.id == patch.output.polyLimit.meta.id ||
-                dest->meta.id == patch.output.pianoModeActive.meta.id)
+                dest->meta.id == patch.output.pianoModeActive.meta.id ||
+                dest->meta.id == patch.output.mpeActive.meta.id)
             {
                 resetPlaymode();
             }
@@ -285,6 +286,16 @@ void Synth::resetPlaymode()
     auto lim = (int)std::round(patch.output.polyLimit.value);
     lim = std::clamp(lim, 1, (int)maxVoices);
     voiceManager->setPolyphonyGroupVoiceLimit(0, lim);
+
+    auto mpe = (bool)std::round(patch.output.mpeActive.value);
+    if (mpe)
+    {
+        voiceManager->dialect = voiceManager_t::MIDI1Dialect::MIDI1_MPE;
+    }
+    else
+    {
+        voiceManager->dialect = voiceManager_t::MIDI1Dialect::MIDI1;
+    }
 }
 
 void Synth::handleParamValue(Param *p, uint32_t pid, float value)

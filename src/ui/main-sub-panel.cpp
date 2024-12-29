@@ -20,10 +20,11 @@ namespace baconpaul::six_sines::ui
 {
 MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
 {
+    auto &on = editor.patchCopy.output;
     voiceTrigerAllowed = false;
-    setupDAHDSR(e, e.patchCopy.output);
+    setupDAHDSR(e, on);
 
-    createComponent(editor, *this, e.patchCopy.output.velSensitivity, velSen, velSenD);
+    createComponent(editor, *this, on.velSensitivity, velSen, velSenD);
     addAndMakeVisible(*velSen);
     velSenL = std::make_unique<jcmp::Label>();
     velSenL->setText("Amp");
@@ -33,8 +34,8 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     velTitle->setText("Sens");
     addAndMakeVisible(*velTitle);
 
-    createComponent(editor, *this, e.patchCopy.output.bendUp, bUp, bUpD);
-    createComponent(editor, *this, e.patchCopy.output.bendDown, bDn, bDnD);
+    createComponent(editor, *this, on.bendUp, bUp, bUpD);
+    createComponent(editor, *this, on.bendDown, bDn, bDnD);
     bUpL = std::make_unique<jcmp::Label>();
     bUpL->setText("+");
     bDnL = std::make_unique<jcmp::Label>();
@@ -52,11 +53,11 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     playTitle->setText("Play");
     addAndMakeVisible(*playTitle);
 
-    createComponent(editor, *this, e.patchCopy.output.playMode, playMode, playModeD);
+    createComponent(editor, *this, on.playMode, playMode, playModeD);
     playMode->direction = sst::jucegui::components::MultiSwitch::VERTICAL;
     addAndMakeVisible(*playMode);
 
-    createComponent(editor, *this, e.patchCopy.output.portaTime, portaTime, portaTimeD);
+    createComponent(editor, *this, on.portaTime, portaTime, portaTimeD);
     addAndMakeVisible(*portaTime);
     portaL = std::make_unique<jcmp::Label>();
     portaL->setText("Porta");
@@ -70,7 +71,7 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
             w->setEnabledState();
     };
 
-    editor.componentRefreshByID[e.patchCopy.output.playMode.meta.id] = op;
+    editor.componentRefreshByID[on.playMode.meta.id] = op;
     playModeD->onGuiSetValue = op;
 
     triggerButton = std::make_unique<jcmp::TextPushButton>();
@@ -83,7 +84,7 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
             }
         });
     setTriggerButtonLabel();
-    editor.componentRefreshByID[e.patchCopy.output.defaultTrigger.meta.id] =
+    editor.componentRefreshByID[on.defaultTrigger.meta.id] =
         [w = juce::Component::SafePointer(this)]()
     {
         if (w)
@@ -93,11 +94,10 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     };
     addAndMakeVisible(*triggerButton);
 
-    createComponent(editor, *this, e.patchCopy.output.pianoModeActive, pianoModeButton,
-                    pianoModeButtonD);
+    createComponent(editor, *this, on.pianoModeActive, pianoModeButton, pianoModeButtonD);
     addAndMakeVisible(*pianoModeButton);
 
-    createComponent(editor, *this, e.patchCopy.output.unisonCount, uniCt, uniCtD);
+    createComponent(editor, *this, on.unisonCount, uniCt, uniCtD);
     addAndMakeVisible(*uniCt);
     uniCtD->onGuiSetValue = op;
 
@@ -105,11 +105,11 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     uniCtL->setText("Voice");
     addAndMakeVisible(*uniCtL);
 
-    createComponent(editor, *this, e.patchCopy.output.uniPhaseRand, uniRPhase, uniRPhaseDD);
+    createComponent(editor, *this, on.uniPhaseRand, uniRPhase, uniRPhaseDD);
     uniRPhase->setLabel("Rand Phase");
     addAndMakeVisible(*uniRPhase);
 
-    createComponent(editor, *this, e.patchCopy.output.unisonSpread, uniSpread, uniSpreadD);
+    createComponent(editor, *this, on.unisonSpread, uniSpread, uniSpreadD);
     addAndMakeVisible(*uniSpread);
     uniSpreadL = std::make_unique<jcmp::Label>();
     uniSpreadL->setText("Spread");
@@ -118,7 +118,24 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     uniTitle = std::make_unique<RuledLabel>();
     uniTitle->setText("Unison");
     addAndMakeVisible(*uniTitle);
-    editor.componentRefreshByID[e.patchCopy.output.unisonCount.meta.id] = op;
+    editor.componentRefreshByID[on.unisonCount.meta.id] = op;
+
+    mpeTitle = std::make_unique<RuledLabel>();
+    mpeTitle->setText("MPE");
+    addAndMakeVisible(*mpeTitle);
+
+    createComponent(editor, *this, on.mpeActive, mpeActiveButton, mpeActiveButtonD);
+    addAndMakeVisible(*mpeActiveButton);
+    mpeActiveButton->setLabel("MPE Active");
+    mpeActiveButtonD->onGuiSetValue = op;
+    editor.componentRefreshByID[on.mpeActive.meta.id] = op;
+
+    createComponent(editor, *this, on.mpeBendRange, mpeRange, mpeRangeD);
+    addAndMakeVisible(*mpeRange);
+
+    mpeRangeL = std::make_unique<jcmp::Label>();
+    mpeRangeL->setText("Bend");
+    addAndMakeVisible(*mpeRangeL);
 
     setEnabledState();
 };
@@ -139,14 +156,14 @@ void MainSubPanel::resized()
     positionKnobAndLabel(depx + xtraW, depy, velSen, velSenL);
 
     depy += uicLabeledKnobHeight + uicMargin;
+    auto pmw{14};
     positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, bendTitle);
     auto bbx = juce::Rectangle<int>(depx, depy + uicTitleLabelHeight, uicKnobSize + 2 * xtraW,
                                     uicLabelHeight);
-    bUpL->setBounds(bbx.withWidth(18));
-    bUp->setBounds(bbx.withTrimmedLeft(18 + uicMargin));
+    bUpL->setBounds(bbx.withWidth(pmw));
+    bUp->setBounds(bbx.withTrimmedLeft(pmw + uicMargin));
     bbx = bbx.translated(0, uicLabelHeight + uicMargin);
 
-    auto pmw{14};
     bDnL->setBounds(bbx.withWidth(pmw));
     bDn->setBounds(bbx.withTrimmedLeft(pmw + uicMargin));
 
@@ -174,6 +191,16 @@ void MainSubPanel::resized()
     bbx = bbx.translated(0, uicMargin + uicLabelHeight);
     uniRPhase->setBounds(bbx.withHeight(uicLabelHeight));
     positionKnobAndLabel(bbx.getX() + xtraW, portaTime->getY(), uniSpread, uniSpreadL);
+
+    depx += bbx.getWidth() + uicMargin;
+    depy = r.getY();
+    positionTitleLabelAt(depx, depy, bbx.getWidth(), mpeTitle);
+    bbx = juce::Rectangle<int>(depx, depy + uicTitleLabelHeight, bbx.getWidth(), uicLabelHeight);
+    mpeActiveButton->setBounds(bbx.withHeight(uicLabelHeight));
+    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
+    mpeRange->setBounds(bbx.withHeight(uicLabelHeight));
+    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
+    mpeRangeL->setBounds(bbx.withHeight(uicLabelHeight));
 }
 
 void MainSubPanel::setTriggerButtonLabel()
@@ -238,6 +265,11 @@ void MainSubPanel::setEnabledState()
         uniCtL->setText("Voice");
     else
         uniCtL->setText("Voices");
+
+    auto me = editor.patchCopy.output.mpeActive.value > 0.5;
+    mpeRange->setEnabled(me);
+    mpeRangeL->setEnabled(me);
+
     repaint();
 }
 

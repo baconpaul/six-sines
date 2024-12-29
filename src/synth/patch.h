@@ -733,7 +733,18 @@ struct Patch
                                .withName(name() + " Unison Phase Randomized")
                                .withGroupName(name())
                                .withDefault(true)
-                               .withID(id(32)))
+                               .withID(id(32))),
+              mpeActive(boolMd()
+                            .withName(name() + " MPE Active")
+                            .withGroupName(name())
+                            .withDefault(false)
+                            .withID(id(33))),
+              mpeBendRange(intMd()
+                               .withName(name() + " MPE Bend Range")
+                               .withGroupName(name())
+                               .withRange(1, 96)
+                               .withDefault(24)
+                               .withID(id(34)))
         {
             defaultTrigger.adhocFeatures = Param::AdHocFeatureValues::TRIGGERMODE;
         }
@@ -744,13 +755,14 @@ struct Patch
         Param level, velSensitivity, playMode;
         Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, pianoModeActive;
         Param unisonCount, unisonSpread, uniPhaseRand;
+        Param mpeActive, mpeBendRange;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level,          &velSensitivity, &playMode,
-                                     &bendUp,         &bendDown,       &polyLimit,
-                                     &defaultTrigger, &portaTime,      &pianoModeActive,
-                                     &unisonCount,    &unisonSpread,   &uniPhaseRand};
+            std::vector<Param *> res{
+                &level,        &velSensitivity, &playMode,  &bendUp,          &bendDown,
+                &polyLimit,    &defaultTrigger, &portaTime, &pianoModeActive, &unisonCount,
+                &unisonSpread, &uniPhaseRand,   &mpeActive, &mpeBendRange};
             appendDAHDSRParams(res);
             return res;
         }

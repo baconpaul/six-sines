@@ -11,16 +11,11 @@ MODULATION:
   - main
 - Unison Sources
 
-MPE Support
-- An MPE-switch in main panel toggles voice manager
-- MPE sources hooked up in mod matrix
-
 PATCH SELECTOR:
 - Jog Buttons for next/prev
 
 MAIN/PLAY MODE:
 - Global Transpose and Global in-semitone-tuning with LFO routable to tuning
-- It also occurs to me that the main AEG feels totally dumb in voice mode. default moves to gate
 
 CLAP
 - An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)

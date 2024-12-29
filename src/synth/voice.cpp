@@ -70,7 +70,7 @@ void Voice::renderBlock()
             MTS_RetuningInSemitones(monoValues.mtsClient, voiceValues.key, voiceValues.channel);
     }
     retuneKey += ((monoValues.pitchBend >= 0) ? out.bendUp : out.bendDown) * monoValues.pitchBend;
-    retuneKey += voiceValues.portaDiff * voiceValues.portaSign;
+    retuneKey += voiceValues.portaDiff * voiceValues.portaSign + voiceValues.mpeBendInSemis;
 
     if (voiceValues.portaDiff > 1e-5)
         voiceValues.portaDiff -= voiceValues.dPorta;
@@ -190,6 +190,7 @@ void Voice::cleanup()
     voiceValues.portaDiff = 0;
     voiceValues.portaSign = 0;
     voiceValues.dPorta = 0;
+    voiceValues.mpeBendInSemis = 0;
 
     for (auto &s : src)
     {
