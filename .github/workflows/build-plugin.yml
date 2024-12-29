@@ -190,5 +190,5 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: artifacts/**/**/**
-          tag: Nightly
+          tag: ${{ github.ref_name }}
           file_glob: true
