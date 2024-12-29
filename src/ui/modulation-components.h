@@ -31,8 +31,8 @@ template <typename Comp, typename Patch> struct ModulationComponents
     Comp *asComp() { return static_cast<Comp *>(this); }
     ModulationComponents() {}
 
-    const Patch *patchPtr{nullptr};
-    void setupModulation(SixSinesEditor &e, const Patch &v)
+    Patch *patchPtr{nullptr};
+    void setupModulation(SixSinesEditor &e, Patch &v)
     {
         patchPtr = &v;
         auto c = asComp();
@@ -46,11 +46,11 @@ template <typename Comp, typename Patch> struct ModulationComponents
             sourceMenu[i] = std::make_unique<jcmp::MenuButton>();
             resetSourceLabel(i);
             sourceMenu[i]->setOnCallback(
-                [w = juce::Component::SafePointer(asComp())]()
+                [i, w = juce::Component::SafePointer(asComp())]()
                 {
                     if (!w)
                         return;
-                    w->showSourceMenu();
+                    w->showSourceMenu(i);
                 });
             e.componentRefreshByID[v.modsource[i].meta.id] =
                 [i, w = juce::Component::SafePointer(c)]()
@@ -121,7 +121,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
         }
     }
 
-    void showSourceMenu()
+    void showSourceMenu(int index)
     {
         SXSNLOG("Show Source Menu");
         auto p = juce::PopupMenu();
@@ -129,11 +129,26 @@ template <typename Comp, typename Patch> struct ModulationComponents
         p.addSeparator();
         std::string currCat{};
         auto s = juce::PopupMenu();
+        auto genSet = [&](auto si)
+        {
+            return [si, w = juce::Component::SafePointer(asComp()), index]()
+            {
+                if (!w)
+                    return;
+                if (!w->patchPtr)
+                    return;
+                w->patchPtr->modsource[index].value = si;
+                w->editor.uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM,
+                                          w->patchPtr->modsource[index].meta.id, (float)si});
+                w->resetSourceLabel(index);
+            };
+        };
+
         for (const auto &so : asComp()->editor.modMatrixConfig.sources)
         {
             if (so.group.empty())
             {
-                p.addItem(so.name, [i = so.id]() { SXSNLOG("With " << i); });
+                p.addItem(so.name, genSet(so.id));
             }
             else
             {
@@ -143,7 +158,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
                     s = juce::PopupMenu();
                 }
                 currCat = so.group;
-                s.addItem(so.name, [i = so.id]() { SXSNLOG("With " << i); });
+                s.addItem(so.name, genSet(so.id));
             }
         }
         if (s.getNumItems() > 0)
