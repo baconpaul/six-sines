@@ -524,7 +524,8 @@ void SixSinesEditor::showPresetPopup()
                   if (w)
                       w->doSavePatch();
               });
-    p.addItem("Reset",
+    p.addSeparator();
+    p.addItem("Reset to Init",
               [w = juce::Component::SafePointer(this)]()
               {
                   if (w)

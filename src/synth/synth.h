@@ -50,8 +50,6 @@ struct Synth
     Patch patch;
     MonoValues monoValues;
 
-    ModMatrixConfig modMatrixConfig;
-
     struct VMConfig
     {
         static constexpr size_t maxVoiceCount{maxVoices};
@@ -74,7 +72,7 @@ struct Synth
         void setVoiceEndCallback(std::function<void(Voice *)> f) { doVoiceEndCallback = f; }
         void retriggerVoiceWithNewNoteID(Voice *v, int32_t nid, float vel)
         {
-            v->voiceValues.gated = true;
+            v->voiceValues.setGated(true);
             v->voiceValues.velocity = vel;
             v->retriggerAllEnvelopesForReGate();
         }
@@ -91,7 +89,7 @@ struct Synth
             v->setupPortaTo(k, synth.patch.output.portaTime.value);
             v->voiceValues.key = k;
             v->voiceValues.velocity = ve;
-            v->voiceValues.gated = true;
+            v->voiceValues.setGated(true);
             v->retriggerAllEnvelopesForReGate();
         }
 
@@ -109,7 +107,7 @@ struct Synth
 
         void terminateVoice(Voice *voice)
         {
-            voice->voiceValues.gated = false;
+            voice->voiceValues.setGated(false);
             voice->fadeBlocks = Voice::fadeOverBlocks;
         }
         int32_t initializeMultipleVoices(
@@ -154,7 +152,7 @@ struct Synth
                         {
                             obuf[vc].voice = &synth.voices[i];
                             synth.voices[i].used = true;
-                            synth.voices[i].voiceValues.gated = true;
+                            synth.voices[i].voiceValues.setGated(true);
                             synth.voices[i].voiceValues.key = key;
                             synth.voices[i].voiceValues.channel = ch;
                             synth.voices[i].voiceValues.velocity = vel;
@@ -179,12 +177,12 @@ struct Synth
         }
         void releaseVoice(Voice *v, float rv)
         {
-            v->voiceValues.gated = false;
+            v->voiceValues.setGated(false);
             v->voiceValues.releaseVelocity = rv;
         }
         void setNoteExpression(Voice *, int32_t, double) {}
         void setVoicePolyphonicParameterModulation(Voice *, uint32_t, double) {}
-        void setPolyphonicAftertouch(Voice *, int8_t) {}
+        void setPolyphonicAftertouch(Voice *v, int8_t a) { v->voiceValues.polyAt = a / 127.0; }
 
         void setVoiceMIDIMPEChannelPitchBend(Voice *, uint16_t) {}
         void setVoiceMIDIMPEChannelPressure(Voice *, int8_t) {}
@@ -199,8 +197,15 @@ struct Synth
         {
             synth.monoValues.pitchBend = (v - 8192) * 1.0 / 8192;
         }
-        void setMIDI1CC(int16_t ch, int16_t cc, int8_t v) { synth.monoValues.midiCC[cc] = v; }
-        void setMIDIChannelPressure(int16_t, int16_t) {}
+        void setMIDI1CC(int16_t ch, int16_t cc, int8_t v)
+        {
+            synth.monoValues.midiCC[cc] = v;
+            synth.monoValues.midiCCFloat[cc] = v / 127.0;
+        }
+        void setMIDIChannelPressure(int16_t ch, int16_t v)
+        {
+            synth.monoValues.channelAT = v / 127.0;
+        }
     };
     using voiceManager_t = sst::voicemanager::VoiceManager<VMConfig, VMResponder, VMMonoResponder>;
 

@@ -58,7 +58,7 @@ void Voice::attack()
     for (auto &n : matrixNode)
         n.attack();
 
-    voiceValues.gated = true;
+    voiceValues.setGated(true);
 }
 
 void Voice::renderBlock()
@@ -186,7 +186,7 @@ void Voice::cleanup()
 {
     used = false;
     fadeBlocks = -1;
-    voiceValues.gated = false;
+    voiceValues.setGated(false);
     voiceValues.portaDiff = 0;
     voiceValues.portaSign = 0;
     voiceValues.dPorta = 0;

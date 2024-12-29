@@ -327,6 +327,28 @@ struct Patch
     struct SourceNode : public DAHDSRMixin, public LFOMixin, public ModulationMixin
     {
         static constexpr uint32_t idBase{1500}, idStride{250};
+
+        // These stream
+        enum TargetID
+        {
+            NONE = 0,
+            DIRECT = 10,
+            ENV_DEPTH_ATTEN = 20,
+            LFO_DEPTH_ATTEN = 30,
+
+            ENV_ATTACK = 40,
+            LFO_RATE = 50
+        };
+
+        std::vector<std::pair<TargetID, std::string>> targetList{
+            {TargetID::NONE, "Off"},
+            {TargetID::DIRECT, "Ratio"},
+            {TargetID::ENV_DEPTH_ATTEN, "Env Depth"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFO Depth"},
+            {TargetID::ENV_ATTACK, "Env Attack"},
+            {TargetID::LFO_RATE, "LFO Rate"},
+        };
+
         SourceNode(size_t idx)
             : ratio(floatMd()
                         .withRange(-5, 5)
@@ -392,11 +414,9 @@ struct Patch
                       return md_t()
                           .withName(name(idx) + " Mod Target " + std::to_string(i))
                           .withGroupName(name(idx))
-                          .withRange(0, 2)
-                          .withDefault(0)
-                          .withID(id(160 + i, idx))
-                          .withUnorderedMapFormatting(
-                              {{0, "Env Atten"}, {1, "LFO Amp"}, {2, "Direct"}});
+                          .withRange(0, 2000)
+                          .withDefault(TargetID::NONE)
+                          .withID(id(160 + i, idx));
                   }))
         {
         }

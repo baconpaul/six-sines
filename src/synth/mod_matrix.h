@@ -27,7 +27,6 @@ namespace baconpaul::six_sines
 {
 struct ModMatrixConfig
 {
-
     // These ids stream
     static constexpr uint32_t voiceLevel{5000};
     enum Source : uint32_t

@@ -39,6 +39,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     float output alignas(16)[blockSize];
 
+    const Patch::SourceNode &sourceNode;
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
@@ -53,8 +54,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     uint32_t dPhase;
 
     OpSource(const Patch::SourceNode &sn, MonoValues &mv, const VoiceValues &vv)
-        : monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv),
-          ModulationSupport(sn, mv, vv), ratio(sn.ratio), activeV(sn.active),
+        : sourceNode(sn), monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv),
+          LFOSupport(sn, mv), ModulationSupport(sn, mv, vv), ratio(sn.ratio), activeV(sn.active),
           envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio), lfoByEnv(sn.envLfoSum),
           waveForm(sn.waveForm)
     {
@@ -65,15 +66,20 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     {
         zeroInputs();
         snapActive();
-        envAttack();
-        lfoAttack();
-        bindModulation();
 
-        phase = 4 << 27;
-        fbVal[0] = 0.f;
-        fbVal[1] = 0.f;
-        auto wf = (SinTable::WaveForm)std::round(waveForm);
-        st.setWaveForm(wf);
+        if (active)
+        {
+            calculateModulation();
+            envAttack();
+            lfoAttack();
+            bindModulation();
+
+            phase = 4 << 27;
+            fbVal[0] = 0.f;
+            fbVal[1] = 0.f;
+            auto wf = (SinTable::WaveForm)std::round(waveForm);
+            st.setWaveForm(wf);
+        }
     }
 
     void zeroInputs()
@@ -92,6 +98,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     float baseFrequency{0};
     void setBaseFrequency(float freq) { baseFrequency = freq; }
 
+    float ratioMod{0.f};
+    float envRatioAtten{1.0};
+    float lfoRatioAtten{1.0};
+
     float priorRF{-10000000};
     void renderBlock()
     {
@@ -102,13 +112,19 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             fbVal[1] = 0.f;
             return;
         }
+
+        /*
+         * Apply modulation
+         */
+        calculateModulation();
+
         envProcess();
         lfoProcess();
         auto lfoFac = lfoByEnv > 0.5 ? env.outputCache[blockSize - 1] : 1.f;
 
-        auto rf =
-            monoValues.twoToTheX.twoToThe(ratio + envToRatio * env.outputCache[blockSize - 1] +
-                                          lfoFac * lfoToRatio * lfo.outputBlock[0]);
+        auto rf = monoValues.twoToTheX.twoToThe(
+            ratio + envRatioAtten * envToRatio * env.outputCache[blockSize - 1] +
+            lfoFac * lfoRatioAtten * lfoToRatio * lfo.outputBlock[0] + ratioMod);
         rf *= voiceValues.uniRatioMul;
         if (priorRF < -10000)
             priorRF = rf;
@@ -126,6 +142,47 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             output[i] = out;
             fbVal[1] = fbVal[0];
             fbVal[0] = out;
+        }
+    }
+
+    void calculateModulation()
+    {
+        envRatioAtten = 1.f;
+        lfoRatioAtten = 1.f;
+        ratioMod = 0.f;
+        attackMod = 0.f;
+        rateMod = 0.f;
+        for (int i = 0; i < numModsPer; ++i)
+        {
+            if (sourcePointers[i] &&
+                (int)sourceNode.modtarget[i].value != Patch::SourceNode::TargetID::NONE)
+            {
+                // targets: env depth atten, lfo dept atten, direct adjust, env attack, lfo rate
+                auto dp = depthPointers[i];
+                if (!dp)
+                    continue;
+                auto d = *dp;
+                switch ((Patch::SourceNode::TargetID)sourceNode.modtarget[i].value)
+                {
+                case Patch::SourceNode::DIRECT:
+                    ratioMod += d * *sourcePointers[i] * 2;
+                    break;
+                case Patch::SourceNode::ENV_DEPTH_ATTEN:
+                    envRatioAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                    break;
+                case Patch::SourceNode::LFO_DEPTH_ATTEN:
+                    lfoRatioAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                    break;
+                case Patch::SourceNode::ENV_ATTACK:
+                    attackMod += d * *sourcePointers[i];
+                    break;
+                case Patch::SourceNode::LFO_RATE:
+                    rateMod += d * *sourcePointers[i] * 4;
+                    break;
+                default:
+                    break;
+                }
+            }
         }
     }
 
