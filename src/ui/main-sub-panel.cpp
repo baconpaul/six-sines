@@ -101,6 +101,14 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
     addAndMakeVisible(*uniCt);
     uniCtD->onGuiSetValue = op;
 
+    uniCtL = std::make_unique<jcmp::Label>();
+    uniCtL->setText("Voice");
+    addAndMakeVisible(*uniCtL);
+
+    createComponent(editor, *this, e.patchCopy.output.uniPhaseRand, uniRPhase, uniRPhaseDD);
+    uniRPhase->setLabel("Rand Phase");
+    addAndMakeVisible(*uniRPhase);
+
     createComponent(editor, *this, e.patchCopy.output.unisonSpread, uniSpread, uniSpreadD);
     addAndMakeVisible(*uniSpread);
     uniSpreadL = std::make_unique<jcmp::Label>();
@@ -160,9 +168,12 @@ void MainSubPanel::resized()
     depy = r.getY();
     positionTitleLabelAt(depx, depy, bbx.getWidth(), uniTitle);
     bbx = juce::Rectangle<int>(depx, depy + uicTitleLabelHeight, bbx.getWidth(), uicLabelHeight);
-    uniCt->setBounds(bbx.withHeight(uicLabeledKnobHeight + uicLabelHeight));
-    bbx = bbx.translated(0, uicLabeledKnobHeight + uicMargin + uicLabelHeight);
-    positionKnobAndLabel(bbx.getX() + xtraW, bbx.getY(), uniSpread, uniSpreadL);
+    uniCt->setBounds(bbx.withHeight(uicLabelHeight));
+    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
+    uniCtL->setBounds(bbx.withHeight(uicLabelHeight));
+    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
+    uniRPhase->setBounds(bbx.withHeight(uicLabelHeight));
+    positionKnobAndLabel(bbx.getX() + xtraW, portaTime->getY(), uniSpread, uniSpreadL);
 }
 
 void MainSubPanel::setTriggerButtonLabel()
@@ -221,6 +232,12 @@ void MainSubPanel::setEnabledState()
 
     auto uc = editor.patchCopy.output.unisonCount.value;
     uniSpread->setEnabled(uc > 1.5);
+    uniSpreadL->setEnabled(uc > 1.5);
+    uniRPhase->setEnabled(uc > 1.5);
+    if (uc < 1.5)
+        uniCtL->setText("Voice");
+    else
+        uniCtL->setText("Voices");
     repaint();
 }
 

@@ -21,6 +21,7 @@
 #include "sst/jucegui/components/MultiSwitch.h"
 #include "sst/jucegui/components/DraggableTextEditableValue.h"
 #include "sst/jucegui/components/TextPushButton.h"
+#include "sst/jucegui/components/JogUpDownButton.h"
 #include "patch-data-bindings.h"
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
@@ -62,8 +63,12 @@ struct MainSubPanel : juce::Component, HasEditor, DAHDSRComponents<MainSubPanel,
     std::unique_ptr<jcmp::Label> portaL;
     void setEnabledState();
 
-    std::unique_ptr<jcmp::MultiSwitch> uniCt;
+    std::unique_ptr<jcmp::JogUpDownButton> uniCt;
     std::unique_ptr<PatchDiscrete> uniCtD;
+    std::unique_ptr<jcmp::Label> uniCtL;
+
+    std::unique_ptr<jcmp::ToggleButton> uniRPhase;
+    std::unique_ptr<PatchDiscrete> uniRPhaseDD;
 
     std::unique_ptr<jcmp::Knob> uniSpread;
     std::unique_ptr<PatchContinuous> uniSpreadD;

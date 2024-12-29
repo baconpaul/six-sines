@@ -716,11 +716,10 @@ struct Patch
                                   .withDefault(true)
                                   .withID(id(29))),
               unisonCount(intMd()
-                              .withName(name() + " Unison Count")
+                              .withName(name() + " Unison Voice Count")
                               .withGroupName(name())
                               .withRange(1, 5)
                               .withDefault(1)
-                              .withLinearScaleFormatting("voices")
                               .withID(id(30))),
               unisonSpread(floatMd()
                                .withRange(0, 2.0 / 12.0)
@@ -729,7 +728,12 @@ struct Patch
                                .withDefault(.1 / 12.0)
                                .withDecimalPlaces(4)
                                .withATwoToTheBFormatting(1, 1, "x")
-                               .withID(id(31)))
+                               .withID(id(31))),
+              uniPhaseRand(boolMd()
+                               .withName(name() + " Unison Phase Randomized")
+                               .withGroupName(name())
+                               .withDefault(true)
+                               .withID(id(32)))
         {
             defaultTrigger.adhocFeatures = Param::AdHocFeatureValues::TRIGGERMODE;
         }
@@ -739,13 +743,14 @@ struct Patch
 
         Param level, velSensitivity, playMode;
         Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, pianoModeActive;
-        Param unisonCount, unisonSpread;
+        Param unisonCount, unisonSpread, uniPhaseRand;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level,           &velSensitivity, &playMode,       &bendUp,
-                                     &bendDown,        &polyLimit,      &defaultTrigger, &portaTime,
-                                     &pianoModeActive, &unisonCount,    &unisonSpread};
+            std::vector<Param *> res{&level,          &velSensitivity, &playMode,
+                                     &bendUp,         &bendDown,       &polyLimit,
+                                     &defaultTrigger, &portaTime,      &pianoModeActive,
+                                     &unisonCount,    &unisonSpread,   &uniPhaseRand};
             appendDAHDSRParams(res);
             return res;
         }

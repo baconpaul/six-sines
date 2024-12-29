@@ -75,7 +75,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             bindModulation();
 
             phase = 4 << 27;
-            if (voiceValues.uniCount > 1 && voiceValues.uniIndex > 0)
+            if (voiceValues.phaseRandom)
             {
                 phase += monoValues.rng.unifU32() & ((1 << 27) - 1);
             }

@@ -47,6 +47,7 @@ struct VoiceValues
     float uniPanShift{0.0};
     int uniIndex{0};
     int uniCount{1};
+    bool phaseRandom{false};
 
   private:
     bool gatedV{false};
