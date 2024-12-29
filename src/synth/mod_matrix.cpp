@@ -38,6 +38,11 @@ ModMatrixConfig::ModMatrixConfig()
     add(MPE_PRESSURE, "MPE", "Pressure");
     add(MPE_TIMBRE, "MPE", "Timbre");
 
+    add(RANDOM_01, "Random", "Rand Unif 01");
+    add(RANDOM_PM1, "Random", "Rand Unif Bi");
+    add(RANDOM_NORM, "Random", "Rand Normal");
+    add(RANDOM_HALFNORM, "Random", "Rand HalfNorm");
+
     std::sort(sources.begin(), sources.end(),
               [](const SourceObj &a, const SourceObj &b)
               {

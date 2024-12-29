@@ -200,7 +200,7 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
 template <typename T> struct ModulationSupport
 {
     const T &paramBundle;
-    const MonoValues &monoValues;
+    MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
     // array makes ref clumsy so show pointers instead
@@ -209,7 +209,9 @@ template <typename T> struct ModulationSupport
     std::array<const float *, numModsPer> depthPointers;
     std::array<float, numModsPer> priorModulation;
 
-    ModulationSupport(const T &mn, const MonoValues &mv, const VoiceValues &vv)
+    float modr01, modrpm1, modrnorm, modrhalfnorm;
+
+    ModulationSupport(const T &mn, MonoValues &mv, const VoiceValues &vv)
         : paramBundle(mn), monoValues(mv), voiceValues(vv),
           depthPointers(sst::cpputils::make_array_lambda<const float *, numModsPer>(
               [this](int i) { return &paramBundle.moddepth[i].value; }))
@@ -237,6 +239,14 @@ template <typename T> struct ModulationSupport
             {
                 anySources |= (sourcePointers[i] != nullptr);
             }
+        }
+
+        if (anySources)
+        {
+            modr01 = monoValues.rng.unif01();
+            modrpm1 = monoValues.rng.unifPM1();
+            modrnorm = monoValues.rng.normPM1();
+            modrhalfnorm = monoValues.rng.half01();
         }
     }
 
@@ -299,6 +309,19 @@ template <typename T> struct ModulationSupport
             break;
         case ModMatrixConfig::Source::MPE_PITCHBEND:
             sourcePointers[which] = &voiceValues.mpeBendInSemis;
+            break;
+
+        case ModMatrixConfig::Source::RANDOM_01:
+            sourcePointers[which] = &modr01;
+            break;
+        case ModMatrixConfig::Source::RANDOM_PM1:
+            sourcePointers[which] = &modrpm1;
+            break;
+        case ModMatrixConfig::Source::RANDOM_NORM:
+            sourcePointers[which] = &modrnorm;
+            break;
+        case ModMatrixConfig::Source::RANDOM_HALFNORM:
+            sourcePointers[which] = &modrhalfnorm;
             break;
 
         default:

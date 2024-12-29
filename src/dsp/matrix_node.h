@@ -147,8 +147,10 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
             for (int j = 0; j < blockSize; ++j)
             {
                 onto.feedbackLevel[j] =
-                    (int32_t)((1 << 24) * (((env.outputCache[j] * lfoAtten * lfoToFB * lfo.outputBlock[j]) *
-                              fbBase * depthAtten) + fbMod));
+                    (int32_t)((1 << 24) *
+                              (((env.outputCache[j] * lfoAtten * lfoToFB * lfo.outputBlock[j]) *
+                                fbBase * depthAtten) +
+                               fbMod));
             }
         }
         else
@@ -156,12 +158,12 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
             for (int j = 0; j < blockSize; ++j)
             {
                 onto.feedbackLevel[j] =
-                    (int32_t)((1 << 24) * (((env.outputCache[j] + lfoAtten * lfoToFB * lfo.outputBlock[j]) *
-                              fbBase * depthAtten) + fbMod));
+                    (int32_t)((1 << 24) *
+                              (((env.outputCache[j] + lfoAtten * lfoToFB * lfo.outputBlock[j]) *
+                                fbBase * depthAtten) +
+                               fbMod));
             }
         }
-
-
     }
 
     float fbMod{0.f};
