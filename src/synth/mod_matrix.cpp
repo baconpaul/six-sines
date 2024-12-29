@@ -25,7 +25,7 @@ ModMatrixConfig::ModMatrixConfig()
     add(PITCH_BEND, "MIDI", "Pitch Bend");
 
     for (int cc = 0; cc < 128; ++cc)
-        add(MIDICC_0 + cc, "MIDI CC", fmt::format("CC {:03d}", cc + 1));
+        add(MIDICC_0 + cc, "MIDI CC", fmt::format("CC {:03d}", cc));
     for (int mc = 0; mc < numMacros; ++mc)
         add(MACRO_0 + mc, "Macros", "Macro " + std::to_string(mc + 1));
 

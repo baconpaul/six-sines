@@ -20,6 +20,8 @@
 #include <sst/basic-blocks/tables/TwoToTheXProvider.h>
 #include <sst/basic-blocks/dsp/RNG.h>
 
+#include "mod_matrix.h"
+
 struct MTSClient;
 
 namespace baconpaul::six_sines
@@ -30,11 +32,16 @@ struct MonoValues
     {
         tuningProvider.init();
         twoToTheX.init();
+        std::fill(macroPtr.begin(), macroPtr.end(), nullptr);
     }
 
     float tempoSyncRatio{1};
     float pitchBend{0.f};
     std::array<int8_t, 128> midiCC;
+    std::array<float, 128> midiCCFloat; // 0...1 normed
+    float channelAT{0.f};
+
+    std::array<float *, numMacros> macroPtr;
 
     MTSClient *mtsClient{nullptr};
 
@@ -42,6 +49,8 @@ struct MonoValues
     sst::basic_blocks::tables::TwoToTheXProvider twoToTheX;
 
     sst::basic_blocks::dsp::RNG rng;
+
+    ModMatrixConfig modMatrixConfig;
 };
 };     // namespace baconpaul::six_sines
 #endif // MONO_VALUES_H

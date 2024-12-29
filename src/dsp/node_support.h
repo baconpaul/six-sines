@@ -67,6 +67,8 @@ template <typename T> struct EnvelopeSupport
     using env_t = sst::basic_blocks::modulators::AHDSRShapedSC<SRProvider, blockSize, range_t>;
     env_t env;
 
+    float attackMod{0.f};
+
     void envAttack()
     {
         triggerMode = (TriggerMode)std::round(tmV);
@@ -96,7 +98,8 @@ template <typename T> struct EnvelopeSupport
             startingValue = env.outputCache[blockSize - 1];
 
         if (active && !constantEnv)
-            env.attackFromWithDelay(startingValue, delay, attackv);
+            env.attackFromWithDelay(startingValue, delay,
+                                    std::clamp(attackv + attackMod, 0.f, 1.f));
         else if (constantEnv)
         {
             for (int i = 0; i < blockSize; ++i)
@@ -110,8 +113,8 @@ template <typename T> struct EnvelopeSupport
         if (!active || constantEnv)
             return;
 
-        env.processBlockWithDelay(delay, attackv, hold, decay, sustain, release, ash, dsh, rsh,
-                                  voiceValues.gated, true);
+        env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, 0.f, 1.f), hold, decay,
+                                  sustain, release, ash, dsh, rsh, voiceValues.gated, true);
     }
 
     void envCleanup()
@@ -139,6 +142,8 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
           lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive), tempoSyncV(mn.tempoSync), monoValues(mv)
     {
     }
+
+    float rateMod{0.f};
 
     int shape;
     bool tempoSync{false};
@@ -177,7 +182,7 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
         if (tempoSync)
             rate = monoValues.tempoSyncRatio * paramBundle.lfoRate.meta.snapToTemposync(rate);
 
-        lfo.process_block(rate, lfoDeform, shape);
+        lfo.process_block(rate + rateMod, lfoDeform, shape);
 
         if (doSmooth)
         {
@@ -201,6 +206,7 @@ template <typename T> struct ModulationSupport
     // array makes ref clumsy so show pointers instead
     std::array<const float *, numModsPer> sourcePointers;
     std::array<const float *, numModsPer> depthPointers;
+    std::array<float, numModsPer> priorModulation;
 
     ModulationSupport(const T &mn, const MonoValues &mv, const VoiceValues &vv)
         : paramBundle(mn), monoValues(mv), voiceValues(vv),
@@ -208,9 +214,83 @@ template <typename T> struct ModulationSupport
               [this](int i) { return &paramBundle.moddepth[i].value; }))
     {
         std::fill(sourcePointers.begin(), sourcePointers.end(), nullptr);
+        std::fill(priorModulation.begin(), priorModulation.end(), 0);
     }
 
-    void bindModulation() {}
+    void bindModulation()
+    {
+        for (int i = 0; i < numModsPer; ++i)
+        {
+            if (priorModulation[i] != paramBundle.modsource[i].value)
+            {
+                rebindPointer(i);
+                priorModulation[i] = paramBundle.modsource[i].value;
+            }
+        }
+    }
+
+    void rebindPointer(int which)
+    {
+        auto sv = (int)std::round(paramBundle.modsource[which].value);
+        if (sv == ModMatrixConfig::Source::OFF)
+        {
+            sourcePointers[which] = nullptr;
+            return;
+        }
+
+        if (sv >= ModMatrixConfig::Source::MIDICC_0 && sv < ModMatrixConfig::Source::MIDICC_0 + 128)
+        {
+            sourcePointers[which] =
+                &(monoValues.midiCCFloat[sv - ModMatrixConfig::Source::MIDICC_0]);
+            return;
+        }
+
+        if (sv >= ModMatrixConfig::Source::MACRO_0 &&
+            sv < ModMatrixConfig::Source::MACRO_0 + numMacros)
+        {
+            sourcePointers[which] = monoValues.macroPtr[sv - ModMatrixConfig::Source::MACRO_0];
+            return;
+        }
+
+        sourcePointers[which] = nullptr;
+
+        switch (sv)
+        {
+        case ModMatrixConfig::Source::CHANNEL_AT:
+            sourcePointers[which] = &monoValues.channelAT;
+            break;
+        case ModMatrixConfig::Source::PITCH_BEND:
+            sourcePointers[which] = &monoValues.pitchBend;
+            break;
+
+        case ModMatrixConfig::Source::VELOCITY:
+            sourcePointers[which] = &voiceValues.velocity;
+            break;
+        case ModMatrixConfig::Source::RELEASE_VELOCITY:
+            sourcePointers[which] = &voiceValues.releaseVelocity;
+            break;
+        case ModMatrixConfig::Source::POLY_AT:
+            sourcePointers[which] = &voiceValues.polyAt;
+            break;
+
+        case ModMatrixConfig::Source::GATED:
+            sourcePointers[which] = &voiceValues.gatedFloat;
+            break;
+        case ModMatrixConfig::Source::RELEASED:
+            sourcePointers[which] = &voiceValues.ungatedFloat;
+            break;
+
+        case ModMatrixConfig::Source::MPE_PRESSURE:
+        case ModMatrixConfig::Source::MPE_TIMBRE:
+        case ModMatrixConfig::Source::MPE_PITCHBEND:
+            SXSNLOG("Unimplemented source " << sv);
+            break;
+
+        default:
+            SXSNLOG("Fell Through on Mod Assignment " << which << " " << sv);
+            break;
+        }
+    }
 };
 } // namespace baconpaul::six_sines
 

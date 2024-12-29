@@ -62,6 +62,13 @@ template <typename Comp, typename Patch> struct ModulationComponents
             };
             targetMenu[i] = std::make_unique<jcmp::MenuButton>();
             resetTargetLabel(i);
+            targetMenu[i]->setOnCallback(
+                [i, w = juce::Component::SafePointer(asComp())]()
+                {
+                    if (!w)
+                        return;
+                    w->showTargetMenu(i);
+                });
             e.componentRefreshByID[v.modtarget[i].meta.id] =
                 [i, w = juce::Component::SafePointer(c)]()
             {
@@ -97,7 +104,24 @@ template <typename Comp, typename Patch> struct ModulationComponents
         }
     }
 
-    void resetTargetLabel(int i) { targetMenu[i]->setLabel("Tgt " + std::to_string(i + 1)); }
+    void resetTargetLabel(int i)
+    {
+        if (!patchPtr)
+        {
+            targetMenu[i]->setLabel("");
+            return;
+        }
+        std::string res{"ERR"};
+        auto v = (uint32_t)std::round(patchPtr->modtarget[i].value);
+        for (auto &[id, nm] : patchPtr->targetList)
+        {
+            if (id == v)
+            {
+                res = nm;
+            }
+        }
+        targetMenu[i]->setLabel(res);
+    }
 
     void layoutModulation(const juce::Rectangle<int> &r)
     {
@@ -121,9 +145,34 @@ template <typename Comp, typename Patch> struct ModulationComponents
         }
     }
 
+    void showTargetMenu(int index)
+    {
+        if (!patchPtr)
+            return;
+
+        auto p = juce::PopupMenu();
+        p.addSectionHeader("Modulation Target");
+        p.addSeparator();
+        for (const auto &[id, nm] : patchPtr->targetList)
+        {
+            p.addItem(nm,
+                      [si = id, w = juce::Component::SafePointer(asComp()), index]()
+                      {
+                          if (!w)
+                              return;
+                          if (!w->patchPtr)
+                              return;
+                          w->patchPtr->modtarget[index].value = si;
+                          w->editor.uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM,
+                                                    w->patchPtr->modtarget[index].meta.id,
+                                                    (float)si});
+                          w->resetTargetLabel(index);
+                      });
+        }
+        p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
+    }
     void showSourceMenu(int index)
     {
-        SXSNLOG("Show Source Menu");
         auto p = juce::PopupMenu();
         p.addSectionHeader("Modulation Source");
         p.addSeparator();

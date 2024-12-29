@@ -34,6 +34,11 @@ Synth::Synth()
     lagHandler.setRate(60, blockSize, gSampleRate);
     vuPeak.setSampleRate(gSampleRate);
     monoValues.mtsClient = MTS_RegisterClient();
+
+    for (int i = 0; i < numMacros; ++i)
+    {
+        monoValues.macroPtr[i] = &patch.macroNodes[i].level.value;
+    }
 }
 
 Synth::~Synth()

@@ -2,16 +2,18 @@ TODO BEFORE 1JAN2025
 
 SOURCE:
 - Keytrack on/off, and if off ratio -> offset from 440hz
-- 90%-100% of internal nyquist mute fades (maybe ship without this tho)
 
 MODULATION:
-- Each item gets a modulation list from source set
-- Monophonic Midi source
-- Macro source
-- Polyphonic Voice Source
-- MPE source? (later)
-- Note expressions? (later)
-- Unison Source
+- Put modulation in
+  - matrix
+  - feedback
+  - mixer
+  - main
+- Unison Sources
+
+MPE Support
+- An MPE-switch in main panel toggles voice manager
+- MPE sources hooked up in mod matrix
 
 PATCH SELECTOR:
 - Jog Buttons for next/prev
@@ -24,6 +26,9 @@ CLAP
 - An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)
 
 GENERAL AND CLEANUPS
+- Screen Reader Check
+  - Toggles and Multiswitches dont have accesible set actions
+  - Show menu doesnt work for set value
 - Toggle button paint cleaner, including not enabled for piano mode button
   - sync
   - piano mode
@@ -32,6 +37,9 @@ GENERAL AND CLEANUPS
 - We could have an envelope which trigers as !gated on release (and then ungates in mono-retrigger)
 - AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
 - Don't send VU etc when editor not attached
+
+THINGS I DIDNT DO
+- 90%-100% of internal nyquist mute fades (maybe ship without this tho)
 - Main DAHDSR at DAHD=0 SR=1 means voice lifetime is longest active op mixer DAHDSR and main DAHDSR bypassed
-
-
+- Note Expressions
+- CLAP PolyMod
