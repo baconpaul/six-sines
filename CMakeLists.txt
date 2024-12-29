@@ -22,8 +22,8 @@ option(COPY_AFTER_BUILD "Will copy after build" TRUE)
 include(cmake/compile-options.cmake)
 
 file(READ ${CMAKE_SOURCE_DIR}/VERSION VERSION_FILE)
+string(STRIP ${VERSION_FILE} VERSION_FILE)
 message(STATUS "Version is ${VERSION_FILE}")
-
 
 find_package(Git)
 
