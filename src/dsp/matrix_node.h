@@ -104,19 +104,22 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
     }
 };
 
-struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>, LFOSupport<Patch::SelfNode>
+struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
+                        LFOSupport<Patch::SelfNode>,
+                        ModulationSupport<Patch::SelfNode>
 {
     OpSource &onto;
     SRProvider sr;
 
+    const Patch::SelfNode &selfNode;
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
     const float &fbBase, &lfoToFB, &activeV, &lfoMulV;
     MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, MonoValues &mv, const VoiceValues &vv)
-        : monoValues(mv), voiceValues(vv), sr(mv), onto(on), fbBase(sn.fbLevel),
+        : selfNode(sn), monoValues(mv), voiceValues(vv), sr(mv), onto(on), fbBase(sn.fbLevel),
           lfoToFB(sn.lfoToFB), activeV(sn.active), lfoMulV(sn.envLfoSum),
-          EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv){};
+          EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv), ModulationSupport(sn, mv, vv){};
     bool active{true}, lfoMul{false};
 
     void attack()
@@ -125,6 +128,8 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>, LFOSupport<Patch::Self
         lfoMul = lfoMulV > 0.5;
         if (active)
         {
+            bindModulation();
+            calculateModulation();
             envAttack();
             lfoAttack();
         }
@@ -134,6 +139,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>, LFOSupport<Patch::Self
         if (!active)
             return;
 
+        calculateModulation();
         envProcess();
         lfoProcess();
         if (lfoMul)
@@ -141,8 +147,8 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>, LFOSupport<Patch::Self
             for (int j = 0; j < blockSize; ++j)
             {
                 onto.feedbackLevel[j] =
-                    (int32_t)((1 << 24) * (env.outputCache[j] * lfoToFB * lfo.outputBlock[j]) *
-                              fbBase);
+                    (int32_t)((1 << 24) * (((env.outputCache[j] * lfoAtten * lfoToFB * lfo.outputBlock[j]) *
+                              fbBase * depthAtten) + fbMod));
             }
         }
         else
@@ -150,8 +156,59 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>, LFOSupport<Patch::Self
             for (int j = 0; j < blockSize; ++j)
             {
                 onto.feedbackLevel[j] =
-                    (int32_t)((1 << 24) * (env.outputCache[j] + lfoToFB * lfo.outputBlock[j]) *
-                              fbBase);
+                    (int32_t)((1 << 24) * (((env.outputCache[j] + lfoAtten * lfoToFB * lfo.outputBlock[j]) *
+                              fbBase * depthAtten) + fbMod));
+            }
+        }
+
+
+    }
+
+    float fbMod{0.f};
+    float depthAtten{1.0};
+    float lfoAtten{1.0};
+
+    void calculateModulation()
+    {
+        depthAtten = 1.f;
+        lfoAtten = 1.f;
+        fbMod = 0.f;
+        attackMod = 0.f;
+        rateMod = 0.f;
+
+        if (!anySources)
+            return;
+
+        for (int i = 0; i < numModsPer; ++i)
+        {
+            if (sourcePointers[i] &&
+                (int)selfNode.modtarget[i].value != Patch::SelfNode::TargetID::NONE)
+            {
+                // targets: env depth atten, lfo dept atten, direct adjust, env attack, lfo rate
+                auto dp = depthPointers[i];
+                if (!dp)
+                    continue;
+                auto d = *dp;
+                switch ((Patch::SelfNode::TargetID)selfNode.modtarget[i].value)
+                {
+                case Patch::SelfNode::DIRECT:
+                    fbMod += d * *sourcePointers[i];
+                    break;
+                case Patch::SelfNode::DEPTH_ATTEN:
+                    depthAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                    break;
+                case Patch::SelfNode::LFO_DEPTH_ATTEN:
+                    lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                    break;
+                case Patch::SelfNode::ENV_ATTACK:
+                    attackMod += d * *sourcePointers[i];
+                    break;
+                case Patch::SelfNode::LFO_RATE:
+                    rateMod += d * *sourcePointers[i] * 4;
+                    break;
+                default:
+                    break;
+                }
             }
         }
     }

@@ -20,13 +20,15 @@
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
 #include "lfo-components.h"
+#include "modulation-components.h"
 
 namespace baconpaul::six_sines::ui
 {
 struct SelfSubPanel : juce::Component,
                       HasEditor,
                       DAHDSRComponents<SelfSubPanel, Patch::SelfNode>,
-                      LFOComponents<SelfSubPanel, Patch::SelfNode>
+                      LFOComponents<SelfSubPanel, Patch::SelfNode>,
+                      ModulationComponents<SelfSubPanel, Patch::SelfNode>
 {
     SelfSubPanel(SixSinesEditor &);
     ~SelfSubPanel();

@@ -6,10 +6,10 @@ SOURCE:
 MODULATION:
 - Put modulation in
   - matrix
-  - feedback
   - mixer
   - main
 - Unison Sources
+- Random sources (put a float in each ModulationSupport and set them in bind)
 
 PATCH SELECTOR:
 - Jog Buttons for next/prev

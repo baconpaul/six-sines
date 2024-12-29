@@ -30,6 +30,7 @@ void SelfSubPanel::setSelectedIndex(int idx)
     auto &n = editor.patchCopy.selfNodes[idx];
     setupDAHDSR(editor, editor.patchCopy.selfNodes[idx]);
     setupLFO(editor, editor.patchCopy.selfNodes[idx]);
+    setupModulation(editor, editor.patchCopy.selfNodes[idx]);
 
     createComponent(editor, *this, n.lfoToFB, lfoToFb, lfoToFbD);
     addAndMakeVisible(*lfoToFb);
@@ -55,6 +56,8 @@ void SelfSubPanel::resized()
     auto r = layoutLFOAt(pn.getX(), p.getY(), uicMargin + uicKnobSize);
 
     positionKnobAndLabel(r.getX() - uicKnobSize, r.getY() + uicTitleLabelHeight, lfoToFb, lfoToFbL);
+
+    layoutModulation(p);
 }
 
 } // namespace baconpaul::six_sines::ui

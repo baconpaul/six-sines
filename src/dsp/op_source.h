@@ -69,10 +69,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
         if (active)
         {
+            bindModulation();
             calculateModulation();
             envAttack();
             lfoAttack();
-            bindModulation();
 
             phase = 4 << 27;
             if (voiceValues.phaseRandom)
@@ -156,6 +156,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         ratioMod = 0.f;
         attackMod = 0.f;
         rateMod = 0.f;
+
+        if (!anySources)
+            return;
+
         for (int i = 0; i < numModsPer; ++i)
         {
             if (sourcePointers[i] &&
