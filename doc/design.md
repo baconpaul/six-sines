@@ -35,7 +35,6 @@ GENERAL AND CLEANUPS
 - Don't send VU etc when editor not attached
 - Write a better README
 - Write some semblance of documentation
-- Make pipeline have a release stage
 
 THINGS I DIDNT DO
 - 90%-100% of internal nyquist mute fades (maybe ship without this tho)
