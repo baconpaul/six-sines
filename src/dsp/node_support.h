@@ -187,7 +187,7 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     LFOSupport(const T &mn, MonoValues &mv)
         : sr(mv), paramBundle(mn), lfo(&sr, mv.rng), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform),
           lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive), tempoSyncV(mn.tempoSync), monoValues(mv),
-    bipolarV(mn.lfoBipolar)
+          bipolarV(mn.lfoBipolar)
     {
     }
 

@@ -84,7 +84,6 @@ template <typename Comp, typename Patch> struct LFOComponents
         tempoSync->setBounds(bx.withTrimmedTop(2 * uicLabeledKnobHeight - lh).withHeight(lh));
         bipolar->setBounds(bx.withTrimmedTop(2 * uicLabeledKnobHeight + uicMargin).withHeight(lh));
 
-
         bx = bx.translated(w + uicMargin, 0);
         positionKnobAndLabel(bx.getX(), bx.getY(), rate, rateL);
         positionKnobAndLabel(bx.getX(), bx.getY() + uicLabeledKnobHeight + uicMargin, deform,
@@ -107,7 +106,6 @@ template <typename Comp, typename Patch> struct LFOComponents
 
     std::unique_ptr<jcmp::ToggleButton> bipolar;
     std::unique_ptr<PatchDiscrete> bipolarD;
-
 };
 } // namespace baconpaul::six_sines::ui
 #endif // LFO_COMPONENTS_H

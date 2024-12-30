@@ -175,7 +175,11 @@ struct Patch
                             .withName(name + " Temposync")
                             .withGroupName(name)
                             .withDefault(false)),
-        lfoBipolar(boolMd().withDefault(true).withID(id0+6).withName(name + " Bipolar").withGroupName(name))
+              lfoBipolar(boolMd()
+                             .withDefault(true)
+                             .withID(id0 + 6)
+                             .withName(name + " Bipolar")
+                             .withGroupName(name))
         {
         }
 
