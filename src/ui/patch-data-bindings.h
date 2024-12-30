@@ -58,7 +58,9 @@ struct PatchContinuous : jdat::Continuous
             auto r = p->meta.valueToString(
                 f, sst::basic_blocks::params::ParamMetaData::FeatureState().withTemposync(true));
             if (r.has_value())
+            {
                 return *r;
+            }
         }
         auto r = p->meta.valueToString(f);
         if (r.has_value())

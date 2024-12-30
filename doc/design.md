@@ -2,14 +2,12 @@ TODO BEFORE 1JAN2025
 
 
 ANDREYA BUG LIST
-- Env +/* on matrix node and separate depths since current +/- is pretty broken
 - What Andreya really wants is a full feldge screen for main pan and tune. Fine.
-- Temposync Labels screwed
+- Envelope combination is a mess
 ------
   so then it is
 
 Env Plus/Mul
-LFO Uni/Bi
 LFO is enveloped or not
 
 Env Depth (gray out if env is Mul)
@@ -18,7 +16,11 @@ LFO Depth
 are the 5 controls we need for each 'nubbin'
 -----
 
+
 GENERAL AND CLEANUPS
+- Temposync Labels screwed
+- Per operator octave
+- Windows HPDI
 - Screen Reader Check
   - Toggles and Multiswitches dont have accesible set actions
   - Multi-switch doesn't have RMB
@@ -27,6 +29,7 @@ GENERAL AND CLEANUPS
 - Write some semblance of a manual
 
 THINGS I DIDNT GET TO FOR 1.0
+- Temposync Envelopes
 - An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)
 - AM is somehow not quiet intuitive. Modulator signal to zero results in 'no output' but it sort of intuitively should me
   'no modulation'

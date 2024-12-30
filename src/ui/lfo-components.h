@@ -58,6 +58,11 @@ template <typename Comp, typename Patch> struct LFOComponents
         tempoSync->setLabel("Sync");
         c->addAndMakeVisible(*tempoSync);
 
+        createComponent(e, *c, v.lfoBipolar, bipolar, bipolarD);
+        bipolar->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
+        bipolar->setLabel("Bipolar");
+        c->addAndMakeVisible(*bipolar);
+
         rateD->setTemposyncPowerPartner(tempoSyncD.get());
     }
 
@@ -67,7 +72,7 @@ template <typename Comp, typename Patch> struct LFOComponents
             return {};
 
         auto c = asComp();
-        auto lh = uicTitleLabelHeight;
+        auto lh = uicLabelHeight;
         auto h = c->getHeight() - y;
         auto q = h - lh;
         auto w = uicKnobSize * 1.5;
@@ -77,6 +82,8 @@ template <typename Comp, typename Patch> struct LFOComponents
         auto bx = juce::Rectangle<int>(x, y + lh, w, h - lh);
         shape->setBounds(bx.withHeight(2 * uicLabeledKnobHeight - uicMargin - lh));
         tempoSync->setBounds(bx.withTrimmedTop(2 * uicLabeledKnobHeight - lh).withHeight(lh));
+        bipolar->setBounds(bx.withTrimmedTop(2 * uicLabeledKnobHeight + uicMargin).withHeight(lh));
+
 
         bx = bx.translated(w + uicMargin, 0);
         positionKnobAndLabel(bx.getX(), bx.getY(), rate, rateL);
@@ -97,6 +104,10 @@ template <typename Comp, typename Patch> struct LFOComponents
 
     std::unique_ptr<jcmp::ToggleButton> tempoSync;
     std::unique_ptr<PatchDiscrete> tempoSyncD;
+
+    std::unique_ptr<jcmp::ToggleButton> bipolar;
+    std::unique_ptr<PatchDiscrete> bipolarD;
+
 };
 } // namespace baconpaul::six_sines::ui
 #endif // LFO_COMPONENTS_H

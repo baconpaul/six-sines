@@ -178,7 +178,7 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     const T &paramBundle;
     const MonoValues &monoValues;
 
-    const float &lfoRate, &lfoDeform, &lfoShape, &lfoActiveV, &tempoSyncV;
+    const float &lfoRate, &lfoDeform, &lfoShape, &lfoActiveV, &tempoSyncV, &bipolarV;
     bool active, doSmooth{false};
     using lfo_t = sst::basic_blocks::modulators::SimpleLFO<SRProvider, blockSize>;
     lfo_t lfo;
@@ -186,7 +186,8 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
 
     LFOSupport(const T &mn, MonoValues &mv)
         : sr(mv), paramBundle(mn), lfo(&sr, mv.rng), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform),
-          lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive), tempoSyncV(mn.tempoSync), monoValues(mv)
+          lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive), tempoSyncV(mn.tempoSync), monoValues(mv),
+    bipolarV(mn.lfoBipolar)
     {
     }
 
@@ -194,9 +195,11 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
 
     int shape;
     bool tempoSync{false};
+    bool bipolar{true};
     void lfoAttack()
     {
         tempoSync = tempoSyncV > 0.5;
+        bipolar = bipolarV > 0.5;
         shape = static_cast<int>(std::round(lfoShape));
 
         lfo.attack(shape);
@@ -227,18 +230,24 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     {
         auto rate = lfoRate;
         if (tempoSync)
-            rate = monoValues.tempoSyncRatio * paramBundle.lfoRate.meta.snapToTemposync(rate);
+            rate = -monoValues.tempoSyncRatio * paramBundle.lfoRate.meta.snapToTemposync(-rate);
 
         lfo.process_block(rate + rateMod, lfoDeform, shape);
 
         if (doSmooth)
         {
-
             for (int j = 0; j < blockSize; ++j)
             {
                 lag.setTarget(lfo.outputBlock[j]);
                 lag.process();
                 lfo.outputBlock[j] = lag.v;
+            }
+        }
+        if (!bipolar)
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                lfo.outputBlock[j] = (lfo.outputBlock[j] + 1) * 0.5;
             }
         }
     }
