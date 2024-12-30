@@ -1,15 +1,13 @@
 TODO BEFORE 1JAN2025
 
-PATCH SELECTOR:
-- Jog Buttons for next/prev
-
 CLAP
 - An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)
 
 GENERAL AND CLEANUPS
 - Screen Reader Check
   - Toggles and Multiswitches dont have accesible set actions
-  - Show menu doesnt work for set value
+  - Multi-switch doesn't have RMB
+  - Ruled Labels are on
 - Ctrl/Knob quantizes on ratio to PO2
 - Write some semblance of a manual
 

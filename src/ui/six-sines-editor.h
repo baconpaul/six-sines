@@ -26,6 +26,7 @@
 #include <sst/jucegui/components/ToolTip.h>
 #include <sst/jucegui/components/ToggleButton.h>
 #include <sst/jucegui/components/MenuButton.h>
+#include <sst/jucegui/components/JogUpDownButton.h>
 #include <sst/jucegui/data/Continuous.h>
 
 #include "synth/synth.h"
@@ -84,10 +85,11 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::unique_ptr<SourceSubPanel> sourceSubPanel;
 
     std::unique_ptr<PresetManager> presetManager;
-    std::unique_ptr<jcmp::MenuButton> presetButton;
+    std::unique_ptr<jcmp::JogUpDownButton> presetButton;
     void showPresetPopup();
     void doLoadPatch();
     void doSavePatch();
+    void postPatchChange(const std::string &displayName);
     void resetToDefault();
     void setPatchNameDisplay();
     void setPatchNameTo(const std::string &);

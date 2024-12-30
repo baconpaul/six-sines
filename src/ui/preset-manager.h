@@ -17,30 +17,44 @@
 #define BACONPAUL_SIX_SINES_UI_PRESET_MANAGER_H
 
 #include "filesystem/import.h"
+#include "sst/jucegui/data/Discrete.h"
 #include "synth/patch.h"
 #include <map>
+#include <functional>
 #include <set>
 #include <string>
 
 namespace baconpaul::six_sines::ui
 {
+struct PresetDataBinding;
 struct PresetManager
 {
-    fs::path userPatchPath;
-    PresetManager();
+    fs::path userPath;
+    fs::path userPatchesPath;
+    Patch &patch;
+    PresetManager(Patch &p);
+    ~PresetManager();
 
     void rescanUserPresets();
 
-    void saveUserPresetDirect(const fs::path &p, Patch &);
-    void loadUserPresetDirect(const fs::path &p, Patch &);
+    void loadInit();
 
-    void loadFactoryPreset(const std::string &cat, const std::string &pat, Patch &);
-    fs::path userPath;
-    fs::path userPatchesPath;
+    void saveUserPresetDirect(const fs::path &p);
+    void loadUserPresetDirect(const fs::path &p);
+
+    void loadFactoryPreset(const std::string &cat, const std::string &pat);
+
+    std::function<void(const std::string &)> onPresetLoaded{nullptr};
+
+    void setStateForDisplayName(const std::string &s);
 
     static constexpr const char *factoryPath{"resources/factory_patches"};
     std::map<std::string, std::set<std::string>> factoryPatchNames;
+    std::vector<std::pair<std::string, std::string>> factoryPatchVector;
     std::vector<fs::path> userPatches;
+
+    std::unique_ptr<PresetDataBinding> discreteDataBinding;
+    sst::jucegui::data::Discrete *getDiscreteData();
 };
 } // namespace baconpaul::six_sines::ui
 #endif // PRESET_MANAGER_H
