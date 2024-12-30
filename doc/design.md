@@ -7,7 +7,7 @@ PATCH SELECTOR:
 - Jog Buttons for next/prev
 
 MAIN/PLAY MODE:
-- Global Transpose and Global in-semitone-tuning with LFO routable to tuning
+- Global Transpose
 
 CLAP
 - An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)
@@ -26,3 +26,5 @@ THINGS I DIDNT GET TO FOR 1.0
 - Main DAHDSR at DAHD=0 SR=1 means voice lifetime is longest active op mixer DAHDSR and main DAHDSR bypassed
 - Note Expressions
 - CLAP PolyMod
+- Global tuning other than octave transpose
+- A main LFO

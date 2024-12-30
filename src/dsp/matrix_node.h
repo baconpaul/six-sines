@@ -421,11 +421,13 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
     }
 };
 
-struct OutputNode : EnvelopeSupport<Patch::OutputNode>
+struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch::OutputNode>
 {
     float output alignas(16)[2][blockSize];
     std::array<MixerNode, numOps> &fromArr;
     SRProvider sr;
+
+    const Patch::OutputNode &outputNode;
 
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
@@ -436,9 +438,9 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
 
     OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f, MonoValues &mv,
                const VoiceValues &vv)
-        : monoValues(mv), voiceValues(vv), sr(mv), fromArr(f), level(on.level), bendUp(on.bendUp),
-          bendDown(on.bendDown), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),
-          defTrigV(on.defaultTrigger)
+        : outputNode(on), ModulationSupport(on, mv, vv), monoValues(mv), voiceValues(vv), sr(mv),
+          fromArr(f), level(on.level), bendUp(on.bendUp), bendDown(on.bendDown),
+          velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv), defTrigV(on.defaultTrigger)
     {
         memset(output, 0, sizeof(output));
         allowVoiceTrigger = false;
@@ -447,11 +449,15 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
     void attack()
     {
         defaultTrigger = (TriggerMode)std::round(defTrigV);
+        bindModulation();
+        calculateModulation();
         envAttack();
     }
 
+    float finalEnvLevel alignas(16)[blockSize];
     void renderBlock()
     {
+        calculateModulation();
         for (const auto &from : fromArr)
         {
             mech::accumulate_from_to<blockSize>(from.output[0], output[0]);
@@ -459,13 +465,33 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
         }
 
         envProcess(false);
-        mech::scale_by<blockSize>(env.outputCache, output[0], output[1]);
+        mech::copy_from_to<blockSize>(env.outputCache, finalEnvLevel);
+        mech::scale_by<blockSize>(depthAtten, finalEnvLevel);
+        mech::scale_by<blockSize>(finalEnvLevel, output[0], output[1]);
 
         // Apply main output
         auto lv = level;
-        auto v = 1.0 - velSen * (1.0 - voiceValues.velocity);
-        lv = 0.15 * v * lv * lv * lv;
+        auto v = 1.f - velSen * (1.f - voiceValues.velocity);
+        lv = 0.15 * std::clamp(v * lv * lv * lv, 0.f, 1.f);
         mech::scale_by<blockSize>(lv, output[0], output[1]);
+
+        auto pn = panMod;
+        if (pn != 0.f)
+        {
+            pn = (pn + 1) * 0.5;
+            sdsp::pan_laws::panmatrix_t pmat;
+            sdsp::pan_laws::stereoEqualPower(pn, pmat);
+
+            for (int i = 0; i < blockSize; ++i)
+            {
+                auto oL = output[0][i];
+                auto oR = output[1][i];
+
+                output[0][i] = pmat[0] * oL + pmat[2] * oR;
+                output[1][i] = pmat[3] * oL + pmat[1] * oR;
+            }
+        }
+
 #if DEBUG_LEVELS
         for (int i = 0; i < blockSize; ++i)
         {
@@ -475,6 +501,46 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>
             }
         }
 #endif
+    }
+
+    float panMod{0.f};
+    float depthAtten{1.0};
+
+    void calculateModulation()
+    {
+        depthAtten = 1.f;
+        attackMod = 0.f;
+        panMod = 0.f;
+
+        if (!anySources)
+            return;
+
+        for (int i = 0; i < numModsPer; ++i)
+        {
+            if (sourcePointers[i] &&
+                (int)outputNode.modtarget[i].value != Patch::MixerNode::TargetID::NONE)
+            {
+                // targets: env depth atten, lfo dept atten, direct adjust, env attack, lfo rate
+                auto dp = depthPointers[i];
+                if (!dp)
+                    continue;
+                auto d = *dp;
+                switch ((Patch::OutputNode::TargetID)outputNode.modtarget[i].value)
+                {
+                case Patch::OutputNode::PAN:
+                    panMod += d * *sourcePointers[i];
+                    break;
+                case Patch::OutputNode::DEPTH_ATTEN:
+                    depthAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                    break;
+                case Patch::OutputNode::ENV_ATTACK:
+                    attackMod += d * *sourcePointers[i];
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
     }
 };
 } // namespace baconpaul::six_sines

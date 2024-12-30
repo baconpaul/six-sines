@@ -18,11 +18,13 @@
 
 namespace baconpaul::six_sines::ui
 {
-MainSubPanel::MainSubPanel(SixSinesEditor &e) : HasEditor(e), DAHDSRComponents()
+MainSubPanel::MainSubPanel(SixSinesEditor &e)
+    : HasEditor(e), DAHDSRComponents(), ModulationComponents()
 {
     auto &on = editor.patchCopy.output;
     voiceTrigerAllowed = false;
     setupDAHDSR(e, on);
+    setupModulation(e, on);
 
     createComponent(editor, *this, on.velSensitivity, velSen, velSenD);
     addAndMakeVisible(*velSen);
@@ -201,6 +203,8 @@ void MainSubPanel::resized()
     mpeRange->setBounds(bbx.withHeight(uicLabelHeight));
     bbx = bbx.translated(0, uicMargin + uicLabelHeight);
     mpeRangeL->setBounds(bbx.withHeight(uicLabelHeight));
+
+    layoutModulation(p);
 }
 
 void MainSubPanel::setTriggerButtonLabel()
@@ -225,7 +229,7 @@ void MainSubPanel::showTriggerButtonMenu()
 {
     auto tmv = (int)std::round(editor.patchCopy.output.defaultTrigger.value);
 
-    auto genSet = [w = juce::Component::SafePointer(asComp())](int nv)
+    auto genSet = [w = juce::Component::SafePointer(this)](int nv)
     {
         auto that = w;
         return [nv, that]()
@@ -246,7 +250,7 @@ void MainSubPanel::showTriggerButtonMenu()
         p.addItem(TriggerModeName[g], true, tmv == g, genSet(g));
     }
 
-    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&this->editor));
 }
 
 void MainSubPanel::setEnabledState()

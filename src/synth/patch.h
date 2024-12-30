@@ -331,6 +331,7 @@ struct Patch
         // These stream
         enum TargetID
         {
+            SKIP = -1,
             NONE = 0,
             DIRECT = 10,
             ENV_DEPTH_ATTEN = 20,
@@ -342,9 +343,11 @@ struct Patch
 
         std::vector<std::pair<TargetID, std::string>> targetList{
             {TargetID::NONE, "Off"},
+            {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Ratio"},
-            {TargetID::ENV_DEPTH_ATTEN, "Env Depth"},
-            {TargetID::LFO_DEPTH_ATTEN, "LFO Depth"},
+            {TargetID::ENV_DEPTH_ATTEN, "Env Sens"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFO Sens"},
+            {TargetID::SKIP, ""},
             {TargetID::ENV_ATTACK, "Env Attack"},
             {TargetID::LFO_RATE, "LFO Rate"},
         };
@@ -466,6 +469,7 @@ struct Patch
         // These stream
         enum TargetID
         {
+            SKIP = -1,
             NONE = 0,
             DIRECT = 10,
             DEPTH_ATTEN = 20,
@@ -477,9 +481,11 @@ struct Patch
 
         std::vector<std::pair<TargetID, std::string>> targetList{
             {TargetID::NONE, "Off"},
+            {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Feedback Level"},
-            {TargetID::DEPTH_ATTEN, "Mod Depth"},
-            {TargetID::LFO_DEPTH_ATTEN, "LFO Depth"},
+            {TargetID::DEPTH_ATTEN, "Mod Sens"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFO Sens"},
+            {TargetID::SKIP, ""},
             {TargetID::ENV_ATTACK, "Env Attack"},
             {TargetID::LFO_RATE, "LFO Rate"},
         };
@@ -554,6 +560,7 @@ struct Patch
 
         enum TargetID
         {
+            SKIP = -1,
             NONE = 0,
             DIRECT = 10,
             DEPTH_ATTEN = 20,
@@ -565,9 +572,11 @@ struct Patch
 
         std::vector<std::pair<TargetID, std::string>> targetList{
             {TargetID::NONE, "Off"},
+            {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Modulation Level"},
-            {TargetID::DEPTH_ATTEN, "Mod Depth"},
-            {TargetID::LFO_DEPTH_ATTEN, "LFO Depth"},
+            {TargetID::DEPTH_ATTEN, "Mod Sens"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFO Sens"},
+            {TargetID::SKIP, ""},
             {TargetID::ENV_ATTACK, "Env Attack"},
             {TargetID::LFO_RATE, "LFO Rate"},
         };
@@ -656,6 +665,7 @@ struct Patch
 
         enum TargetID
         {
+            SKIP = -1,
             NONE = 0,
             DIRECT = 10,
             PAN = 15,
@@ -669,11 +679,14 @@ struct Patch
 
         std::vector<std::pair<TargetID, std::string>> targetList{
             {TargetID::NONE, "Off"},
+            {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Amplitude"},
             {TargetID::PAN, "Pan"},
-            {TargetID::DEPTH_ATTEN, "Env Depth"},
-            {TargetID::LFO_DEPTH_ATTEN, "LFOENV Depth"},
-            {TargetID::LFO_DEPTH_ATTEN, "LFOPan Depth"},
+            {TargetID::SKIP, ""},
+            {TargetID::DEPTH_ATTEN, "Env Sens"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFOENV Sens"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFOPan Sens"},
+            {TargetID::SKIP, ""},
             {TargetID::ENV_ATTACK, "Env Attack"},
             {TargetID::LFO_RATE, "LFO Rate"},
         };
@@ -779,9 +792,25 @@ struct Patch
         }
     };
 
-    struct OutputNode : public DAHDSRMixin
+    struct OutputNode : public DAHDSRMixin, public ModulationMixin
     {
         static constexpr uint32_t idBase{500};
+
+        enum TargetID
+        {
+            SKIP = -1,
+            NONE = 0,
+            PAN = 15,
+            DEPTH_ATTEN = 20,
+
+            ENV_ATTACK = 40,
+        };
+
+        std::vector<std::pair<TargetID, std::string>> targetList{
+            {TargetID::NONE, "Off"}, {TargetID::SKIP, ""}, {TargetID::DEPTH_ATTEN, "Env Sens"},
+            {TargetID::PAN, "Pan"},  {TargetID::SKIP, ""}, {TargetID::ENV_ATTACK, "Env Attack"},
+        };
+
         OutputNode()
             : DAHDSRMixin(name(), id(2), true), level(floatMd()
                                                           .asPercent()
@@ -879,7 +908,19 @@ struct Patch
                                .withGroupName(name())
                                .withRange(1, 96)
                                .withDefault(24)
-                               .withID(id(34)))
+                               .withID(id(34))),
+
+              ModulationMixin(name(), id(120)),
+              modtarget(scpu::make_array_lambda<Param, numModsPer>(
+                  [this](int i)
+                  {
+                      return md_t()
+                          .withName(name() + " Mod Target " + std::to_string(i))
+                          .withGroupName(name())
+                          .withRange(0, 2000)
+                          .withDefault(TargetID::NONE)
+                          .withID(id(150 + i));
+                  }))
         {
             defaultTrigger.adhocFeatures = Param::AdHocFeatureValues::TRIGGERMODE;
         }
@@ -892,6 +933,8 @@ struct Patch
         Param unisonCount, unisonSpread, uniPhaseRand;
         Param mpeActive, mpeBendRange;
 
+        std::array<Param, numModsPer> modtarget;
+
         std::vector<Param *> params()
         {
             std::vector<Param *> res{
@@ -899,6 +942,11 @@ struct Patch
                 &polyLimit,    &defaultTrigger, &portaTime, &pianoModeActive, &unisonCount,
                 &unisonSpread, &uniPhaseRand,   &mpeActive, &mpeBendRange};
             appendDAHDSRParams(res);
+
+            for (int i = 0; i < numModsPer; ++i)
+                res.push_back(&modtarget[i]);
+            appendModulationParams(res);
+
             return res;
         }
     };

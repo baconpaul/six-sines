@@ -25,11 +25,15 @@
 #include "patch-data-bindings.h"
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
+#include "modulation-components.h"
 #include "ruled-label.h"
 
 namespace baconpaul::six_sines::ui
 {
-struct MainSubPanel : juce::Component, HasEditor, DAHDSRComponents<MainSubPanel, Patch::OutputNode>
+struct MainSubPanel : juce::Component,
+                      HasEditor,
+                      DAHDSRComponents<MainSubPanel, Patch::OutputNode>,
+                      ModulationComponents<MainSubPanel, Patch::OutputNode>
 {
     MainSubPanel(SixSinesEditor &);
     ~MainSubPanel();

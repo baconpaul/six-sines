@@ -155,19 +155,26 @@ template <typename Comp, typename Patch> struct ModulationComponents
         p.addSeparator();
         for (const auto &[id, nm] : patchPtr->targetList)
         {
-            p.addItem(nm,
-                      [si = id, w = juce::Component::SafePointer(asComp()), index]()
-                      {
-                          if (!w)
-                              return;
-                          if (!w->patchPtr)
-                              return;
-                          w->patchPtr->modtarget[index].value = si;
-                          w->editor.uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM,
-                                                    w->patchPtr->modtarget[index].meta.id,
-                                                    (float)si});
-                          w->resetTargetLabel(index);
-                      });
+            if (id == -1)
+            {
+                p.addSeparator();
+            }
+            else
+            {
+                p.addItem(nm,
+                          [si = id, w = juce::Component::SafePointer(asComp()), index]()
+                          {
+                              if (!w)
+                                  return;
+                              if (!w->patchPtr)
+                                  return;
+                              w->patchPtr->modtarget[index].value = si;
+                              w->editor.uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM,
+                                                        w->patchPtr->modtarget[index].meta.id,
+                                                        (float)si});
+                              w->resetTargetLabel(index);
+                          });
+            }
         }
         p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
     }
