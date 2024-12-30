@@ -921,6 +921,20 @@ struct Patch
                                .withRange(-3, 3)
                                .withDefault(0)
                                .withID(id(35))),
+              fineTune(floatMd()
+                           .withName(name() + " Fine Tuning")
+                           .withGroupName(name())
+                           .withRange(-500, 500)
+                           .withDefault(0)
+                           .withLinearScaleFormatting("cents")
+                           .withID(id(36))),
+
+              pan(floatMd()
+                      .withName(name() + " Pan")
+                      .withGroupName(name())
+                      .asPercentBipolar()
+                      .withDefault(0)
+                      .withID(id(37))),
 
               ModulationMixin(name(), id(120)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
@@ -944,7 +958,7 @@ struct Patch
         Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, pianoModeActive;
         Param unisonCount, unisonSpread, uniPhaseRand;
         Param mpeActive, mpeBendRange;
-        Param octTranspose;
+        Param octTranspose, fineTune, pan;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -953,7 +967,8 @@ struct Patch
             std::vector<Param *> res{
                 &level,        &velSensitivity, &playMode,  &bendUp,          &bendDown,
                 &polyLimit,    &defaultTrigger, &portaTime, &pianoModeActive, &unisonCount,
-                &unisonSpread, &uniPhaseRand,   &mpeActive, &mpeBendRange,    &octTranspose};
+                &unisonSpread, &uniPhaseRand,   &mpeActive, &mpeBendRange,    &octTranspose,
+                &pan,          &fineTune};
             appendDAHDSRParams(res);
 
             for (int i = 0; i < numModsPer; ++i)

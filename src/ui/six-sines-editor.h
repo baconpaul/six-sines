@@ -27,6 +27,7 @@
 #include <sst/jucegui/components/ToggleButton.h>
 #include <sst/jucegui/components/MenuButton.h>
 #include <sst/jucegui/components/JogUpDownButton.h>
+#include <sst/jucegui/components/VUMeter.h>
 #include <sst/jucegui/data/Continuous.h>
 
 #include "synth/synth.h"
@@ -111,6 +112,8 @@ struct SixSinesEditor : jcmp::WindowPanel
 
     void sendEntirePatchToAudio(const std::string &patchName);
     void setParamValueOnCopy(uint32_t id, float value, bool notifyAudio);
+
+    std::unique_ptr<jcmp::VUMeter> vuMeter;
 };
 
 struct HasEditor

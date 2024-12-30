@@ -23,24 +23,30 @@ namespace baconpaul::six_sines::ui
 MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
 {
     createComponent(editor, *this, editor.patchCopy.output.level, lev, levData);
-    lev->setDrawLabel(false);
     addAndMakeVisible(*lev);
     levLabel = std::make_unique<jcmp::Label>();
     levLabel->setText("Level");
     addAndMakeVisible(*levLabel);
 
-    vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::HORIZONTAL);
-    addAndMakeVisible(*vuMeter);
+    createComponent(editor, *this, editor.patchCopy.output.pan, pan, panData);
+    addAndMakeVisible(*pan);
+    panLabel = std::make_unique<jcmp::Label>();
+    panLabel->setText("Pan");
+    addAndMakeVisible(*panLabel);
+
+    createComponent(editor, *this, editor.patchCopy.output.fineTune, tun, tunData);
+    addAndMakeVisible(*tun);
+    tunLabel = std::make_unique<jcmp::Label>();
+    tunLabel->setText("Tune");
+    addAndMakeVisible(*tunLabel);
 
     voiceCount = std::make_unique<jcmp::Label>();
-    voiceCount->setJustification(juce::Justification::centredLeft);
     addAndMakeVisible(*voiceCount);
     setVoiceCount(0);
 
-    vcOf = std::make_unique<jcmp::Label>();
-    vcOf->setText("/");
-    vcOf->setJustification(juce::Justification::centredRight);
-    addAndMakeVisible(*vcOf);
+    voiceLabel = std::make_unique<jcmp::Label>();
+    voiceLabel->setText("Voices");
+    addAndMakeVisible(*voiceLabel);
 
     voiceLimit = std::make_unique<jcmp::MenuButton>();
     voiceLimit->setLabel(std::to_string(getPolyLimit()));
@@ -64,14 +70,19 @@ void MainPanel::resized()
     auto b = getContentArea().reduced(uicMargin, 0);
 
     positionKnobAndLabel(b.getX(), b.getY(), lev, levLabel);
+    b = b.withTrimmedLeft(uicKnobSize + uicMargin);
+    positionKnobAndLabel(b.getX(), b.getY(), pan, panLabel);
 
-    auto vum = b.withTrimmedLeft(uicKnobSize + 2 * uicMargin).withHeight(b.getHeight() / 3);
-    vuMeter->setBounds(vum);
+    b = b.withTrimmedLeft(uicKnobSize + uicMargin);
+    positionKnobAndLabel(b.getX(), b.getY(), tun, tunLabel);
+    b = b.withTrimmedLeft(uicKnobSize + uicMargin);
 
-    auto lp = vum.translated(0, vum.getHeight() + uicMargin);
-    voiceCount->setBounds(lp);
-    vcOf->setBounds(lp.withTrimmedRight(vum.getWidth() * 0.6));
-    voiceLimit->setBounds(lp.withTrimmedLeft(vum.getWidth() * 0.4 + uicMargin));
+    auto vb = b.withHeight(uicLabelHeight);
+    voiceCount->setBounds(vb);
+    vb = vb.translated(0, uicLabelHeight + uicMargin);
+    voiceLimit->setBounds(vb);
+    vb = vb.translated(0, uicLabelHeight + uicMargin);
+    voiceLabel->setBounds(b.withTrimmedTop(uicKnobSize + uicMargin).withHeight(uicLabelHeight));
 }
 
 void MainPanel::beginEdit()

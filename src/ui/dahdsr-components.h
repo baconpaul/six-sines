@@ -134,10 +134,10 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         switch (tmv)
         {
         case (int)TriggerMode::NEW_GATE:
-            triggerButton->setLabel("G");
+            triggerButton->setLabel("L");
             break;
         case (int)TriggerMode::NEW_VOICE:
-            triggerButton->setLabel("V");
+            triggerButton->setLabel("S");
             break;
         case (int)TriggerMode::KEY_PRESS:
             triggerButton->setLabel("K");
@@ -180,6 +180,8 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         {
             bool enabled = true;
             if (v == (int)TriggerMode::NEW_VOICE && !voiceTrigerAllowed)
+                enabled = false;
+            if (v == (int)TriggerMode::ON_RELEASE && !voiceTrigerAllowed)
                 enabled = false;
             if (v == (int)TriggerMode::PATCH_DEFAULT)
                 p.addSeparator();

@@ -41,9 +41,8 @@ enum TriggerMode
     ON_RELEASE
 };
 
-static const char *TriggerModeName[5]{"On Start or In Release ('Legato')", "On Start Only",
-                                      "On Any Key Press ('Mono')", "Patch Default",
-                                      "On Release (Anti-gated)"};
+static const char *TriggerModeName[5]{"On Start or In Release (Legato)", "On Start Voice Only",
+                                      "On Any Key Press", "Patch Default", "On Release"};
 
 template <typename T> struct EnvelopeSupport
 {

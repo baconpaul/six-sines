@@ -136,8 +136,11 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
         }
     }
 
+    vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::HORIZONTAL);
+    addAndMakeVisible(*vuMeter);
+
     // Make sure to do this last
-    setSize(673, 845);
+    setSize(682, 812);
 
     uiToAudio.push({Synth::UIToAudioMsg::EDITOR_ATTACH_DETATCH, true});
 }
@@ -158,7 +161,7 @@ void SixSinesEditor::idle()
         }
         else if (aum->action == Synth::AudioToUIMsg::UPDATE_VU)
         {
-            mainPanel->vuMeter->setLevels(aum->value, aum->value2);
+            vuMeter->setLevels(aum->value, aum->value2);
         }
         else if (aum->action == Synth::AudioToUIMsg::UPDATE_VOICE_COUNT)
         {
@@ -187,30 +190,14 @@ void SixSinesEditor::paint(juce::Graphics &g)
     auto xp = 3;
     auto ht = 30;
 
+    int np{110};
+
     for (int fr = 1; fr < 6; ++fr)
     {
         juce::Path p;
-        int np{80};
         for (int i = 0; i < np; ++i)
         {
             auto sx = sin(2.0 * M_PI * fr * i / np);
-            if (i == 0)
-                p.startNewSubPath(xp + i, 0.45 * (-sx + 1) * ht + 4);
-            else
-                p.lineTo(xp + i, 0.45 * (-sx + 1) * ht + 4);
-        }
-        g.setColour(juce::Colours::white.withAlpha(0.9f - sqrt((fr - 1) / 7.0f)));
-        g.strokePath(p, juce::PathStrokeType(1));
-    }
-
-    xp = getWidth() - 83;
-    for (int fr = 1; fr < 6; ++fr)
-    {
-        juce::Path p;
-        int np{80};
-        for (int i = 0; i < np; ++i)
-        {
-            auto sx = -sin(2.0 * M_PI * fr * i / np);
             if (i == 0)
                 p.startNewSubPath(xp + i, 0.45 * (-sx + 1) * ht + 4);
             else
@@ -245,7 +232,7 @@ void SixSinesEditor::resized()
 
     auto matrixWidth = numOps * (uicPowerKnobWidth) + (numOps - 1) * uicMargin + panelPadX;
     auto matrixHeight = numOps * uicLabeledKnobHeight + (numOps - 1) * uicMargin + panelPadY;
-    auto mixerWidth = uicPowerKnobWidth + panelPadX;
+    auto mixerWidth = uicKnobSize + uicPowerKnobWidth + uicMargin + panelPadX;
     auto macroWidth = uicKnobSize + panelPadX;
     auto mainWidth = mixerWidth + macroWidth;
 
@@ -256,6 +243,9 @@ void SixSinesEditor::resized()
     // Preset button
     auto but = presetArea.reduced(110, 0).withTrimmedTop(uicMargin);
     presetButton->setBounds(but);
+    but = but.withLeft(presetButton->getRight() + uicMargin).withRight(getWidth() - uicMargin);
+
+    vuMeter->setBounds(but);
 
     auto sourceRect =
         juce::Rectangle<int>(panelArea.getX(), panelArea.getY(), matrixWidth, sourceHeight);

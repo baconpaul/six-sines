@@ -43,10 +43,17 @@ struct MainPanel : jcmp::NamedPanel, HasEditor
     std::unique_ptr<PatchContinuous> levData;
     std::unique_ptr<jcmp::Knob> lev;
     std::unique_ptr<jcmp::Label> levLabel;
-    std::unique_ptr<jcmp::VUMeter> vuMeter;
 
-    void setVoiceCount(int vc) { voiceCount->setText("v: " + std::to_string(vc)); }
-    std::unique_ptr<jcmp::Label> voiceCount, vcOf;
+    std::unique_ptr<PatchContinuous> panData;
+    std::unique_ptr<jcmp::Knob> pan;
+    std::unique_ptr<jcmp::Label> panLabel;
+
+    std::unique_ptr<PatchContinuous> tunData;
+    std::unique_ptr<jcmp::Knob> tun;
+    std::unique_ptr<jcmp::Label> tunLabel;
+
+    void setVoiceCount(int vc) { voiceCount->setText(std::to_string(vc)); }
+    std::unique_ptr<jcmp::Label> voiceCount, voiceLabel;
     std::unique_ptr<jcmp::MenuButton> voiceLimit;
 
     void showPolyLimitMenu();

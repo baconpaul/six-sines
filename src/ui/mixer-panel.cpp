@@ -49,6 +49,12 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
                                           true);
             w->repaint();
         };
+
+        createComponent(editor, *this, mn[i].pan, panKnobs[i], panKnobsData[i], i);
+        addAndMakeVisible(*panKnobs[i]);
+        panLabels[i] = std::make_unique<jcmp::Label>();
+        panLabels[i]->setText("Pan");
+        addAndMakeVisible(*panLabels[i]);
     }
 
     highlight = std::make_unique<KnobHighlight>();
@@ -58,13 +64,13 @@ MixerPanel::~MixerPanel() = default;
 
 void MixerPanel::resized()
 {
-
     auto b = getContentArea().reduced(uicMargin, 0);
     auto x = b.getX();
     auto y = b.getY();
     for (auto i = 0U; i < numOps; ++i)
     {
         positionPowerKnobAndLabel(x, y, power[i], knobs[i], labels[i]);
+        positionKnobAndLabel(x + uicPowerKnobWidth + uicMargin, y, panKnobs[i], panLabels[i]);
         y += uicLabeledKnobHeight + uicMargin;
     }
 }
@@ -80,7 +86,7 @@ void MixerPanel::beginEdit(size_t idx)
     highlight->setVisible(true);
     auto b = getContentArea().reduced(uicMargin, 0);
     highlight->setBounds(b.getX(), b.getY() + idx * (uicLabeledKnobHeight + uicMargin),
-                         uicPowerKnobWidth + 2, uicLabeledKnobHeight);
+                         uicPowerKnobWidth + uicMargin + uicKnobSize + 2, uicLabeledKnobHeight);
     highlight->toBack();
 }
 

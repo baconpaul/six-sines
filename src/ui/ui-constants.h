@@ -20,8 +20,9 @@
 
 namespace baconpaul::six_sines::ui
 {
-static constexpr uint32_t uicKnobSize{50};
+static constexpr uint32_t uicKnobSize{45};
 static constexpr uint32_t uicPowerButtonSize{24};
+static constexpr uint32_t uicPowerButtonMargin{4};
 static constexpr uint32_t uicLabelHeight{18};
 static constexpr uint32_t uicLabelGap{2};
 static constexpr uint32_t uicMargin{4};
@@ -50,13 +51,16 @@ inline void positionPowerKnobAndLabel(uint32_t x, uint32_t y, const T &t, const 
     {
         t->setBounds(b.withWidth(uicPowerButtonSize)
                          .withTrimmedTop((uicKnobSize - uicPowerButtonSize) / 2)
-                         .withTrimmedBottom((uicKnobSize - uicPowerButtonSize) / 2));
+                         .withTrimmedBottom((uicKnobSize - uicPowerButtonSize) / 2)
+                         .reduced(uicPowerButtonMargin));
     }
     else
     {
         t->setBounds(b.withWidth(uicPowerButtonSize)
                          .withTrimmedTop(uicMargin)
-                         .withTrimmedBottom(uicKnobSize - uicPowerButtonSize - uicMargin));
+                         .withTrimmedBottom(uicKnobSize - uicPowerButtonSize - uicMargin)
+                         .withTrimmedBottom(2 * uicPowerButtonMargin)
+                         .reduced(uicPowerButtonMargin, 0));
     }
     l->setBounds(b.translated(0, uicKnobSize + uicLabelGap).withHeight(uicLabelHeight));
 }
@@ -69,9 +73,11 @@ inline void positionPowerKnobSwitchAndLabel(uint32_t x, uint32_t y, const T &t, 
     k->setBounds(b.withTrimmedLeft(uicPowerButtonSize + uicMargin));
     t->setBounds(b.withWidth(uicPowerButtonSize)
                      .withTrimmedTop(uicMargin)
-                     .withTrimmedBottom(uicKnobSize - uicPowerButtonSize - uicMargin));
+                     .withTrimmedBottom(uicKnobSize - uicPowerButtonSize - uicMargin)
+                     .withTrimmedBottom(2 * uicPowerButtonMargin)
+                     .reduced(uicPowerButtonMargin, 0));
     s->setBounds(b.withWidth(uicPowerButtonSize)
-                     .withTrimmedTop(t->getHeight() + uicMargin)
+                     .withTrimmedTop(t->getHeight() + 1.5 * uicMargin)
                      .withTrimmedBottom(uicMargin));
 
     l->setBounds(b.translated(0, uicKnobSize + uicLabelGap).withHeight(uicLabelHeight));

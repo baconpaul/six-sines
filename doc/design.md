@@ -1,7 +1,13 @@
 TODO BEFORE 1JAN2025
 
-CLAP
-- An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)
+
+ANDREYA BUG LIST
+- Env +/* on matrix node and separate depths
+- Too tall
+- Remove "Anti-gated" name; better G D R etc
+- Don't allow release on main node
+- Matrix LFO is screwed
+- What Andreya really wants is a full feldge screen for main pan and tune. Fine.
 
 GENERAL AND CLEANUPS
 - Screen Reader Check
@@ -12,6 +18,7 @@ GENERAL AND CLEANUPS
 - Write some semblance of a manual
 
 THINGS I DIDNT GET TO FOR 1.0
+- An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)
 - AM is somehow not quiet intuitive. Modulator signal to zero results in 'no output' but it sort of intuitively should me
   'no modulation'
 - 90%-100% of internal nyquist mute fades (maybe ship without this tho)
@@ -20,3 +27,18 @@ THINGS I DIDNT GET TO FOR 1.0
 - CLAP PolyMod
 - Global tuning other than octave transpose
 - A main LFO
+
+
+JACKY IDEAS
+---
+This is so much better now with MPE and the LS. Thanks for it.
+
+Reflecting back on earlier discussions, I'm wondering if it would be within the realm of possibilities, to be able to quantize Op Ratios to integer harmonics...
+
+With Pressure routed to this, one could then actually break-out precise harmonics above the fundamental frequencies.
+
+The way it works now is one very useful pole, but quantizing ratios to integers during modulation would be an amazing next-level feature.
+In an ideal scenario, I might set the depth such that it only modulates up to harmonic 4.
+Thinking exponential, rather than linear, so there's a wider area around the 1/1...
+Rambling and dreaming. I know the clock is running out, but just tossing this out there, as it does seem interesting and akin to the behavior of acoustic instruments somehow.
+---

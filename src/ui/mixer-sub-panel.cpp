@@ -48,15 +48,6 @@ void MixerSubPanel::setSelectedIndex(int idx)
     lfoToPanL->setText(std::string() + u8"\U00002192" + "Pan");
     addAndMakeVisible(*lfoToPanL);
 
-    panTitle = std::make_unique<RuledLabel>();
-    panTitle->setText("Pan");
-    createComponent(editor, *this, sn.pan, pan, panD);
-    panL = std::make_unique<jcmp::Label>();
-    panL->setText("Pan");
-    addAndMakeVisible(*panTitle);
-    addAndMakeVisible(*pan);
-    addAndMakeVisible(*panL);
-
     resized();
 }
 
@@ -75,13 +66,6 @@ void MixerSubPanel::resized()
     positionKnobAndLabel(r.getX() - uicKnobSize,
                          r.getY() + uicTitleLabelHeight + uicLabeledKnobHeight + uicMargin,
                          lfoToPan, lfoToPanL);
-
-    auto depx = r.getX() + 2 * uicMargin;
-    auto depy = r.getY();
-    positionTitleLabelAt(depx, depy, uicKnobSize + uicMargin, panTitle);
-
-    depy += uicTitleLabelHeight;
-    positionKnobAndLabel(depx, depy, pan, panL);
 
     layoutModulation(p);
 }

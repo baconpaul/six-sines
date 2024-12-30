@@ -39,6 +39,8 @@ Synth::Synth()
     {
         monoValues.macroPtr[i] = &patch.macroNodes[i].level.value;
     }
+
+    resetPlaymode();
 }
 
 Synth::~Synth()

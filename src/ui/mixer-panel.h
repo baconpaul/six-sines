@@ -49,6 +49,10 @@ struct MixerPanel : jcmp::NamedPanel, HasEditor
     std::array<std::unique_ptr<jcmp::ToggleButton>, numOps> power;
     std::array<std::unique_ptr<PatchDiscrete>, numOps> powerData;
     std::array<std::unique_ptr<jcmp::Label>, numOps> labels;
+
+    std::array<std::unique_ptr<jcmp::Knob>, numOps> panKnobs;
+    std::array<std::unique_ptr<PatchContinuous>, numOps> panKnobsData;
+    std::array<std::unique_ptr<jcmp::Label>, numOps> panLabels;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MIXER_PANE_H
