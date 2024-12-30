@@ -139,6 +139,13 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e)
     mpeRangeL->setText("Bend");
     addAndMakeVisible(*mpeRangeL);
 
+    tsposeTitle = std::make_unique<RuledLabel>();
+    tsposeTitle->setText("Octave");
+    addAndMakeVisible(*tsposeTitle);
+
+    createComponent(editor, *this, on.octTranspose, tsposeButton, tsposeButtonD);
+    addAndMakeVisible(*tsposeButton);
+
     setEnabledState();
 };
 
@@ -203,6 +210,10 @@ void MainSubPanel::resized()
     mpeRange->setBounds(bbx.withHeight(uicLabelHeight));
     bbx = bbx.translated(0, uicMargin + uicLabelHeight);
     mpeRangeL->setBounds(bbx.withHeight(uicLabelHeight));
+    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
+    positionTitleLabelAt(bbx.getX(), bbx.getY(), bbx.getWidth(), tsposeTitle);
+    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
+    tsposeButton->setBounds(bbx.withHeight(uicLabelHeight));
 
     layoutModulation(p);
 }

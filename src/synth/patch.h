@@ -909,6 +909,12 @@ struct Patch
                                .withRange(1, 96)
                                .withDefault(24)
                                .withID(id(34))),
+              octTranspose(intMd()
+                               .withName(name() + " Octave Transpose")
+                               .withGroupName(name())
+                               .withRange(-3, 3)
+                               .withDefault(0)
+                               .withID(id(35))),
 
               ModulationMixin(name(), id(120)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
@@ -932,6 +938,7 @@ struct Patch
         Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, pianoModeActive;
         Param unisonCount, unisonSpread, uniPhaseRand;
         Param mpeActive, mpeBendRange;
+        Param octTranspose;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -940,7 +947,7 @@ struct Patch
             std::vector<Param *> res{
                 &level,        &velSensitivity, &playMode,  &bendUp,          &bendDown,
                 &polyLimit,    &defaultTrigger, &portaTime, &pianoModeActive, &unisonCount,
-                &unisonSpread, &uniPhaseRand,   &mpeActive, &mpeBendRange};
+                &unisonSpread, &uniPhaseRand,   &mpeActive, &mpeBendRange,    &octTranspose};
             appendDAHDSRParams(res);
 
             for (int i = 0; i < numModsPer; ++i)

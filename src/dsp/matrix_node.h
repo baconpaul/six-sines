@@ -432,7 +432,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &level, &velSen, &bendUp, &bendDown;
+    const float &level, &velSen, &bendUp, &bendDown, &octTranspose;
     const float &defTrigV;
     TriggerMode defaultTrigger;
 
@@ -440,7 +440,8 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
                const VoiceValues &vv)
         : outputNode(on), ModulationSupport(on, mv, vv), monoValues(mv), voiceValues(vv), sr(mv),
           fromArr(f), level(on.level), bendUp(on.bendUp), bendDown(on.bendDown),
-          velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv), defTrigV(on.defaultTrigger)
+          octTranspose(on.octTranspose), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),
+          defTrigV(on.defaultTrigger)
     {
         memset(output, 0, sizeof(output));
         allowVoiceTrigger = false;

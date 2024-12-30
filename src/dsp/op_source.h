@@ -100,14 +100,15 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     void snapActive() { active = activeV > 0.5; }
 
     float baseFrequency{0};
-    void setBaseFrequency(float freq)
+    void setBaseFrequency(float freq, float octFac)
     {
         if (kt > 0.5)
         {
-            baseFrequency = freq;
+            baseFrequency = freq * octFac;
         }
         else
         {
+            // Consciously do *not* retune absolute mode oscillators
             baseFrequency = 440 * monoValues.twoToTheX.twoToThe(ktv / 12);
         }
     }

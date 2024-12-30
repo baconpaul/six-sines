@@ -6,9 +6,6 @@ MODULATION:
 PATCH SELECTOR:
 - Jog Buttons for next/prev
 
-MAIN/PLAY MODE:
-- Global Transpose
-
 CLAP
 - An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)
 

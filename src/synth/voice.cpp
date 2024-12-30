@@ -76,6 +76,10 @@ void Voice::renderBlock()
         voiceValues.portaDiff -= voiceValues.dPorta;
     else
         voiceValues.portaDiff = 0;
+
+    auto octSh = std::clamp((int)std::round(out.octTranspose), -3, 3);
+    static constexpr float octFac[7] = {1.0 / 8.0, 1.0 / 4.0, 1.0 / 2.0, 1.0, 2.0, 4.0, 8.0};
+
     auto baseFreq = monoValues.tuningProvider.note_to_pitch(retuneKey - 69) * 440.0;
 
     for (int i = 0; i < numOps; ++i)
@@ -85,7 +89,7 @@ void Voice::renderBlock()
             continue;
         }
         src[i].zeroInputs();
-        src[i].setBaseFrequency(baseFreq);
+        src[i].setBaseFrequency(baseFreq, octFac[octSh + 3]);
         for (auto j = 0; j < i; ++j)
         {
             auto pos = MatrixIndex::positionForSourceTarget(j, i);
