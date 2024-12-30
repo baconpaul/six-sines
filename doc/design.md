@@ -21,11 +21,11 @@ GENERAL AND CLEANUPS
   - Toggles and Multiswitches dont have accesible set actions
   - Show menu doesnt work for set value
 - Ctrl/Knob quantizes on ratio to PO2
-- AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
-- Write a better README
-- Write some semblance of documentation
+- Write some semblance of a manual
 
-THINGS I DIDNT DO
+THINGS I DIDNT GET TO FOR 1.0
+- AM is somehow not quiet intuitive. Modulator signal to zero results in 'no output' but it sort of intuitively should me
+  'no modulation'
 - 90%-100% of internal nyquist mute fades (maybe ship without this tho)
 - Main DAHDSR at DAHD=0 SR=1 means voice lifetime is longest active op mixer DAHDSR and main DAHDSR bypassed
 - Note Expressions
