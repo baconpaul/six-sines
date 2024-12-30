@@ -121,6 +121,9 @@ void Voice::retriggerAllEnvelopesForKeyPress()
     auto dtm = out.defaultTrigger;
     auto mtm = [dtm](auto tm)
     {
+        if (tm == ON_RELEASE)
+            return false;
+
         auto res = (tm == TriggerMode::KEY_PRESS ||
                     (tm == TriggerMode::PATCH_DEFAULT && dtm == TriggerMode::KEY_PRESS));
         return res;
@@ -154,6 +157,9 @@ void Voice::retriggerAllEnvelopesForReGate()
     auto dtm = out.defaultTrigger;
     auto mtm = [dtm](auto tm)
     {
+        if (tm == ON_RELEASE)
+            return false;
+
         // DTM can only be key or gate and both will trigger here
         return (tm != TriggerMode::NEW_VOICE);
     };

@@ -21,7 +21,6 @@ GENERAL AND CLEANUPS
   - Toggles and Multiswitches dont have accesible set actions
   - Show menu doesnt work for set value
 - Ctrl/Knob quantizes on ratio to PO2
-- We could have an envelope which triggers as !gated on release (and then ungates in mono-retrigger)
 - AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
 - Don't send VU etc when editor not attached
 - Write a better README

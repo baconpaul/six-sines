@@ -406,17 +406,18 @@ struct Patch
                                                    {SinTable::WaveForm::TX6, "TX 6"},
                                                    {SinTable::WaveForm::TX7, "TX 7"},
                                                    {SinTable::WaveForm::TX8, "TX 8"}})),
-        keyTrack(boolMd().withName(name(idx) + " Keytrack")
-            .withGroupName(name(idx))
-            .withID(id(6, idx))
-            .withDefault(true)),
-        keyTrackValue(floatMd().withName(name(idx) + " Absolute Frequency at Ratio=1")
-            .withGroupName(name(idx))
-            .withDefault(0)
-            .withRange(-70, 70)
-            .withSemitoneZeroAt400Formatting()
-            .withID(id(7, idx))
-            ),
+              keyTrack(boolMd()
+                           .withName(name(idx) + " Keytrack")
+                           .withGroupName(name(idx))
+                           .withID(id(6, idx))
+                           .withDefault(true)),
+              keyTrackValue(floatMd()
+                                .withName(name(idx) + " Absolute Frequency at Ratio=1")
+                                .withGroupName(name(idx))
+                                .withDefault(0)
+                                .withRange(-70, 70)
+                                .withSemitoneZeroAt400Formatting()
+                                .withID(id(7, idx))),
               DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx)),
               ModulationMixin(name(idx), id(150, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
@@ -450,8 +451,8 @@ struct Patch
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&ratio,      &active,    &envToRatio,
-                                     &lfoToRatio, &envLfoSum, &waveForm, &keyTrack, &keyTrackValue};
+            std::vector<Param *> res{&ratio,     &active,   &envToRatio, &lfoToRatio,
+                                     &envLfoSum, &waveForm, &keyTrack,   &keyTrackValue};
             for (int i = 0; i < numModsPer; ++i)
                 res.push_back(&modtarget[i]);
             appendDAHDSRParams(res);

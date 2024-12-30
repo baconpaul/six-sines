@@ -37,11 +37,13 @@ enum TriggerMode
     NEW_GATE,
     NEW_VOICE,
     KEY_PRESS,
-    PATCH_DEFAULT
+    PATCH_DEFAULT,
+    ON_RELEASE
 };
 
-static const char *TriggerModeName[4]{"On Start or In Release ('Legato')", "On Start Only",
-                                      "On Any Key Press ('Mono')", "Patch Default"};
+static const char *TriggerModeName[5]{"On Start or In Release ('Legato')", "On Start Only",
+                                      "On Any Key Press ('Mono')", "Patch Default",
+                                      "On Release (Anti-gated)"};
 
 template <typename T> struct EnvelopeSupport
 {
@@ -68,6 +70,7 @@ template <typename T> struct EnvelopeSupport
     env_t env;
 
     float attackMod{0.f};
+    bool releaseEnvStarted{false}, releaseEnvUngated{false};
 
     void envAttack()
     {
@@ -98,8 +101,18 @@ template <typename T> struct EnvelopeSupport
             startingValue = env.outputCache[blockSize - 1];
 
         if (active && !constantEnv)
-            env.attackFromWithDelay(startingValue, delay,
-                                    std::clamp(attackv + attackMod, 0.f, 1.f));
+        {
+            if (triggerMode == ON_RELEASE)
+            {
+                releaseEnvStarted = false;
+                releaseEnvUngated = false;
+            }
+            else
+            {
+                env.attackFromWithDelay(startingValue, delay,
+                                        std::clamp(attackv + attackMod, 0.f, 1.f));
+            }
+        }
         else if (constantEnv)
         {
             for (int i = 0; i < blockSize; ++i)
@@ -113,8 +126,43 @@ template <typename T> struct EnvelopeSupport
         if (!active || constantEnv)
             return;
 
-        env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, 0.f, 1.f), hold, decay,
-                                  sustain, release, ash, dsh, rsh, voiceValues.gated, true);
+        if (triggerMode == ON_RELEASE)
+        {
+            if (voiceValues.gated && !releaseEnvStarted)
+            {
+                memset(env.outputCache, 0, sizeof(env.outputCache));
+                return;
+            }
+
+            if (voiceValues.gated)
+            {
+                // regated
+                releaseEnvUngated = true;
+            }
+            if (!voiceValues.gated)
+            {
+                if (!releaseEnvStarted)
+                {
+                    // never started - so attack from zero
+                    env.attackFromWithDelay(0.f, delay, std::clamp(attackv + attackMod, 0.f, 1.f));
+                    releaseEnvStarted = true;
+                }
+                else if (releaseEnvUngated)
+                {
+                    env.attackFromWithDelay(env.outputCache[blockSize - 1], delay,
+                                            std::clamp(attackv + attackMod, 0.f, 1.f));
+                    releaseEnvStarted = true;
+                    releaseEnvUngated = false;
+                }
+            }
+            env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, 0.f, 1.f), hold, decay,
+                                      sustain, release, ash, dsh, rsh, !voiceValues.gated, true);
+        }
+        else
+        {
+            env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, 0.f, 1.f), hold, decay,
+                                      sustain, release, ash, dsh, rsh, voiceValues.gated, true);
+        }
     }
 
     void envCleanup()
