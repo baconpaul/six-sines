@@ -22,7 +22,6 @@ GENERAL AND CLEANUPS
   - Show menu doesnt work for set value
 - Ctrl/Knob quantizes on ratio to PO2
 - AM is somehow not quiet right. Signal to zero seems 'no modulation' not 'no output'
-- Don't send VU etc when editor not attached
 - Write a better README
 - Write some semblance of documentation
 

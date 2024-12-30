@@ -267,7 +267,8 @@ struct Synth
             END_EDIT,
             STOP_AUDIO,
             START_AUDIO,
-            SEND_PATCH_NAME
+            SEND_PATCH_NAME,
+            EDITOR_ATTACH_DETATCH // paramid is true for attach and false for detach
         } action;
         uint32_t paramId{0};
         float value{0};
@@ -278,6 +279,7 @@ struct Synth
     audioToUIQueue_t audioToUi;
     uiToAudioQueue_T uiToAudio;
     std::atomic<bool> doFullRefresh{false};
+    bool isEditorAttached{false};
     sst::basic_blocks::dsp::UIComponentLagHandler lagHandler;
 
     void prepForStream()

@@ -95,21 +95,28 @@ void Synth::process(const clap_output_events_t *outq)
         for (int i = 0; i < blockSize; ++i)
         {
             resampler->push(lOutput[0][i], lOutput[1][i]);
-            vuPeak.process(lOutput[0][i], lOutput[1][i]);
         }
 
-        if (lastVuUpdate >= updateVuEvery)
+        if (isEditorAttached)
         {
-            AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
-            audioToUi.push(msg);
+            for (int i = 0; i < blockSize; ++i)
+            {
+                vuPeak.process(lOutput[0][i], lOutput[1][i]);
+            }
 
-            AudioToUIMsg msg2{AudioToUIMsg::UPDATE_VOICE_COUNT, (uint32_t)voiceCount};
-            audioToUi.push(msg2);
-            lastVuUpdate = 0;
-        }
-        else
-        {
-            lastVuUpdate++;
+            if (lastVuUpdate >= updateVuEvery)
+            {
+                AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
+                audioToUi.push(msg);
+
+                AudioToUIMsg msg2{AudioToUIMsg::UPDATE_VOICE_COUNT, (uint32_t)voiceCount};
+                audioToUi.push(msg2);
+                lastVuUpdate = 0;
+            }
+            else
+            {
+                lastVuUpdate++;
+            }
         }
     }
 
@@ -254,6 +261,11 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             memset(patch.name, 0, sizeof(patch.name));
             strncpy(patch.name, uiM->hackPointer, 255);
             audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
+        }
+        break;
+        case UIToAudioMsg::EDITOR_ATTACH_DETATCH:
+        {
+            isEditorAttached = uiM->paramId;
         }
         break;
         }

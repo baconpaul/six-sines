@@ -131,8 +131,14 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
 
     // Make sure to do this last
     setSize(673, 845);
+
+    uiToAudio.push({Synth::UIToAudioMsg::EDITOR_ATTACH_DETATCH, true});
 }
-SixSinesEditor::~SixSinesEditor() { idleTimer->stopTimer(); }
+SixSinesEditor::~SixSinesEditor()
+{
+    uiToAudio.push({Synth::UIToAudioMsg::EDITOR_ATTACH_DETATCH, false});
+    idleTimer->stopTimer();
+}
 
 void SixSinesEditor::idle()
 {
