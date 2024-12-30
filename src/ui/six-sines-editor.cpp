@@ -443,7 +443,7 @@ void SixSinesEditor::popupMenuForContinuous(jcmp::ContinuousParamEditor *e)
 void SixSinesEditor::showPresetPopup()
 {
     auto p = juce::PopupMenu();
-    p.addSectionHeader("Presets");
+    p.addSectionHeader("Main Menu");
 
     auto f = juce::PopupMenu();
     for (auto &[c, ent] : presetManager->factoryPatchNames)
@@ -525,8 +525,8 @@ void SixSinesEditor::showPresetPopup()
         u.addSubMenu(cat.u8string(), s);
     }
     p.addSeparator();
-    p.addSubMenu("Factory", f);
-    p.addSubMenu("User", u);
+    p.addSubMenu("Factory Presets", f);
+    p.addSubMenu("User Presets", u);
     p.addSeparator();
     p.addItem("Load Patch",
               [w = juce::Component::SafePointer(this)]()
@@ -549,6 +549,15 @@ void SixSinesEditor::showPresetPopup()
                       w->resetToDefault();
                   }
               });
+    p.addSeparator();
+    p.addItem("Read the Manual",
+              []()
+              {
+                  juce::URL("https://github.com/baconpaul/six-sines/blob/main/doc/manual.md")
+                      .launchInDefaultBrowser();
+              });
+    p.addItem("Get the Source", []()
+              { juce::URL("https://github.com/baconpaul/six-sines/").launchInDefaultBrowser(); });
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
 }
