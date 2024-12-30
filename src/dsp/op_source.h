@@ -45,7 +45,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     bool keytrack{true};
     const float &ratio, &activeV, &envToRatio, &lfoToRatio, &lfoByEnv; // in  frequency multiple
-    const float &waveForm;
+    const float &waveForm, &kt, &ktv;
     bool active{false};
 
     // todo waveshape
@@ -57,7 +57,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         : sourceNode(sn), monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv),
           LFOSupport(sn, mv), ModulationSupport(sn, mv, vv), ratio(sn.ratio), activeV(sn.active),
           envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio), lfoByEnv(sn.envLfoSum),
-          waveForm(sn.waveForm)
+          waveForm(sn.waveForm), kt(sn.keyTrack), ktv(sn.keyTrackValue)
     {
         reset();
     }
@@ -100,7 +100,17 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     void snapActive() { active = activeV > 0.5; }
 
     float baseFrequency{0};
-    void setBaseFrequency(float freq) { baseFrequency = freq; }
+    void setBaseFrequency(float freq)
+    {
+        if (kt > 0.5)
+        {
+            baseFrequency = freq;
+        }
+        else
+        {
+            baseFrequency = 440 * monoValues.twoToTheX.twoToThe(ktv / 12);
+        }
+    }
 
     float ratioMod{0.f};
     float envRatioAtten{1.0};

@@ -1,8 +1,5 @@
 TODO BEFORE 1JAN2025
 
-SOURCE:
-- Keytrack on/off, and if off ratio -> offset from 440hz
-
 MODULATION:
 - Put modulation in
   - matrix

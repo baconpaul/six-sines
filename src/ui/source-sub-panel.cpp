@@ -95,6 +95,29 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     wavPainter = std::make_unique<WavPainter>(sn.waveForm);
     addAndMakeVisible(*wavPainter);
 
+    keyTrackTitle = std::make_unique<RuledLabel>();
+    keyTrackTitle->setText("KeyTrak");
+    addAndMakeVisible(*keyTrackTitle);
+
+    createComponent(editor, *this, sn.keyTrack, keyTrack, keyTrackD);
+    keyTrack->setLabel("Active");
+    addAndMakeVisible(*keyTrack);
+
+    createComponent(editor, *this, sn.keyTrackValue, keyTrackValue, keyTrackValueD);
+    addAndMakeVisible(*keyTrackValue);
+    keyTrackValueLL = std::make_unique<jcmp::Label>();
+    keyTrackValueLL->setText("f @ r=1");
+    addAndMakeVisible(*keyTrackValueLL);
+
+    auto op = [w = juce::Component::SafePointer(this)]()
+    {
+        if (w)
+            w->setEnabledState();
+    };
+    keyTrackD->onGuiSetValue = op;
+    editor.componentRefreshByID[sn.keyTrack.meta.id] = op;
+    setEnabledState();
+
     resized();
 }
 
@@ -127,6 +150,26 @@ void SourceSubPanel::resized()
     depy += uicLabelHeight + uicMargin;
     wavPainter->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight * 2.5);
 
+    depx += 2 * uicKnobSize + 3 * uicMargin;
+    depy = r.getY();
+    auto xtraW = 4;
+    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, keyTrackTitle);
+    depy += uicLabelHeight + uicMargin;
+    auto bbx = juce::Rectangle<int>(depx, depy, uicKnobSize + 2 * xtraW, uicLabelHeight);
+    keyTrack->setBounds(bbx);
+    bbx = bbx.translated(0, uicLabelHeight + 2 * uicMargin);
+    positionKnobAndLabel(depx + xtraW, bbx.getY(), keyTrackValue, keyTrackValueLL);
+
     layoutModulation(p);
 }
+
+void SourceSubPanel::setEnabledState()
+{
+    auto &sn = editor.patchCopy.sourceNodes[index];
+    auto ekt = sn.keyTrack.value < 0.5;
+    keyTrackValue->setEnabled(ekt);
+    keyTrackValueLL->setEnabled(ekt);
+    repaint();
+}
+
 } // namespace baconpaul::six_sines::ui

@@ -56,9 +56,18 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::JogUpDownButton> wavButton;
     std::unique_ptr<PatchDiscrete> wavButtonD;
 
-    std::unique_ptr<RuledLabel> modTitle, wavTitle;
+    std::unique_ptr<RuledLabel> modTitle, wavTitle, keyTrackTitle;
 
     std::unique_ptr<juce::Component> wavPainter;
+
+    std::unique_ptr<jcmp::ToggleButton> keyTrack;
+    std::unique_ptr<PatchDiscrete> keyTrackD;
+
+    std::unique_ptr<jcmp::Knob> keyTrackValue;
+    std::unique_ptr<PatchContinuous> keyTrackValueD;
+    std::unique_ptr<jcmp::Label> keyTrackValueLL;
+
+    void setEnabledState();
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H
