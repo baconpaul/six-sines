@@ -48,6 +48,7 @@ struct ModMatrixConfig
         POLY_AT = voiceLevel + 2,
         GATED = voiceLevel + 50,
         RELEASED = voiceLevel + 51,
+        UNISON_VAL = voiceLevel + 60,
 
         MPE_PRESSURE = voiceLevel + 100,
         MPE_TIMBRE = voiceLevel + 101,

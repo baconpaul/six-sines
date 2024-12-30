@@ -338,6 +338,9 @@ template <typename T> struct ModulationSupport
         case ModMatrixConfig::Source::RELEASE_VELOCITY:
             sourcePointers[which] = &voiceValues.releaseVelocity;
             break;
+        case ModMatrixConfig::Source::UNISON_VAL:
+            sourcePointers[which] = &voiceValues.uniPMScale;
+            break;
         case ModMatrixConfig::Source::POLY_AT:
             sourcePointers[which] = &voiceValues.polyAt;
             break;

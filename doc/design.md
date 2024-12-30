@@ -1,8 +1,5 @@
 TODO BEFORE 1JAN2025
 
-MODULATION:
-- Unison Sources
-
 PATCH SELECTOR:
 - Jog Buttons for next/prev
 

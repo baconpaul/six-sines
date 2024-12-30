@@ -34,6 +34,7 @@ ModMatrixConfig::ModMatrixConfig()
     add(POLY_AT, "MIDI", "Poly AT");
     add(GATED, "Voice", "Gated");
     add(RELEASED, "Voice", "Released");
+    add(UNISON_VAL, "Voice", "Unison Position");
 
     add(MPE_PRESSURE, "MPE", "Pressure");
     add(MPE_TIMBRE, "MPE", "Timbre");

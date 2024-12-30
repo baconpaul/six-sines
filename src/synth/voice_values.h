@@ -49,6 +49,7 @@ struct VoiceValues
     float uniPanShift{0.0};
     int uniIndex{0};
     int uniCount{1};
+    float uniPMScale{0.f}; // -1 to 1 for unison field
     bool phaseRandom{false};
 
   private:

@@ -123,6 +123,7 @@ struct Synth
             usp = synth.monoValues.twoToTheX.twoToThe(usp);
             float uniVal[5]{1.0};
             float uniPan[5]{0.0};
+            float uniScale[5]{0.0};
             assert(ct <= 5);
             if (ct > 1)
             {
@@ -135,8 +136,8 @@ struct Synth
                         val = 1.0 / ((1.0 + (usp - 1)) - dUni * i);
                     }
                     uniVal[i] = val;
-                    uniPan[i] = 2 * (i - 1.0 * (ct - 1) / 2) / (ct - 1);
-                    uniPan[i] *= 0.8; // bring it in a bit
+                    uniScale[i] = 2 * (i - 1.0 * (ct - 1) / 2) / (ct - 1);
+                    uniPan[i] = 0.8 * uniScale[i]; // bring it in a bit
                 }
             }
 
@@ -162,6 +163,7 @@ struct Synth
                             synth.voices[i].voiceValues.uniIndex = vc;
                             synth.voices[i].voiceValues.uniRatioMul = uniVal[vc];
                             synth.voices[i].voiceValues.uniPanShift = uniPan[vc];
+                            synth.voices[i].voiceValues.uniPMScale = uniScale[vc];
                             synth.voices[i].voiceValues.phaseRandom = (vc > 0 && upr);
                             synth.voices[i].attack();
 
