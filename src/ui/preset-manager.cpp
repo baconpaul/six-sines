@@ -24,7 +24,82 @@ CMRC_DECLARE(sixsines_patches);
 
 namespace baconpaul::six_sines::ui
 {
-PresetManager::PresetManager()
+
+struct PresetDataBinding : sst::jucegui::data::Discrete
+{
+    PresetManager &pm;
+    PresetDataBinding(PresetManager &p) : pm(p) {}
+
+    std::string getLabel() const override { return "Presets"; }
+
+    int curr{0};
+    bool hasExtra{false};
+    std::string extraName{};
+    void setExtra(const std::string &s)
+    {
+        hasExtra = true;
+        extraName = s;
+    }
+
+    int getValue() const override { return curr; }
+    int getDefaultValue() const override { return 0; };
+    std::string getValueAsStringFor(int i) const override
+    {
+        if (hasExtra && i < 0)
+            return extraName;
+
+        if (i == 0)
+            return "Init";
+        auto fp = i - 1;
+        if (fp < pm.factoryPatchVector.size())
+        {
+            fs::path p{pm.factoryPatchVector[fp].first};
+            p = p / pm.factoryPatchVector[fp].second;
+            p = p.replace_extension("");
+            return p.u8string();
+        }
+        fp -= pm.factoryPatchVector.size();
+        if (fp < pm.userPatches.size())
+        {
+            auto pt = pm.userPatches[fp];
+            pt = pt.replace_extension("");
+            return pt.u8string();
+        }
+        return "ERR";
+    }
+    void setValueFromGUI(const int &f) override
+    {
+        if (hasExtra)
+        {
+            hasExtra = false;
+        }
+        curr = f;
+        if (f == 0)
+        {
+            pm.loadInit();
+            return;
+        }
+        auto fp = f - 1;
+        if (fp < pm.factoryPatchVector.size())
+        {
+            pm.loadFactoryPreset(pm.factoryPatchVector[fp].first, pm.factoryPatchVector[fp].second);
+        }
+        fp -= pm.factoryPatchVector.size();
+        if (fp < pm.userPatches.size())
+        {
+            auto pt = pm.userPatches[fp];
+            pm.loadUserPresetDirect(pm.userPatchesPath / pt);
+        }
+    };
+    void setValueFromModel(const int &f) override { curr = f; }
+    int getMin() const override { return hasExtra ? -1 : 0; }
+    int getMax() const override
+    {
+        return 1 + pm.factoryPatchVector.size() + pm.userPatches.size() - 1 + (hasExtra ? 1 : 0);
+    } // last -1 is because inclusive
+};
+
+PresetManager::PresetManager(Patch &pp) : patch(pp)
 {
     try
     {
@@ -54,6 +129,15 @@ PresetManager::PresetManager()
                 factoryPatchNames[d.filename()] = ents;
             }
         }
+
+        factoryPatchVector.clear();
+        for (const auto &[c, st] : factoryPatchNames)
+        {
+            for (const auto &pn : st)
+            {
+                factoryPatchVector.emplace_back(c, pn);
+            }
+        }
     }
     catch (const std::exception &e)
     {
@@ -61,7 +145,13 @@ PresetManager::PresetManager()
     }
 
     rescanUserPresets();
+
+    discreteDataBinding = std::make_unique<PresetDataBinding>(*this);
+
+    setStateForDisplayName(patch.name);
 }
+
+PresetManager::~PresetManager() = default;
 
 void PresetManager::rescanUserPresets()
 {
@@ -122,7 +212,7 @@ void PresetManager::rescanUserPresets()
     }
 }
 
-void PresetManager::saveUserPresetDirect(const fs::path &pt, Patch &patch)
+void PresetManager::saveUserPresetDirect(const fs::path &pt)
 {
     std::ofstream ofs(pt);
     if (ofs.is_open())
@@ -133,7 +223,7 @@ void PresetManager::saveUserPresetDirect(const fs::path &pt, Patch &patch)
     rescanUserPresets();
 }
 
-void PresetManager::loadUserPresetDirect(const fs::path &p, Patch &patch)
+void PresetManager::loadUserPresetDirect(const fs::path &p)
 {
     std::ifstream t(p);
     if (!t.is_open())
@@ -142,9 +232,13 @@ void PresetManager::loadUserPresetDirect(const fs::path &p, Patch &patch)
     buffer << t.rdbuf();
 
     patch.fromState(buffer.str());
+
+    auto dn = p.filename().replace_extension("").u8string();
+    if (onPresetLoaded)
+        onPresetLoaded(dn);
 }
 
-void PresetManager::loadFactoryPreset(const std::string &cat, const std::string &pat, Patch &patch)
+void PresetManager::loadFactoryPreset(const std::string &cat, const std::string &pat)
 {
     try
     {
@@ -152,10 +246,94 @@ void PresetManager::loadFactoryPreset(const std::string &cat, const std::string 
         auto f = fs.open(std::string() + factoryPath + "/" + cat + "/" + pat);
         auto pb = std::string(f.begin(), f.end());
         patch.fromState(pb);
+
+        // can we find this factory preset
+        int idx{0};
+        for (idx = 0; idx < factoryPatchVector.size(); idx++)
+        {
+            if (factoryPatchVector[idx].first == cat && factoryPatchVector[idx].second == pat)
+                break;
+        }
+        if (idx != factoryPatchVector.size())
+        {
+            discreteDataBinding->setValueFromModel(idx + 1);
+        }
+
+        if (onPresetLoaded)
+        {
+            auto noExt = pat;
+            auto ps = noExt.find(".sxsnp");
+            if (ps != std::string::npos)
+            {
+                noExt = noExt.substr(0, ps);
+            }
+            onPresetLoaded(noExt);
+        }
     }
     catch (const std::exception &e)
     {
         SXSNLOG(e.what());
+    }
+}
+
+void PresetManager::loadInit()
+{
+    patch.resetToInit();
+    if (onPresetLoaded)
+        onPresetLoaded("Init");
+}
+
+sst::jucegui::data::Discrete *PresetManager::getDiscreteData() { return discreteDataBinding.get(); }
+
+void PresetManager::setStateForDisplayName(const std::string &s)
+{
+    auto q = discreteDataBinding->getValueAsString();
+    auto sp = q.find("/");
+    if (sp != std::string::npos)
+    {
+        q = q.substr(sp + 1);
+    }
+    if (q != s)
+    {
+        if (s == "Init")
+        {
+            discreteDataBinding->setValueFromModel(0);
+        }
+        else
+        {
+            bool found{false};
+            int idx{1};
+            for (const auto &[c, pp] : factoryPatchVector)
+            {
+                auto p = pp.substr(0, pp.find(".sxsnp"));
+                if (p == s)
+                {
+                    discreteDataBinding->setValueFromModel(idx);
+                    found = true;
+                    break;
+                }
+                idx++;
+            }
+            if (!found)
+            {
+                for (auto &p : userPatches)
+                {
+                    auto pn = p.filename().replace_extension("").u8string();
+                    if (s == pn)
+                    {
+                        discreteDataBinding->setValueFromModel(idx);
+                        found = true;
+                        break;
+                    }
+                    idx++;
+                }
+            }
+            if (!found)
+            {
+                discreteDataBinding->setExtra(s);
+                discreteDataBinding->setValueFromModel(-1);
+            }
+        }
     }
 }
 
