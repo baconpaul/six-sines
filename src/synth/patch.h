@@ -800,6 +800,7 @@ struct Patch
         {
             SKIP = -1,
             NONE = 0,
+            DIRECT = 10,
             PAN = 15,
             DEPTH_ATTEN = 20,
 
@@ -807,8 +808,13 @@ struct Patch
         };
 
         std::vector<std::pair<TargetID, std::string>> targetList{
-            {TargetID::NONE, "Off"}, {TargetID::SKIP, ""}, {TargetID::DEPTH_ATTEN, "Env Sens"},
-            {TargetID::PAN, "Pan"},  {TargetID::SKIP, ""}, {TargetID::ENV_ATTACK, "Env Attack"},
+            {TargetID::NONE, "Off"},
+            {TargetID::SKIP, ""},
+            {TargetID::DIRECT, "Amplitude"},
+            {TargetID::DEPTH_ATTEN, "Env Sens"},
+            {TargetID::PAN, "Pan"},
+            {TargetID::SKIP, ""},
+            {TargetID::ENV_ATTACK, "Env Attack"},
         };
 
         OutputNode()

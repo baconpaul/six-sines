@@ -471,7 +471,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
         mech::scale_by<blockSize>(finalEnvLevel, output[0], output[1]);
 
         // Apply main output
-        auto lv = level;
+        auto lv = std::clamp(level + levMod, 0.f, 1.f);
         auto v = 1.f - velSen * (1.f - voiceValues.velocity);
         lv = 0.15 * std::clamp(v * lv * lv * lv, 0.f, 1.f);
         mech::scale_by<blockSize>(lv, output[0], output[1]);
@@ -504,6 +504,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
 #endif
     }
 
+    float levMod{0.f};
     float panMod{0.f};
     float depthAtten{1.0};
 
@@ -512,6 +513,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
         depthAtten = 1.f;
         attackMod = 0.f;
         panMod = 0.f;
+        levMod = 0.f;
 
         if (!anySources)
             return;
@@ -530,6 +532,9 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
                 {
                 case Patch::OutputNode::PAN:
                     panMod += d * *sourcePointers[i];
+                    break;
+                case Patch::OutputNode::DIRECT:
+                    levMod += d * *sourcePointers[i];
                     break;
                 case Patch::OutputNode::DEPTH_ATTEN:
                     depthAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
