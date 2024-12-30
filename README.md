@@ -6,7 +6,7 @@ kinda not the point.
 
 If you want to read a manual, [go here](doc/manual.md)
 
-If you want to download a release or recent version, [go here](releases)
+If you want to download a release or recent version, [go here](https://github.com/baconpaul/six-sines/releases)
 
 ## Background
 
@@ -25,7 +25,7 @@ said to a group of users in a discord "the most useless thing is a 6 op fill mat
 
 ## How to build this software
 
-We provide pre-build windows, linux, and macOS binaries at the [release page](releases) but especially on 
+We provide pre-build windows, linux, and macOS binaries at the [release page](https://github.com/baconpaul/six-sines/releases) but especially on 
 Linux, you may want to build it yourself, since we use ubuntu 24 machines and linux doesn't really exist.
 
 So to build it, do the standard
