@@ -16,25 +16,27 @@
 #include "main-panel.h"
 #include "ui-constants.h"
 #include "main-sub-panel.h"
+#include "mainpan-sub-panel.h"
+#include "finetune-sub-panel.h"
 #include "knob-highlight.h"
 
 namespace baconpaul::six_sines::ui
 {
 MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
 {
-    createComponent(editor, *this, editor.patchCopy.output.level, lev, levData);
+    createComponent(editor, *this, editor.patchCopy.output.level, lev, levData, 0);
     addAndMakeVisible(*lev);
     levLabel = std::make_unique<jcmp::Label>();
     levLabel->setText("Level");
     addAndMakeVisible(*levLabel);
 
-    createComponent(editor, *this, editor.patchCopy.output.pan, pan, panData);
+    createComponent(editor, *this, editor.patchCopy.output.pan, pan, panData, 1);
     addAndMakeVisible(*pan);
     panLabel = std::make_unique<jcmp::Label>();
     panLabel->setText("Pan");
     addAndMakeVisible(*panLabel);
 
-    createComponent(editor, *this, editor.patchCopy.output.fineTune, tun, tunData);
+    createComponent(editor, *this, editor.patchCopy.output.fineTune, tun, tunData, 2);
     addAndMakeVisible(*tun);
     tunLabel = std::make_unique<jcmp::Label>();
     tunLabel->setText("Tune");
@@ -85,16 +87,34 @@ void MainPanel::resized()
     voiceLabel->setBounds(b.withTrimmedTop(uicKnobSize + uicMargin).withHeight(uicLabelHeight));
 }
 
-void MainPanel::beginEdit()
+void MainPanel::beginEdit(int which)
 {
     editor.hideAllSubPanels();
-    editor.mainSubPanel->setVisible(true);
-
-    editor.singlePanel->setName("Main Output");
+    if (which == 0)
+    {
+        editor.mainSubPanel->setVisible(true);
+        editor.singlePanel->setName("Main Output");
+        auto b = getContentArea().reduced(uicMargin, 0);
+        highlight->setBounds(b.getX(), b.getY(), uicKnobSize + uicMargin, uicLabeledKnobHeight);
+    }
+    else if (which == 1)
+    {
+        editor.mainPanSubPanel->setVisible(true);
+        editor.singlePanel->setName("Main Panning");
+        auto b = getContentArea().reduced(uicMargin, 0);
+        highlight->setBounds(b.getX() + uicKnobSize + 0.5 * uicMargin, b.getY(),
+                             uicKnobSize + uicMargin, uicLabeledKnobHeight);
+    }
+    else if (which == 2)
+    {
+        editor.fineTuneSubPanel->setVisible(true);
+        editor.singlePanel->setName("Main Tuning");
+        auto b = getContentArea().reduced(uicMargin, 0);
+        highlight->setBounds(b.getX() + 2 * uicKnobSize + 1.5 * uicMargin, b.getY(),
+                             uicKnobSize + uicMargin, uicLabeledKnobHeight);
+    }
 
     highlight->setVisible(true);
-    auto b = getContentArea().reduced(uicMargin, 0);
-    highlight->setBounds(b.getX(), b.getY(), uicKnobSize + uicMargin, uicLabeledKnobHeight);
     highlight->toBack();
 }
 

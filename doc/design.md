@@ -5,6 +5,18 @@ ANDREYA BUG LIST
 - Env +/* on matrix node and separate depths since current +/- is pretty broken
 - What Andreya really wants is a full feldge screen for main pan and tune. Fine.
 - Temposync Labels screwed
+------
+  so then it is
+
+Env Plus/Mul
+LFO Uni/Bi
+LFO is enveloped or not
+
+Env Depth (gray out if env is Mul)
+LFO Depth
+
+are the 5 controls we need for each 'nubbin'
+-----
 
 GENERAL AND CLEANUPS
 - Screen Reader Check

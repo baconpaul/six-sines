@@ -19,6 +19,8 @@
 #include "main-sub-panel.h"
 #include "matrix-panel.h"
 #include "matrix-sub-panel.h"
+#include "finetune-sub-panel.h"
+#include "mainpan-sub-panel.h"
 #include "self-sub-panel.h"
 #include "mixer-panel.h"
 #include "mixer-sub-panel.h"
@@ -99,6 +101,10 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     singlePanel->addChildComponent(*mixerSubPanel);
     sourceSubPanel = std::make_unique<SourceSubPanel>(*this);
     singlePanel->addChildComponent(*sourceSubPanel);
+    fineTuneSubPanel = std::make_unique<FineTuneSubPanel>(*this);
+    singlePanel->addChildComponent(*fineTuneSubPanel);
+    mainPanSubPanel = std::make_unique<MainPanSubPanel>(*this);
+    singlePanel->addChildComponent(*mainPanSubPanel);
 
     auto startMsg = Synth::UIToAudioMsg{Synth::UIToAudioMsg::REQUEST_REFRESH};
     uiToAudio.push(startMsg);
@@ -274,6 +280,8 @@ void SixSinesEditor::resized()
     selfSubPanel->setBounds(singlePanel->getContentArea());
     mixerSubPanel->setBounds(singlePanel->getContentArea());
     sourceSubPanel->setBounds(singlePanel->getContentArea());
+    mainPanSubPanel->setBounds(singlePanel->getContentArea());
+    fineTuneSubPanel->setBounds(singlePanel->getContentArea());
 }
 
 void SixSinesEditor::hideAllSubPanels()

@@ -31,7 +31,7 @@ struct MainPanel : jcmp::NamedPanel, HasEditor
 
     void resized() override;
 
-    void beginEdit();
+    void beginEdit(int which);
 
     std::unique_ptr<juce::Component> highlight;
     void clearHighlight()
