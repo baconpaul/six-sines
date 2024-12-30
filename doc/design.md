@@ -2,12 +2,9 @@ TODO BEFORE 1JAN2025
 
 
 ANDREYA BUG LIST
-- Env +/* on matrix node and separate depths
-- Too tall
-- Remove "Anti-gated" name; better G D R etc
-- Don't allow release on main node
-- Matrix LFO is screwed
+- Env +/* on matrix node and separate depths since current +/- is pretty broken
 - What Andreya really wants is a full feldge screen for main pan and tune. Fine.
+- Temposync Labels screwed
 
 GENERAL AND CLEANUPS
 - Screen Reader Check
