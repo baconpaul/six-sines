@@ -1,10 +1,6 @@
 TODO BEFORE 1JAN2025
 
 MODULATION:
-- Put modulation in
-  - matrix
-  - mixer
-  - main
 - Unison Sources
 
 PATCH SELECTOR:

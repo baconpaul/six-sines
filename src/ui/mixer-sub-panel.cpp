@@ -30,6 +30,7 @@ void MixerSubPanel::setSelectedIndex(int idx)
     auto &sn = editor.patchCopy.mixerNodes[idx];
     setupDAHDSR(editor, sn);
     setupLFO(editor, sn);
+    setupModulation(editor, sn);
 
     createComponent(editor, *this, sn.envLfoSum, lfoMul, lfoMulD);
     addAndMakeVisible(*lfoMul);
@@ -81,6 +82,8 @@ void MixerSubPanel::resized()
 
     depy += uicTitleLabelHeight;
     positionKnobAndLabel(depx, depy, pan, panL);
+
+    layoutModulation(p);
 }
 
 } // namespace baconpaul::six_sines::ui

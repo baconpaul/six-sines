@@ -28,6 +28,7 @@ void MatrixSubPanel::setSelectedIndex(int idx)
     auto &m = editor.patchCopy.matrixNodes[idx];
     setupDAHDSR(editor, m);
     setupLFO(editor, m);
+    setupModulation(editor, m);
 
     createComponent(editor, *this, m.lfoToDepth, lfoToDepth, lfoToDepthD);
     addAndMakeVisible(*lfoToDepth);
@@ -56,6 +57,8 @@ void MatrixSubPanel::resized()
 
     positionKnobAndLabel(r.getX() - uicKnobSize, r.getY() + uicTitleLabelHeight, lfoToDepth,
                          lfoToDepthL);
+
+    layoutModulation(p);
 }
 
 } // namespace baconpaul::six_sines::ui

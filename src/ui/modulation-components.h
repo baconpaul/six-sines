@@ -127,7 +127,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
     {
         auto modW{150}; // TODO MOVE TO UIC
         auto bx = r.withTrimmedLeft(r.getWidth() - modW);
-        modTitleLab->setBounds(bx.withHeight(uicTitleLabelHeight));
+        positionTitleLabelAt(bx.getX(), bx.getY(), modW, modTitleLab);
         auto bq = bx.translated(0, uicTitleLabelHeight + uicMargin)
                       .withHeight(uicLabelHeight + uicMargin);
 

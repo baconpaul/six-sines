@@ -27,7 +27,8 @@ namespace baconpaul::six_sines::ui
 struct MatrixSubPanel : juce::Component,
                         HasEditor,
                         DAHDSRComponents<MatrixSubPanel, Patch::MatrixNode>,
-                        LFOComponents<MatrixSubPanel, Patch::MatrixNode>
+                        LFOComponents<MatrixSubPanel, Patch::MatrixNode>,
+                        ModulationComponents<MatrixSubPanel, Patch::MatrixNode>
 {
     MatrixSubPanel(SixSinesEditor &);
     ~MatrixSubPanel();

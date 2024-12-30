@@ -20,13 +20,15 @@
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
 #include "lfo-components.h"
+#include "modulation-components.h"
 
 namespace baconpaul::six_sines::ui
 {
 struct MixerSubPanel : juce::Component,
                        HasEditor,
                        DAHDSRComponents<MixerSubPanel, Patch::MixerNode>,
-                       LFOComponents<MixerSubPanel, Patch::MixerNode>
+                       LFOComponents<MixerSubPanel, Patch::MixerNode>,
+                       ModulationComponents<MixerSubPanel, Patch::MixerNode>
 {
     MixerSubPanel(SixSinesEditor &);
     ~MixerSubPanel();

@@ -548,9 +548,30 @@ struct Patch
         }
     };
 
-    struct MatrixNode : public DAHDSRMixin, public LFOMixin
+    struct MatrixNode : public DAHDSRMixin, public LFOMixin, public ModulationMixin
     {
         static constexpr uint32_t idBase{30000}, idStride{200};
+
+        enum TargetID
+        {
+            NONE = 0,
+            DIRECT = 10,
+            DEPTH_ATTEN = 20,
+            LFO_DEPTH_ATTEN = 30,
+
+            ENV_ATTACK = 40,
+            LFO_RATE = 50
+        };
+
+        std::vector<std::pair<TargetID, std::string>> targetList{
+            {TargetID::NONE, "Off"},
+            {TargetID::DIRECT, "Modulation Level"},
+            {TargetID::DEPTH_ATTEN, "Mod Depth"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFO Depth"},
+            {TargetID::ENV_ATTACK, "Env Attack"},
+            {TargetID::LFO_RATE, "LFO Rate"},
+        };
+
         MatrixNode(size_t idx)
             : level(floatMd()
                         .asPercent()
@@ -585,7 +606,19 @@ struct Patch
                             .withID(id(26, idx))
                             .withRange(0, 1)
                             .withDefault(0)
-                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}}))
+                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}})),
+              ModulationMixin(name(idx), id(70, idx)),
+              modtarget(scpu::make_array_lambda<Param, numModsPer>(
+                  [this, idx](int i)
+                  {
+                      return md_t()
+                          .withName(name(idx) + " Mod Target " + std::to_string(i))
+                          .withGroupName(name(idx))
+                          .withRange(0, 2000)
+                          .withDefault(TargetID::NONE)
+                          .withID(id(80 + i, idx));
+                  }))
+
         {
         }
 
@@ -594,6 +627,8 @@ struct Patch
         Param pmOrRM;
         Param lfoToDepth;
         Param envLfoSum;
+
+        std::array<Param, numModsPer> modtarget;
 
         std::string name(int idx) const
         {
@@ -606,13 +641,43 @@ struct Patch
             std::vector<Param *> res{&level, &active, &pmOrRM, &lfoToDepth, &envLfoSum};
             appendDAHDSRParams(res);
             appendLFOParams(res);
+
+            for (int i = 0; i < numModsPer; ++i)
+                res.push_back(&modtarget[i]);
+            appendModulationParams(res);
+
             return res;
         }
     };
 
-    struct MixerNode : public DAHDSRMixin, public LFOMixin
+    struct MixerNode : public DAHDSRMixin, public LFOMixin, public ModulationMixin
     {
         static constexpr uint32_t idBase{20000}, idStride{100};
+
+        enum TargetID
+        {
+            NONE = 0,
+            DIRECT = 10,
+            PAN = 15,
+            DEPTH_ATTEN = 20,
+            LFO_DEPTH_ATTEN = 30,
+            LFO_DEPTH_PAN_ATTEN = 35,
+
+            ENV_ATTACK = 40,
+            LFO_RATE = 50
+        };
+
+        std::vector<std::pair<TargetID, std::string>> targetList{
+            {TargetID::NONE, "Off"},
+            {TargetID::DIRECT, "Amplitude"},
+            {TargetID::PAN, "Pan"},
+            {TargetID::DEPTH_ATTEN, "Env Depth"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFOENV Depth"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFOPan Depth"},
+            {TargetID::ENV_ATTACK, "Env Attack"},
+            {TargetID::LFO_RATE, "LFO Rate"},
+        };
+
         MixerNode(size_t idx)
             : level(floatMd()
                         .asPercent()
@@ -651,7 +716,19 @@ struct Patch
                             .withID(id(42, idx))
                             .withRange(0, 1)
                             .withDefault(0)
-                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}}))
+                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}})),
+              ModulationMixin(name(idx), id(50, idx)),
+              modtarget(scpu::make_array_lambda<Param, numModsPer>(
+                  [this, idx](int i)
+                  {
+                      return md_t()
+                          .withName(name(idx) + " Mod Target " + std::to_string(i))
+                          .withGroupName(name(idx))
+                          .withRange(0, 2000)
+                          .withDefault(TargetID::NONE)
+                          .withID(id(60 + i, idx));
+                  }))
+
         {
         }
 
@@ -660,12 +737,18 @@ struct Patch
 
         Param level, pan, lfoToLevel, lfoToPan, envLfoSum;
         Param active;
+        std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
             std::vector<Param *> res{&level, &active, &pan, &lfoToLevel, &lfoToPan, &envLfoSum};
             appendDAHDSRParams(res);
             appendLFOParams(res);
+
+            for (int i = 0; i < numModsPer; ++i)
+                res.push_back(&modtarget[i]);
+            appendModulationParams(res);
+
             return res;
         }
     };
