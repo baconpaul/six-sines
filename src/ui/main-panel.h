@@ -16,6 +16,8 @@
 #ifndef BACONPAUL_SIX_SINES_UI_MAIN_PANEL_H
 #define BACONPAUL_SIX_SINES_UI_MAIN_PANEL_H
 
+#include <sst/jucegui/component-adapters/DiscreteToReference.h>
+
 #include "sst/jucegui/components/Label.h"
 #include "sst/jucegui/components/VUMeter.h"
 
@@ -34,10 +36,13 @@ struct MainPanel : jcmp::NamedPanel, HasEditor
     void beginEdit(int which);
 
     std::unique_ptr<juce::Component> highlight;
+    bool supressPowerOff{false};
     void clearHighlight()
     {
         if (highlight)
             highlight->setVisible(false);
+        if (playScreenD && !supressPowerOff)
+            playScreenD->setValueFromModel(false);
     }
 
     std::unique_ptr<PatchContinuous> levData;
@@ -52,13 +57,14 @@ struct MainPanel : jcmp::NamedPanel, HasEditor
     std::unique_ptr<jcmp::Knob> tun;
     std::unique_ptr<jcmp::Label> tunLabel;
 
-    void setVoiceCount(int vc) { voiceCount->setText(std::to_string(vc)); }
-    std::unique_ptr<jcmp::Label> voiceCount, voiceLabel;
-    std::unique_ptr<jcmp::MenuButton> voiceLimit;
+    void setVoiceCount(int vc) { voiceCount->setText("V: " + std::to_string(vc)); }
+    std::unique_ptr<jcmp::Label> voiceCount;
 
-    void showPolyLimitMenu();
-    int getPolyLimit();
-    void setPolyLimit(int pl);
+    jcmp::ToggleButton *playScreen{nullptr}; // owned by the d. detail to fix up later
+    std::unique_ptr<
+        sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::ToggleButton, bool>>
+        playScreenD;
+    bool isPlayScreenShowing{false};
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_PANEL_H

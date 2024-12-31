@@ -45,48 +45,7 @@ struct MainSubPanel : juce::Component,
     std::unique_ptr<PatchContinuous> velSenD;
     std::unique_ptr<jcmp::Label> velSenL;
 
-    std::unique_ptr<RuledLabel> playTitle;
-    std::unique_ptr<jcmp::MultiSwitch> playMode;
-    std::unique_ptr<PatchDiscrete> playModeD;
-
-    std::unique_ptr<RuledLabel> velTitle, bendTitle, uniTitle, mpeTitle, tsposeTitle;
-
-    std::unique_ptr<jcmp::Label> bUpL, bDnL;
-    std::unique_ptr<PatchContinuous> bUpD, bDnD;
-    std::unique_ptr<jcmp::DraggableTextEditableValue> bUp, bDn;
-
-    std::unique_ptr<jcmp::TextPushButton> triggerButton;
-    void setTriggerButtonLabel();
-    void showTriggerButtonMenu();
-
-    std::unique_ptr<jcmp::ToggleButton> pianoModeButton;
-    std::unique_ptr<PatchDiscrete> pianoModeButtonD;
-
-    std::unique_ptr<jcmp::Knob> portaTime;
-    std::unique_ptr<PatchContinuous> portaTimeD;
-    std::unique_ptr<jcmp::Label> portaL;
-    void setEnabledState();
-
-    std::unique_ptr<jcmp::JogUpDownButton> uniCt;
-    std::unique_ptr<PatchDiscrete> uniCtD;
-    std::unique_ptr<jcmp::Label> uniCtL;
-
-    std::unique_ptr<jcmp::ToggleButton> uniRPhase;
-    std::unique_ptr<PatchDiscrete> uniRPhaseDD;
-
-    std::unique_ptr<jcmp::Knob> uniSpread;
-    std::unique_ptr<PatchContinuous> uniSpreadD;
-    std::unique_ptr<jcmp::Label> uniSpreadL;
-
-    std::unique_ptr<jcmp::ToggleButton> mpeActiveButton;
-    std::unique_ptr<PatchDiscrete> mpeActiveButtonD;
-
-    std::unique_ptr<jcmp::JogUpDownButton> mpeRange;
-    std::unique_ptr<PatchDiscrete> mpeRangeD;
-    std::unique_ptr<jcmp::Label> mpeRangeL;
-
-    std::unique_ptr<jcmp::JogUpDownButton> tsposeButton;
-    std::unique_ptr<PatchDiscrete> tsposeButtonD;
+    std::unique_ptr<RuledLabel> velTitle;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

@@ -47,6 +47,7 @@ struct MixerPanel;
 struct MixerSubPanel;
 struct MainPanSubPanel;
 struct FineTuneSubPanel;
+struct PlayModeSubPanel;
 struct SourcePanel;
 struct SourceSubPanel;
 struct MacroPanel;
@@ -76,6 +77,7 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::unique_ptr<MainSubPanel> mainSubPanel;
     std::unique_ptr<MainPanSubPanel> mainPanSubPanel;
     std::unique_ptr<FineTuneSubPanel> fineTuneSubPanel;
+    std::unique_ptr<PlayModeSubPanel> playModeSubPanel;
 
     std::unique_ptr<MatrixPanel> matrixPanel;
     std::unique_ptr<MatrixSubPanel> matrixSubPanel;

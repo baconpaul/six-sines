@@ -39,7 +39,7 @@ MacroPanel::~MacroPanel() = default;
 void MacroPanel::resized()
 {
     auto b = getContentArea().reduced(uicMargin, 0);
-    auto x = b.getX();
+    auto x = b.getX() + (b.getWidth() - uicKnobSize) / 2;
     auto y = b.getY();
     for (auto i = 0U; i < numOps; ++i)
     {

@@ -14,12 +14,15 @@
  */
 
 #include "six-sines-editor.h"
+
+#include "finetune-sub-panel.h"
 #include "patch-data-bindings.h"
 #include "main-panel.h"
 #include "main-sub-panel.h"
 #include "matrix-panel.h"
 #include "matrix-sub-panel.h"
 #include "finetune-sub-panel.h"
+#include "playmode-sub-panel.h"
 #include "mainpan-sub-panel.h"
 #include "self-sub-panel.h"
 #include "mixer-panel.h"
@@ -105,6 +108,8 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     singlePanel->addChildComponent(*fineTuneSubPanel);
     mainPanSubPanel = std::make_unique<MainPanSubPanel>(*this);
     singlePanel->addChildComponent(*mainPanSubPanel);
+    playModeSubPanel = std::make_unique<PlayModeSubPanel>(*this);
+    singlePanel->addChildComponent(*playModeSubPanel);
 
     auto startMsg = Synth::UIToAudioMsg{Synth::UIToAudioMsg::REQUEST_REFRESH};
     uiToAudio.push(startMsg);
@@ -146,7 +151,7 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     addAndMakeVisible(*vuMeter);
 
     // Make sure to do this last
-    setSize(682, 812);
+    setSize(688, 812);
 
     uiToAudio.push({Synth::UIToAudioMsg::EDITOR_ATTACH_DETATCH, true});
 }
@@ -239,7 +244,7 @@ void SixSinesEditor::resized()
     auto matrixWidth = numOps * (uicPowerKnobWidth) + (numOps - 1) * uicMargin + panelPadX;
     auto matrixHeight = numOps * uicLabeledKnobHeight + (numOps - 1) * uicMargin + panelPadY;
     auto mixerWidth = uicKnobSize + uicPowerKnobWidth + uicMargin + panelPadX;
-    auto macroWidth = uicKnobSize + panelPadX;
+    auto macroWidth = uicKnobSize + panelPadX + 6;
     auto mainWidth = mixerWidth + macroWidth;
 
     auto editHeight = 220;
@@ -282,6 +287,7 @@ void SixSinesEditor::resized()
     sourceSubPanel->setBounds(singlePanel->getContentArea());
     mainPanSubPanel->setBounds(singlePanel->getContentArea());
     fineTuneSubPanel->setBounds(singlePanel->getContentArea());
+    playModeSubPanel->setBounds(singlePanel->getContentArea());
 }
 
 void SixSinesEditor::hideAllSubPanels()

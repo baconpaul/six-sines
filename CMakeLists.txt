@@ -66,6 +66,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/ui/macro-panel.cpp
         src/ui/finetune-sub-panel.cpp
         src/ui/mainpan-sub-panel.cpp
+        src/ui/playmode-sub-panel.cpp
 
         src/dsp/sintable.cpp
 
