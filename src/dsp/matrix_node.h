@@ -452,6 +452,126 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
     }
 };
 
+// Single point modulation
+struct ModulationOnlyNode : EnvelopeSupport<Patch::ModulationOnlyNode>,
+                            ModulationSupport<Patch::ModulationOnlyNode>,
+                            LFOSupport<Patch::ModulationOnlyNode>
+{
+    // float level alignas(16)[blockSize];
+    float level{0.f};
+
+    const Patch::ModulationOnlyNode &modNode;
+
+    const MonoValues &monoValues;
+    const VoiceValues &voiceValues;
+
+    const float &lfoD, &envD;
+
+    ModulationOnlyNode(const Patch::ModulationOnlyNode &mn, MonoValues &mv, const VoiceValues &vv)
+        : ModulationSupport(mn, mv, vv), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
+          modNode(mn), monoValues(mv), voiceValues(vv), lfoD(mn.lfoDepth), envD(mn.envDepth)
+    {
+    }
+
+    bool active{0};
+    void attack()
+    {
+        bindModulation();
+
+        active = true;
+        if (std::fabs(lfoD) < 1e-8 && std::fabs(envD) < 1e-8)
+        {
+            active = false;
+            for (auto &d : sourcePointers)
+            {
+                if (d)
+                    active = true;
+            }
+        }
+
+        level = 0.f;
+        if (!active)
+        {
+            return;
+        }
+
+        calculateModulation();
+        envAttack();
+        lfoAttack();
+    }
+
+    void modProcess()
+    {
+        if (!active)
+            return;
+
+        envProcess(true, false);
+        lfoProcess();
+
+        level = directMod + env.outBlock0 * (envD + edMod) * envAtten +
+                lfo.outputBlock[blockSize - 1] * (lfoD + ldMod) * lfoAtten;
+    }
+
+    float lfoAtten{0.f};
+    float directMod{0.f};
+    float envAtten{1.0};
+    float edMod{0.f};
+    float ldMod{0.f};
+
+    void calculateModulation()
+    {
+        attackMod = 0.f;
+        rateMod = 0.f;
+        lfoAtten = 1.f;
+        envAtten = 1.f;
+        directMod = 0.f;
+        edMod = 0.f;
+        ldMod = 0.f;
+
+        if (!anySources)
+            return;
+
+        for (int i = 0; i < numModsPer; ++i)
+        {
+            if (sourcePointers[i] &&
+                (int)modNode.modtarget[i].value != Patch::ModulationOnlyNode::TargetID::NONE)
+            {
+                // targets: env depth atten, lfo dept atten, direct adjust, env attack, lfo rate
+                auto dp = depthPointers[i];
+                if (!dp)
+                    continue;
+                auto d = *dp;
+                switch ((Patch::ModulationOnlyNode::TargetID)modNode.modtarget[i].value)
+                {
+                case Patch::ModulationOnlyNode::DIRECT:
+                    directMod += d * *sourcePointers[i];
+                    break;
+                case Patch::ModulationOnlyNode::ENVDEP_DIR:
+                    edMod += d * *sourcePointers[i];
+                    break;
+                case Patch::ModulationOnlyNode::LFODEP_DIR:
+                    ldMod += d * *sourcePointers[i];
+                    break;
+                case Patch::ModulationOnlyNode::DEPTH_ATTEN:
+                    envAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                    break;
+                case Patch::ModulationOnlyNode::LFO_DEPTH_ATTEN:
+                    lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                    break;
+                case Patch::ModulationOnlyNode::LFO_RATE:
+                    rateMod += d * *sourcePointers[i] * 4;
+                    break;
+                case Patch::ModulationOnlyNode::ENV_ATTACK:
+                    attackMod += d * *sourcePointers[i];
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+    }
+};
+
 struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
                     ModulationSupport<Patch::OutputNode>,
                     LFOSupport<Patch::OutputNode>
@@ -469,13 +589,16 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     const float &defTrigV;
     TriggerMode defaultTrigger;
 
-    OutputNode(const Patch::OutputNode &on, std::array<MixerNode, numOps> &f, MonoValues &mv,
-               const VoiceValues &vv)
+    ModulationOnlyNode ftModNode, panModNode;
+
+    OutputNode(const Patch::OutputNode &on, const Patch::ModulationOnlyNode &panMN,
+               const Patch::ModulationOnlyNode &ftMN, std::array<MixerNode, numOps> &f,
+               MonoValues &mv, const VoiceValues &vv)
         : outputNode(on), ModulationSupport(on, mv, vv), monoValues(mv), voiceValues(vv), sr(mv),
           fromArr(f), level(on.level), bendUp(on.bendUp), bendDown(on.bendDown),
           octTranspose(on.octTranspose), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),
           LFOSupport(on, mv), defTrigV(on.defaultTrigger), pan(on.pan), fineTune(on.fineTune),
-          lfoDepth(on.lfoDepth)
+          lfoDepth(on.lfoDepth), ftModNode(ftMN, mv, vv), panModNode(panMN, mv, vv)
     {
         memset(output, 0, sizeof(output));
         allowVoiceTrigger = false;
@@ -488,6 +611,8 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
         calculateModulation();
         envAttack();
         lfoAttack();
+        ftModNode.attack();
+        panModNode.attack();
     }
 
     float finalEnvLevel alignas(16)[blockSize];
@@ -502,6 +627,8 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
 
         envProcess(false);
         lfoProcess();
+        ftModNode.modProcess();
+        panModNode.modProcess();
 
         mech::copy_from_to<blockSize>(env.outputCache, finalEnvLevel);
         mech::scale_by<blockSize>(depthAtten, finalEnvLevel);
@@ -523,7 +650,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
         lv = 0.15 * std::clamp(v * lv * lv * lv, 0.f, 1.f);
         mech::scale_by<blockSize>(lv, output[0], output[1]);
 
-        auto pn = panMod + pan;
+        auto pn = panMod + pan + panModNode.level;
         if (pn != 0.f)
         {
             pn = (pn + 1) * 0.5;
@@ -571,7 +698,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
         for (int i = 0; i < numModsPer; ++i)
         {
             if (sourcePointers[i] &&
-                (int)outputNode.modtarget[i].value != Patch::MixerNode::TargetID::NONE)
+                (int)outputNode.modtarget[i].value != Patch::OutputNode::TargetID::NONE)
             {
                 // targets: env depth atten, lfo dept atten, direct adjust, env attack, lfo rate
                 auto dp = depthPointers[i];

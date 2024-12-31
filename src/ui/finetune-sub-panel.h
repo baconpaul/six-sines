@@ -24,20 +24,32 @@
 
 namespace baconpaul::six_sines::ui
 {
-struct FineTuneSubPanel : juce::Component, HasEditor
-// DAHDSRComponents<MixerSubPanel, Patch::MixerNode>,
-// LFOComponents<MixerSubPanel, Patch::MixerNode>,
-// ModulationComponents<MixerSubPanel, Patch::MixerNode>
+struct FineTuneSubPanel : juce::Component,
+                          HasEditor,
+                          DAHDSRComponents<FineTuneSubPanel, Patch::ModulationOnlyNode>,
+                          LFOComponents<FineTuneSubPanel, Patch::ModulationOnlyNode>,
+                          ModulationComponents<FineTuneSubPanel, Patch::ModulationOnlyNode>
 {
-    FineTuneSubPanel(SixSinesEditor &e) : HasEditor(e) {}
+    FineTuneSubPanel(SixSinesEditor &e);
     ~FineTuneSubPanel() = default;
 
-    void paint(juce::Graphics &g)
-    {
-        g.setColour(juce::Colours::white);
-        g.setFont(juce::FontOptions(40));
-        g.drawText("Fine Tune Screen Soon", getLocalBounds(), juce::Justification::centred);
-    }
+    void resized() override;
+    void beginEdit() {}
+
+    std::unique_ptr<jcmp::Knob> envDepth;
+    std::unique_ptr<PatchContinuous> envDepthD;
+    std::unique_ptr<jcmp::Label> envDepthLL;
+
+    std::unique_ptr<jcmp::Knob> lfoDep;
+    std::unique_ptr<PatchContinuous> lfoDepD;
+    std::unique_ptr<jcmp::Label> lfoDepL;
+
+    std::unique_ptr<RuledLabel> depTitle;
+
+    std::unique_ptr<jcmp::MultiSwitch> envMul;
+    std::unique_ptr<PatchDiscrete> envMulD;
+
+    void setEnabledState();
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MIXER_SUB_PANE_H

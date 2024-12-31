@@ -76,7 +76,8 @@ struct Patch
           selfNodes(scpu::make_array_bind_first_index<SelfNode, numOps>()),
           matrixNodes(scpu::make_array_bind_first_index<MatrixNode, matrixSize>()),
           mixerNodes(scpu::make_array_bind_first_index<MixerNode, numOps>()),
-          macroNodes(scpu::make_array_bind_first_index<MacroNode, numMacros>())
+          macroNodes(scpu::make_array_bind_first_index<MacroNode, numMacros>()),
+          fineTuneMod("Fine Tune Mod", "Fine Tune", 0), mainPanMod("Main Pan Mod", "Main Pan", 1)
     {
         auto pushParams = [this](auto &from)
         {
@@ -101,6 +102,9 @@ struct Patch
         std::for_each(mixerNodes.begin(), mixerNodes.end(), pushParams);
         std::for_each(matrixNodes.begin(), matrixNodes.end(), pushParams);
         std::for_each(macroNodes.begin(), macroNodes.end(), pushParams);
+
+        pushParams(fineTuneMod);
+        pushParams(mainPanMod);
 
         std::sort(params.begin(), params.end(),
                   [](const Param *a, const Param *b)
@@ -203,7 +207,7 @@ struct Patch
 
     struct DAHDSRMixin
     {
-        DAHDSRMixin(const std::string name, int id0, bool longAdsr)
+        DAHDSRMixin(const std::string name, int id0, bool longAdsr, bool alwaysAdd = false)
             : delay(floatEnvRateMd()
                         .withName(name + " Env Delay")
                         .withGroupName(name)
@@ -271,7 +275,7 @@ struct Patch
               envIsMultiplcative(boolMd()
                                      .withName(name + " Env is Multiplicative")
                                      .withGroupName(name)
-                                     .withDefault(true)
+                                     .withDefault(!alwaysAdd)
                                      .withID(id0 + 11)
                                      .withUnorderedMapFormatting({{0, "Add"}, {1, "Scale"}}))
         {
@@ -819,6 +823,94 @@ struct Patch
         }
     };
 
+    struct ModulationOnlyNode : public DAHDSRMixin, public ModulationMixin, public LFOMixin
+    {
+        static constexpr uint32_t idBase{50000}, idStride{1000};
+
+        enum TargetID
+        {
+            SKIP = -1,
+            NONE = 0,
+            DIRECT = 10,
+            ENVDEP_DIR = 14,
+            LFODEP_DIR = 17,
+            DEPTH_ATTEN = 20,
+            LFO_DEPTH_ATTEN = 25,
+
+            ENV_ATTACK = 40,
+            LFO_RATE = 50
+        };
+
+        std::vector<std::pair<TargetID, std::string>> targetList{
+            {TargetID::NONE, "Off"},
+            {TargetID::SKIP, ""},
+            {TargetID::DIRECT, "TARGET"},
+            {TargetID::ENVDEP_DIR, "Env Depth"},
+            {TargetID::LFODEP_DIR, "LFO Depth"},
+            {TargetID::SKIP, ""},
+            {TargetID::DEPTH_ATTEN, "Env Atten"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFO Atten"},
+            {TargetID::SKIP, ""},
+            {TargetID::ENV_ATTACK, "Env Attack"},
+            {TargetID::LFO_RATE, "LFO Rate"}};
+
+        std::string opName;
+        ModulationOnlyNode(const std::string &n, const std::string &outn, int idx)
+            : opName(n), DAHDSRMixin(name(), id(0, idx), false, true),
+
+              ModulationMixin(name(), id(100, idx)),
+              modtarget(scpu::make_array_lambda<Param, numModsPer>(
+                  [this, idx](int i)
+                  {
+                      return md_t()
+                          .withName(name() + " Mod Target " + std::to_string(i))
+                          .withGroupName(name())
+                          .withRange(0, 2000)
+                          .withDefault(TargetID::NONE)
+                          .withID(id(200 + i, idx));
+                  })),
+              LFOMixin(name(), id(300, idx)), lfoDepth(floatMd()
+                                                           .asPercentBipolar()
+                                                           .withName(name() + " LFO Depth")
+                                                           .withGroupName(name())
+                                                           .withDefault(0)
+                                                           .withID(id(400, idx))),
+              envDepth(floatMd()
+                           .asPercentBipolar()
+                           .withName(name() + " Env Depth")
+                           .withGroupName(name())
+                           .withID(id(401, idx))
+                           .withDefault(0.f))
+
+        {
+            for (auto &[id, n] : targetList)
+            {
+                if (id == TargetID::DIRECT)
+                    n = outn;
+            }
+        }
+
+        std::string name() const { return opName; }
+        uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
+
+        Param lfoDepth, envDepth;
+
+        std::array<Param, numModsPer> modtarget;
+
+        std::vector<Param *> params()
+        {
+            std::vector<Param *> res{&lfoDepth, &envDepth};
+            appendDAHDSRParams(res);
+
+            for (int i = 0; i < numModsPer; ++i)
+                res.push_back(&modtarget[i]);
+            appendModulationParams(res);
+            appendLFOParams(res);
+
+            return res;
+        }
+    };
+
     struct OutputNode : public DAHDSRMixin, public ModulationMixin, public LFOMixin
     {
         static constexpr uint32_t idBase{500};
@@ -1022,6 +1114,8 @@ struct Patch
     std::array<MixerNode, numOps> mixerNodes;
     std::array<MacroNode, numMacros> macroNodes;
     OutputNode output;
+
+    ModulationOnlyNode fineTuneMod, mainPanMod;
 
     void resetToInit();
     std::string toState() const;

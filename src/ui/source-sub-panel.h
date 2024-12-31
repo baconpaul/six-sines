@@ -67,6 +67,7 @@ struct SourceSubPanel : juce::Component,
 
     std::unique_ptr<jcmp::HSliderFilled> startingPhase;
     std::unique_ptr<PatchContinuous> startingPhaseD;
+    std::unique_ptr<jcmp::Label> startingPhaseL;
 
     std::unique_ptr<jcmp::JogUpDownButton> tsposeButton;
     std::unique_ptr<PatchDiscrete> tsposeButtonD;

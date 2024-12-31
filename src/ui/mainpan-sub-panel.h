@@ -24,20 +24,29 @@
 
 namespace baconpaul::six_sines::ui
 {
-struct MainPanSubPanel : juce::Component, HasEditor
-// DAHDSRComponents<MixerSubPanel, Patch::MixerNode>,
-// LFOComponents<MixerSubPanel, Patch::MixerNode>,
-// ModulationComponents<MixerSubPanel, Patch::MixerNode>
+struct MainPanSubPanel : juce::Component,
+                         HasEditor,
+                         DAHDSRComponents<MainPanSubPanel, Patch::ModulationOnlyNode>,
+                         LFOComponents<MainPanSubPanel, Patch::ModulationOnlyNode>,
+                         ModulationComponents<MainPanSubPanel, Patch::ModulationOnlyNode>
 {
-    MainPanSubPanel(SixSinesEditor &e) : HasEditor(e) {}
+    MainPanSubPanel(SixSinesEditor &e);
     ~MainPanSubPanel() = default;
 
-    void paint(juce::Graphics &g)
-    {
-        g.setColour(juce::Colours::white);
-        g.setFont(juce::FontOptions(40));
-        g.drawText("Main Pan Screen Soon", getLocalBounds(), juce::Justification::centred);
-    }
+    void resized() override;
+    void beginEdit() {}
+
+    std::unique_ptr<jcmp::Knob> envDepth;
+    std::unique_ptr<PatchContinuous> envDepthD;
+    std::unique_ptr<jcmp::Label> envDepthLL;
+
+    std::unique_ptr<jcmp::Knob> lfoDep;
+    std::unique_ptr<PatchContinuous> lfoDepD;
+    std::unique_ptr<jcmp::Label> lfoDepL;
+
+    std::unique_ptr<RuledLabel> depTitle;
+
+    void setEnabledState();
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MIXER_SUB_PANE_H

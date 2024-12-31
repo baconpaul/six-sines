@@ -123,7 +123,7 @@ template <typename T> struct EnvelopeSupport
         else
             memset(env.outputCache, 0, sizeof(env.outputCache));
     }
-    void envProcess(bool maxIsForever = true)
+    void envProcess(bool maxIsForever = true, bool needsCurve = true)
     {
         if (!active || constantEnv)
             return;
@@ -158,12 +158,14 @@ template <typename T> struct EnvelopeSupport
                 }
             }
             env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, 0.f, 1.f), hold, decay,
-                                      sustain, release, ash, dsh, rsh, !voiceValues.gated, true);
+                                      sustain, release, ash, dsh, rsh, !voiceValues.gated,
+                                      needsCurve);
         }
         else
         {
             env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, 0.f, 1.f), hold, decay,
-                                      sustain, release, ash, dsh, rsh, voiceValues.gated, true);
+                                      sustain, release, ash, dsh, rsh, voiceValues.gated,
+                                      needsCurve);
         }
     }
 

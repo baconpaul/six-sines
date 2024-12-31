@@ -31,6 +31,8 @@ struct PatchContinuous : jdat::Continuous
     SixSinesEditor &editor;
     uint32_t pid;
     Param *p{nullptr};
+    std::function<void()> onGuiSetValue{nullptr};
+
     PatchContinuous(SixSinesEditor &e, uint32_t id) : editor(e), pid(id)
     {
         if (e.patchCopy.paramMap.find(id) == e.patchCopy.paramMap.end())
@@ -87,6 +89,9 @@ struct PatchContinuous : jdat::Continuous
         editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pid, f});
         editor.flushOperator();
         editor.updateTooltip(this);
+
+        if (onGuiSetValue)
+            onGuiSetValue();
     }
     void setValueFromModel(const float &f) override { p->value = f; }
     float getDefaultValue() const override { return p->meta.defaultVal; }
