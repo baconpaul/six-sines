@@ -25,14 +25,15 @@ SourceSubPanel::~SourceSubPanel() {}
 
 struct WavPainter : juce::Component
 {
-    const Param &wf;
+    const Param &wf, &ph;
     SinTable st;
-    WavPainter(const Param &w) : wf(w) {}
+    WavPainter(const Param &w, const Param &p) : wf(w), ph(p) {}
 
     void paint(juce::Graphics &g)
     {
         st.setWaveForm((SinTable::WaveForm)std::round(wf.value));
         uint32_t phase{0};
+        phase += (1 << 26) * ph.value;
         int nPixels{getWidth()};
         auto dPhase = (1 << 26) / (nPixels - 1);
         auto p = juce::Path();
@@ -90,9 +91,13 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
 
     createComponent(editor, *this, sn.waveForm, wavButton, wavButtonD);
     addAndMakeVisible(*wavButton);
-    wavButtonD->onGuiSetValue = [this]() { wavPainter->repaint(); };
+    wavButtonD->onGuiSetValue = [this]()
+    {
+        wavPainter->repaint();
+        wavButton->repaint();
+    };
 
-    wavPainter = std::make_unique<WavPainter>(sn.waveForm);
+    wavPainter = std::make_unique<WavPainter>(sn.waveForm, sn.startingPhase);
     addAndMakeVisible(*wavPainter);
 
     keyTrackTitle = std::make_unique<RuledLabel>();
@@ -109,6 +114,15 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     keyTrackValueLL->setText("f @ r=1");
     addAndMakeVisible(*keyTrackValueLL);
 
+    createComponent(editor, *this, sn.startingPhase, startingPhase, startingPhaseD);
+    addAndMakeVisible(*startingPhase);
+    /*
+     startingPhaseD->onGuiSetValue = [this]()
+    {
+        wavPainter->repaint();
+        wavButton->repaint();
+    };
+    */
     auto op = [w = juce::Component::SafePointer(this)]()
     {
         if (w)
@@ -146,9 +160,10 @@ void SourceSubPanel::resized()
     positionTitleLabelAt(depx, depy, uicKnobSize * 2 + uicMargin, wavTitle);
     depy += uicTitleLabelHeight;
     wavButton->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight);
-
     depy += uicLabelHeight + uicMargin;
-    wavPainter->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight * 2.5);
+    startingPhase->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight - uicMargin);
+    depy += uicLabelHeight;
+    wavPainter->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight * 1.8);
 
     depx += 2 * uicKnobSize + 3 * uicMargin;
     depy = r.getY();

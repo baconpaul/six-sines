@@ -288,21 +288,19 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan, &lfoMulV;
+    const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan;
     bool active{false}, lfoMul{false};
 
     MixerNode(const Patch::MixerNode &mn, OpSource &f, MonoValues &mv, const VoiceValues &vv)
         : mixerNode(mn), monoValues(mv), voiceValues(vv), sr(mv), from(f), pan(mn.pan),
           level(mn.level), activeF(mn.active), lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan),
-          EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv), ModulationSupport(mn, mv, vv),
-          lfoMulV(mn.envLfoSum)
+          EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv), ModulationSupport(mn, mv, vv)
     {
         memset(output, 0, sizeof(output));
     }
 
     void attack()
     {
-        lfoMul = lfoMulV > 0.5;
         active = activeF > 0.5;
         memset(output, 0, sizeof(output));
         if (active)

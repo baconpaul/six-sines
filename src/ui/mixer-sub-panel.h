@@ -40,9 +40,6 @@ struct MixerSubPanel : juce::Component,
     size_t index{0};
     void setSelectedIndex(int i);
 
-    std::unique_ptr<jcmp::MultiSwitch> lfoMul;
-    std::unique_ptr<PatchDiscrete> lfoMulD;
-
     std::unique_ptr<jcmp::Knob> lfoToLevel;
     std::unique_ptr<PatchContinuous> lfoToLevelD;
     std::unique_ptr<jcmp::Label> lfoToLevelL;

@@ -7,18 +7,26 @@ ANDREYA BUG LIST
 ------
   so then it is
 
-Env Plus/Mul
-LFO is enveloped or not
+Env Plus/Mul (envIsMultiplactive)
+LFO is enveloped or not  (lfoIsEnveloped)
 
 Env Depth (gray out if env is Mul)
 LFO Depth
 
 are the 5 controls we need for each 'nubbin'
+
+With that in mind review
+- Ratio
+- Self
+- FromTo
+- Mixer
+- Main
 -----
 
 
 GENERAL AND CLEANUPS
 - Temposync Labels screwed
+- Triangle Waveform
 - Per operator octave
 - Windows HPDI
 - Screen Reader Check
@@ -39,6 +47,8 @@ THINGS I DIDNT GET TO FOR 1.0
 - CLAP PolyMod
 - Global tuning other than octave transpose
 - A main LFO
+- Negative Feedback
+- Solo Oscillators in the mixer
 
 
 JACKY IDEAS

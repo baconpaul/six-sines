@@ -45,7 +45,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     bool keytrack{true};
     const float &ratio, &activeV, &envToRatio, &lfoToRatio, &lfoByEnv; // in  frequency multiple
-    const float &waveForm, &kt, &ktv;
+    const float &waveForm, &kt, &ktv, &startPhase;
     bool active{false};
 
     // todo waveshape
@@ -57,7 +57,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         : sourceNode(sn), monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv),
           LFOSupport(sn, mv), ModulationSupport(sn, mv, vv), ratio(sn.ratio), activeV(sn.active),
           envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio), lfoByEnv(sn.envLfoSum),
-          waveForm(sn.waveForm), kt(sn.keyTrack), ktv(sn.keyTrackValue)
+          waveForm(sn.waveForm), kt(sn.keyTrack), ktv(sn.keyTrackValue),
+          startPhase(sn.startingPhase)
     {
         reset();
     }
@@ -79,6 +80,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             {
                 phase += monoValues.rng.unifU32() & ((1 << 27) - 1);
             }
+            phase += (1 << 26) * (startPhase + phaseMod);
             fbVal[0] = 0.f;
             fbVal[1] = 0.f;
             auto wf = (SinTable::WaveForm)std::round(waveForm);
@@ -116,6 +118,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     float ratioMod{0.f};
     float envRatioAtten{1.0};
     float lfoRatioAtten{1.0};
+    float phaseMod{0.f};
 
     float priorRF{-10000000};
     void renderBlock()
@@ -167,6 +170,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         ratioMod = 0.f;
         attackMod = 0.f;
         rateMod = 0.f;
+        phaseMod = 0.f;
 
         if (!anySources)
             return;
@@ -185,6 +189,9 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                 {
                 case Patch::SourceNode::DIRECT:
                     ratioMod += d * *sourcePointers[i] * 2;
+                    break;
+                case Patch::SourceNode::STARTING_PHASE:
+                    phaseMod += d * *sourcePointers[i];
                     break;
                 case Patch::SourceNode::ENV_DEPTH_ATTEN:
                     envRatioAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));

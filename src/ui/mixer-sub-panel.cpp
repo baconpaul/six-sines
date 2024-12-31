@@ -32,10 +32,6 @@ void MixerSubPanel::setSelectedIndex(int idx)
     setupLFO(editor, sn);
     setupModulation(editor, sn);
 
-    createComponent(editor, *this, sn.envLfoSum, lfoMul, lfoMulD);
-    addAndMakeVisible(*lfoMul);
-    lfoMul->direction = jcmp::MultiSwitch::VERTICAL;
-
     createComponent(editor, *this, sn.lfoToLevel, lfoToLevel, lfoToLevelD);
     addAndMakeVisible(*lfoToLevel);
     lfoToLevelL = std::make_unique<jcmp::Label>();
@@ -56,10 +52,7 @@ void MixerSubPanel::resized()
     auto p = getLocalBounds().reduced(uicMargin, 0);
     auto pn = layoutDAHDSRAt(p.getX(), p.getY());
     auto gh = (pn.getHeight() - 2 * uicPowerButtonSize) / 2;
-    lfoMul->setBounds(pn.getX() + uicMargin, pn.getY() + gh, uicPowerButtonSize,
-                      2 * uicPowerButtonSize);
-    pn = pn.translated(2 * uicMargin + uicPowerButtonSize, 0);
-    auto r = layoutLFOAt(pn.getX(), p.getY(), uicMargin + uicKnobSize);
+    auto r = layoutLFOAt(pn.getX() + uicMargin, p.getY(), uicMargin + uicKnobSize);
 
     positionKnobAndLabel(r.getX() - uicKnobSize, r.getY() + uicTitleLabelHeight, lfoToLevel,
                          lfoToLevelL);

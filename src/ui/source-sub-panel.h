@@ -18,6 +18,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "sst/jucegui/components/JogUpDownButton.h"
+#include "sst/jucegui/components/HSliderFilled.h"
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
 #include "lfo-components.h"
@@ -66,6 +67,9 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::Knob> keyTrackValue;
     std::unique_ptr<PatchContinuous> keyTrackValueD;
     std::unique_ptr<jcmp::Label> keyTrackValueLL;
+
+    std::unique_ptr<jcmp::HSliderFilled> startingPhase;
+    std::unique_ptr<PatchContinuous> startingPhaseD;
 
     void setEnabledState();
 };

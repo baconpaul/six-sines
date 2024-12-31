@@ -178,7 +178,8 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     const T &paramBundle;
     const MonoValues &monoValues;
 
-    const float &lfoRate, &lfoDeform, &lfoShape, &lfoActiveV, &tempoSyncV, &bipolarV;
+    const float &lfoRate, &lfoDeform, &lfoShape, &lfoActiveV, &tempoSyncV, &bipolarV,
+        &lfoIsEnvelopedV;
     bool active, doSmooth{false};
     using lfo_t = sst::basic_blocks::modulators::SimpleLFO<SRProvider, blockSize>;
     lfo_t lfo;
@@ -187,7 +188,7 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     LFOSupport(const T &mn, MonoValues &mv)
         : sr(mv), paramBundle(mn), lfo(&sr, mv.rng), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform),
           lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive), tempoSyncV(mn.tempoSync), monoValues(mv),
-          bipolarV(mn.lfoBipolar)
+          bipolarV(mn.lfoBipolar), lfoIsEnvelopedV(mn.lfoIsEnveloped)
     {
     }
 
@@ -196,10 +197,12 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     int shape;
     bool tempoSync{false};
     bool bipolar{true};
+    bool lfoIsEnveloped{false};
     void lfoAttack()
     {
         tempoSync = tempoSyncV > 0.5;
         bipolar = bipolarV > 0.5;
+        lfoIsEnveloped = lfoIsEnvelopedV > 0.5;
         shape = static_cast<int>(std::round(lfoShape));
 
         lfo.attack(shape);

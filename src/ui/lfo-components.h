@@ -63,6 +63,11 @@ template <typename Comp, typename Patch> struct LFOComponents
         bipolar->setLabel("Bipolar");
         c->addAndMakeVisible(*bipolar);
 
+        createComponent(e, *c, v.lfoIsEnveloped, isEnv, isEnvD);
+        isEnv->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
+        isEnv->setLabel("* Env");
+        c->addAndMakeVisible(*isEnv);
+
         rateD->setTemposyncPowerPartner(tempoSyncD.get());
     }
 
@@ -79,10 +84,15 @@ template <typename Comp, typename Patch> struct LFOComponents
 
         positionTitleLabelAt(x, y, w + uicMargin + uicKnobSize + extraWidth, titleLab);
 
-        auto bx = juce::Rectangle<int>(x, y + lh, w, h - lh);
-        shape->setBounds(bx.withHeight(2 * uicLabeledKnobHeight - uicMargin - lh));
-        tempoSync->setBounds(bx.withTrimmedTop(2 * uicLabeledKnobHeight - lh).withHeight(lh));
-        bipolar->setBounds(bx.withTrimmedTop(2 * uicLabeledKnobHeight + uicMargin).withHeight(lh));
+        auto shapeH = 2 * uicLabeledKnobHeight - uicMargin - lh + 5;
+        auto bx = juce::Rectangle<int>(x, y + uicTitleLabelHeight, w, h - lh);
+        shape->setBounds(bx.withHeight(shapeH));
+        tempoSync->setBounds(bx.withTrimmedTop(shapeH + uicMargin).withHeight(lh));
+        bipolar->setBounds(bx.withTrimmedTop(shapeH + 2 * uicMargin + lh).withHeight(lh));
+        isEnv->setBounds(bx.withTrimmedTop(shapeH + 2 * uicMargin + lh)
+                             .withHeight(lh)
+                             .translated(w + uicMargin, 0)
+                             .withWidth(uicKnobSize));
 
         bx = bx.translated(w + uicMargin, 0);
         positionKnobAndLabel(bx.getX(), bx.getY(), rate, rateL);
@@ -106,6 +116,9 @@ template <typename Comp, typename Patch> struct LFOComponents
 
     std::unique_ptr<jcmp::ToggleButton> bipolar;
     std::unique_ptr<PatchDiscrete> bipolarD;
+
+    std::unique_ptr<jcmp::ToggleButton> isEnv;
+    std::unique_ptr<PatchDiscrete> isEnvD;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // LFO_COMPONENTS_H

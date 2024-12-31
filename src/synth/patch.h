@@ -179,11 +179,16 @@ struct Patch
                              .withDefault(true)
                              .withID(id0 + 6)
                              .withName(name + " Bipolar")
-                             .withGroupName(name))
+                             .withGroupName(name)),
+              lfoIsEnveloped(boolMd()
+                                 .withDefault(false)
+                                 .withID(id0 + 7)
+                                 .withName(name + " Is Enveloped")
+                                 .withGroupName(name))
         {
         }
 
-        Param lfoRate, lfoDeform, lfoShape, lfoActive, tempoSync, lfoBipolar;
+        Param lfoRate, lfoDeform, lfoShape, lfoActive, tempoSync, lfoBipolar, lfoIsEnveloped;
 
         void appendLFOParams(std::vector<Param *> &res)
         {
@@ -192,6 +197,7 @@ struct Patch
             res.push_back(&lfoShape);
             res.push_back(&tempoSync);
             res.push_back(&lfoBipolar);
+            res.push_back(&lfoIsEnveloped);
         }
     };
 
@@ -261,7 +267,12 @@ struct Patch
                               .withUnorderedMapFormatting({{0, "Gate Start"},
                                                            {1, "Voice Start"},
                                                            {3, "Key Press"},
-                                                           {2, "Patch Default"}}))
+                                                           {2, "Patch Default"}})),
+              envIsMultiplcative(boolMd()
+                                     .withName(name + " Env is Multiplicative")
+                                     .withGroupName(name)
+                                     .withDefault(true)
+                                     .withID(id0 + 11))
 
         {
             delay.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
@@ -274,7 +285,7 @@ struct Patch
         }
 
         Param delay, attack, hold, decay, sustain, release, envPower;
-        Param aShape, dShape, rShape, triggerMode;
+        Param aShape, dShape, rShape, triggerMode, envIsMultiplcative;
 
         void appendDAHDSRParams(std::vector<Param *> &res)
         {
@@ -289,6 +300,7 @@ struct Patch
             res.push_back(&dShape);
             res.push_back(&rShape);
             res.push_back(&triggerMode);
+            res.push_back(&envIsMultiplcative);
         }
     };
 
@@ -340,6 +352,7 @@ struct Patch
             SKIP = -1,
             NONE = 0,
             DIRECT = 10,
+            STARTING_PHASE = 15,
             ENV_DEPTH_ATTEN = 20,
             LFO_DEPTH_ATTEN = 30,
 
@@ -351,6 +364,7 @@ struct Patch
             {TargetID::NONE, "Off"},
             {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Ratio"},
+            {TargetID::STARTING_PHASE, "Phase"},
             {TargetID::ENV_DEPTH_ATTEN, "Env Sens"},
             {TargetID::LFO_DEPTH_ATTEN, "LFO Sens"},
             {TargetID::SKIP, ""},
@@ -427,6 +441,12 @@ struct Patch
                                 .withRange(-70, 70)
                                 .withSemitoneZeroAt400Formatting()
                                 .withID(id(7, idx))),
+              startingPhase(floatMd()
+                                .withName(name(idx) + " Phase")
+                                .withGroupName(name(idx))
+                                .asPercent()
+                                .withDefault(0)
+                                .withID(id(8, idx))),
               DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx)),
               ModulationMixin(name(idx), id(150, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
@@ -439,6 +459,7 @@ struct Patch
                           .withDefault(TargetID::NONE)
                           .withID(id(160 + i, idx));
                   }))
+
         {
         }
 
@@ -456,12 +477,15 @@ struct Patch
 
         Param keyTrack, keyTrackValue;
 
+        Param startingPhase;
+
         std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&ratio,     &active,   &envToRatio, &lfoToRatio,
-                                     &envLfoSum, &waveForm, &keyTrack,   &keyTrackValue};
+            std::vector<Param *> res{&ratio,      &active,        &envToRatio,
+                                     &lfoToRatio, &envLfoSum,     &waveForm,
+                                     &keyTrack,   &keyTrackValue, &startingPhase};
             for (int i = 0; i < numModsPer; ++i)
                 res.push_back(&modtarget[i]);
             appendDAHDSRParams(res);
@@ -729,13 +753,6 @@ struct Patch
                            .withGroupName(name(idx))
                            .withID(id(41, idx))
                            .withDefault(0)),
-              envLfoSum(intMd()
-                            .withName(name(idx) + " LFO Env Sum")
-                            .withGroupName(name(idx))
-                            .withID(id(42, idx))
-                            .withRange(0, 1)
-                            .withDefault(0)
-                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}})),
               ModulationMixin(name(idx), id(50, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
@@ -754,13 +771,13 @@ struct Patch
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Mixer"; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
-        Param level, pan, lfoToLevel, lfoToPan, envLfoSum;
+        Param level, pan, lfoToLevel, lfoToPan;
         Param active;
         std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &active, &pan, &lfoToLevel, &lfoToPan, &envLfoSum};
+            std::vector<Param *> res{&level, &active, &pan, &lfoToLevel, &lfoToPan};
             appendDAHDSRParams(res);
             appendLFOParams(res);
 
