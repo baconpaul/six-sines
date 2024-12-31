@@ -20,7 +20,7 @@ went and make a sort of todo-list of why it was hard to build a synth. This incl
 insights into the sst- libraries and the clap-wrapper
 2. Another indie audio dev, who asked to not be named here in case this sucks, which it doesn't I dont think,
 said to a group of users in a discord in an offhand way something like "the least commercially viable thing is
-a 6 op fill matrix pure FM synth". So my response was 1. implement one, 2. give it away, 3 ???, 4. you know the meme.
+a 6 op full matrix pure FM synth". So my response was 1. implement one, 2. give it away, 3 ???, 4. you know the meme.
 
 4. It seemed fun, and I thought some people would download it.
 5. It had been in my head for a while and I wanted to hear how it sounded
