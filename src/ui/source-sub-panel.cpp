@@ -126,7 +126,6 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     };
     keyTrackD->onGuiSetValue = op;
     editor.componentRefreshByID[sn.keyTrack.meta.id] = op;
-    setEnabledState();
 
     createComponent(editor, *this, sn.octTranspose, tsposeButton, tsposeButtonD);
     addAndMakeVisible(*tsposeButton);
@@ -134,6 +133,8 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     tsposeButtonL = std::make_unique<RuledLabel>();
     tsposeButtonL->setText("Octave");
     addAndMakeVisible(*tsposeButtonL);
+
+    setEnabledState();
 
     resized();
 }
@@ -177,7 +178,6 @@ void SourceSubPanel::resized()
     positionKnobAndLabel(depx + xtraW, bbx.getY(), keyTrackValue, keyTrackValueLL);
 
     depy = bbx.getY() + uicLabeledKnobHeight + uicMargin;
-    ;
     positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, tsposeButtonL);
     depy += uicTitleLabelHeight;
     tsposeButton->setBounds(depx, depy, uicKnobSize + 2 * xtraW, uicLabelHeight);
@@ -190,6 +190,7 @@ void SourceSubPanel::setEnabledState()
     auto ekt = sn.keyTrack.value < 0.5;
     keyTrackValue->setEnabled(ekt);
     keyTrackValueLL->setEnabled(ekt);
+    tsposeButton->setEnabled(!ekt);
     repaint();
 }
 
