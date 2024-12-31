@@ -59,7 +59,7 @@ void MainSubPanel::resized()
 
     depy += uicTitleLabelHeight;
     positionKnobAndLabel(depx + xtraW, depy, velSen, velSenL);
-    depy += uicLabeledKnobHeight;
+    depy += uicLabeledKnobHeight + uicMargin;
     positionKnobAndLabel(depx + xtraW, depy, lfoDep, lfoDepL);
 
     layoutModulation(p);

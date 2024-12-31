@@ -25,7 +25,7 @@ namespace baconpaul::six_sines
 namespace scpu = sst::cpputils;
 
 Voice::Voice(const Patch &p, MonoValues &mv)
-    : monoValues(mv), out(p.output, mixerNode, mv, voiceValues),
+    : monoValues(mv), out(p.output, p.mainPanMod, p.fineTuneMod, mixerNode, mv, voiceValues),
       output{out.output[0], out.output[1]},
       src(scpu::make_array_lambda<OpSource, numOps>(
           [this, &p, &mv](auto i) { return OpSource(p.sourceNodes[i], mv, voiceValues); })),
@@ -71,7 +71,7 @@ void Voice::renderBlock()
     }
     retuneKey += ((monoValues.pitchBend >= 0) ? out.bendUp : out.bendDown) * monoValues.pitchBend;
     retuneKey += voiceValues.portaDiff * voiceValues.portaSign + voiceValues.mpeBendInSemis;
-    retuneKey += out.fineTune * 0.01;
+    retuneKey += out.fineTune * 0.01 + out.ftModNode.level * 2;
 
     if (voiceValues.portaDiff > 1e-5)
         voiceValues.portaDiff -= voiceValues.dPorta;

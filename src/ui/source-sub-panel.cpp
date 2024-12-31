@@ -112,13 +112,17 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
 
     createComponent(editor, *this, sn.startingPhase, startingPhase, startingPhaseD);
     addAndMakeVisible(*startingPhase);
-    /*
-     startingPhaseD->onGuiSetValue = [this]()
+    startingPhaseD->onGuiSetValue = [w = juce::Component::SafePointer(this)]()
     {
-        wavPainter->repaint();
-        wavButton->repaint();
+        if (!w)
+            return;
+        w->wavPainter->repaint();
     };
-    */
+
+    startingPhaseL = std::make_unique<jcmp::Label>();
+    startingPhaseL->setText(std::string() + u8"\U000003C6");
+    addAndMakeVisible(*startingPhaseL);
+
     auto op = [w = juce::Component::SafePointer(this)]()
     {
         if (w)
@@ -163,7 +167,11 @@ void SourceSubPanel::resized()
     depy += uicTitleLabelHeight;
     wavButton->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight);
     depy += uicLabelHeight + uicMargin;
-    startingPhase->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight - uicMargin);
+    int plw{14};
+    startingPhaseL->setBounds(depx, depy - uicMargin / 2, plw, uicLabelHeight - uicMargin);
+
+    startingPhase->setBounds(depx + plw, depy, uicKnobSize * 2 + uicMargin - plw,
+                             uicLabelHeight - uicMargin);
     depy += uicLabelHeight;
     wavPainter->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight * 1.8);
 
