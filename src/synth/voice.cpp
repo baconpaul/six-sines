@@ -167,7 +167,9 @@ void Voice::retriggerAllEnvelopesForReGate()
         if (tm == ON_RELEASE)
             return false;
 
-        // DTM can only be key or gate and both will trigger here
+        if (tm == PATCH_DEFAULT && dtm == NEW_VOICE)
+            return false;
+
         return (tm != TriggerMode::NEW_VOICE);
     };
 

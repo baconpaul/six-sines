@@ -252,7 +252,8 @@ void PlayModeSubPanel::showTriggerButtonMenu()
     auto p = juce::PopupMenu();
     p.addSectionHeader("Default Trigger Mode");
     p.addSeparator();
-    for (int g : {(int)TriggerMode::KEY_PRESS, (int)TriggerMode::NEW_GATE})
+    for (int g :
+         {(int)TriggerMode::KEY_PRESS, (int)TriggerMode::NEW_GATE, (int)TriggerMode::NEW_VOICE})
     {
         p.addItem(TriggerModeName[g], true, tmv == g, genSet(g));
     }
