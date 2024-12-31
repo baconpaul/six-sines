@@ -235,10 +235,13 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     void lfoProcess()
     {
         auto rate = lfoRate;
-        if (tempoSync)
-            rate = -monoValues.tempoSyncRatio * paramBundle.lfoRate.meta.snapToTemposync(-rate);
 
-        lfo.process_block(rate + rateMod, lfoDeform, shape);
+        if (tempoSync)
+        {
+            rate = -paramBundle.lfoRate.meta.snapToTemposync(-rate);
+        }
+
+        lfo.process_block(rate + rateMod, lfoDeform, shape, false, monoValues.tempoSyncRatio);
 
         if (doSmooth)
         {
