@@ -443,7 +443,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &level, &velSen, &bendUp, &bendDown, &octTranspose;
+    const float &level, &velSen, &bendUp, &bendDown, &octTranspose, &pan, &fineTune;
     const float &defTrigV;
     TriggerMode defaultTrigger;
 
@@ -452,7 +452,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
         : outputNode(on), ModulationSupport(on, mv, vv), monoValues(mv), voiceValues(vv), sr(mv),
           fromArr(f), level(on.level), bendUp(on.bendUp), bendDown(on.bendDown),
           octTranspose(on.octTranspose), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),
-          defTrigV(on.defaultTrigger)
+          defTrigV(on.defaultTrigger), pan(on.pan), fineTune(on.fineTune)
     {
         memset(output, 0, sizeof(output));
         allowVoiceTrigger = false;
@@ -487,7 +487,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
         lv = 0.15 * std::clamp(v * lv * lv * lv, 0.f, 1.f);
         mech::scale_by<blockSize>(lv, output[0], output[1]);
 
-        auto pn = panMod;
+        auto pn = panMod + pan;
         if (pn != 0.f)
         {
             pn = (pn + 1) * 0.5;

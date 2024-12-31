@@ -952,7 +952,7 @@ struct Patch
               fineTune(floatMd()
                            .withName(name() + " Fine Tuning")
                            .withGroupName(name())
-                           .withRange(-500, 500)
+                           .withRange(-200, 200)
                            .withDefault(0)
                            .withLinearScaleFormatting("cents")
                            .withID(id(36))),
