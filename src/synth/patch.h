@@ -403,13 +403,6 @@ struct Patch
                              .withDecimalPlaces(4)
                              .withDefault(0.f)
                              .withID(id(3, idx))),
-              envLfoSum(intMd()
-                            .withName(name(idx) + " LFO Env Sum")
-                            .withGroupName(name(idx))
-                            .withID(id(4, idx))
-                            .withRange(0, 1)
-                            .withDefault(0)
-                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}})),
               waveForm(
                   intMd()
                       .withName(name(idx) + " Waveform")
@@ -447,6 +440,13 @@ struct Patch
                                 .asPercent()
                                 .withDefault(0)
                                 .withID(id(8, idx))),
+              octTranspose(intMd()
+                               .withName(name(idx) + " Octave Transpose")
+                               .withGroupName(name(idx))
+                               .withRange(-3, 3)
+                               .withDefault(0)
+                               .withID(id(9, idx))),
+
               DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx)),
               ModulationMixin(name(idx), id(150, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
@@ -471,21 +471,20 @@ struct Patch
 
         Param envToRatio;
         Param lfoToRatio;
-        Param envLfoSum;
 
         Param waveForm;
 
         Param keyTrack, keyTrackValue;
 
-        Param startingPhase;
+        Param startingPhase, octTranspose;
 
         std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&ratio,      &active,        &envToRatio,
-                                     &lfoToRatio, &envLfoSum,     &waveForm,
-                                     &keyTrack,   &keyTrackValue, &startingPhase};
+            std::vector<Param *> res{&ratio,         &active,        &envToRatio,
+                                     &lfoToRatio,    &waveForm,      &keyTrack,
+                                     &keyTrackValue, &startingPhase, &octTranspose};
             for (int i = 0; i < numModsPer; ++i)
                 res.push_back(&modtarget[i]);
             appendDAHDSRParams(res);

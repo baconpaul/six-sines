@@ -77,10 +77,6 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     lfoToRatioL->setText("LFO");
     addAndMakeVisible(*lfoToRatioL);
 
-    createComponent(editor, *this, sn.envLfoSum, lfoMul, lfoMulD);
-    addAndMakeVisible(*lfoMul);
-    lfoMul->direction = jcmp::MultiSwitch::VERTICAL;
-
     modTitle = std::make_unique<RuledLabel>();
     modTitle->setText("Depth");
     addAndMakeVisible(*modTitle);
@@ -132,6 +128,13 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     editor.componentRefreshByID[sn.keyTrack.meta.id] = op;
     setEnabledState();
 
+    createComponent(editor, *this, sn.octTranspose, tsposeButton, tsposeButtonD);
+    addAndMakeVisible(*tsposeButton);
+
+    tsposeButtonL = std::make_unique<RuledLabel>();
+    tsposeButtonL->setText("Octave");
+    addAndMakeVisible(*tsposeButtonL);
+
     resized();
 }
 
@@ -140,9 +143,7 @@ void SourceSubPanel::resized()
     auto p = getLocalBounds().reduced(uicMargin, 0);
     auto pn = layoutDAHDSRAt(p.getX(), p.getY());
     auto gh = (pn.getHeight() - 2 * uicPowerButtonSize) / 2;
-    lfoMul->setBounds(pn.getX() + uicMargin, pn.getY() + gh, uicPowerButtonSize,
-                      2 * uicPowerButtonSize);
-    pn = pn.translated(2 * uicMargin + uicPowerButtonSize, 0);
+    pn = pn.translated(uicMargin, 0);
     auto r = layoutLFOAt(pn.getX(), p.getY());
 
     auto depx = r.getX() + 2 * uicMargin;
@@ -167,7 +168,7 @@ void SourceSubPanel::resized()
 
     depx += 2 * uicKnobSize + 3 * uicMargin;
     depy = r.getY();
-    auto xtraW = 4;
+    auto xtraW = 8;
     positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, keyTrackTitle);
     depy += uicLabelHeight + uicMargin;
     auto bbx = juce::Rectangle<int>(depx, depy, uicKnobSize + 2 * xtraW, uicLabelHeight);
@@ -175,6 +176,11 @@ void SourceSubPanel::resized()
     bbx = bbx.translated(0, uicLabelHeight + 2 * uicMargin);
     positionKnobAndLabel(depx + xtraW, bbx.getY(), keyTrackValue, keyTrackValueLL);
 
+    depy = bbx.getY() + uicLabeledKnobHeight + uicMargin;
+    ;
+    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, tsposeButtonL);
+    depy += uicTitleLabelHeight;
+    tsposeButton->setBounds(depx, depy, uicKnobSize + 2 * xtraW, uicLabelHeight);
     layoutModulation(p);
 }
 

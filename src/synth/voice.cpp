@@ -89,7 +89,9 @@ void Voice::renderBlock()
             continue;
         }
         src[i].zeroInputs();
-        src[i].setBaseFrequency(baseFreq, octFac[octSh + 3]);
+        auto octPer = std::clamp((int)std::round(src[i].octTranspose), -3, 3);
+
+        src[i].setBaseFrequency(baseFreq, octFac[octSh + 3] * octFac[octPer + 3]);
         for (auto j = 0; j < i; ++j)
         {
             auto pos = MatrixIndex::positionForSourceTarget(j, i);

@@ -44,8 +44,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     const VoiceValues &voiceValues;
 
     bool keytrack{true};
-    const float &ratio, &activeV, &envToRatio, &lfoToRatio, &lfoByEnv; // in  frequency multiple
-    const float &waveForm, &kt, &ktv, &startPhase;
+    const float &ratio, &activeV, &envToRatio, &lfoToRatio;       // in  frequency multiple
+    const float &waveForm, &kt, &ktv, &startPhase, &octTranspose; // in octaves;
     bool active{false};
 
     // todo waveshape
@@ -56,9 +56,9 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     OpSource(const Patch::SourceNode &sn, MonoValues &mv, const VoiceValues &vv)
         : sourceNode(sn), monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv),
           LFOSupport(sn, mv), ModulationSupport(sn, mv, vv), ratio(sn.ratio), activeV(sn.active),
-          envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio), lfoByEnv(sn.envLfoSum),
-          waveForm(sn.waveForm), kt(sn.keyTrack), ktv(sn.keyTrackValue),
-          startPhase(sn.startingPhase)
+          envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio), waveForm(sn.waveForm),
+          kt(sn.keyTrack), ktv(sn.keyTrackValue), startPhase(sn.startingPhase),
+          octTranspose(sn.octTranspose)
     {
         reset();
     }
@@ -138,7 +138,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
         envProcess();
         lfoProcess();
-        auto lfoFac = lfoByEnv > 0.5 ? env.outputCache[blockSize - 1] : 1.f;
+        auto lfoFac = lfoIsEnveloped > 0.5 ? env.outputCache[blockSize - 1] : 1.f;
 
         auto rf = monoValues.twoToTheX.twoToThe(
             ratio + envRatioAtten * envToRatio * env.outputCache[blockSize - 1] +

@@ -15,11 +15,9 @@ LFO Depth
 
 are the 5 controls we need for each 'nubbin'
 
-With that in mind review
-- Ratio
+With that in mind review still
 - Self
 - FromTo
-- Mixer
 - Main
 -----
 

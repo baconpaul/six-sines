@@ -51,9 +51,6 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<PatchContinuous> lfoToRatioD;
     std::unique_ptr<jcmp::Label> lfoToRatioL;
 
-    std::unique_ptr<jcmp::MultiSwitch> lfoMul;
-    std::unique_ptr<PatchDiscrete> lfoMulD;
-
     std::unique_ptr<jcmp::JogUpDownButton> wavButton;
     std::unique_ptr<PatchDiscrete> wavButtonD;
 
@@ -70,6 +67,10 @@ struct SourceSubPanel : juce::Component,
 
     std::unique_ptr<jcmp::HSliderFilled> startingPhase;
     std::unique_ptr<PatchContinuous> startingPhaseD;
+
+    std::unique_ptr<jcmp::JogUpDownButton> tsposeButton;
+    std::unique_ptr<PatchDiscrete> tsposeButtonD;
+    std::unique_ptr<RuledLabel> tsposeButtonL;
 
     void setEnabledState();
 };
