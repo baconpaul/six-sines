@@ -18,10 +18,12 @@ from idea to loved plugin in November, and I thought hey can I do the same in De
 2. As I wrapped up 2024, I also wanted to take account of how well our project to factor code into libraries
 went and make a sort of todo-list of why it was hard to build a synth. This includes some 
 insights into the sst- libraries and the clap-wrapper
-2. Another india audio dev, who asked to not be named here in case this sucks, which it doesn't I dont think,
-said to a group of users in a discord "the most useless thing is a 6 op fill matrix pure FM synth".
-3. It seemed fun, and I thought some people would download it.
-4. It had been in my head for a while and I wanted to hear how it sounded
+2. Another indie audio dev, who asked to not be named here in case this sucks, which it doesn't I dont think,
+said to a group of users in a discord in an offhand way something like "the least commercially viable thing is
+a 6 op fill matrix pure FM synth". So my response was 1. implement one, 2. give it away, 3 ???, 4. you know the meme.
+
+4. It seemed fun, and I thought some people would download it.
+5. It had been in my head for a while and I wanted to hear how it sounded
 
 ## How to build this software
 
