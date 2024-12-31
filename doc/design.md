@@ -3,7 +3,6 @@ TODO BEFORE 1JAN2025
 
 ANDREYA BUG LIST
 - What Andreya really wants is a full feldge screen for main pan and tune. Fine.
-- Main -> play panel and an lfo on main
 
 
 GENERAL AND CLEANUPS

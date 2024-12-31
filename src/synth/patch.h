@@ -819,7 +819,7 @@ struct Patch
         }
     };
 
-    struct OutputNode : public DAHDSRMixin, public ModulationMixin
+    struct OutputNode : public DAHDSRMixin, public ModulationMixin, public LFOMixin
     {
         static constexpr uint32_t idBase{500};
 
@@ -830,19 +830,22 @@ struct Patch
             DIRECT = 10,
             PAN = 15,
             DEPTH_ATTEN = 20,
+            LFO_DEPTH_ATTEN = 25,
 
             ENV_ATTACK = 40,
+            LFO_RATE = 50
         };
 
         std::vector<std::pair<TargetID, std::string>> targetList{
             {TargetID::NONE, "Off"},
             {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Amplitude"},
-            {TargetID::DEPTH_ATTEN, "Env Sens"},
+            {TargetID::DEPTH_ATTEN, "Env Atten"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFO Atten"},
             {TargetID::PAN, "Pan"},
             {TargetID::SKIP, ""},
             {TargetID::ENV_ATTACK, "Env Attack"},
-        };
+            {TargetID::LFO_RATE, "LFO Rate"}};
 
         OutputNode()
             : DAHDSRMixin(name(), id(2), true), level(floatMd()
@@ -973,7 +976,13 @@ struct Patch
                           .withRange(0, 2000)
                           .withDefault(TargetID::NONE)
                           .withID(id(150 + i));
-                  }))
+                  })),
+              LFOMixin(name(), id(200)), lfoDepth(floatMd()
+                                                      .asPercentBipolar()
+                                                      .withName(name() + " LFO Depth")
+                                                      .withGroupName(name())
+                                                      .withDefault(0)
+                                                      .withID(id(220)))
         {
             defaultTrigger.adhocFeatures = Param::AdHocFeatureValues::TRIGGERMODE;
         }
@@ -985,7 +994,7 @@ struct Patch
         Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, pianoModeActive;
         Param unisonCount, unisonSpread, uniPhaseRand;
         Param mpeActive, mpeBendRange;
-        Param octTranspose, fineTune, pan;
+        Param octTranspose, fineTune, pan, lfoDepth;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -995,12 +1004,13 @@ struct Patch
                 &level,        &velSensitivity, &playMode,  &bendUp,          &bendDown,
                 &polyLimit,    &defaultTrigger, &portaTime, &pianoModeActive, &unisonCount,
                 &unisonSpread, &uniPhaseRand,   &mpeActive, &mpeBendRange,    &octTranspose,
-                &pan,          &fineTune};
+                &pan,          &fineTune,       &lfoDepth};
             appendDAHDSRParams(res);
 
             for (int i = 0; i < numModsPer; ++i)
                 res.push_back(&modtarget[i]);
             appendModulationParams(res);
+            appendLFOParams(res);
 
             return res;
         }

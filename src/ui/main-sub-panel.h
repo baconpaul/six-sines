@@ -26,6 +26,7 @@
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
 #include "modulation-components.h"
+#include "lfo-components.h"
 #include "ruled-label.h"
 
 namespace baconpaul::six_sines::ui
@@ -33,6 +34,7 @@ namespace baconpaul::six_sines::ui
 struct MainSubPanel : juce::Component,
                       HasEditor,
                       DAHDSRComponents<MainSubPanel, Patch::OutputNode>,
+                      LFOComponents<MainSubPanel, Patch::OutputNode>,
                       ModulationComponents<MainSubPanel, Patch::OutputNode>
 {
     MainSubPanel(SixSinesEditor &);
@@ -44,6 +46,10 @@ struct MainSubPanel : juce::Component,
     std::unique_ptr<jcmp::Knob> velSen;
     std::unique_ptr<PatchContinuous> velSenD;
     std::unique_ptr<jcmp::Label> velSenL;
+
+    std::unique_ptr<jcmp::Knob> lfoDep;
+    std::unique_ptr<PatchContinuous> lfoDepD;
+    std::unique_ptr<jcmp::Label> lfoDepL;
 
     std::unique_ptr<RuledLabel> velTitle;
 };

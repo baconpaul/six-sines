@@ -452,7 +452,9 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
     }
 };
 
-struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch::OutputNode>
+struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
+                    ModulationSupport<Patch::OutputNode>,
+                    LFOSupport<Patch::OutputNode>
 {
     float output alignas(16)[2][blockSize];
     std::array<MixerNode, numOps> &fromArr;
@@ -463,7 +465,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &level, &velSen, &bendUp, &bendDown, &octTranspose, &pan, &fineTune;
+    const float &level, &velSen, &bendUp, &bendDown, &octTranspose, &pan, &fineTune, &lfoDepth;
     const float &defTrigV;
     TriggerMode defaultTrigger;
 
@@ -472,7 +474,8 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
         : outputNode(on), ModulationSupport(on, mv, vv), monoValues(mv), voiceValues(vv), sr(mv),
           fromArr(f), level(on.level), bendUp(on.bendUp), bendDown(on.bendDown),
           octTranspose(on.octTranspose), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),
-          defTrigV(on.defaultTrigger), pan(on.pan), fineTune(on.fineTune)
+          LFOSupport(on, mv), defTrigV(on.defaultTrigger), pan(on.pan), fineTune(on.fineTune),
+          lfoDepth(on.lfoDepth)
     {
         memset(output, 0, sizeof(output));
         allowVoiceTrigger = false;
@@ -484,6 +487,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
         bindModulation();
         calculateModulation();
         envAttack();
+        lfoAttack();
     }
 
     float finalEnvLevel alignas(16)[blockSize];
@@ -497,8 +501,20 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
         }
 
         envProcess(false);
+        lfoProcess();
+
         mech::copy_from_to<blockSize>(env.outputCache, finalEnvLevel);
         mech::scale_by<blockSize>(depthAtten, finalEnvLevel);
+
+        if (lfoIsEnveloped)
+        {
+            mech::scale_by<blockSize>(env.outputCache, lfo.outputBlock);
+        }
+
+        auto l2f = lfoDepth * lfoAtten;
+        mech::mul_block<blockSize>(lfo.outputBlock, l2f, lfo.outputBlock);
+        mech::accumulate_from_to<blockSize>(lfo.outputBlock, finalEnvLevel);
+
         mech::scale_by<blockSize>(finalEnvLevel, output[0], output[1]);
 
         // Apply main output
@@ -538,6 +554,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
     float levMod{0.f};
     float panMod{0.f};
     float depthAtten{1.0};
+    float lfoAtten{1.0};
 
     void calculateModulation()
     {
@@ -545,6 +562,8 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
         attackMod = 0.f;
         panMod = 0.f;
         levMod = 0.f;
+        rateMod = 0.f;
+        lfoAtten = 1.f;
 
         if (!anySources)
             return;
@@ -569,6 +588,12 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>, ModulationSupport<Patch:
                     break;
                 case Patch::OutputNode::DEPTH_ATTEN:
                     depthAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                    break;
+                case Patch::OutputNode::LFO_DEPTH_ATTEN:
+                    lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                    break;
+                case Patch::OutputNode::LFO_RATE:
+                    rateMod += d * *sourcePointers[i] * 4;
                     break;
                 case Patch::OutputNode::ENV_ATTACK:
                     attackMod += d * *sourcePointers[i];

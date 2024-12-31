@@ -25,16 +25,23 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e)
     voiceTrigerAllowed = false;
     setupDAHDSR(e, on);
     setupModulation(e, on);
+    setupLFO(e, on);
 
     velTitle = std::make_unique<RuledLabel>();
-    velTitle->setText("Sens");
+    velTitle->setText("Mod");
     addAndMakeVisible(*velTitle);
 
     createComponent(editor, *this, on.velSensitivity, velSen, velSenD);
     addAndMakeVisible(*velSen);
     velSenL = std::make_unique<jcmp::Label>();
-    velSenL->setText("Amp");
+    velSenL->setText("Vel Sens");
     addAndMakeVisible(*velSenL);
+
+    createComponent(editor, *this, on.lfoDepth, lfoDep, lfoDepD);
+    addAndMakeVisible(*lfoDep);
+    lfoDepL = std::make_unique<jcmp::Label>();
+    lfoDepL->setText(std::string() + "LFO " + u8"\U00002192");
+    addAndMakeVisible(*lfoDepL);
 };
 
 MainSubPanel::~MainSubPanel() {}
@@ -43,6 +50,7 @@ void MainSubPanel::resized()
 {
     auto p = getLocalBounds().reduced(uicMargin, 0);
     auto r = layoutDAHDSRAt(p.getX(), p.getY());
+    r = layoutLFOAt(r.getX() + uicMargin, p.getY());
 
     auto depx = r.getX() + 2 * uicMargin;
     auto depy = r.getY();
@@ -51,6 +59,8 @@ void MainSubPanel::resized()
 
     depy += uicTitleLabelHeight;
     positionKnobAndLabel(depx + xtraW, depy, velSen, velSenL);
+    depy += uicLabeledKnobHeight;
+    positionKnobAndLabel(depx + xtraW, depy, lfoDep, lfoDepL);
 
     layoutModulation(p);
 }
