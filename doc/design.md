@@ -17,15 +17,12 @@ are the 5 controls we need for each 'nubbin'
 
 With that in mind review still
 - Self
-- FromTo
 - Main
 -----
 
 
 GENERAL AND CLEANUPS
 - Temposync Labels screwed
-- Triangle Waveform
-- Per operator octave
 - Windows HPDI
 - Screen Reader Check
   - Toggles and Multiswitches dont have accesible set actions
@@ -35,6 +32,7 @@ GENERAL AND CLEANUPS
 - Write some semblance of a manual
 
 THINGS I DIDNT GET TO FOR 1.0
+- Triangle Waveform
 - Temposync Envelopes
 - An output per OP wher each output is just the solo OP * Main ADSR (and zero if the OP is off)
 - AM is somehow not quiet intuitive. Modulator signal to zero results in 'no output' but it sort of intuitively should me

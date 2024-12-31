@@ -44,8 +44,15 @@ struct MatrixSubPanel : juce::Component,
     std::unique_ptr<PatchContinuous> lfoToDepthD;
     std::unique_ptr<jcmp::Label> lfoToDepthL;
 
-    std::unique_ptr<jcmp::MultiSwitch> lfoMul;
-    std::unique_ptr<PatchDiscrete> lfoMulD;
+    std::unique_ptr<RuledLabel> modLabelE, modLabelL;
+    std::unique_ptr<jcmp::Knob> envToLev;
+    std::unique_ptr<PatchContinuous> envToLevD;
+    std::unique_ptr<jcmp::Label> envToLevL;
+
+    std::unique_ptr<jcmp::MultiSwitch> envMul;
+    std::unique_ptr<PatchDiscrete> envMulD;
+
+    void setEnabledState();
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

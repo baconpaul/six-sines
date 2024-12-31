@@ -638,13 +638,13 @@ struct Patch
                              .withGroupName(name(idx))
                              .withDefault(0.0)
                              .withID(id(25, idx))),
-              envLfoSum(intMd()
-                            .withName(name(idx) + " LFO Env Sum")
-                            .withGroupName(name(idx))
-                            .withID(id(26, idx))
-                            .withRange(0, 1)
-                            .withDefault(0)
-                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}})),
+              envToLevel(floatMd()
+                             .asPercentBipolar()
+                             .withName(name(idx) + " EnvToLevel")
+                             .withGroupName(name(idx))
+                             .withID(id(27, idx))
+                             .withDefault(1.f)),
+
               ModulationMixin(name(idx), id(70, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
@@ -664,7 +664,7 @@ struct Patch
         Param active;
         Param pmOrRM;
         Param lfoToDepth;
-        Param envLfoSum;
+        Param envToLevel;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -676,7 +676,7 @@ struct Patch
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &active, &pmOrRM, &lfoToDepth, &envLfoSum};
+            std::vector<Param *> res{&level, &active, &pmOrRM, &lfoToDepth, &envToLevel};
             appendDAHDSRParams(res);
             appendLFOParams(res);
 

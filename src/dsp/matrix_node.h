@@ -39,22 +39,21 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
     const Patch::MatrixNode &matrixNode;
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
-    const float &level, &activeV, &pmrmV, &lfoToDepth, &mulLfoV;
+    const float &level, &activeV, &pmrmV, &lfoToDepth, &envToLevel;
     MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr, MonoValues &mv,
                    const VoiceValues &vv)
         : matrixNode(mn), monoValues(mv), voiceValues(vv), onto(on), from(fr), level(mn.level),
           pmrmV(mn.pmOrRM), activeV(mn.active), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
-          lfoToDepth(mn.lfoToDepth), mulLfoV(mn.envLfoSum), ModulationSupport(mn, mv, vv)
+          lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel), ModulationSupport(mn, mv, vv)
     {
     }
 
-    bool active{false}, isrm{false}, mulLfo{false};
+    bool active{false}, isrm{false};
 
     void attack()
     {
         active = activeV > 0.5;
         isrm = pmrmV > 0.5;
-        mulLfo = mulLfoV > 0.5;
         if (active)
         {
             bindModulation();
@@ -72,27 +71,33 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         calculateModulation();
         envProcess();
         lfoProcess();
-        float mod alignas(16)[blockSize], modB alignas(16)[blockSize];
-        mech::copy_from_to<blockSize>(env.outputCache, mod);
-        mech::scale_by<blockSize>(level * depthAtten, mod);
+        float modlev alignas(16)[blockSize], mod alignas(16)[blockSize];
 
-        if (!mulLfo)
+        // Construct the level which is lfo * lev + env * lev or + env * dept + lev
+        if (lfoIsEnveloped)
         {
-            mech::scale_accumulate_from_to<blockSize>(lfo.outputBlock, lfoToDepth * lfoAtten, mod);
+            mech::scale_by<blockSize>(env.outputCache, lfo.outputBlock);
+        }
+
+        if (envIsMult)
+        {
+            for (int i = 0; i < blockSize; ++i)
+            {
+                modlev[i] =
+                    lfoToDepth * lfo.outputBlock[i] + level * envToLevel * env.outputCache[i];
+            }
         }
         else
         {
-            mech::copy_from_to<blockSize>(lfo.outputBlock, modB);
-            mech::scale_by<blockSize>(lfoToDepth * lfoAtten, modB);
-            mech::mul_block<blockSize>(mod, modB, mod);
+            for (int i = 0; i < blockSize; ++i)
+            {
+                modlev[i] =
+                    level + lfoToDepth * lfo.outputBlock[i] + envToLevel * env.outputCache[i];
+            }
         }
 
-        mech::mul_block<blockSize>(mod, from.output, mod);
+        mech::mul_block<blockSize>(modlev, from.output, mod);
 
-        for (int i = 0; i < blockSize; ++i)
-        {
-            mod[i] += applyMod * from.output[i];
-        }
         if (isrm)
         {
             if (onto.rmAssigned)
