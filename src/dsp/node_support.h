@@ -51,12 +51,13 @@ template <typename T> struct EnvelopeSupport
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV, &tmV;
+    const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV, &tmV, &emV;
     const float &ash, &dsh, &rsh;
     EnvelopeSupport(const T &mn, const MonoValues &mv, const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), sr(mv), env(&sr), delay(mn.delay), attackv(mn.attack),
           hold(mn.hold), decay(mn.decay), sustain(mn.sustain), release(mn.release),
-          powerV(mn.envPower), ash(mn.aShape), dsh(mn.dShape), rsh(mn.rShape), tmV(mn.triggerMode)
+          powerV(mn.envPower), ash(mn.aShape), dsh(mn.dShape), rsh(mn.rShape), tmV(mn.triggerMode),
+          emV(mn.envIsMultiplcative)
     {
     }
 
@@ -70,10 +71,12 @@ template <typename T> struct EnvelopeSupport
 
     float attackMod{0.f};
     bool releaseEnvStarted{false}, releaseEnvUngated{false};
+    bool envIsMult{true};
 
     void envAttack()
     {
         triggerMode = (TriggerMode)std::round(tmV);
+        envIsMult = emV > 0.5;
         if (triggerMode == NEW_VOICE && !allowVoiceTrigger)
             triggerMode = NEW_GATE;
 

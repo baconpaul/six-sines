@@ -47,6 +47,16 @@ struct MixerSubPanel : juce::Component,
     std::unique_ptr<jcmp::Knob> lfoToPan;
     std::unique_ptr<PatchContinuous> lfoToPanD;
     std::unique_ptr<jcmp::Label> lfoToPanL;
+
+    std::unique_ptr<RuledLabel> modLabelE, modLabelL;
+    std::unique_ptr<jcmp::Knob> envToLev;
+    std::unique_ptr<PatchContinuous> envToLevD;
+    std::unique_ptr<jcmp::Label> envToLevL;
+
+    std::unique_ptr<jcmp::MultiSwitch> envMul;
+    std::unique_ptr<PatchDiscrete> envMulD;
+
+    void setEnabledState();
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MIXER_SUB_PANE_H

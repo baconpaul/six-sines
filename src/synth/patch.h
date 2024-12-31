@@ -272,8 +272,8 @@ struct Patch
                                      .withName(name + " Env is Multiplicative")
                                      .withGroupName(name)
                                      .withDefault(true)
-                                     .withID(id0 + 11))
-
+                                     .withID(id0 + 11)
+                                     .withUnorderedMapFormatting({{0, "Add"}, {1, "Scale"}}))
         {
             delay.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
             attack.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
@@ -742,17 +742,23 @@ struct Patch
                                                                  .withID(id(15, idx))),
               LFOMixin(name(idx), id(30, idx)),
               lfoToLevel(floatMd()
-                             .asPercent()
+                             .asPercentBipolar()
                              .withName(name(idx) + " LFO to Level")
                              .withGroupName(name(idx))
                              .withID(id(40, idx))
                              .withDefault(0)),
               lfoToPan(floatMd()
-                           .asPercent()
+                           .asPercentBipolar()
                            .withName(name(idx) + " LFO to Pan")
                            .withGroupName(name(idx))
                            .withID(id(41, idx))
                            .withDefault(0)),
+              envToLevel(floatMd()
+                             .asPercentBipolar()
+                             .withName(name(idx) + " EnvToLevel")
+                             .withGroupName(name(idx))
+                             .withID(id(42, idx))
+                             .withDefault(1.f)),
               ModulationMixin(name(idx), id(50, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
@@ -771,13 +777,13 @@ struct Patch
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Mixer"; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
-        Param level, pan, lfoToLevel, lfoToPan;
+        Param level, pan, lfoToLevel, lfoToPan, envToLevel;
         Param active;
         std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &active, &pan, &lfoToLevel, &lfoToPan};
+            std::vector<Param *> res{&level, &active, &pan, &lfoToLevel, &lfoToPan, &envToLevel};
             appendDAHDSRParams(res);
             appendLFOParams(res);
 

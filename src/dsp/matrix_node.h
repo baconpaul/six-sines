@@ -288,13 +288,14 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan;
-    bool active{false}, lfoMul{false};
+    const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan, &envToLevel;
+    bool active{false};
 
     MixerNode(const Patch::MixerNode &mn, OpSource &f, MonoValues &mv, const VoiceValues &vv)
         : mixerNode(mn), monoValues(mv), voiceValues(vv), sr(mv), from(f), pan(mn.pan),
           level(mn.level), activeF(mn.active), lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan),
-          EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv), ModulationSupport(mn, mv, vv)
+          envToLevel(mn.envToLevel), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
+          ModulationSupport(mn, mv, vv)
     {
         memset(output, 0, sizeof(output));
     }
@@ -324,22 +325,32 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         envProcess();
         lfoProcess();
 
-        if (lfoMul)
+        if (lfoIsEnveloped)
         {
             mech::scale_by<blockSize>(env.outputCache, lfo.outputBlock);
         }
 
         auto lv = std::clamp(level + levMod, 0.f, 1.f) * depthAtten;
-        for (int j = 0; j < blockSize; ++j)
+
+        if (envIsMult)
         {
-            // use mech blah
-            auto amp = level * env.outputCache[j];
-            // LFO is bipolar so
-            auto uniLFO = (lfo.outputBlock[j] + 1) * 0.5;
-            // attenuate amplitude by the LFO
-            amp *= (lfoToLevel * uniLFO) + (1 - lfoToLevel);
-            vSum[j] = lv * (env.outputCache[j] + lfoAtten * lfoToLevel * lfo.outputBlock[j]) *
-                      from.output[j];
+            for (int j = 0; j < blockSize; ++j)
+            {
+                // use mech blah
+                auto amp = level * env.outputCache[j];
+                amp += lfoAtten * lfoToLevel * lfo.outputBlock[j];
+                vSum[j] = amp * from.output[j];
+            }
+        }
+        else
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                // use mech blah
+                auto amp = level + envToLevel * env.outputCache[j];
+                amp += lfoAtten * lfoToLevel * lfo.outputBlock[j];
+                vSum[j] = amp * from.output[j];
+            }
         }
 
         auto pn = std::clamp(pan + lfoPanAtten * lfoToPan * lfo.outputBlock[blockSize - 1] +
