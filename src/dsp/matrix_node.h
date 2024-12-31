@@ -79,20 +79,27 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             mech::scale_by<blockSize>(env.outputCache, lfo.outputBlock);
         }
 
+        auto l2d = lfoToDepth * lfoAtten;
+        static float la{-1111};
+        if (la != lfoAtten)
+        {
+            la = lfoAtten;
+        }
+
         if (envIsMult)
         {
+            auto e2d = level * depthAtten;
             for (int i = 0; i < blockSize; ++i)
             {
-                modlev[i] =
-                    lfoToDepth * lfo.outputBlock[i] + level * envToLevel * env.outputCache[i];
+                modlev[i] = l2d * lfo.outputBlock[i] + e2d * env.outputCache[i];
             }
         }
         else
         {
+            auto e2d = envToLevel * depthAtten;
             for (int i = 0; i < blockSize; ++i)
             {
-                modlev[i] =
-                    level + lfoToDepth * lfo.outputBlock[i] + envToLevel * env.outputCache[i];
+                modlev[i] = level + l2d * lfo.outputBlock[i] + e2d * env.outputCache[i];
             }
         }
 
@@ -180,17 +187,16 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &fbBase, &lfoToFB, &activeV, &lfoMulV;
+    const float &fbBase, &lfoToFB, &activeV, &envToFB;
     MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, MonoValues &mv, const VoiceValues &vv)
         : selfNode(sn), monoValues(mv), voiceValues(vv), sr(mv), onto(on), fbBase(sn.fbLevel),
-          lfoToFB(sn.lfoToFB), activeV(sn.active), lfoMulV(sn.envLfoSum),
-          EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv), ModulationSupport(sn, mv, vv){};
+          lfoToFB(sn.lfoToFB), activeV(sn.active), envToFB(sn.envToFB), EnvelopeSupport(sn, mv, vv),
+          LFOSupport(sn, mv), ModulationSupport(sn, mv, vv){};
     bool active{true}, lfoMul{false};
 
     void attack()
     {
         active = activeV > 0.5;
-        lfoMul = lfoMulV > 0.5;
         if (active)
         {
             bindModulation();
@@ -207,27 +213,36 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
         calculateModulation();
         envProcess();
         lfoProcess();
-        if (lfoMul)
+        if (lfoIsEnveloped)
         {
-            for (int j = 0; j < blockSize; ++j)
+            mech::scale_by<blockSize>(env.outputCache, lfo.outputBlock);
+        }
+
+        float modlev alignas(16)[blockSize];
+
+        auto l2f = lfoToFB * lfoAtten;
+
+        if (envIsMult)
+        {
+            auto e2f = fbBase * depthAtten;
+
+            for (int i = 0; i < blockSize; ++i)
             {
-                onto.feedbackLevel[j] =
-                    (int32_t)((1 << 24) *
-                              (((env.outputCache[j] * lfoAtten * lfoToFB * lfo.outputBlock[j]) *
-                                fbBase * depthAtten) +
-                               fbMod));
+                modlev[i] = l2f * lfo.outputBlock[i] + e2f * env.outputCache[i];
             }
         }
         else
         {
-            for (int j = 0; j < blockSize; ++j)
+            auto e2f = envToFB * depthAtten;
+
+            for (int i = 0; i < blockSize; ++i)
             {
-                onto.feedbackLevel[j] =
-                    (int32_t)((1 << 24) *
-                              (((env.outputCache[j] + lfoAtten * lfoToFB * lfo.outputBlock[j]) *
-                                fbBase * depthAtten) +
-                               fbMod));
+                modlev[i] = fbBase + l2f * lfo.outputBlock[i] + e2f * env.outputCache[i];
             }
+        }
+        for (int j = 0; j < blockSize; ++j)
+        {
+            onto.feedbackLevel[j] = (int32_t)((1 << 24) * modlev[j]);
         }
     }
 

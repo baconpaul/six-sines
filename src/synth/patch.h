@@ -512,8 +512,8 @@ struct Patch
             {TargetID::NONE, "Off"},
             {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Feedback Level"},
-            {TargetID::DEPTH_ATTEN, "Mod Sens"},
-            {TargetID::LFO_DEPTH_ATTEN, "LFO Sens"},
+            {TargetID::DEPTH_ATTEN, "Env Atten"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFO Atten"},
             {TargetID::SKIP, ""},
             {TargetID::ENV_ATTACK, "Env Attack"},
             {TargetID::LFO_RATE, "LFO Rate"},
@@ -540,13 +540,12 @@ struct Patch
                           .withGroupName(name(idx))
                           .withDefault(0.0)
                           .withID(id(25, idx))),
-              envLfoSum(intMd()
-                            .withName(name(idx) + " LFO Env Sum")
-                            .withGroupName(name(idx))
-                            .withID(id(26, idx))
-                            .withRange(0, 1)
-                            .withDefault(0)
-                            .withUnorderedMapFormatting({{0, "+"}, {1, "x"}})),
+              envToFB(floatMd()
+                          .asPercentBipolar()
+                          .withName(name(idx) + " Env to FB Amplitude")
+                          .withGroupName(name(idx))
+                          .withID(id(27, idx))
+                          .withDefault(0)),
               ModulationMixin(name(idx), id(40, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
@@ -564,14 +563,14 @@ struct Patch
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Feedback"; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
-        Param fbLevel, lfoToFB, envLfoSum;
+        Param fbLevel, lfoToFB, envToFB;
         Param active;
 
         std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&fbLevel, &active, &lfoToFB, &envLfoSum};
+            std::vector<Param *> res{&fbLevel, &active, &lfoToFB, &envToFB};
             appendDAHDSRParams(res);
             appendLFOParams(res);
 
@@ -602,9 +601,9 @@ struct Patch
         std::vector<std::pair<TargetID, std::string>> targetList{
             {TargetID::NONE, "Off"},
             {TargetID::SKIP, ""},
-            {TargetID::DIRECT, "Modulation Level"},
-            {TargetID::DEPTH_ATTEN, "Mod Sens"},
-            {TargetID::LFO_DEPTH_ATTEN, "LFO Sens"},
+            {TargetID::DIRECT, "Level"},
+            {TargetID::DEPTH_ATTEN, "Env Atten"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFO Atten"},
             {TargetID::SKIP, ""},
             {TargetID::ENV_ATTACK, "Env Attack"},
             {TargetID::LFO_RATE, "LFO Rate"},
@@ -712,9 +711,9 @@ struct Patch
             {TargetID::DIRECT, "Amplitude"},
             {TargetID::PAN, "Pan"},
             {TargetID::SKIP, ""},
-            {TargetID::DEPTH_ATTEN, "Env Sens"},
-            {TargetID::LFO_DEPTH_ATTEN, "LFOENV Sens"},
-            {TargetID::LFO_DEPTH_ATTEN, "LFOPan Sens"},
+            {TargetID::DEPTH_ATTEN, "Env Atten"},
+            {TargetID::LFO_DEPTH_ATTEN, std::string() + "LFO" + u8"\U00002192" + "Amp Atten"},
+            {TargetID::LFO_DEPTH_PAN_ATTEN, std::string() + "LFO" + u8"\U00002192" + "Pan Atten"},
             {TargetID::SKIP, ""},
             {TargetID::ENV_ATTACK, "Env Attack"},
             {TargetID::LFO_RATE, "LFO Rate"},
