@@ -854,31 +854,30 @@ struct Patch
             {TargetID::ENV_ATTACK, "Env Attack"},
             {TargetID::LFO_RATE, "LFO Rate"}};
 
-        std::string opName;
-        ModulationOnlyNode(const std::string &n, const std::string &outn, int idx)
-            : opName(n), DAHDSRMixin(name(), id(0, idx), false, true),
+        ModulationOnlyNode(const std::string &opName, const std::string &outn, int idx)
+            : DAHDSRMixin(opName, id(0, idx), false, true),
 
-              ModulationMixin(name(), id(100, idx)),
+              ModulationMixin(opName, id(100, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
-                  [this, idx](int i)
+                  [this, opName, idx](int i)
                   {
                       return md_t()
-                          .withName(name() + " Mod Target " + std::to_string(i))
-                          .withGroupName(name())
+                          .withName(opName + " Mod Target " + std::to_string(i))
+                          .withGroupName(opName)
                           .withRange(0, 2000)
                           .withDefault(TargetID::NONE)
                           .withID(id(200 + i, idx));
                   })),
-              LFOMixin(name(), id(300, idx)), lfoDepth(floatMd()
+              LFOMixin(opName, id(300, idx)), lfoDepth(floatMd()
                                                            .asPercentBipolar()
-                                                           .withName(name() + " LFO Depth")
-                                                           .withGroupName(name())
+                                                           .withName(opName + " LFO Depth")
+                                                           .withGroupName(opName)
                                                            .withDefault(0)
                                                            .withID(id(400, idx))),
               envDepth(floatMd()
                            .asPercentBipolar()
-                           .withName(name() + " Env Depth")
-                           .withGroupName(name())
+                           .withName(opName + " Env Depth")
+                           .withGroupName(opName)
                            .withID(id(401, idx))
                            .withDefault(0.f))
 
@@ -890,7 +889,6 @@ struct Patch
             }
         }
 
-        std::string name() const { return opName; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
         Param lfoDepth, envDepth;
