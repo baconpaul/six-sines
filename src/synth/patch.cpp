@@ -218,6 +218,14 @@ float Patch::migrateParamValueFromVersion(Param *p, float value, uint32_t versio
             return 1;
     }
 
+    if (p == &output.defaultTrigger && version == 6)
+    {
+        if (value == 1 /* that's NEW_VOICE */)
+        {
+            return 0; /* that's NEW_GATE */
+        }
+    }
+
     if ((p->adhocFeatures & (uint64_t)Param::AdHocFeatureValues::TRIGGERMODE))
     {
         if (version == 5)

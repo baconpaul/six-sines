@@ -232,9 +232,6 @@ void PlayModeSubPanel::setTriggerButtonLabel()
     auto v = (int)std::round(editor.patchCopy.output.defaultTrigger.value);
     switch (v)
     {
-    case NEW_VOICE:
-        triggerButton->setLabel("On Start");
-        break;
     case KEY_PRESS:
         triggerButton->setLabel("On Key");
         break;
@@ -265,8 +262,7 @@ void PlayModeSubPanel::showTriggerButtonMenu()
     auto p = juce::PopupMenu();
     p.addSectionHeader("Default Trigger Mode");
     p.addSeparator();
-    for (int g :
-         {(int)TriggerMode::KEY_PRESS, (int)TriggerMode::NEW_GATE, (int)TriggerMode::NEW_VOICE})
+    for (int g : {(int)TriggerMode::KEY_PRESS, (int)TriggerMode::NEW_GATE})
     {
         p.addItem(TriggerModeName[g], true, tmv == g, genSet(g));
     }
