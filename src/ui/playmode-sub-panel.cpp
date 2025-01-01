@@ -165,7 +165,7 @@ void PlayModeSubPanel::resized()
     auto depy = getLocalBounds().getY();
     auto xtraW = 15;
     positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, voiceLimitL);
-    depy += uicTitleLabelHeight + uicMargin;
+    depy += uicTitleLabelHeight;
     voiceLimit->setBounds(
         juce::Rectangle<int>(depx, depy, uicKnobSize + 2 * xtraW, uicLabelHeight));
     depy += uicLabelHeight + uicMargin;
