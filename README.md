@@ -13,8 +13,7 @@ If you want to download a release or recent version, [go here](https://github.co
 The project exists for a few reasons
 
 1. At the end of 2024, I was in a bit of a slump dev-wise for a variety of reasons and wanted a 
-   small project to sort of jump-start me for 2025. I had watched [Newfangled Dan ship obliterate](https://www.newfangledaudio.com/obliteratefrom 
-from idea to loved plugin in November, and I thought hey can I do the same in December
+   small project to sort of jump-start me for 2025. I had watched [Newfangled Dan ship obliterate](https://www.newfangledaudio.com/obliterate) from idea to loved plugin in November, and I thought hey can I do the same in December
 2. As I wrapped up 2024, I also wanted to take account of how well our project to factor code into libraries
 went and make a sort of todo-list of why it was hard to build a synth. This includes some 
 insights into the sst- libraries and the clap-wrapper
