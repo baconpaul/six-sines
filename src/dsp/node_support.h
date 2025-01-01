@@ -73,6 +73,9 @@ template <typename T> struct EnvelopeSupport
     bool releaseEnvStarted{false}, releaseEnvUngated{false};
     bool envIsMult{true};
 
+    static constexpr float minAttackOnRetrig{0.07}; // about 1.8 ms
+    float minAttack{0.f};
+
     void envAttack()
     {
         triggerMode = (TriggerMode)std::round(tmV);
@@ -99,8 +102,12 @@ template <typename T> struct EnvelopeSupport
         bool nodel = delay < 0.00001;
 
         float startingValue = 0.f;
+        minAttack = 0.f;
         if (running && nodel)
+        {
             startingValue = env.outputCache[blockSize - 1];
+            minAttack = minAttackOnRetrig;
+        }
 
         if (active && !constantEnv)
         {
@@ -112,7 +119,7 @@ template <typename T> struct EnvelopeSupport
             else
             {
                 env.attackFromWithDelay(startingValue, delay,
-                                        std::clamp(attackv + attackMod, 0.f, 1.f));
+                                        std::clamp(attackv + attackMod, minAttack, 1.f));
             }
         }
         else if (constantEnv)
@@ -123,6 +130,7 @@ template <typename T> struct EnvelopeSupport
         else
             memset(env.outputCache, 0, sizeof(env.outputCache));
     }
+
     void envProcess(bool maxIsForever = true, bool needsCurve = true)
     {
         if (!active || constantEnv)
@@ -146,25 +154,26 @@ template <typename T> struct EnvelopeSupport
                 if (!releaseEnvStarted)
                 {
                     // never started - so attack from zero
-                    env.attackFromWithDelay(0.f, delay, std::clamp(attackv + attackMod, 0.f, 1.f));
+                    env.attackFromWithDelay(0.f, delay,
+                                            std::clamp(attackv + attackMod, minAttack, 1.f));
                     releaseEnvStarted = true;
                 }
                 else if (releaseEnvUngated)
                 {
                     env.attackFromWithDelay(env.outputCache[blockSize - 1], delay,
-                                            std::clamp(attackv + attackMod, 0.f, 1.f));
+                                            std::clamp(attackv + attackMod, minAttack, 1.f));
                     releaseEnvStarted = true;
                     releaseEnvUngated = false;
                 }
             }
-            env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, 0.f, 1.f), hold, decay,
-                                      sustain, release, ash, dsh, rsh, !voiceValues.gated,
+            env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, minAttack, 1.f), hold,
+                                      decay, sustain, release, ash, dsh, rsh, !voiceValues.gated,
                                       needsCurve);
         }
         else
         {
-            env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, 0.f, 1.f), hold, decay,
-                                      sustain, release, ash, dsh, rsh, voiceValues.gated,
+            env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, minAttack, 1.f), hold,
+                                      decay, sustain, release, ash, dsh, rsh, voiceValues.gated,
                                       needsCurve);
         }
     }

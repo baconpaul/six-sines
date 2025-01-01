@@ -75,17 +75,22 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             envAttack();
             lfoAttack();
 
-            phase = 4 << 27;
-            if (voiceValues.phaseRandom)
-            {
-                phase += monoValues.rng.unifU32() & ((1 << 27) - 1);
-            }
-            phase += (1 << 26) * (startPhase + phaseMod);
+            resetPhaseOnly();
             fbVal[0] = 0.f;
             fbVal[1] = 0.f;
             auto wf = (SinTable::WaveForm)std::round(waveForm);
             st.setWaveForm(wf);
         }
+    }
+
+    void resetPhaseOnly()
+    {
+        phase = 4 << 27;
+        if (voiceValues.phaseRandom)
+        {
+            phase += monoValues.rng.unifU32() & ((1 << 27) - 1);
+        }
+        phase += (1 << 26) * (startPhase + phaseMod);
     }
 
     void zeroInputs()
