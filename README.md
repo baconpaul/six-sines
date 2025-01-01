@@ -53,3 +53,19 @@ But remember, "Programming an FM/PM/RM synth is hard" is not a bug in six-sines!
 
 Well you know. It's not quite up to snuff for a surge project. And its pretty idiosyncratic.
 I may do a few more side quest projects in 2025. Lets see.
+
+## Some Credits
+
+Members of the surge synth team helped with pre-release
+testing. Large parts of the factory patch library
+at first release were authored by Jacky Ligon and Kinsey
+Dulcet, and large parts of the workflow design
+improvements came from Andreya and EvilDragon. 
+Thanks folks!
+
+We use loads of open source software of course
+including all the sst libraries, clap and
+the clap wrapper (which itself includes 
+vst3, ausdk, rtaudio, rtmidi, and more).
+The definitive list right now comes from 
+the source directory.
