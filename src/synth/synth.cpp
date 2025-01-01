@@ -270,6 +270,11 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             isEditorAttached = uiM->paramId;
         }
         break;
+        case UIToAudioMsg::PANIC_STOP_VOICES:
+        {
+            voiceManager->allSoundsOff();
+        }
+        break;
         }
         uiM = uiToAudio.pop();
     }

@@ -22,6 +22,7 @@
 #include "sst/jucegui/components/DraggableTextEditableValue.h"
 #include "sst/jucegui/components/TextPushButton.h"
 #include "sst/jucegui/components/JogUpDownButton.h"
+
 #include "patch-data-bindings.h"
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"

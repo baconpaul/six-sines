@@ -146,6 +146,15 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     };
     addAndMakeVisible(*voiceLimit);
 
+    panicTitle = std::make_unique<RuledLabel>();
+    panicTitle->setText("Panic");
+    panicButton = std::make_unique<jcmp::TextPushButton>();
+    panicButton->setLabel("Sound Off");
+    panicButton->setOnCallback(
+        [this]() { editor.uiToAudio.push({Synth::UIToAudioMsg::PANIC_STOP_VOICES}); });
+    addAndMakeVisible(*panicButton);
+    addAndMakeVisible(*panicTitle);
+
     setEnabledState();
 }
 
@@ -211,7 +220,11 @@ void PlayModeSubPanel::resized()
     mpeRange->setBounds(bbx.withHeight(uicLabelHeight));
     bbx = bbx.translated(0, uicMargin + uicLabelHeight);
     mpeRangeL->setBounds(bbx.withHeight(uicLabelHeight));
-    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
+    bbx = bbx.translated(0, 2 * uicMargin + uicLabelHeight);
+
+    positionTitleLabelAt(depx, bbx.getY(), bbx.getWidth(), panicTitle);
+    bbx = bbx.translated(0, uicTitleLabelHeight);
+    panicButton->setBounds(bbx.withHeight(uicLabelHeight));
 }
 
 void PlayModeSubPanel::setTriggerButtonLabel()

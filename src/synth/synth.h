@@ -270,7 +270,8 @@ struct Synth
             STOP_AUDIO,
             START_AUDIO,
             SEND_PATCH_NAME,
-            EDITOR_ATTACH_DETATCH // paramid is true for attach and false for detach
+            EDITOR_ATTACH_DETATCH, // paramid is true for attach and false for detach
+            PANIC_STOP_VOICES
         } action;
         uint32_t paramId{0};
         float value{0};
