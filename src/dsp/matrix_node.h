@@ -20,6 +20,7 @@
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
 #include "sst/basic-blocks/mechanics/block-ops.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
+#include "sst/basic-blocks/dsp/DCBlocker.h"
 #include "dsp/op_source.h"
 #include "dsp/sr_provider.h"
 #include "dsp/node_support.h"
@@ -320,6 +321,9 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         memset(output, 0, sizeof(output));
     }
 
+    float doBlock{false};
+    sst::basic_blocks::dsp::DCBlocker<blockSize> dcBlocker;
+
     void attack()
     {
         active = activeF > 0.5;
@@ -330,6 +334,14 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
             calculateModulation();
             envAttack();
             lfoAttack();
+            dcBlocker.reset();
+
+            auto wf = (SinTable::WaveForm)(from.waveForm);
+            if (wf == SinTable::TX3 || wf == SinTable::TX4 || wf == SinTable::TX7 ||
+                wf == SinTable::TX8)
+            {
+                doBlock = true;
+            }
         }
     }
 
@@ -345,6 +357,18 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         envProcess();
         lfoProcess();
 
+        float dcValues alignas(16)[blockSize];
+        float *useOut;
+        if (from.rmAssigned || doBlock)
+        {
+            dcBlocker.filter(from.output, dcValues);
+            useOut = dcValues;
+        }
+        else
+        {
+            useOut = from.output;
+        }
+
         if (lfoIsEnveloped)
         {
             mech::scale_by<blockSize>(env.outputCache, lfo.outputBlock);
@@ -359,7 +383,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
                 // use mech blah
                 auto amp = level * env.outputCache[j];
                 amp += lfoAtten * lfoToLevel * lfo.outputBlock[j];
-                vSum[j] = amp * from.output[j];
+                vSum[j] = amp * useOut[j];
             }
         }
         else
@@ -369,7 +393,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
                 // use mech blah
                 auto amp = level + envToLevel * env.outputCache[j];
                 amp += lfoAtten * lfoToLevel * lfo.outputBlock[j];
-                vSum[j] = amp * from.output[j];
+                vSum[j] = amp * useOut[j];
             }
         }
 
