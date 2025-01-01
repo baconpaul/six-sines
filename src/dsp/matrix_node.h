@@ -21,6 +21,7 @@
 #include "sst/basic-blocks/mechanics/block-ops.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
 #include "sst/basic-blocks/dsp/DCBlocker.h"
+#include "sst/basic-blocks/dsp/Lag.h"
 #include "dsp/op_source.h"
 #include "dsp/sr_provider.h"
 #include "dsp/node_support.h"
@@ -626,10 +627,14 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     {
         memset(output, 0, sizeof(output));
         allowVoiceTrigger = false;
+        velocityLag.setRateInMilliseconds(10, gSampleRate, 1.0 / blockSize);
     }
+
+    sst::basic_blocks::dsp::OnePoleLag<float, false> velocityLag;
 
     void attack()
     {
+        velocityLag.snapTo(voiceValues.velocity);
         defaultTrigger = (TriggerMode)std::round(defTrigV);
         bindModulation();
         calculateModulation();
@@ -669,8 +674,10 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
         mech::scale_by<blockSize>(finalEnvLevel, output[0], output[1]);
 
         // Apply main output
+        velocityLag.setTarget(voiceValues.velocity);
+        velocityLag.process();
         auto lv = std::clamp(level + levMod, 0.f, 1.f);
-        auto v = 1.f - velSen * (1.f - voiceValues.velocity);
+        auto v = 1.f - velSen * (1.f - velocityLag.v);
         lv = 0.15 * std::clamp(v * lv * lv * lv, 0.f, 1.f);
         mech::scale_by<blockSize>(lv, output[0], output[1]);
 
