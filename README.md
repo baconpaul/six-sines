@@ -34,6 +34,7 @@ So to build it, do the standard
 ```aiignore
 git clone https://github.com/baconpaul/six-sines
 cd six-sines
+git submodule update --init --recursive
 cmake -Bignore/build -DCMAKE_BUILD_TYPE=Release
 cmake --build ignore/build --config Release --target six-sines_all
 ```
