@@ -41,6 +41,8 @@ struct MonoValues
     std::array<float, 128> midiCCFloat; // 0...1 normed
     float channelAT{0.f};
 
+    bool attackFloorOnRetrig{true};
+
     std::array<float *, numMacros> macroPtr;
 
     MTSClient *mtsClient{nullptr};

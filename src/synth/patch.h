@@ -959,14 +959,14 @@ struct Patch
                            .withID(id(23))
                            .withUnorderedMapFormatting({{0, "Poly"}, {1, "Mono"}})),
               bendUp(floatMd()
-                         .withRange(0, 24)
+                         .withRange(0, 48)
                          .withName(name() + " PB Up")
                          .withGroupName(name())
                          .withDefault(2)
                          .withID(id(24))
                          .withLinearScaleFormatting("")),
               bendDown(floatMd()
-                           .withRange(0, 24)
+                           .withRange(0, 48)
                            .withName(name() + " PB Up")
                            .withGroupName(name())
                            .withDefault(2)
@@ -1055,6 +1055,11 @@ struct Patch
                       .asPercentBipolar()
                       .withDefault(0)
                       .withID(id(37))),
+              attackFloorOnRetrig(boolMd()
+                                      .withName(name() + " Attack is Floored on Retrigger")
+                                      .withGroupName(name())
+                                      .withDefault(1)
+                                      .withID(id(38))),
 
               ModulationMixin(name(), id(120)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
@@ -1085,16 +1090,18 @@ struct Patch
         Param unisonCount, unisonSpread, uniPhaseRand;
         Param mpeActive, mpeBendRange;
         Param octTranspose, fineTune, pan, lfoDepth;
+        Param attackFloorOnRetrig;
 
         std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
             std::vector<Param *> res{
-                &level,        &velSensitivity, &playMode,  &bendUp,          &bendDown,
-                &polyLimit,    &defaultTrigger, &portaTime, &pianoModeActive, &unisonCount,
-                &unisonSpread, &uniPhaseRand,   &mpeActive, &mpeBendRange,    &octTranspose,
-                &pan,          &fineTune,       &lfoDepth};
+                &level,           &velSensitivity, &playMode,           &bendUp,
+                &bendDown,        &polyLimit,      &defaultTrigger,     &portaTime,
+                &pianoModeActive, &unisonCount,    &unisonSpread,       &uniPhaseRand,
+                &mpeActive,       &mpeBendRange,   &octTranspose,       &pan,
+                &fineTune,        &lfoDepth,       &attackFloorOnRetrig};
             appendDAHDSRParams(res);
 
             for (int i = 0; i < numModsPer; ++i)

@@ -73,8 +73,9 @@ template <typename T> struct EnvelopeSupport
     bool releaseEnvStarted{false}, releaseEnvUngated{false};
     bool envIsMult{true};
 
-    static constexpr float minAttackOnRetrig{0.07}; // about 1.8 ms
+    static constexpr float minAttackOnRetrig{0.0599}; // about 1.8 ms
     float minAttack{0.f};
+    bool retriggerHasFloor{true};
 
     void envAttack()
     {
@@ -106,7 +107,9 @@ template <typename T> struct EnvelopeSupport
         if (running && nodel)
         {
             startingValue = env.outputCache[blockSize - 1];
-            minAttack = minAttackOnRetrig;
+            minAttack =
+                (retriggerHasFloor && monoValues.attackFloorOnRetrig) ? minAttackOnRetrig : 0.f;
+            ;
         }
 
         if (active && !constantEnv)

@@ -66,6 +66,8 @@ void Synth::process(const clap_output_events_t *outq)
         return;
     }
 
+    monoValues.attackFloorOnRetrig = patch.output.attackFloorOnRetrig > 0.5;
+
     while (resampler->inputsRequiredToGenerateOutputs(blockSize) > 0)
     {
         lagHandler.process();

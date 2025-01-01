@@ -70,6 +70,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
         if (active)
         {
+            retriggerHasFloor = false;
             bindModulation();
             calculateModulation();
             envAttack();

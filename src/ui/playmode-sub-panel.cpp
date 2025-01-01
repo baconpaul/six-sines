@@ -266,6 +266,18 @@ void PlayModeSubPanel::showTriggerButtonMenu()
     {
         p.addItem(TriggerModeName[g], true, tmv == g, genSet(g));
     }
+    p.addSeparator();
+    auto atfl = editor.patchCopy.output.attackFloorOnRetrig;
+    p.addItem("Attack Floored on Retrigger", true, atfl,
+              [atfl, w = juce::Component::SafePointer(this)]()
+              {
+                  if (!w)
+                      return;
+                  w->editor.patchCopy.output.attackFloorOnRetrig = !atfl;
+                  w->editor.uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM,
+                                            w->editor.patchCopy.output.attackFloorOnRetrig.meta.id,
+                                            (float)(!atfl)});
+              });
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&this->editor));
 }
