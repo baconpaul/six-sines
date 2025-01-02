@@ -23,7 +23,6 @@
 #include "sst/basic-blocks/dsp/DCBlocker.h"
 #include "sst/basic-blocks/dsp/Lag.h"
 #include "dsp/op_source.h"
-#include "dsp/sr_provider.h"
 #include "dsp/node_support.h"
 #include "synth/patch.h"
 #include "synth/mono_values.h"
@@ -183,7 +182,6 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
                         ModulationSupport<Patch::SelfNode>
 {
     OpSource &onto;
-    SRProvider sr;
 
     const Patch::SelfNode &selfNode;
     const MonoValues &monoValues;
@@ -191,7 +189,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
 
     const float &fbBase, &lfoToFB, &activeV, &envToFB;
     MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, MonoValues &mv, const VoiceValues &vv)
-        : selfNode(sn), monoValues(mv), voiceValues(vv), sr(mv), onto(on), fbBase(sn.fbLevel),
+        : selfNode(sn), monoValues(mv), voiceValues(vv), onto(on), fbBase(sn.fbLevel),
           lfoToFB(sn.lfoToFB), activeV(sn.active), envToFB(sn.envToFB), EnvelopeSupport(sn, mv, vv),
           LFOSupport(sn, mv), ModulationSupport(sn, mv, vv){};
     bool active{true}, lfoMul{false};
@@ -304,7 +302,6 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
 {
     float output alignas(16)[2][blockSize];
     OpSource &from;
-    SRProvider sr;
 
     const Patch::MixerNode &mixerNode;
     const MonoValues &monoValues;
@@ -314,8 +311,8 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
     bool active{false};
 
     MixerNode(const Patch::MixerNode &mn, OpSource &f, MonoValues &mv, const VoiceValues &vv)
-        : mixerNode(mn), monoValues(mv), voiceValues(vv), sr(mv), from(f), pan(mn.pan),
-          level(mn.level), activeF(mn.active), lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan),
+        : mixerNode(mn), monoValues(mv), voiceValues(vv), from(f), pan(mn.pan), level(mn.level),
+          activeF(mn.active), lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan),
           envToLevel(mn.envToLevel), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
           ModulationSupport(mn, mv, vv)
     {
@@ -603,7 +600,6 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
 {
     float output alignas(16)[2][blockSize];
     std::array<MixerNode, numOps> &fromArr;
-    SRProvider sr;
 
     const Patch::OutputNode &outputNode;
 
@@ -619,7 +615,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     OutputNode(const Patch::OutputNode &on, const Patch::ModulationOnlyNode &panMN,
                const Patch::ModulationOnlyNode &ftMN, std::array<MixerNode, numOps> &f,
                MonoValues &mv, const VoiceValues &vv)
-        : outputNode(on), ModulationSupport(on, mv, vv), monoValues(mv), voiceValues(vv), sr(mv),
+        : outputNode(on), ModulationSupport(on, mv, vv), monoValues(mv), voiceValues(vv),
           fromArr(f), level(on.level), bendUp(on.bendUp), bendDown(on.bendDown),
           octTranspose(on.octTranspose), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),
           LFOSupport(on, mv), defTrigV(on.defaultTrigger), pan(on.pan), fineTune(on.fineTune),
@@ -627,7 +623,6 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     {
         memset(output, 0, sizeof(output));
         allowVoiceTrigger = false;
-        velocityLag.setRateInMilliseconds(10, gSampleRate, 1.0 / blockSize);
     }
 
     sst::basic_blocks::dsp::OnePoleLag<float, false> velocityLag;
@@ -635,6 +630,8 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     void attack()
     {
         velocityLag.snapTo(voiceValues.velocity);
+        velocityLag.setRateInMilliseconds(10, monoValues.sr.sampleRate, 1.0 / blockSize);
+
         defaultTrigger = (TriggerMode)std::round(defTrigV);
         bindModulation();
         calculateModulation();

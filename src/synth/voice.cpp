@@ -240,7 +240,7 @@ void Voice::setupPortaTo(uint16_t newKey, float log2Time)
         voiceValues.dPorta = 0;
         return;
     }
-    auto blocks = monoValues.twoToTheX.twoToThe(log2Time) * gSampleRate / blockSize;
+    auto blocks = monoValues.twoToTheX.twoToThe(log2Time) * monoValues.sr.sampleRate / blockSize;
 
     if (voiceValues.portaDiff > 1e-5)
     {

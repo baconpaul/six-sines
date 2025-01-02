@@ -65,6 +65,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     void reset()
     {
+        st.setSampleRate(monoValues.sr.sampleRate);
         zeroInputs();
         snapActive();
 

@@ -231,11 +231,7 @@ struct Synth
     bool audioRunning{true};
 
     double realSampleRate{0};
-    void setSampleRate(double sampleRate)
-    {
-        realSampleRate = sampleRate;
-        resampler = std::make_unique<resampler_t>(gSampleRate, realSampleRate);
-    }
+    void setSampleRate(double sampleRate);
 
     void process(const clap_output_events_t *);
     void processUIQueue(const clap_output_events_t *);
@@ -301,7 +297,7 @@ struct Synth
     void resetPlaymode();
 
     sst::basic_blocks::dsp::VUPeak vuPeak;
-    int32_t updateVuEvery{(int32_t)(gSampleRate / 60 / blockSize)};
+    int32_t updateVuEvery{(int32_t)(48000 * 2.5 / 60 / blockSize)}; // approx
     int32_t lastVuUpdate{updateVuEvery};
 };
 } // namespace baconpaul::six_sines

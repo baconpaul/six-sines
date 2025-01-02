@@ -68,6 +68,7 @@ struct SinTable
         simdQuad = simdFullQuad[0];
     }
 
+    void setSampleRate(double sr) { frToPhase = (1 << 26) / sr; }
     static void fillTable(int WF, std::function<std::pair<double, double>(double x, int Q)> der);
     static void initializeStatics();
 
@@ -79,7 +80,7 @@ struct SinTable
         simdQuad = simdFullQuad[stwf];
     }
 
-    static constexpr double frToPhase{(1 << 26) / gSampleRate};
+    double frToPhase{0};
     uint32_t dPhase(float fr)
     {
         auto dph = (uint32_t)(fr * frToPhase);
