@@ -23,6 +23,9 @@
 #include <cstring>
 #include <string.h>
 #include <clap/clap.h>
+#if WIN32
+#include <windows.h>
+#endif
 
 namespace baconpaul::six_sines
 {
@@ -128,6 +131,25 @@ const void *get_factory(const char *factory_id)
     }
     return nullptr;
 }
-bool clap_init(const char *p) { return true; }
+bool clap_init(const char *p)
+{
+#if WIN32
+#define WIN_DEBUG_CONSOLE_ACTIVE 0
+#if WIN_DEBUG_CONSOLE_ACTIVE
+    static FILE *confp{nullptr};
+    AllocConsole();
+    freopen_s(&confp, "CONOUT$", "w", stdout);
+    HANDLE hConOut =
+        CreateFile("CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                   NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    SetStdHandle(STD_OUTPUT_HANDLE, hConOut);
+    std::cout.clear();
+    std::wcout.clear();
+    printf("Hello Console\n");
+    std::cout << "Heya" << std::endl;
+#endif
+#endif
+    return true;
+}
 void clap_deinit() {}
 } // namespace baconpaul::six_sines
