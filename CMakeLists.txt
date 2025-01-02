@@ -9,7 +9,7 @@ string(TIMESTAMP DAY_OF_YEAR "%j")
 string(TIMESTAMP YEAR "%Y")
 math(EXPR PART0 "${YEAR}-2023 + 2")
 math(EXPR PART1 "${DAY_OF_YEAR}/2")
-message(STATUS "Using date-driven version while in alpha. 0.${PART0}.${PART1}.0")
+message(STATUS "Using date-driven version starting with '0'. 0.${PART0}.${PART1}.0")
 
 project(six-sines VERSION 0.${PART0}.${PART1}.0 LANGUAGES C CXX)
 

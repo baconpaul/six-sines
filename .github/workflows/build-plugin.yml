@@ -81,9 +81,9 @@ jobs:
         run: |
           mkdir build/inst
           mkdir build/insttmp
-          mv build/CLAP/Release/*.clap build/insttmp
-          mv build/VST3/Release/*.vst3 build/insttmp
-          mv build/Release/*.exe build/insttmp
+          mv build/CLAP/*.clap build/insttmp
+          mv build/VST3/*.vst3 build/insttmp
+          mv build/*.exe build/insttmp
           
           7z a -r build/inst/windows-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip build/insttmp/*
 
