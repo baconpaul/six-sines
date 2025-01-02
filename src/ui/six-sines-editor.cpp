@@ -317,14 +317,15 @@ void SixSinesEditor::showTooltipOn(juce::Component *c)
     }
     y += c->getHeight();
     toolTip->resetSizeFromData();
-    if (y + toolTip->getHeight() > getHeight())
+    if (y + toolTip->getHeight() > getHeight() - 40)
     {
-        y -= c->getHeight() - 3 - toolTip->getHeight();
+        y -= c->getHeight() + 3 + toolTip->getHeight();
     }
 
     if (x + toolTip->getWidth() > getWidth())
     {
-        x -= toolTip->getWidth() - c->getWidth() / 2;
+        x -= toolTip->getWidth();
+        x += c->getWidth() - 3;
     }
 
     toolTip->setTopLeftPosition(x, y);
