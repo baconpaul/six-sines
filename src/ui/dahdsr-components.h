@@ -145,6 +145,9 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         case (int)TriggerMode::ON_RELEASE:
             triggerButton->setLabel("R");
             break;
+        case (int)TriggerMode::ONE_SHOT:
+            triggerButton->setLabel("1");
+            break;
         case (int)TriggerMode::PATCH_DEFAULT:
             triggerButton->setLabel("D");
             break;
@@ -174,9 +177,9 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         auto p = juce::PopupMenu();
         p.addSectionHeader("Trigger Mode");
         p.addSeparator();
-        for (auto v :
-             {(int)TriggerMode::KEY_PRESS, (int)TriggerMode::NEW_GATE, (int)TriggerMode::NEW_VOICE,
-              (int)TriggerMode::ON_RELEASE, (int)TriggerMode::PATCH_DEFAULT})
+        for (auto v : {(int)TriggerMode::KEY_PRESS, (int)TriggerMode::NEW_GATE,
+                       (int)TriggerMode::NEW_VOICE, (int)TriggerMode::ON_RELEASE,
+                       (int)TriggerMode::ONE_SHOT, (int)TriggerMode::PATCH_DEFAULT})
         {
             bool enabled = true;
             if (v == (int)TriggerMode::NEW_VOICE && !voiceTrigerAllowed)
