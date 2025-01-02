@@ -49,7 +49,8 @@ struct MainSubPanel : juce::Component,
     std::unique_ptr<jcmp::Label> velSenL;
 
     std::unique_ptr<jcmp::Knob> lfoDep;
-    std::unique_ptr<PatchContinuous> lfoDepD;
+    std::unique_ptr<PatchContinuous::cubic_t> lfoDepDA;
+
     std::unique_ptr<jcmp::Label> lfoDepL;
 
     std::unique_ptr<RuledLabel> velTitle;

@@ -37,11 +37,11 @@ struct MainPanSubPanel : juce::Component,
     void beginEdit() {}
 
     std::unique_ptr<jcmp::Knob> envDepth;
-    std::unique_ptr<PatchContinuous> envDepthD;
+    std::unique_ptr<PatchContinuous::cubic_t> envDepthDA;
     std::unique_ptr<jcmp::Label> envDepthLL;
 
     std::unique_ptr<jcmp::Knob> lfoDep;
-    std::unique_ptr<PatchContinuous> lfoDepD;
+    std::unique_ptr<PatchContinuous::cubic_t> lfoDepDA;
     std::unique_ptr<jcmp::Label> lfoDepL;
 
     std::unique_ptr<RuledLabel> depTitle;

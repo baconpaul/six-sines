@@ -26,7 +26,7 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
     auto &mn = editor.patchCopy.selfNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
-        createComponent(editor, *this, mn[i].fbLevel, Sknobs[i], SknobsData[i], i, true);
+        createRescaledComponent(editor, *this, mn[i].fbLevel, Sknobs[i], SknobsData[i], i, true);
         Sknobs[i]->setDrawLabel(false);
         addAndMakeVisible(*Sknobs[i]);
 
@@ -39,7 +39,7 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         Slabels[i]->setText("Op " + std::to_string(i + 1) + " " + u8"\U000021A9");
         addAndMakeVisible(*Slabels[i]);
 
-        SknobsData[i]->onPullFromMin = [i, w = juce::Component::SafePointer(this)]()
+        SknobsData[i]->under->onPullFromMin = [i, w = juce::Component::SafePointer(this)]()
         {
             if (!w)
                 return;
@@ -54,7 +54,7 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
     auto &mx = editor.patchCopy.matrixNodes;
     for (auto i = 0U; i < matrixSize; ++i)
     {
-        createComponent(editor, *this, mx[i].level, Mknobs[i], MknobsData[i], i, false);
+        createRescaledComponent(editor, *this, mx[i].level, Mknobs[i], MknobsData[i], i, false);
         Mknobs[i]->setDrawLabel(false);
         addAndMakeVisible(*Mknobs[i]);
 
@@ -76,7 +76,7 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         Mlabels[i]->setText("Op " + std::to_string(si + 1) + " " + glyph);
         addAndMakeVisible(*Mlabels[i]);
 
-        MknobsData[i]->onPullFromMin = [i, si, w = juce::Component::SafePointer(this)]()
+        MknobsData[i]->under->onPullFromMin = [i, si, w = juce::Component::SafePointer(this)]()
         {
             if (!w)
                 return;

@@ -30,13 +30,13 @@ void MatrixSubPanel::setSelectedIndex(int idx)
     setupLFO(editor, m);
     setupModulation(editor, m);
 
-    createComponent(editor, *this, m.lfoToDepth, lfoToDepth, lfoToDepthD);
+    createRescaledComponent(editor, *this, m.lfoToDepth, lfoToDepth, lfoToDepthDA);
     addAndMakeVisible(*lfoToDepth);
     lfoToDepthL = std::make_unique<jcmp::Label>();
     lfoToDepthL->setText("Depth");
     addAndMakeVisible(*lfoToDepthL);
 
-    createComponent(editor, *this, m.envToLevel, envToLev, envToLevD);
+    createRescaledComponent(editor, *this, m.envToLevel, envToLev, envToLevDA);
     addAndMakeVisible(*envToLev);
     envToLevL = std::make_unique<jcmp::Label>();
     envToLevL->setText("Level");

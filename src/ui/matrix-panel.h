@@ -42,13 +42,13 @@ struct MatrixPanel : jcmp::NamedPanel, HasEditor
     }
 
     std::array<std::unique_ptr<jcmp::Knob>, numOps> Sknobs;
-    std::array<std::unique_ptr<PatchContinuous>, numOps> SknobsData;
+    std::array<std::unique_ptr<PatchContinuous::cubic_t>, numOps> SknobsData;
     std::array<std::unique_ptr<jcmp::ToggleButton>, numOps> Spower;
     std::array<std::unique_ptr<PatchDiscrete>, numOps> SpowerData;
     std::array<std::unique_ptr<jcmp::Label>, numOps> Slabels;
 
     std::array<std::unique_ptr<jcmp::Knob>, matrixSize> Mknobs;
-    std::array<std::unique_ptr<PatchContinuous>, matrixSize> MknobsData;
+    std::array<std::unique_ptr<PatchContinuous::cubic_t>, matrixSize> MknobsData;
     std::array<std::unique_ptr<jcmp::ToggleButton>, matrixSize> Mpower;
     std::array<std::unique_ptr<PatchDiscrete>, matrixSize> MpowerData;
     std::array<std::unique_ptr<jcmp::MultiSwitch>, matrixSize> Mpmrm;

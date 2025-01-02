@@ -32,19 +32,19 @@ void MixerSubPanel::setSelectedIndex(int idx)
     setupLFO(editor, sn);
     setupModulation(editor, sn);
 
-    createComponent(editor, *this, sn.lfoToLevel, lfoToLevel, lfoToLevelD);
+    createRescaledComponent(editor, *this, sn.lfoToLevel, lfoToLevel, lfoToLevelDA);
     addAndMakeVisible(*lfoToLevel);
     lfoToLevelL = std::make_unique<jcmp::Label>();
     lfoToLevelL->setText("Level");
     addAndMakeVisible(*lfoToLevelL);
 
-    createComponent(editor, *this, sn.lfoToPan, lfoToPan, lfoToPanD);
+    createRescaledComponent(editor, *this, sn.lfoToPan, lfoToPan, lfoToPanDA);
     addAndMakeVisible(*lfoToPan);
     lfoToPanL = std::make_unique<jcmp::Label>();
     lfoToPanL->setText("Pan");
     addAndMakeVisible(*lfoToPanL);
 
-    createComponent(editor, *this, sn.envToLevel, envToLev, envToLevD);
+    createRescaledComponent(editor, *this, sn.envToLevel, envToLev, envToLevDA);
     addAndMakeVisible(*envToLev);
     envToLevL = std::make_unique<jcmp::Label>();
     envToLevL->setText("Level");

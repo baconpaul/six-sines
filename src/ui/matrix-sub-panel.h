@@ -41,12 +41,12 @@ struct MatrixSubPanel : juce::Component,
     void setSelectedIndex(int idx);
 
     std::unique_ptr<jcmp::Knob> lfoToDepth;
-    std::unique_ptr<PatchContinuous> lfoToDepthD;
+    std::unique_ptr<PatchContinuous::cubic_t> lfoToDepthDA;
     std::unique_ptr<jcmp::Label> lfoToDepthL;
 
     std::unique_ptr<RuledLabel> modLabelE, modLabelL;
     std::unique_ptr<jcmp::Knob> envToLev;
-    std::unique_ptr<PatchContinuous> envToLevD;
+    std::unique_ptr<PatchContinuous::cubic_t> envToLevDA;
     std::unique_ptr<jcmp::Label> envToLevL;
 
     std::unique_ptr<jcmp::MultiSwitch> envMul;

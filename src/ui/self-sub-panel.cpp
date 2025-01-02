@@ -32,13 +32,13 @@ void SelfSubPanel::setSelectedIndex(int idx)
     setupLFO(editor, editor.patchCopy.selfNodes[idx]);
     setupModulation(editor, editor.patchCopy.selfNodes[idx]);
 
-    createComponent(editor, *this, n.lfoToFB, lfoToFb, lfoToFbD);
+    createRescaledComponent(editor, *this, n.lfoToFB, lfoToFb, lfoToFbDA);
     addAndMakeVisible(*lfoToFb);
     lfoToFbL = std::make_unique<jcmp::Label>();
     lfoToFbL->setText("Depth");
     addAndMakeVisible(*lfoToFbL);
 
-    createComponent(editor, *this, n.envToFB, envToLev, envToLevD);
+    createRescaledComponent(editor, *this, n.envToFB, envToLev, envToLevDA);
     addAndMakeVisible(*envToLev);
     envToLevL = std::make_unique<jcmp::Label>();
     envToLevL->setText("Level");
