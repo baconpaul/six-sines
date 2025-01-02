@@ -145,7 +145,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
         envProcess();
         lfoProcess();
-        auto lfoFac = lfoIsEnveloped > 0.5 ? env.outputCache[blockSize - 1] : 1.f;
+        auto lfoFac = lfoIsEnveloped ? env.outputCache[blockSize - 1] : 1.f;
 
         auto rf = monoValues.twoToTheX.twoToThe(
             ratio + envRatioAtten * envToRatio * env.outputCache[blockSize - 1] +
