@@ -81,14 +81,14 @@ struct SinTable
     }
 
     double frToPhase{0};
-    uint32_t dPhase(float fr)
+    inline uint32_t dPhase(float fr) const
     {
         auto dph = (uint32_t)(fr * frToPhase);
         return dph;
     }
 
     // phase is 26 bits, 12 of fractional, 12 of position in the table and 2 of quadrant
-    float at(uint32_t ph)
+    inline float at(const uint32_t ph) const
     {
         static constexpr uint32_t mask{(1 << 12) - 1};
         static constexpr uint32_t umask{(1 << 14) - 1};
@@ -99,6 +99,7 @@ struct SinTable
         auto q = simdQuad[ub];
         auto c = simdCubic[lb];
         auto r = SIMD_MM(mul_ps(q, c));
+
         auto h = SIMD_MM(hadd_ps)(r, r);
         auto v = SIMD_MM(hadd_ps)(h, h);
         return SIMD_MM(cvtss_f32)(v);

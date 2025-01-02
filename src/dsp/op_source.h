@@ -63,9 +63,12 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         reset();
     }
 
+    float *lfoFacP{nullptr};
+    float one{1.f}; // to point to
     void reset()
     {
         st.setSampleRate(monoValues.sr.sampleRate);
+        firstTime = true;
         zeroInputs();
         snapActive();
 
@@ -82,6 +85,15 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             fbVal[1] = 0.f;
             auto wf = (SinTable::WaveForm)std::round(waveForm);
             st.setWaveForm(wf);
+
+            if (lfoIsEnveloped)
+            {
+                lfoFacP = &env.outputCache[blockSize - 1];
+            }
+            else
+            {
+                lfoFacP = &one;
+            }
         }
     }
 
@@ -126,8 +138,9 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     float envRatioAtten{1.0};
     float lfoRatioAtten{1.0};
     float phaseMod{0.f};
+    float priorRF{0.f};
 
-    float priorRF{-10000000};
+    bool firstTime{true};
     void renderBlock()
     {
         if (!active)
@@ -145,14 +158,16 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
         envProcess();
         lfoProcess();
-        auto lfoFac = lfoIsEnveloped ? env.outputCache[blockSize - 1] : 1.f;
+        auto lfoFac = *lfoFacP;
 
         auto rf = monoValues.twoToTheX.twoToThe(
-            ratio + envRatioAtten * envToRatio * env.outputCache[blockSize - 1] +
-            lfoFac * lfoRatioAtten * lfoToRatio * lfo.outputBlock[0] + ratioMod);
-        rf *= voiceValues.uniRatioMul;
-        if (priorRF < -10000)
+                      ratio + envRatioAtten * envToRatio * env.outputCache[blockSize - 1] +
+                      lfoFac * lfoRatioAtten * lfoToRatio * lfo.outputBlock[0] + ratioMod) *
+                  voiceValues.uniRatioMul;
+
+        if (firstTime)
             priorRF = rf;
+        firstTime = false;
         auto dRF = (priorRF - rf) / blockSize;
         std::swap(rf, priorRF);
 
@@ -163,7 +178,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
             phase += dPhase;
             auto fb = 0.5 * (fbVal[0] + fbVal[1]);
-            auto out = st.at(phase + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb)) * rmLevel[i];
+            auto ph = phase + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb);
+            auto out = st.at(ph);
+
+            out = out * rmLevel[i];
             output[i] = out;
             fbVal[1] = fbVal[0];
             fbVal[0] = out;
