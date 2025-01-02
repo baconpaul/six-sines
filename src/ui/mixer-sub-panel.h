@@ -41,16 +41,18 @@ struct MixerSubPanel : juce::Component,
     void setSelectedIndex(int i);
 
     std::unique_ptr<jcmp::Knob> lfoToLevel;
-    std::unique_ptr<PatchContinuous> lfoToLevelD;
+    std::unique_ptr<PatchContinuous::cubic_t> lfoToLevelDA;
+
     std::unique_ptr<jcmp::Label> lfoToLevelL;
 
     std::unique_ptr<jcmp::Knob> lfoToPan;
     std::unique_ptr<PatchContinuous> lfoToPanD;
+    std::unique_ptr<PatchContinuous::cubic_t> lfoToPanDA;
     std::unique_ptr<jcmp::Label> lfoToPanL;
 
     std::unique_ptr<RuledLabel> modLabelE, modLabelL;
     std::unique_ptr<jcmp::Knob> envToLev;
-    std::unique_ptr<PatchContinuous> envToLevD;
+    std::unique_ptr<PatchContinuous::cubic_t> envToLevDA;
     std::unique_ptr<jcmp::Label> envToLevL;
 
     std::unique_ptr<jcmp::MultiSwitch> envMul;

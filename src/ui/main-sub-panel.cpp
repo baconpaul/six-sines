@@ -37,7 +37,7 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e)
     velSenL->setText("Vel Sens");
     addAndMakeVisible(*velSenL);
 
-    createComponent(editor, *this, on.lfoDepth, lfoDep, lfoDepD);
+    createRescaledComponent(editor, *this, on.lfoDepth, lfoDep, lfoDepDA);
     addAndMakeVisible(*lfoDep);
     lfoDepL = std::make_unique<jcmp::Label>();
     lfoDepL->setText(std::string() + "LFO " + u8"\U00002192");

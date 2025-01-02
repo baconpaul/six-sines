@@ -28,13 +28,13 @@ FineTuneSubPanel::FineTuneSubPanel(SixSinesEditor &e) : HasEditor(e)
     depTitle->setText("Tune");
     addAndMakeVisible(*depTitle);
 
-    createComponent(editor, *this, on.envDepth, envDepth, envDepthD);
+    createRescaledComponent(editor, *this, on.envDepth, envDepth, envDepthDA);
     addAndMakeVisible(*envDepth);
     envDepthLL = std::make_unique<jcmp::Label>();
     envDepthLL->setText(std::string() + "Env " + u8"\U00002192");
     addAndMakeVisible(*envDepthLL);
 
-    createComponent(editor, *this, on.lfoDepth, lfoDep, lfoDepD);
+    createRescaledComponent(editor, *this, on.lfoDepth, lfoDep, lfoDepDA);
     addAndMakeVisible(*lfoDep);
     lfoDepL = std::make_unique<jcmp::Label>();
     lfoDepL->setText(std::string() + "LFO " + u8"\U00002192");

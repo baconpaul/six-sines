@@ -19,6 +19,8 @@
 #include <cstdint>
 #include "sst/jucegui/data/Continuous.h"
 #include "sst/jucegui/data/Discrete.h"
+#include <sst/jucegui/component-adapters/ThrowRescaler.h>
+
 #include "sst/jucegui/components/Knob.h"
 #include "sst/jucegui/components/DraggableTextEditableValue.h"
 
@@ -103,6 +105,8 @@ struct PatchContinuous : jdat::Continuous
     void setTemposyncPowerPartner(jdat::Discrete *d) { tsPowerPartner = d; }
 
     std::function<void()> onPullFromMin{nullptr};
+
+    using cubic_t = sst::jucegui::component_adapters::CubicThrowRescaler<PatchContinuous>;
 };
 
 struct PatchDiscrete : jdat::Discrete
@@ -193,6 +197,41 @@ void createComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique
         }
     };
     cm->setSource(pc.get());
+
+    e.componentByID[id] = juce::Component::SafePointer<juce::Component>(cm.get());
+}
+
+template <typename P, typename T, typename Rescaler, typename... Args>
+void createRescaledComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique_ptr<T> &cm,
+                             std::unique_ptr<Rescaler> &rc, Args... args)
+{
+    auto id = parm.meta.id;
+    auto pc = std::make_unique<PatchContinuous>(e, id);
+    rc = std::make_unique<Rescaler>(std::move(pc));
+    cm = std::make_unique<T>();
+
+    if constexpr (!std::is_same_v<T, jcmp::DraggableTextEditableValue>) // hack
+    {
+        cm->onPopupMenu = [&e, ptr = cm.get()](auto &mods)
+        {
+            e.hideTooltip();
+            e.popupMenuForContinuous(ptr);
+        };
+    }
+    cm->onBeginEdit = [&e, &cm, &rc, args..., id, &panel]()
+    {
+        e.uiToAudio.push({Synth::UIToAudioMsg::Action::BEGIN_EDIT, id});
+        e.updateTooltip(rc.get());
+        e.showTooltipOn(cm.get());
+
+        panel.beginEdit(args...);
+    };
+    cm->onEndEdit = [&e, id, &panel]()
+    {
+        e.uiToAudio.push({Synth::UIToAudioMsg::Action::END_EDIT, id});
+        e.hideTooltip();
+    };
+    cm->setSource(rc.get());
 
     e.componentByID[id] = juce::Component::SafePointer<juce::Component>(cm.get());
 }
