@@ -23,14 +23,15 @@ jobs:
         include:
           - os: windows-latest
             name: windows-x64
-            cmake_args: -G"Visual Studio 17 2022" -A x64
+            cmake_args: -DCMAKE_CXX_COMPLIER=clang++ -DCMAKE_C_COMPILER=clang -GNinja
 
           - os: macos-latest
             name: macos
-            cmake_args: -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+            cmake_args: -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -GNinja
 
           - os: ubuntu-latest
             name: linux-x64
+            cmake_args: -GNinja
 
     steps:
       - name: Checkout code
@@ -41,6 +42,9 @@ jobs:
       - name: Select Xcode Version
         if: runner.os == 'macOS'
         run: sudo xcode-select -switch /Applications/Xcode_15.1.app
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
 
       - uses: apple-actions/import-codesign-certs@v3
         if: runner.os == 'macOS' && github.event_name != 'pull_request'
@@ -77,9 +81,9 @@ jobs:
         run: |
           mkdir build/inst
           mkdir build/insttmp
-          mv build/CLAP/Release/*.clap build/insttmp
-          mv build/VST3/Release/*.vst3 build/insttmp
-          mv build/Release/*.exe build/insttmp
+          mv build/CLAP/*.clap build/insttmp
+          mv build/VST3/*.vst3 build/insttmp
+          mv build/*.exe build/insttmp
           
           7z a -r build/inst/windows-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip build/insttmp/*
 
