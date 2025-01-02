@@ -85,7 +85,7 @@ void Voice::renderBlock()
 
     for (int i = 0; i < numOps; ++i)
     {
-        if (!src[i].activeV)
+        if (!src[i].active)
         {
             continue;
         }
