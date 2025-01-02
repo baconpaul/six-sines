@@ -43,7 +43,7 @@ Voice::Voice(const Patch &p, MonoValues &mv)
           }))
 {
     std::fill(isKeytrack.begin(), isKeytrack.end(), true);
-    std::fill(cmRatio.begin(), cmRatio.end(), 1.0);
+    std::fill(cmRatio.begin(), cmRatio.end(), 1.f);
 }
 
 void Voice::attack()

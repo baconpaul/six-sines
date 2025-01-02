@@ -292,7 +292,7 @@ template <typename T> struct ModulationSupport
               [this](int i) { return &paramBundle.moddepth[i].value; }))
     {
         std::fill(sourcePointers.begin(), sourcePointers.end(), nullptr);
-        std::fill(priorModulation.begin(), priorModulation.end(), 0);
+        std::fill(priorModulation.begin(), priorModulation.end(), 0.f);
     }
 
     void bindModulation()
