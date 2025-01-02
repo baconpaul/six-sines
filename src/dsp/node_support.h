@@ -37,11 +37,16 @@ enum TriggerMode
     NEW_VOICE,
     KEY_PRESS,
     PATCH_DEFAULT,
-    ON_RELEASE
+    ON_RELEASE,
+    ONE_SHOT
 };
 
-static const char *TriggerModeName[5]{"On Start or In Release (Legato)", "On Start Voice Only",
-                                      "On Any Key Press", "Patch Default", "On Release"};
+static const char *TriggerModeName[6]{"On Start or In Release (Legato)",
+                                      "On Start Voice Only",
+                                      "On Any Key Press",
+                                      "Patch Default",
+                                      "On Release",
+                                      "One Shot (w/ Default Retrigger)"};
 
 template <typename T> struct EnvelopeSupport
 {
@@ -169,6 +174,12 @@ template <typename T> struct EnvelopeSupport
             env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, minAttack, 1.f), hold,
                                       decay, sustain, release, ash, dsh, rsh, !voiceValues.gated,
                                       needsCurve);
+        }
+        else if (triggerMode == ONE_SHOT)
+        {
+            env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, minAttack, 1.f), hold,
+                                      decay, sustain, release, ash, dsh, rsh,
+                                      env.stage < env_t::s_sustain, needsCurve);
         }
         else
         {

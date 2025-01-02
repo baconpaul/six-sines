@@ -132,7 +132,8 @@ void Voice::retriggerAllEnvelopesForKeyPress()
             return false;
 
         auto res = (tm == TriggerMode::KEY_PRESS ||
-                    (tm == TriggerMode::PATCH_DEFAULT && dtm == TriggerMode::KEY_PRESS));
+                    ((tm == TriggerMode::PATCH_DEFAULT || tm == ONE_SHOT) &&
+                     dtm == TriggerMode::KEY_PRESS));
         return res;
     };
     for (auto &s : src)
