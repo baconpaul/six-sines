@@ -228,7 +228,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
 
             for (int i = 0; i < blockSize; ++i)
             {
-                modlev[i] = l2f * lfo.outputBlock[i] + e2f * env.outputCache[i];
+                modlev[i] = l2f * lfo.outputBlock[i] + e2f * env.outputCache[i] + fbMod;
             }
         }
         else
@@ -237,7 +237,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
 
             for (int i = 0; i < blockSize; ++i)
             {
-                modlev[i] = fbBase + l2f * lfo.outputBlock[i] + e2f * env.outputCache[i];
+                modlev[i] = fbBase + l2f * lfo.outputBlock[i] + e2f * env.outputCache[i] + fbMod;
             }
         }
         for (int j = 0; j < blockSize; ++j)
