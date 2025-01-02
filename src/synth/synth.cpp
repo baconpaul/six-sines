@@ -57,7 +57,8 @@ void Synth::setSampleRate(double sampleRate)
     lagHandler.setRate(60, blockSize, monoValues.sr.sampleRate);
     vuPeak.setSampleRate(monoValues.sr.sampleRate);
 
-    resampler = std::make_unique<resampler_t>((float)monoValues.sr.sampleRate, (float)realSampleRate);
+    resampler =
+        std::make_unique<resampler_t>((float)monoValues.sr.sampleRate, (float)realSampleRate);
 }
 
 void Synth::process(const clap_output_events_t *outq)

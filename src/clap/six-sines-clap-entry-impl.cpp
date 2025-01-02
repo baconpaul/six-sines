@@ -76,12 +76,6 @@ const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_h
     return nullptr;
 }
 
-const struct clap_plugin_factory six_sines_clap_factory = {
-    clap_get_plugin_count,
-    clap_get_plugin_descriptor,
-    clap_create_plugin,
-};
-
 /*
  * Clap Wrapper AUV2 Factory API
  */
@@ -98,10 +92,6 @@ static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint3
     return true;
 }
 
-const struct clap_plugin_factory_as_auv2 six_sines_auv2_factory = {"BcPL",      // manu
-                                                                   "BaconPaul", // manu name
-                                                                   clap_get_auv2_info};
-
 /*
  * Clap Wrapper VST3 Factory API
  */
@@ -111,22 +101,31 @@ static const clap_plugin_info_as_vst3 *clap_get_vst3_info(const clap_plugin_fact
     return nullptr;
 }
 
-const struct clap_plugin_factory_as_vst3 six_sines_vst3_factory = {
-    "BaconPaul", "https://baconpaul.org", "", clap_get_vst3_info};
-
 const void *get_factory(const char *factory_id)
 {
     SXSNLOG("Asking for factory [" << factory_id << "]");
     if (strcmp(factory_id, CLAP_PLUGIN_FACTORY_ID) == 0)
     {
+        static const struct clap_plugin_factory six_sines_clap_factory = {
+            clap_get_plugin_count,
+            clap_get_plugin_descriptor,
+            clap_create_plugin,
+        };
         return &six_sines_clap_factory;
     }
     if (strcmp(factory_id, CLAP_PLUGIN_FACTORY_INFO_AUV2) == 0)
     {
+        static const struct clap_plugin_factory_as_auv2 six_sines_auv2_factory = {
+            "BcPL",      // manu
+            "BaconPaul", // manu name
+            clap_get_auv2_info};
         return &six_sines_auv2_factory;
     }
     if (strcmp(factory_id, CLAP_PLUGIN_FACTORY_INFO_VST3) == 0)
     {
+        static const struct clap_plugin_factory_as_vst3 six_sines_vst3_factory = {
+            "BaconPaul", "https://baconpaul.org", "", clap_get_vst3_info};
+
         return &six_sines_vst3_factory;
     }
     return nullptr;

@@ -83,16 +83,21 @@ target_compile_definitions(${PROJECT_NAME}-impl PRIVATE
         DISPLAY_VERSION="${VERSION_FILE}"
 )
 target_link_libraries(${PROJECT_NAME}-impl PUBLIC
+        clap
+)
+target_link_libraries(${PROJECT_NAME}-impl PRIVATE
         simde
-        clap clap-helpers clap-wrapper-extensions
-        fmt-header-only
+        clap-helpers clap-wrapper-extensions
         mts-esp-client
+        fmt-header-only
         sst-basic-blocks sst-voicemanager sst-jucegui sst-cpputils
         sst-plugininfra sst-plugininfra::filesystem sst-plugininfra::tinyxml
         sst::clap_juce_shim sst::clap_juce_shim_headers
         ${PROJECT_NAME}-patches
 )
 
+# Hmm - why do I need this?
+add_compile_definitions(CLAP_WRAPPER_LOGLEVEL=0)
 
 set(CLAP_TARGET ${PROJECT_NAME}_clap)
 add_library(${CLAP_TARGET} MODULE
