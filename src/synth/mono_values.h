@@ -26,9 +26,30 @@ struct MTSClient;
 
 namespace baconpaul::six_sines
 {
+struct MonoValues;
+struct SRProvider
+{
+    const sst::basic_blocks::tables::TwoToTheXProvider &ttx;
+    SRProvider(const sst::basic_blocks::tables::TwoToTheXProvider &t) : ttx(t) {}
+    float envelope_rate_linear_nowrap(float f) const
+    {
+        return (blockSize * sampleRateInv) * ttx.twoToThe(-f);
+    }
+
+    void setSampleRate(double sr)
+    {
+        samplerate = sr;
+        sampleRate = sr;
+        sampleRateInv = 1.0 / sr;
+    }
+    double samplerate{1};
+    double sampleRate{1};
+    double sampleRateInv{1};
+};
+
 struct MonoValues
 {
-    MonoValues()
+    MonoValues() : sr(twoToTheX)
     {
         tuningProvider.init();
         twoToTheX.init();
@@ -53,6 +74,8 @@ struct MonoValues
     sst::basic_blocks::dsp::RNG rng;
 
     ModMatrixConfig modMatrixConfig;
+
+    SRProvider sr;
 };
 };     // namespace baconpaul::six_sines
 #endif // MONO_VALUES_H

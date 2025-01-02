@@ -31,8 +31,6 @@ Synth::Synth()
       voices(sst::cpputils::make_array<Voice, VMConfig::maxVoiceCount>(patch, monoValues))
 {
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
-    lagHandler.setRate(60, blockSize, gSampleRate);
-    vuPeak.setSampleRate(gSampleRate);
     monoValues.mtsClient = MTS_RegisterClient();
 
     for (int i = 0; i < numMacros; ++i)
@@ -49,6 +47,17 @@ Synth::~Synth()
     {
         MTS_DeregisterClient(monoValues.mtsClient);
     }
+}
+
+void Synth::setSampleRate(double sampleRate)
+{
+    realSampleRate = sampleRate;
+    monoValues.sr.setSampleRate(sampleRate * overSampleFactor);
+
+    lagHandler.setRate(60, blockSize, monoValues.sr.sampleRate);
+    vuPeak.setSampleRate(monoValues.sr.sampleRate);
+
+    resampler = std::make_unique<resampler_t>(monoValues.sr.sampleRate, realSampleRate);
 }
 
 void Synth::process(const clap_output_events_t *outq)

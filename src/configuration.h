@@ -25,7 +25,7 @@ namespace baconpaul::six_sines
 {
 
 static constexpr size_t blockSize{8};
-static constexpr float gSampleRate{128000.0};
+static constexpr float overSampleFactor{2.5};
 
 static constexpr size_t numOps{6};
 static constexpr size_t matrixSize{(numOps * (numOps - 1)) / 2};

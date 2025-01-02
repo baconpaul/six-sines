@@ -24,7 +24,6 @@
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
 #include "sst/basic-blocks/dsp/Lag.h"
 
-#include "dsp/sr_provider.h"
 #include "synth/mono_values.h"
 #include "synth/voice_values.h"
 
@@ -46,15 +45,13 @@ static const char *TriggerModeName[5]{"On Start or In Release (Legato)", "On Sta
 
 template <typename T> struct EnvelopeSupport
 {
-    SRProvider sr;
-
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
     const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV, &tmV, &emV;
     const float &ash, &dsh, &rsh;
     EnvelopeSupport(const T &mn, const MonoValues &mv, const VoiceValues &vv)
-        : monoValues(mv), voiceValues(vv), sr(mv), env(&sr), delay(mn.delay), attackv(mn.attack),
+        : monoValues(mv), voiceValues(vv), env(&mv.sr), delay(mn.delay), attackv(mn.attack),
           hold(mn.hold), decay(mn.decay), sustain(mn.sustain), release(mn.release),
           powerV(mn.envPower), ash(mn.aShape), dsh(mn.dShape), rsh(mn.rShape), tmV(mn.triggerMode),
           emV(mn.envIsMultiplcative)
@@ -191,7 +188,6 @@ template <typename T> struct EnvelopeSupport
 
 template <typename T, bool needsSmoothing = true> struct LFOSupport
 {
-    SRProvider sr;
     const T &paramBundle;
     const MonoValues &monoValues;
 
@@ -203,7 +199,7 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     sst::basic_blocks::dsp::OnePoleLag<float, false> lag;
 
     LFOSupport(const T &mn, MonoValues &mv)
-        : sr(mv), paramBundle(mn), lfo(&sr, mv.rng), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform),
+        : paramBundle(mn), lfo(&mv.sr, mv.rng), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform),
           lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive), tempoSyncV(mn.tempoSync), monoValues(mv),
           bipolarV(mn.lfoBipolar), lfoIsEnvelopedV(mn.lfoIsEnveloped)
     {
@@ -233,7 +229,7 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
             case lfo_t::PULSE:
             case lfo_t::SH_NOISE:
                 doSmooth = true;
-                lag.setRateInMilliseconds(10, gSampleRate, 1.0);
+                lag.setRateInMilliseconds(10, monoValues.sr.samplerate, 1.0);
                 lag.snapTo(0.f);
                 break;
             default:
