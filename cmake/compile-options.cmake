@@ -25,9 +25,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
             $<$<BOOL:${USE_SANITIZER}>:-fsanitize=address>
             $<$<BOOL:${USE_SANITIZER}>:-fsanitize=undefined>
     )
-    if (UNIX AND NOT APPLE)
+    if (NOT APPLE)
         add_compile_options(-march=nehalem)
     endif()
+endif()
+
+
+if (WIN32)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS=1)
 endif()
 
 if (MSVC)
