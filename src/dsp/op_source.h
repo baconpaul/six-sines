@@ -45,7 +45,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     const VoiceValues &voiceValues;
 
     bool keytrack{true};
-    const float &ratio, &activeV, &envToRatio, &lfoToRatio;       // in  frequency multiple
+    const float &ratio, &activeV, &envToRatio, &lfoToRatio, &envToRatioFine,
+        &lfoToRatioFine;                                          // in  frequency multiple
     const float &waveForm, &kt, &ktv, &startPhase, &octTranspose; // in octaves;
     bool active{false};
 
@@ -54,12 +55,15 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     uint32_t phase;
     uint32_t dPhase;
 
+    static constexpr float centsScale{1.0 / (12 * 100)};
+
     OpSource(const Patch::SourceNode &sn, MonoValues &mv, const VoiceValues &vv)
         : sourceNode(sn), monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv),
           LFOSupport(sn, mv), ModulationSupport(sn, mv, vv), ratio(sn.ratio), activeV(sn.active),
           envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio), waveForm(sn.waveForm),
           kt(sn.keyTrack), ktv(sn.keyTrackValue), startPhase(sn.startingPhase),
-          octTranspose(sn.octTranspose)
+          octTranspose(sn.octTranspose), lfoToRatioFine(sn.lfoToRatioFine),
+          envToRatioFine(sn.envToRatioFine)
     {
         reset();
     }
@@ -162,8 +166,12 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         auto lfoFac = *lfoFacP;
 
         auto rf = monoValues.twoToTheX.twoToThe(
-                      ratio + envRatioAtten * envToRatio * env.outputCache[blockSize - 1] +
-                      lfoFac * lfoRatioAtten * lfoToRatio * lfo.outputBlock[0] + ratioMod) *
+                      ratio +
+                      envRatioAtten * (envToRatio + centsScale * envToRatioFine) *
+                          env.outputCache[blockSize - 1] +
+                      lfoFac * lfoRatioAtten * (lfoToRatio + centsScale * lfoToRatioFine) *
+                          lfo.outputBlock[0] +
+                      ratioMod) *
                   voiceValues.uniRatioMul;
 
         if (firstTime)
