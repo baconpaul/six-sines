@@ -636,6 +636,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
 
     void attack()
     {
+        memset(output, 0, sizeof(output));
         velocityLag.snapTo(voiceValues.velocity);
         velocityLag.setRateInMilliseconds(10, monoValues.sr.sampleRate, 1.0 / blockSize);
 
