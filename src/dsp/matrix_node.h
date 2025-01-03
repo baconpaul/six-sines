@@ -530,8 +530,15 @@ struct ModulationOnlyNode : EnvelopeSupport<Patch::ModulationOnlyNode>,
         envProcess(true, false);
         lfoProcess();
 
+        auto lfoLev = lfo.outputBlock[blockSize - 1];
+
+        if (lfoIsEnveloped)
+        {
+            lfoLev = lfoLev * env.outBlock0;
+        }
+
         level = directMod + env.outBlock0 * (envD + edMod) * envAtten +
-                lfo.outputBlock[blockSize - 1] * (lfoD + ldMod) * lfoAtten;
+                lfoLev * (lfoD + ldMod) * lfoAtten;
     }
 
     float lfoAtten{0.f};
