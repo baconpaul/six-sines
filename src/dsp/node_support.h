@@ -99,16 +99,14 @@ template <typename T> struct EnvelopeSupport
         }
 
         bool running = env.stage <= env_t::s_release;
-        bool nodel = delay < 0.00001;
 
         float startingValue = 0.f;
         minAttack = 0.f;
-        if (running && nodel)
+        if (running)
         {
             startingValue = env.outputCache[blockSize - 1];
             minAttack =
                 (retriggerHasFloor && monoValues.attackFloorOnRetrig) ? minAttackOnRetrig : 0.f;
-            ;
         }
 
         if (active && !constantEnv)
