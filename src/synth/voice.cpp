@@ -181,7 +181,7 @@ void Voice::retriggerAllEnvelopesForReGate()
             {
                 s.envAttack();
                 if (voiceValues.rephaseOnRetrigger)
-                    SXSNLOG("Would rephase");
+                    s.softResetPhase();
             }
 
     for (auto &s : selfNode)

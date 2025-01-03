@@ -172,8 +172,44 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         auto dRF = (priorRF - rf) / blockSize;
         std::swap(rf, priorRF);
 
-        innerLoop(output, fbVal, rf, dRF, phase);
+        if (softResetPhaseCount > 0)
+        {
+            float newOutput alignas(16)[blockSize];
+            innerLoop(output, fbVal, rf, dRF, phase);
+            innerLoop(newOutput, softFb, rf, dRF, softPhase);
+            float p0 = 1.f * softResetPhaseCount / softPhaseCount;
 
+            for (int i = 0; i < blockSize; ++i)
+            {
+                auto fac = p0 - i * dSoftPhase;
+                output[i] = fac * output[i] + (1 - fac) * newOutput[i];
+            }
+            softResetPhaseCount--;
+
+            if (softResetPhaseCount == 0)
+            {
+                phase = softPhase;
+                fbVal[0] = softFb[0];
+                fbVal[1] = softFb[1];
+            }
+        }
+        else
+        {
+            innerLoop(output, fbVal, rf, dRF, phase);
+        }
+    }
+
+    static constexpr int softPhaseCount{16};
+    static constexpr float dSoftPhase{1.f / (blockSize * softPhaseCount)};
+    int softResetPhaseCount{-1};
+    uint32_t softPhase;
+    float softFb[2];
+    void softResetPhase()
+    {
+        softPhase = 4 << 27;
+        softFb[0] = 0.f;
+        softFb[1] = 0.f;
+        softResetPhaseCount = 4;
     }
 
     void innerLoop(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs)
