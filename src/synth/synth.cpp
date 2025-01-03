@@ -86,6 +86,7 @@ void Synth::process(const clap_output_events_t *outq)
         memset(lOutput, 0, sizeof(output));
         // this can be way more efficient
         auto cvoice = head;
+        Voice *removeVoice{nullptr};
 
         while (cvoice)
         {
@@ -97,13 +98,24 @@ void Synth::process(const clap_output_events_t *outq)
 
             if (cvoice->out.env.stage > OutputNode::env_t::s_release || cvoice->fadeBlocks == 0)
             {
-                responder.doVoiceEndCallback(cvoice);
+                auto rvoice = cvoice;
                 cvoice = removeFromVoiceList(cvoice);
+                rvoice->next = removeVoice;
+                removeVoice = rvoice;
             }
             else
             {
                 cvoice = cvoice->next;
             }
+        }
+
+        while (removeVoice)
+        {
+            responder.doVoiceEndCallback(removeVoice);
+            auto v = removeVoice;
+            removeVoice = removeVoice->next;
+            v->next = nullptr;
+            assert(!v->next && !v->prior);
         }
 
         for (int i = 0; i < blockSize; ++i)
@@ -167,7 +179,9 @@ Voice *Synth::removeFromVoiceList(Voice *cvoice)
     cvoice->cleanup();
     cvoice->next = nullptr;
     cvoice->prior = nullptr;
+    cvoice->fadeBlocks = -1;
     voiceCount--;
+
     return nv;
 }
 

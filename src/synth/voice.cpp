@@ -111,6 +111,7 @@ void Voice::renderBlock()
         {
             auto fp = fadeBlocks * blockSize - i;
             auto at = fp * dFade;
+
             out.output[0][i] *= at;
             out.output[1][i] *= at;
         }
@@ -228,6 +229,8 @@ void Voice::cleanup()
     }
 
     out.envCleanup();
+    out.ftModNode.envCleanup();
+    out.panModNode.envCleanup();
 }
 
 void Voice::setupPortaTo(uint16_t newKey, float log2Time)
