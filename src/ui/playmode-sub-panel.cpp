@@ -269,7 +269,7 @@ void PlayModeSubPanel::showTriggerButtonMenu()
     p.addSeparator();
     auto rpo = editor.patchCopy.output.rephaseOnRetrigger;
     auto rnp = editor.patchCopy.output.uniPhaseRand;
-    p.addItem("Reset phase on retriggerr", !rnp, rpo,
+    p.addItem("Reset Phase on Retrigger", !rnp, rpo,
               [rpo, w = juce::Component::SafePointer(this)]()
               {
                   if (!w)
