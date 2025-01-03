@@ -172,13 +172,55 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         auto dRF = (priorRF - rf) / blockSize;
         std::swap(rf, priorRF);
 
+        if (softResetPhaseCount > 0)
+        {
+            float newOutput alignas(16)[blockSize];
+            innerLoop(output, fbVal, rf, dRF, phase);
+            innerLoop(newOutput, softFb, rf, dRF, softPhase);
+            float p0 = 1.f * softResetPhaseCount / softPhaseCount;
+
+            for (int i = 0; i < blockSize; ++i)
+            {
+                auto fac = p0 - i * dSoftPhase;
+                output[i] = fac * output[i] + (1 - fac) * newOutput[i];
+            }
+            softResetPhaseCount--;
+
+            if (softResetPhaseCount == 0)
+            {
+                phase = softPhase;
+                fbVal[0] = softFb[0];
+                fbVal[1] = softFb[1];
+            }
+        }
+        else
+        {
+            innerLoop(output, fbVal, rf, dRF, phase);
+        }
+    }
+
+    static constexpr int softPhaseCount{16};
+    static constexpr float dSoftPhase{1.f / (blockSize * softPhaseCount)};
+    int softResetPhaseCount{-1};
+    uint32_t softPhase;
+    float softFb[2];
+    void softResetPhase()
+    {
+        softPhase = 4 << 27;
+        softFb[0] = 0.f;
+        softFb[1] = 0.f;
+        softResetPhaseCount = 4;
+    }
+
+    void innerLoop(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs)
+    {
         for (int i = 0; i < blockSize; ++i)
         {
             dPhase = st.dPhase(baseFrequency * rf);
             rf += dRF;
 
-            phase += dPhase;
-            auto fb = 0.5 * (fbVal[0] + fbVal[1]);
+            phs += dPhase;
+            auto fb = 0.5 * (fbv[0] + fbv[1]);
             auto sb = std::signbit(feedbackLevel[i]);
             // fb = sb ? fb * fb : fb. Ugh a branch. but bool = 0/1, so
             // (1-sb) * fb + sb * fb * fb - 3 mul, 2 add
@@ -186,13 +228,13 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             // fb * ( 1 - sb * ( 1 - fb)) - 2 mul 2 add
             fb = fb * (1 - sb * (1 - fb));
 
-            auto ph = phase + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb);
+            auto ph = phs + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb);
             auto out = st.at(ph);
 
             out = out * rmLevel[i];
-            output[i] = out;
-            fbVal[1] = fbVal[0];
-            fbVal[0] = out;
+            onto[i] = out;
+            fbv[1] = fbv[0];
+            fbv[0] = out;
         }
     }
 

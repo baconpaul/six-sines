@@ -267,6 +267,20 @@ void PlayModeSubPanel::showTriggerButtonMenu()
         p.addItem(TriggerModeName[g], true, tmv == g, genSet(g));
     }
     p.addSeparator();
+    auto rpo = editor.patchCopy.output.rephaseOnRetrigger;
+    auto rnp = editor.patchCopy.output.uniPhaseRand;
+    p.addItem("Reset Phase on Retrigger", !rnp, rpo,
+              [rpo, w = juce::Component::SafePointer(this)]()
+              {
+                  if (!w)
+                      return;
+                  w->editor.patchCopy.output.rephaseOnRetrigger = !rpo;
+                  w->editor.uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM,
+                                            w->editor.patchCopy.output.rephaseOnRetrigger.meta.id,
+                                            (float)(!rpo)});
+              });
+
+    p.addSeparator();
     auto atfl = editor.patchCopy.output.attackFloorOnRetrig;
     p.addItem("Attack Floored on Retrigger", true, atfl,
               [atfl, w = juce::Component::SafePointer(this)]()
