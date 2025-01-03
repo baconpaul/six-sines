@@ -112,7 +112,7 @@ jobs:
           
           mkdir build/inst
           cd build
-          ../libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh "Six Sines" . ../resources inst `date +"%Y-%m-%d"`-`git rev-parse --short HEAD`
+          ../libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh "Six Sines" . ../resources/mac_installer inst `date +"%Y-%m-%d"`-`git rev-parse --short HEAD`
 
       - name: Configure pull request version
         if: github.event_name == 'pull_request'
