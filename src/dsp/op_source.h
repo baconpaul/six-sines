@@ -17,6 +17,7 @@
 #define BACONPAUL_SIX_SINES_DSP_OP_SOURCE_H
 
 #include <cstdint>
+#include <cmath>
 
 #include "configuration.h"
 
@@ -178,6 +179,13 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
             phase += dPhase;
             auto fb = 0.5 * (fbVal[0] + fbVal[1]);
+            auto sb = std::signbit(feedbackLevel[i]);
+            // fb = sb ? fb * fb : fb. Ugh a branch. but bool = 0/1, so
+            // (1-sb) * fb + sb * fb * fb - 3 mul, 2 add
+            // fb - sb * fb + sb * fb * fb - 3 nul 2 add
+            // fb * ( 1 - sb * ( 1 - fb)) - 2 mul 2 add
+            fb = fb * (1 - sb * (1 - fb));
+
             auto ph = phase + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb);
             auto out = st.at(ph);
 

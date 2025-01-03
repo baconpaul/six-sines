@@ -527,7 +527,7 @@ struct Patch
         static constexpr uint32_t idBase{10000}, idStride{100};
         SelfNode(size_t idx)
             : fbLevel(floatMd()
-                          .asPercent()
+                          .asPercentBipolar()
                           .withName(name(idx) + " Level")
                           .withGroupName(name(idx))
                           .withDefault(0.0)
