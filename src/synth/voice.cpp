@@ -162,6 +162,10 @@ void Voice::retriggerAllEnvelopesForKeyPress()
 
     if (mtm(out.triggerMode))
         out.envAttack();
+    if (mtm(out.ftModNode.triggerMode))
+        out.ftModNode.envAttack();
+    if (mtm(out.panModNode.triggerMode))
+        out.panModNode.envAttack();
 }
 
 void Voice::retriggerAllEnvelopesForReGate()
@@ -205,6 +209,10 @@ void Voice::retriggerAllEnvelopesForReGate()
 
     if (mtm(out.triggerMode))
         out.envAttack();
+    if (mtm(out.ftModNode.triggerMode))
+        out.ftModNode.envAttack();
+    if (mtm(out.panModNode.triggerMode))
+        out.panModNode.envAttack();
 }
 
 void Voice::cleanup()
