@@ -71,7 +71,7 @@ template <typename T> struct EnvelopeSupport
     bool releaseEnvStarted{false}, releaseEnvUngated{false};
     bool envIsMult{true};
 
-    static constexpr float minAttackOnRetrig{0.0599}; // about 1.8 ms
+    static constexpr float minAttackOnRetrig{0.05}; // the main dahdsr default
     float minAttack{0.f};
     bool retriggerHasFloor{true};
 

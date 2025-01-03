@@ -209,7 +209,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         softPhase = 4 << 27;
         softFb[0] = 0.f;
         softFb[1] = 0.f;
-        softResetPhaseCount = 4;
+        softResetPhaseCount = softPhaseCount;
     }
 
     void innerLoop(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs)
