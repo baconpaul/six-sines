@@ -33,7 +33,7 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
     Comp *asComp() { return static_cast<Comp *>(this); }
     DAHDSRComponents() {}
 
-    const Param *triggerModePtr{nullptr}; // bit of a hack since refs arent mutable
+    const PatchPart *patchPartPtr{nullptr}; // bit of a hack since refs arent mutable
     void setupDAHDSR(SixSinesEditor &e, const PatchPart &v)
     {
         auto mk = [&e, this](auto id, auto idx, auto lb)
@@ -80,7 +80,7 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
             if (w)
                 w->setTriggerLabel();
         };
-        triggerModePtr = &v.triggerMode;
+        patchPartPtr = &v;
         setTriggerLabel();
     }
 
@@ -128,44 +128,46 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
     std::unique_ptr<jcmp::TextPushButton> triggerButton;
     void setTriggerLabel()
     {
-        if (!triggerModePtr)
+        if (!patchPartPtr)
             return;
-        auto tmv = (int)std::round(triggerModePtr->value);
+        auto tmv = (int)std::round(patchPartPtr->triggerMode.value);
+        auto osv = (int)std::round(patchPartPtr->envIsOneShot.value);
+
+        std::string LE = (osv ? u8"\U000000B9" : "");
+
         switch (tmv)
         {
         case (int)TriggerMode::NEW_GATE:
-            triggerButton->setLabel("L");
+            triggerButton->setLabel("L" + LE);
             break;
         case (int)TriggerMode::NEW_VOICE:
-            triggerButton->setLabel("S");
+            triggerButton->setLabel("S" + LE);
             break;
         case (int)TriggerMode::KEY_PRESS:
-            triggerButton->setLabel("K");
+            triggerButton->setLabel("K" + LE);
             break;
         case (int)TriggerMode::ON_RELEASE:
-            triggerButton->setLabel("R");
-            break;
-        case (int)TriggerMode::ONE_SHOT:
-            triggerButton->setLabel("1");
+            triggerButton->setLabel("R"); // one shot does nothing with release
             break;
         case (int)TriggerMode::PATCH_DEFAULT:
-            triggerButton->setLabel("D");
+            triggerButton->setLabel("D" + LE);
             break;
         }
         triggerButton->repaint();
     }
     void showTriggerPopup()
     {
-        if (!triggerModePtr)
+        if (!patchPartPtr)
             return;
-        auto tmv = (int)std::round(triggerModePtr->value);
+        auto tmv = (int)std::round(patchPartPtr->triggerMode.value);
+        auto osv = (bool)std::round(patchPartPtr->envIsOneShot.value);
 
         auto genSet = [w = juce::Component::SafePointer(asComp())](int nv)
         {
             auto that = w;
             return [nv, that]()
             {
-                auto pid = that->triggerModePtr->meta.id;
+                auto pid = that->patchPartPtr->triggerMode.meta.id;
                 that->editor.patchCopy.paramMap.at(pid)->value = nv;
                 that->setTriggerLabel();
 
@@ -177,9 +179,9 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         auto p = juce::PopupMenu();
         p.addSectionHeader("Trigger Mode");
         p.addSeparator();
-        for (auto v : {(int)TriggerMode::KEY_PRESS, (int)TriggerMode::NEW_GATE,
-                       (int)TriggerMode::NEW_VOICE, (int)TriggerMode::ON_RELEASE,
-                       (int)TriggerMode::ONE_SHOT, (int)TriggerMode::PATCH_DEFAULT})
+        for (auto v :
+             {(int)TriggerMode::KEY_PRESS, (int)TriggerMode::NEW_GATE, (int)TriggerMode::NEW_VOICE,
+              (int)TriggerMode::ON_RELEASE, (int)TriggerMode::PATCH_DEFAULT})
         {
             bool enabled = true;
             if (v == (int)TriggerMode::NEW_VOICE && !voiceTrigerAllowed)
@@ -191,6 +193,21 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
             p.addItem(TriggerModeName[v], enabled, tmv == v, genSet(v));
         }
 
+        p.addSeparator();
+        p.addItem("One Shot", tmv != (int)TriggerMode::ON_RELEASE, osv,
+                  [osv, w = juce::Component::SafePointer(asComp())]()
+                  {
+                      if (!w)
+                          return;
+
+                      auto pid = w->patchPartPtr->envIsOneShot.meta.id;
+                      w->editor.patchCopy.paramMap.at(pid)->value = !(osv);
+                      w->setTriggerLabel();
+
+                      w->editor.uiToAudio.push(
+                          {Synth::UIToAudioMsg::Action::SET_PARAM, pid, (float)(!osv)});
+                      w->editor.flushOperator();
+                  });
         p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
     }
 };

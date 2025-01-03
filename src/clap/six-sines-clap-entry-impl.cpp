@@ -70,7 +70,6 @@ const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_h
 
     if (strcmp(plugin_id, getDescriptor()->id) == 0)
     {
-        SXSNLOG("Asked for desc");
         return makePlugin(host);
     }
     return nullptr;

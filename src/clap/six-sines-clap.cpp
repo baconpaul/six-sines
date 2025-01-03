@@ -367,7 +367,6 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
 const clap_plugin *makePlugin(const clap_host *h)
 {
-    SXSNLOG("makePlugin");
     auto res = new baconpaul::six_sines::clapimpl::SixSinesClap(h);
     return res->clapPlugin();
 }

@@ -127,6 +127,8 @@ bool Patch::fromState(const std::string &idata)
         par = par->NextSiblingElement("p");
     }
 
+    if (ver != patchVersion)
+        migratePatchFromVersion(ver);
     return true;
 }
 
@@ -235,6 +237,30 @@ float Patch::migrateParamValueFromVersion(Param *p, float value, uint32_t versio
         }
     }
     return value;
+}
+
+void Patch::migratePatchFromVersion(uint32_t version)
+{
+    if (version == 7)
+    {
+        auto fixTrigMod = [](auto &a)
+        {
+            if (a.triggerMode.value == 5)
+            {
+                a.triggerMode.value = 3; // PATCH_DEFAULT
+                a.envIsOneShot.value = true;
+            }
+        };
+        for (auto &s : sourceNodes)
+            fixTrigMod(s);
+        for (auto &s : selfNodes)
+            fixTrigMod(s);
+        for (auto &s : matrixNodes)
+            fixTrigMod(s);
+        fixTrigMod(output);
+        fixTrigMod(fineTuneMod);
+        fixTrigMod(mainPanMod);
+    }
 }
 
 } // namespace baconpaul::six_sines
