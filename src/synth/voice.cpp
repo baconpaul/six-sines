@@ -139,7 +139,11 @@ void Voice::retriggerAllEnvelopesForKeyPress()
     for (auto &s : src)
         if (s.active)
             if (mtm(s.triggerMode))
+            {
                 s.envAttack();
+                if (voiceValues.rephaseOnRetrigger)
+                    s.softResetPhase();
+            }
 
     for (auto &s : selfNode)
         if (s.active)
