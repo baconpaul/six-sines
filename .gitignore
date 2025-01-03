@@ -3,3 +3,4 @@ build/
 .idea/
 cmake-*/
 ignore/
+minst*.sh
