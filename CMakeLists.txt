@@ -160,6 +160,7 @@ target_link_libraries(${sat} PRIVATE ${PROJECT_NAME}-impl)
 target_add_standalone_wrapper(TARGET ${sat}
         OUTPUT_NAME "${PRODUCT_NAME}"
         STATICALLY_LINKED_CLAP_ENTRY True
+        MACOS_ICON "${CMAKE_SOURCE_DIR}/resources/mac_installer/Icon.icns"
         PLUGIN_ID "org.baconpaul.six-sines")
 
 add_custom_target(${PROJECT_NAME}_all)
