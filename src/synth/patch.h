@@ -398,21 +398,39 @@ struct Patch
                          .withDefault(idx == 0)
                          .withID(id(1, idx))),
               envToRatio(floatMd()
-                             .withRange(-2, 2)
-                             .withLinearScaleFormatting("offset")
+                             .withRange(-5, 5)
+                             .withATwoToTheBFormatting(1, 1, "offset")
                              .withName(name(idx) + " Env to Ratio")
                              .withGroupName(name(idx))
                              .withDecimalPlaces(4)
                              .withDefault(0.f)
-                             .withID(id(2, idx))),
+                             .withID(id(2, idx))
+                             .withFeature(md_t::Features::BELOW_ONE_IS_INVERSE_FRACTION)),
               lfoToRatio(floatMd()
-                             .withRange(-2, 2)
-                             .withLinearScaleFormatting("offset")
+                             .withRange(-5, 5)
+                             .withATwoToTheBFormatting(1, 1, "offset")
                              .withName(name(idx) + " LFO to Ratio")
                              .withGroupName(name(idx))
                              .withDecimalPlaces(4)
                              .withDefault(0.f)
-                             .withID(id(3, idx))),
+                             .withID(id(3, idx))
+                             .withFeature(md_t::Features::BELOW_ONE_IS_INVERSE_FRACTION)),
+              envToRatioFine(floatMd()
+                                 .withRange(-200, 200)
+                                 .withLinearScaleFormatting(" cents")
+                                 .withName(name(idx) + " Env to Ratio (Fine)")
+                                 .withGroupName(name(idx))
+                                 .withDecimalPlaces(4)
+                                 .withDefault(0.f)
+                                 .withID(id(10, idx))),
+              lfoToRatioFine(floatMd()
+                                 .withRange(-200, 200)
+                                 .withLinearScaleFormatting(" cents")
+                                 .withName(name(idx) + " LFO to Ratio (Fine)")
+                                 .withGroupName(name(idx))
+                                 .withDecimalPlaces(4)
+                                 .withDefault(0.f)
+                                 .withID(id(11, idx))),
               waveForm(
                   intMd()
                       .withName(name(idx) + " Waveform")
@@ -479,8 +497,8 @@ struct Patch
         Param ratio;
         Param active;
 
-        Param envToRatio;
-        Param lfoToRatio;
+        Param envToRatio, envToRatioFine;
+        Param lfoToRatio, lfoToRatioFine;
 
         Param waveForm;
 
@@ -492,9 +510,9 @@ struct Patch
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&ratio,         &active,        &envToRatio,
-                                     &lfoToRatio,    &waveForm,      &keyTrack,
-                                     &keyTrackValue, &startingPhase, &octTranspose};
+            std::vector<Param *> res{&ratio,        &active,         &envToRatio,    &lfoToRatio,
+                                     &waveForm,     &keyTrack,       &keyTrackValue, &startingPhase,
+                                     &octTranspose, &envToRatioFine, &lfoToRatioFine};
             for (int i = 0; i < numModsPer; ++i)
                 res.push_back(&modtarget[i]);
             appendDAHDSRParams(res);

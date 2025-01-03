@@ -45,16 +45,22 @@ struct SourceSubPanel : juce::Component,
 
     std::unique_ptr<jcmp::Knob> envToRatio;
     std::unique_ptr<PatchContinuous> envToRatioD;
+    std::unique_ptr<jcmp::Knob> envToRatioFine;
+    std::unique_ptr<PatchContinuous> envToRatioFineD;
     std::unique_ptr<jcmp::Label> envToRatioL;
+    std::unique_ptr<jcmp::Label> envToRatioFineL;
 
     std::unique_ptr<jcmp::Knob> lfoToRatio;
     std::unique_ptr<PatchContinuous> lfoToRatioD;
+    std::unique_ptr<jcmp::Knob> lfoToRatioFine;
+    std::unique_ptr<PatchContinuous> lfoToRatioFineD;
     std::unique_ptr<jcmp::Label> lfoToRatioL;
+    std::unique_ptr<jcmp::Label> lfoToRatioFineL;
 
     std::unique_ptr<jcmp::JogUpDownButton> wavButton;
     std::unique_ptr<PatchDiscrete> wavButtonD;
 
-    std::unique_ptr<RuledLabel> modTitle, wavTitle, keyTrackTitle;
+    std::unique_ptr<RuledLabel> modTitle, lfoModTitle, wavTitle, keyTrackTitle;
 
     std::unique_ptr<juce::Component> wavPainter;
 
@@ -71,7 +77,7 @@ struct SourceSubPanel : juce::Component,
 
     std::unique_ptr<jcmp::JogUpDownButton> tsposeButton;
     std::unique_ptr<PatchDiscrete> tsposeButtonD;
-    std::unique_ptr<RuledLabel> tsposeButtonL;
+    std::unique_ptr<jcmp::Label> tsposeButtonL;
 
     void setEnabledState();
 };

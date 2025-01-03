@@ -66,20 +66,34 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     setupModulation(editor, sn);
 
     createComponent(editor, *this, sn.envToRatio, envToRatio, envToRatioD);
+    createComponent(editor, *this, sn.envToRatioFine, envToRatioFine, envToRatioFineD);
     envToRatioL = std::make_unique<jcmp::Label>();
-    envToRatioL->setText("Env");
+    envToRatioL->setText("Coarse");
+    envToRatioFineL = std::make_unique<jcmp::Label>();
+    envToRatioFineL->setText("Fine");
     addAndMakeVisible(*envToRatioL);
     addAndMakeVisible(*envToRatio);
+    addAndMakeVisible(*envToRatioFine);
+    addAndMakeVisible(*envToRatioFineL);
 
     createComponent(editor, *this, sn.lfoToRatio, lfoToRatio, lfoToRatioD);
-    addAndMakeVisible(*lfoToRatio);
+    createComponent(editor, *this, sn.lfoToRatioFine, lfoToRatioFine, lfoToRatioFineD);
     lfoToRatioL = std::make_unique<jcmp::Label>();
-    lfoToRatioL->setText("LFO");
+    lfoToRatioL->setText("Coarse");
+    lfoToRatioFineL = std::make_unique<jcmp::Label>();
+    lfoToRatioFineL->setText("Fine");
     addAndMakeVisible(*lfoToRatioL);
+    addAndMakeVisible(*lfoToRatio);
+    addAndMakeVisible(*lfoToRatioFine);
+    addAndMakeVisible(*lfoToRatioFineL);
 
     modTitle = std::make_unique<RuledLabel>();
-    modTitle->setText("Depth");
+    modTitle->setText("Env Depth");
     addAndMakeVisible(*modTitle);
+
+    lfoModTitle = std::make_unique<RuledLabel>();
+    lfoModTitle->setText("LFO Depth");
+    addAndMakeVisible(*lfoModTitle);
 
     wavTitle = std::make_unique<RuledLabel>();
     wavTitle->setText("Wave");
@@ -97,11 +111,11 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     addAndMakeVisible(*wavPainter);
 
     keyTrackTitle = std::make_unique<RuledLabel>();
-    keyTrackTitle->setText("KeyTrak");
+    keyTrackTitle->setText("Pitch");
     addAndMakeVisible(*keyTrackTitle);
 
     createComponent(editor, *this, sn.keyTrack, keyTrack, keyTrackD);
-    keyTrack->setLabel("Active");
+    keyTrack->setLabel("KeyTrak");
     addAndMakeVisible(*keyTrack);
 
     createComponent(editor, *this, sn.keyTrackValue, keyTrackValue, keyTrackValueD);
@@ -134,7 +148,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     createComponent(editor, *this, sn.octTranspose, tsposeButton, tsposeButtonD);
     addAndMakeVisible(*tsposeButton);
 
-    tsposeButtonL = std::make_unique<RuledLabel>();
+    tsposeButtonL = std::make_unique<jcmp::Label>();
     tsposeButtonL->setText("Octave");
     addAndMakeVisible(*tsposeButtonL);
 
@@ -153,42 +167,51 @@ void SourceSubPanel::resized()
 
     auto depx = r.getX() + 2 * uicMargin;
     auto depy = r.getY();
-    positionTitleLabelAt(depx, depy, uicKnobSize * 2 + uicMargin, modTitle);
 
+    // spanning label so
+    positionTitleLabelAt(depx, depy, uicKnobSize * 2 + uicMargin, modTitle);
     depy += uicTitleLabelHeight;
     positionKnobAndLabel(depx, depy, envToRatio, envToRatioL);
-    depx += uicKnobSize + uicMargin;
+    positionKnobAndLabel(depx + uicKnobSize + uicMargin, depy, envToRatioFine, envToRatioFineL);
+
+    depy += uicLabeledKnobHeight + uicMargin + 1;
+    positionTitleLabelAt(depx, depy, uicKnobSize * 2 + uicMargin, lfoModTitle);
+    depy += uicTitleLabelHeight;
     positionKnobAndLabel(depx, depy, lfoToRatio, lfoToRatioL);
+    positionKnobAndLabel(depx + uicKnobSize + uicMargin, depy, lfoToRatioFine, lfoToRatioFineL);
 
     depx = r.getX() + 2 * uicMargin;
     depy += uicLabeledKnobHeight + uicMargin;
 
-    positionTitleLabelAt(depx, depy, uicKnobSize * 2 + uicMargin, wavTitle);
-    depy += uicTitleLabelHeight;
-    wavButton->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight);
-    depy += uicLabelHeight + uicMargin;
-    int plw{14};
-    startingPhaseL->setBounds(depx, depy - uicMargin / 2, plw, uicLabelHeight - uicMargin);
-
-    startingPhase->setBounds(depx + plw, depy, uicKnobSize * 2 + uicMargin - plw,
-                             uicLabelHeight - uicMargin);
-    depy += uicLabelHeight;
-    wavPainter->setBounds(depx, depy, uicKnobSize * 2 + uicMargin, uicLabelHeight * 1.8);
-
     depx += 2 * uicKnobSize + 3 * uicMargin;
     depy = r.getY();
     auto xtraW = 8;
-    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, keyTrackTitle);
+    positionTitleLabelAt(depx, depy, 2 * uicKnobSize + uicMargin + 4 * xtraW, keyTrackTitle);
     depy += uicLabelHeight + uicMargin;
     auto bbx = juce::Rectangle<int>(depx, depy, uicKnobSize + 2 * xtraW, uicLabelHeight);
     keyTrack->setBounds(bbx);
     bbx = bbx.translated(0, uicLabelHeight + 2 * uicMargin);
-    positionKnobAndLabel(depx + xtraW, bbx.getY(), keyTrackValue, keyTrackValueLL);
+    tsposeButton->setBounds(bbx.withHeight(uicLabelHeight));
+    bbx = bbx.translated(0, uicLabelHeight + uicMargin);
+    tsposeButtonL->setBounds(bbx.withHeight(uicLabelHeight));
+    bbx = bbx.translated(0, uicLabelHeight + uicMargin);
+    positionKnobAndLabel(depx + 3 * xtraW + uicKnobSize + uicMargin, depy, keyTrackValue,
+                         keyTrackValueLL);
 
-    depy = bbx.getY() + uicLabeledKnobHeight + uicMargin;
-    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, tsposeButtonL);
+    int plw{14};
+    depy = bbx.getY();
+    positionTitleLabelAt(depx, depy, uicKnobSize * 2 + uicMargin + 4 * xtraW, wavTitle);
     depy += uicTitleLabelHeight;
-    tsposeButton->setBounds(depx, depy, uicKnobSize + 2 * xtraW, uicLabelHeight);
+    wavButton->setBounds(depx, depy, uicKnobSize * 2 + uicMargin + 4 * xtraW, uicLabelHeight);
+    depy += uicLabelHeight + uicMargin;
+    startingPhaseL->setBounds(depx, depy - uicMargin / 2, plw, uicLabelHeight - uicMargin);
+
+    startingPhase->setBounds(depx + plw, depy, uicKnobSize * 2 + +4 * xtraW + uicMargin - plw,
+                             uicLabelHeight - uicMargin);
+    depy += uicLabelHeight;
+    wavPainter->setBounds(depx, depy, uicKnobSize * 2 + uicMargin + 4 * xtraW,
+                          uicLabelHeight * 1.8);
+
     layoutModulation(p);
 }
 
