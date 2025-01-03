@@ -1067,6 +1067,12 @@ struct Patch
                                       .withDefault(1)
                                       .withID(id(38))),
 
+        rephaseOnRetrigger(boolMd()
+                                .withName(name() + " Soft Reset Phase on Retrigger")
+                                .withGroupName(name())
+                                .withDefault(false)
+                                .withID(id(39))),
+
               ModulationMixin(name(), id(120)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this](int i)
@@ -1096,7 +1102,7 @@ struct Patch
         Param unisonCount, unisonSpread, uniPhaseRand;
         Param mpeActive, mpeBendRange;
         Param octTranspose, fineTune, pan, lfoDepth;
-        Param attackFloorOnRetrig;
+        Param attackFloorOnRetrig, rephaseOnRetrigger;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -1107,7 +1113,7 @@ struct Patch
                 &bendDown,        &polyLimit,      &defaultTrigger,     &portaTime,
                 &pianoModeActive, &unisonCount,    &unisonSpread,       &uniPhaseRand,
                 &mpeActive,       &mpeBendRange,   &octTranspose,       &pan,
-                &fineTune,        &lfoDepth,       &attackFloorOnRetrig};
+                &fineTune,        &lfoDepth,       &attackFloorOnRetrig, &rephaseOnRetrigger};
             appendDAHDSRParams(res);
 
             for (int i = 0; i < numModsPer; ++i)

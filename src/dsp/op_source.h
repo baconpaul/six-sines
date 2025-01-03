@@ -172,13 +172,19 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         auto dRF = (priorRF - rf) / blockSize;
         std::swap(rf, priorRF);
 
+        innerLoop(output, fbVal, rf, dRF, phase);
+
+    }
+
+    void innerLoop(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs)
+    {
         for (int i = 0; i < blockSize; ++i)
         {
             dPhase = st.dPhase(baseFrequency * rf);
             rf += dRF;
 
-            phase += dPhase;
-            auto fb = 0.5 * (fbVal[0] + fbVal[1]);
+            phs += dPhase;
+            auto fb = 0.5 * (fbv[0] + fbv[1]);
             auto sb = std::signbit(feedbackLevel[i]);
             // fb = sb ? fb * fb : fb. Ugh a branch. but bool = 0/1, so
             // (1-sb) * fb + sb * fb * fb - 3 mul, 2 add
@@ -186,13 +192,13 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             // fb * ( 1 - sb * ( 1 - fb)) - 2 mul 2 add
             fb = fb * (1 - sb * (1 - fb));
 
-            auto ph = phase + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb);
+            auto ph = phs + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb);
             auto out = st.at(ph);
 
             out = out * rmLevel[i];
-            output[i] = out;
-            fbVal[1] = fbVal[0];
-            fbVal[0] = out;
+            onto[i] = out;
+            fbv[1] = fbv[0];
+            fbv[0] = out;
         }
     }
 

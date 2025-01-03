@@ -142,6 +142,7 @@ struct Synth
             }
 
             auto upr = synth.patch.output.uniPhaseRand.value > 0.5;
+            auto prt = synth.patch.output.rephaseOnRetrigger > 0.5;
             for (int vc = 0; vc < ct; ++vc)
             {
                 if (ibuf[vc].instruction !=
@@ -165,6 +166,7 @@ struct Synth
                             synth.voices[i].voiceValues.uniPanShift = uniPan[vc];
                             synth.voices[i].voiceValues.uniPMScale = uniScale[vc];
                             synth.voices[i].voiceValues.phaseRandom = (vc > 0 && upr);
+                            synth.voices[i].voiceValues.rephaseOnRetrigger = (!upr && prt);
                             synth.voices[i].attack();
 
                             synth.addToVoiceList(&synth.voices[i]);

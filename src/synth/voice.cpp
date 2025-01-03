@@ -163,6 +163,7 @@ void Voice::retriggerAllEnvelopesForKeyPress()
 void Voice::retriggerAllEnvelopesForReGate()
 {
     auto dtm = out.defaultTrigger;
+
     auto mtm = [dtm](auto tm)
     {
         if (tm == ON_RELEASE)
@@ -177,7 +178,11 @@ void Voice::retriggerAllEnvelopesForReGate()
     for (auto &s : src)
         if (s.active)
             if (mtm(s.triggerMode))
+            {
                 s.envAttack();
+                if (voiceValues.rephaseOnRetrigger)
+                    SXSNLOG("Would rephase");
+            }
 
     for (auto &s : selfNode)
         if (s.active)
