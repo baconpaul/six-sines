@@ -37,33 +37,29 @@ enum TriggerMode
     NEW_VOICE,
     KEY_PRESS,
     PATCH_DEFAULT,
-    ON_RELEASE,
-    ONE_SHOT
+    ON_RELEASE
 };
 
-static const char *TriggerModeName[6]{"On Start or In Release (Legato)",
-                                      "On Start Voice Only",
-                                      "On Any Key Press",
-                                      "Patch Default",
-                                      "On Release",
-                                      "One Shot (w/ Default Retrigger)"};
+static const char *TriggerModeName[5]{"On Start or In Release (Legato)", "On Start Voice Only",
+                                      "On Any Key Press", "Patch Default", "On Release"};
 
 template <typename T> struct EnvelopeSupport
 {
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV, &tmV, &emV;
+    const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV, &tmV, &emV, &oneShV;
     const float &ash, &dsh, &rsh;
     EnvelopeSupport(const T &mn, const MonoValues &mv, const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), env(&mv.sr), delay(mn.delay), attackv(mn.attack),
           hold(mn.hold), decay(mn.decay), sustain(mn.sustain), release(mn.release),
           powerV(mn.envPower), ash(mn.aShape), dsh(mn.dShape), rsh(mn.rShape), tmV(mn.triggerMode),
-          emV(mn.envIsMultiplcative)
+          emV(mn.envIsMultiplcative), oneShV(mn.envIsOneShot)
     {
     }
 
     TriggerMode triggerMode{NEW_GATE};
+    bool envIsOneShot{false};
     bool allowVoiceTrigger{true};
 
     bool active{true}, constantEnv{false};
@@ -83,6 +79,7 @@ template <typename T> struct EnvelopeSupport
     {
         triggerMode = (TriggerMode)std::round(tmV);
         envIsMult = emV > 0.5;
+        envIsOneShot = oneShV > 0.5;
         if (triggerMode == NEW_VOICE && !allowVoiceTrigger)
             triggerMode = NEW_GATE;
 
@@ -175,17 +172,11 @@ template <typename T> struct EnvelopeSupport
                                       decay, sustain, release, ash, dsh, rsh, !voiceValues.gated,
                                       needsCurve);
         }
-        else if (triggerMode == ONE_SHOT)
-        {
-            env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, minAttack, 1.f), hold,
-                                      decay, sustain, release, ash, dsh, rsh,
-                                      env.stage < env_t::s_sustain, needsCurve);
-        }
         else
         {
+            auto gate = envIsOneShot ? env.stage < env_t::s_sustain : voiceValues.gated;
             env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, minAttack, 1.f), hold,
-                                      decay, sustain, release, ash, dsh, rsh, voiceValues.gated,
-                                      needsCurve);
+                                      decay, sustain, release, ash, dsh, rsh, gate, needsCurve);
         }
     }
 

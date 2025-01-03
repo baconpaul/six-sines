@@ -56,7 +56,7 @@ struct Param
 
 struct Patch
 {
-    static constexpr uint32_t patchVersion{7};
+    static constexpr uint32_t patchVersion{8};
     std::vector<const Param *> params;
     std::unordered_map<uint32_t, Param *> paramMap;
 
@@ -277,7 +277,12 @@ struct Patch
                                      .withGroupName(name)
                                      .withDefault(!alwaysAdd)
                                      .withID(id0 + 11)
-                                     .withUnorderedMapFormatting({{0, "Add"}, {1, "Scale"}}))
+                                     .withUnorderedMapFormatting({{0, "Add"}, {1, "Scale"}})),
+              envIsOneShot(boolMd()
+                               .withName(name + " Is OneShot")
+                               .withGroupName(name)
+                               .withDefault(false)
+                               .withID(id0 + 12))
         {
             delay.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
             attack.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
@@ -289,7 +294,7 @@ struct Patch
         }
 
         Param delay, attack, hold, decay, sustain, release, envPower;
-        Param aShape, dShape, rShape, triggerMode, envIsMultiplcative;
+        Param aShape, dShape, rShape, triggerMode, envIsMultiplcative, envIsOneShot;
 
         void appendDAHDSRParams(std::vector<Param *> &res)
         {
@@ -305,6 +310,7 @@ struct Patch
             res.push_back(&rShape);
             res.push_back(&triggerMode);
             res.push_back(&envIsMultiplcative);
+            res.push_back(&envIsOneShot);
         }
     };
 
@@ -1132,6 +1138,7 @@ struct Patch
     bool fromStateV1(const std::string &);
 
     float migrateParamValueFromVersion(Param *p, float value, uint32_t version);
+    void migratePatchFromVersion(uint32_t version);
 };
 } // namespace baconpaul::six_sines
 #endif // PATCH_H
