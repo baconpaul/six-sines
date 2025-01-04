@@ -18,6 +18,8 @@
 #include "sst/plugininfra/paths.h"
 #include "preset-manager.h"
 
+#include "sst/plugininfra/strnatcmp.h"
+
 #include <cmrc/cmrc.hpp>
 
 CMRC_DECLARE(sixsines_patches);
@@ -120,12 +122,16 @@ PresetManager::PresetManager(Patch &pp) : patch(pp)
         {
             if (d.is_directory())
             {
-                std::set<std::string> ents;
+                std::vector<std::string> ents;
                 for (const auto &p :
                      fs.iterate_directory(std::string() + factoryPath + "/" + d.filename()))
                 {
-                    ents.insert(p.filename());
+                    ents.push_back(p.filename());
                 }
+
+                std::sort(ents.begin(), ents.end(),
+                          [](const auto &a, const auto &b)
+                          { return strnatcasecmp(a.c_str(), b.c_str()) < 0; });
                 factoryPatchNames[d.filename()] = ents;
             }
         }
@@ -191,7 +197,8 @@ void PresetManager::rescanUserPresets()
 
                       if (appe && bppe)
                       {
-                          return a < b;
+                          return strnatcasecmp(a.filename().u8string().c_str(),
+                                               b.filename().u8string().c_str()) < 0;
                       }
                       else if (appe)
                       {
