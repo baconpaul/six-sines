@@ -92,7 +92,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             auto e2d = level * depthAtten;
             for (int i = 0; i < blockSize; ++i)
             {
-                modlev[i] = l2d * lfo.outputBlock[i] + e2d * env.outputCache[i];
+                modlev[i] = applyMod + l2d * lfo.outputBlock[i] + e2d * env.outputCache[i];
             }
         }
         else
@@ -100,7 +100,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             auto e2d = envToLevel * depthAtten;
             for (int i = 0; i < blockSize; ++i)
             {
-                modlev[i] = level + l2d * lfo.outputBlock[i] + e2d * env.outputCache[i];
+                modlev[i] = applyMod + level + l2d * lfo.outputBlock[i] + e2d * env.outputCache[i];
             }
         }
 
@@ -379,7 +379,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
             for (int j = 0; j < blockSize; ++j)
             {
                 // use mech blah
-                auto amp = level * env.outputCache[j];
+                auto amp = lv * env.outputCache[j];
                 amp += lfoAtten * lfoToLevel * lfo.outputBlock[j];
                 vSum[j] = amp * useOut[j];
             }
@@ -389,7 +389,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
             for (int j = 0; j < blockSize; ++j)
             {
                 // use mech blah
-                auto amp = level + envToLevel * env.outputCache[j];
+                auto amp = lv + envToLevel * env.outputCache[j];
                 amp += lfoAtten * lfoToLevel * lfo.outputBlock[j];
                 vSum[j] = amp * useOut[j];
             }
@@ -527,6 +527,7 @@ struct ModulationOnlyNode : EnvelopeSupport<Patch::ModulationOnlyNode>,
         if (!active)
             return;
 
+        calculateModulation();
         envProcess(true, false);
         lfoProcess();
 
