@@ -135,24 +135,36 @@ template <typename Comp, typename Patch> struct ModulationComponents
 
     void layoutModulation(const juce::Rectangle<int> &r)
     {
-        auto modW{150}; // TODO MOVE TO UIC
-        auto bx = r.withTrimmedLeft(r.getWidth() - modW);
-        positionTitleLabelAt(bx.getX(), bx.getY(), modW, modTitleLab);
-        auto bq = bx.translated(0, uicTitleLabelHeight + uicMargin)
-                      .withHeight(uicLabelHeight + uicMargin);
+        auto modW{uicModulationWidth};
 
-        auto mks = 2 * uicLabelHeight + 2 * uicMargin;
+        namespace jlo = sst::jucegui::layout;
+
+        auto lo = jlo::VList()
+                      .at(r.getRight() - uicModulationWidth, r.getY())
+                      .withHeight(asComp()->getHeight() - r.getY())
+                      .withWidth(uicModulationWidth);
+
+        lo.add(titleLabelLayout(modTitleLab));
 
         for (int i = 0; i < numModsPer; ++i)
         {
-            auto kb = bq.withTrimmedLeft(bq.getWidth() - mks).withHeight(mks);
-            depthSlider[i]->setBounds(kb);
+            auto hl = jlo::HList()
+                          .withWidth(uicModulationWidth)
+                          .withHeight(uicKnobSize)
+                          .withAutoGap(uicMargin);
 
-            sourceMenu[i]->setBounds(bq.withTrimmedRight(mks));
-            bq = bq.translated(0, uicLabelHeight + uicMargin);
-            targetMenu[i]->setBounds(bq.withTrimmedRight(mks));
-            bq = bq.translated(0, uicLabelHeight + 3 * uicMargin);
+            auto vl = jlo::VList().expandToFill().withAutoGap(uicLabelGap);
+            vl.add(jlo::Component(*sourceMenu[i]).expandToFill());
+            vl.add(jlo::Component(*targetMenu[i]).expandToFill());
+
+            hl.add(vl);
+            hl.add(jlo::Component(*depthSlider[i]).withWidth(uicKnobSize));
+
+            lo.add(hl);
+            lo.addGap(uicMargin * 2);
         }
+
+        lo.doLayout();
     }
 
     void showTargetMenu(int index)
