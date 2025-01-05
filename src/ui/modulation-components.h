@@ -91,12 +91,14 @@ template <typename Comp, typename Patch> struct ModulationComponents
             sourceMenu[i]->setLabel("");
             return;
         }
+        auto n = patchPtr->name();
         auto v = (uint32_t)std::round(patchPtr->modsource[i].value);
 
         auto p = asComp()->editor.modMatrixConfig.sourceByID.find(v);
         if (p != asComp()->editor.modMatrixConfig.sourceByID.end())
         {
-            sourceMenu[i]->setLabel(p->second.name);
+            sourceMenu[i]->setLabelAndTitle(
+                p->second.name, n + " Mod Source " + std::to_string(i + 1) + " " + p->second.name);
         }
         else
         {
@@ -113,6 +115,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
         }
         std::string res{"ERR"};
         auto v = (uint32_t)std::round(patchPtr->modtarget[i].value);
+        auto n = patchPtr->name();
         for (auto &[id, nm] : patchPtr->targetList)
         {
             if (id == v)
@@ -120,7 +123,8 @@ template <typename Comp, typename Patch> struct ModulationComponents
                 res = nm;
             }
         }
-        targetMenu[i]->setLabel(res);
+        targetMenu[i]->setLabelAndTitle(res,
+                                        n + " Mod Target " + std::to_string(i + 1) + " " + res);
     }
 
     void layoutModulation(const juce::Rectangle<int> &r)

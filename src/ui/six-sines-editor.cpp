@@ -431,6 +431,8 @@ struct MenuValueTypein : HasEditor, juce::PopupMenu::CustomComponent, juce::Text
     {
         if (underComp && underComp->continuous())
         {
+            underComp->onBeginEdit();
+
             if (s.empty())
             {
                 underComp->continuous()->setValueFromGUI(
@@ -440,7 +442,10 @@ struct MenuValueTypein : HasEditor, juce::PopupMenu::CustomComponent, juce::Text
             {
                 underComp->continuous()->setValueAsString(s);
             }
+            underComp->onEndEdit();
+            underComp->repaint();
             underComp->grabKeyboardFocus();
+            underComp->notifyAccessibleChange();
         }
     }
 

@@ -134,23 +134,28 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         auto osv = (int)std::round(patchPartPtr->envIsOneShot.value);
 
         std::string LE = (osv ? u8"\U000000B9" : "");
+        std::string LEacc = (osv ? " (one shot)" : "");
+        std::string nm = "";
+        if (patchPartPtr)
+            nm = patchPartPtr->name();
 
         switch (tmv)
         {
         case (int)TriggerMode::NEW_GATE:
-            triggerButton->setLabel("L" + LE);
+            triggerButton->setLabelAndTitle("L" + LE, nm + " Env Trigger Legato" + LEacc);
             break;
         case (int)TriggerMode::NEW_VOICE:
-            triggerButton->setLabel("S" + LE);
+            triggerButton->setLabelAndTitle("S" + LE, nm + " Env Trigger on Voice" + LEacc);
             break;
         case (int)TriggerMode::KEY_PRESS:
-            triggerButton->setLabel("K" + LE);
+            triggerButton->setLabelAndTitle("K" + LE, nm + " Env Trigger on Key" + LEacc);
             break;
         case (int)TriggerMode::ON_RELEASE:
-            triggerButton->setLabel("R"); // one shot does nothing with release
+            triggerButton->setLabelAndTitle("R", nm + " Env Trigger on Release" +
+                                                     LEacc); // one shot does nothing with release
             break;
         case (int)TriggerMode::PATCH_DEFAULT:
-            triggerButton->setLabel("D" + LE);
+            triggerButton->setLabelAndTitle("D" + LE, nm + " Env Patch Default Trigger" + LEacc);
             break;
         }
         triggerButton->repaint();
