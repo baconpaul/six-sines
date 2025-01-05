@@ -28,6 +28,7 @@
 #include <sst/jucegui/components/MenuButton.h>
 #include <sst/jucegui/components/JogUpDownButton.h>
 #include <sst/jucegui/components/VUMeter.h>
+#include <sst/jucegui/accessibility/FocusDebugger.h>
 #include <sst/jucegui/data/Continuous.h>
 
 #include "synth/synth.h"
@@ -119,7 +120,14 @@ struct SixSinesEditor : jcmp::WindowPanel
     void sendEntirePatchToAudio(const std::string &patchName);
     void setParamValueOnCopy(uint32_t id, float value, bool notifyAudio);
 
+    bool keyPressed(const juce::KeyPress &key) override;
+
     std::unique_ptr<jcmp::VUMeter> vuMeter;
+
+    // To turn this on, recompile with it on in six-sines-editor.cpp
+    void visibilityChanged() override;
+    void parentHierarchyChanged() override;
+    std::unique_ptr<sst::jucegui::accessibility::FocusDebugger> focusDebugger;
 };
 
 struct HasEditor

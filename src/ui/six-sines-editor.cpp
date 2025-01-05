@@ -157,6 +157,12 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     uiToAudio.push({Synth::UIToAudioMsg::REQUEST_REFRESH, true});
     if (flushOperator)
         flushOperator();
+
+#define DEBUG_FOCUS 0
+#if DEBUG_FOCUS
+    focusDebugger = std::make_unique<sst::jucegui::accessibility::FocusDebugger>(*this);
+    focusDebugger->setDoFocusDebug(true);
+#endif
 }
 SixSinesEditor::~SixSinesEditor()
 {
@@ -676,6 +682,34 @@ void SixSinesEditor::postPatchChange(const std::string &dn)
         f();
 
     repaint();
+}
+
+bool SixSinesEditor::keyPressed(const juce::KeyPress &key)
+{
+    if (key.getModifiers().isCommandDown() && (char)key.getKeyCode() == 78)
+    {
+        SXSNLOG("Navigation Menu");
+        return true;
+    }
+    return false;
+}
+
+void SixSinesEditor::visibilityChanged()
+{
+    if (isVisible() && isShowing())
+    {
+        presetButton->setWantsKeyboardFocus(true);
+        presetButton->grabKeyboardFocus();
+    }
+}
+
+void SixSinesEditor::parentHierarchyChanged()
+{
+    if (isVisible() && isShowing())
+    {
+        presetButton->setWantsKeyboardFocus(true);
+        presetButton->grabKeyboardFocus();
+    }
 }
 
 } // namespace baconpaul::six_sines::ui

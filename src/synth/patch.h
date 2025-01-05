@@ -489,10 +489,19 @@ struct Patch
                   }))
 
         {
+            index = idx;
         }
 
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Source"; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
+
+        int index{-1};
+        std::string name() const
+        {
+            if (index < 0)
+                throw std::runtime_error("Only call this post setup");
+            return name(index);
+        }
 
         Param ratio;
         Param active;
@@ -586,10 +595,19 @@ struct Patch
                           .withID(id(55 + i, idx));
                   }))
         {
+            index = idx;
         }
 
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Feedback"; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
+
+        int index{-1};
+        std::string name() const
+        {
+            if (index < 0)
+                throw std::runtime_error("Only call this post setup");
+            return name(index);
+        }
 
         Param fbLevel, lfoToFB, envToFB;
         Param active;
@@ -685,6 +703,7 @@ struct Patch
                   }))
 
         {
+            index = idx;
         }
 
         Param level;
@@ -695,12 +714,22 @@ struct Patch
 
         std::array<Param, numModsPer> modtarget;
 
+        // Use *this* version in constructor
         std::string name(int idx) const
         {
             return "Op " + std::to_string(MatrixIndex::sourceIndexAt(idx) + 1) + " to Op " +
                    std::to_string(MatrixIndex::targetIndexAt(idx) + 1);
         }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
+
+        int index{-1};
+        std::string name() const
+        {
+            if (index < 0)
+                throw std::runtime_error("Only call this post setup");
+            return name(index);
+        }
+
         std::vector<Param *> params()
         {
             std::vector<Param *> res{&level, &active, &pmOrRM, &lfoToDepth, &envToLevel};
@@ -798,10 +827,19 @@ struct Patch
                   }))
 
         {
+            index = idx;
         }
 
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Mixer"; }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
+
+        int index{-1};
+        std::string name() const
+        {
+            if (index < 0)
+                throw std::runtime_error("Only call this post setup");
+            return name(index);
+        }
 
         Param level, pan, lfoToLevel, lfoToPan, envToLevel;
         Param active;
@@ -911,7 +949,11 @@ struct Patch
                 if (id == TargetID::DIRECT)
                     n = outn;
             }
+            cacheName = opName;
         }
+
+        std::string cacheName{};
+        std::string name() const { return cacheName; }
 
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
