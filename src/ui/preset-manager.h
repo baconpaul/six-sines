@@ -49,7 +49,7 @@ struct PresetManager
     void setStateForDisplayName(const std::string &s);
 
     static constexpr const char *factoryPath{"resources/factory_patches"};
-    std::map<std::string, std::set<std::string>> factoryPatchNames;
+    std::map<std::string, std::vector<std::string>> factoryPatchNames;
     std::vector<std::pair<std::string, std::string>> factoryPatchVector;
     std::vector<fs::path> userPatches;
 

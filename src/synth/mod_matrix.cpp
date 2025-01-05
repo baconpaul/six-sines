@@ -14,6 +14,7 @@
  */
 
 #include "mod_matrix.h"
+#include <sst/basic-blocks/tables/MIDICCNames.h>
 #include <fmt/core.h>
 
 namespace baconpaul::six_sines
@@ -23,9 +24,26 @@ ModMatrixConfig::ModMatrixConfig()
     add(OFF, "", "Off");
     add(CHANNEL_AT, "MIDI", "Channel AT");
     add(PITCH_BEND, "MIDI", "Pitch Bend");
+    add(MIDICC_0 + 1, "MIDI", "Mod Wheel");
 
-    for (int cc = 0; cc < 128; ++cc)
-        add(MIDICC_0 + cc, "MIDI CC", fmt::format("CC {:03d}", cc));
+    for (int cc = 2; cc < 128; ++cc)
+    {
+        if (cc >= 98 && cc <= 101)
+        {
+            // nprn
+            continue;
+        }
+        if (cc == 120 || cc == 123)
+        {
+            // note sound off
+            continue;
+        }
+        auto s = sst::basic_blocks::tables::MIDI1CCVeryShortName(cc);
+        if (!s.empty())
+            s = " - " + s;
+        auto q = fmt::format("CC {:03d}{}", cc, s);
+        add(MIDICC_0 + cc, "MIDI CC", q);
+    }
     for (int mc = 0; mc < numMacros; ++mc)
         add(MACRO_0 + mc, "Macros", "Macro " + std::to_string(mc + 1));
 
