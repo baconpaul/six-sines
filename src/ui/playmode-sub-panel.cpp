@@ -135,14 +135,16 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     voiceLimitL->setText("Voices");
     addAndMakeVisible(*voiceLimitL);
     voiceLimit = std::make_unique<jcmp::MenuButton>();
-    voiceLimit->setLabel(std::to_string(getPolyLimit()));
+    voiceLimit->setLabelAndTitle(std::to_string(getPolyLimit()),
+                                 "Voice Limit " + std::to_string(getPolyLimit()));
     voiceLimit->setOnCallback([this]() { showPolyLimitMenu(); });
     editor.componentRefreshByID[editor.patchCopy.output.polyLimit.meta.id] =
         [w = juce::Component::SafePointer(this)]()
     {
         if (!w)
             return;
-        w->voiceLimit->setLabel(std::to_string(w->getPolyLimit()));
+        w->voiceLimit->setLabelAndTitle(std::to_string(w->getPolyLimit()),
+                                        "Voice Limit " + std::to_string(w->getPolyLimit()));
     };
     addAndMakeVisible(*voiceLimit);
 
@@ -352,7 +354,8 @@ void PlayModeSubPanel::setPolyLimit(int plVal)
     editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pl.meta.id, (float)plVal});
     editor.flushOperator();
 
-    voiceLimit->setLabel(std::to_string(getPolyLimit()));
+    voiceLimit->setLabelAndTitle(std::to_string(getPolyLimit()),
+                                 "Voice Limit " + std::to_string(getPolyLimit()));
     voiceLimit->repaint();
 }
 
