@@ -45,32 +45,37 @@ struct PresetDataBinding : sst::jucegui::data::Discrete
 
     int getValue() const override { return curr; }
     int getDefaultValue() const override { return 0; };
+    bool isDirty{false};
+
     std::string getValueAsStringFor(int i) const override
     {
         if (hasExtra && i < 0)
             return extraName;
 
+        std::string postfix = isDirty ? " *" : "";
+
         if (i == 0)
-            return "Init";
+            return "Init" + postfix;
         auto fp = i - 1;
         if (fp < pm.factoryPatchVector.size())
         {
             fs::path p{pm.factoryPatchVector[fp].first};
             p = p / pm.factoryPatchVector[fp].second;
             p = p.replace_extension("");
-            return p.u8string();
+            return p.u8string() + postfix;
         }
         fp -= pm.factoryPatchVector.size();
         if (fp < pm.userPatches.size())
         {
             auto pt = pm.userPatches[fp];
             pt = pt.replace_extension("");
-            return pt.u8string();
+            return pt.u8string() + postfix;
         }
         return "ERR";
     }
     void setValueFromGUI(const int &f) override
     {
+        isDirty = false;
         if (hasExtra)
         {
             hasExtra = false;
@@ -343,5 +348,7 @@ void PresetManager::setStateForDisplayName(const std::string &s)
         }
     }
 }
+
+void PresetManager::setDirtyState(bool b) { discreteDataBinding->isDirty = b; }
 
 } // namespace baconpaul::six_sines::ui

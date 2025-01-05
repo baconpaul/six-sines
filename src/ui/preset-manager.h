@@ -55,6 +55,8 @@ struct PresetManager
 
     std::unique_ptr<PresetDataBinding> discreteDataBinding;
     sst::jucegui::data::Discrete *getDiscreteData();
+
+    void setDirtyState(bool b);
 };
 } // namespace baconpaul::six_sines::ui
 #endif // PRESET_MANAGER_H

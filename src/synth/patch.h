@@ -56,6 +56,7 @@ struct Param
 
 struct Patch
 {
+    bool dirty{false};
     static constexpr uint32_t patchVersion{8};
     std::vector<const Param *> params;
     std::unordered_map<uint32_t, Param *> paramMap;

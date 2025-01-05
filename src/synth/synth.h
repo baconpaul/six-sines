@@ -251,7 +251,8 @@ struct Synth
             UPDATE_PARAM,
             UPDATE_VU,
             UPDATE_VOICE_COUNT,
-            SET_PATCH_NAME
+            SET_PATCH_NAME,
+            SET_PATCH_DIRTY_STATE
         } action;
         uint32_t paramId{0};
         float value{0}, value2{0};
@@ -268,6 +269,7 @@ struct Synth
             STOP_AUDIO,
             START_AUDIO,
             SEND_PATCH_NAME,
+            SEND_PATCH_IS_CLEAN,
             EDITOR_ATTACH_DETATCH, // paramid is true for attach and false for detach
             PANIC_STOP_VOICES
         } action;

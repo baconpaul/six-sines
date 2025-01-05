@@ -194,6 +194,16 @@ void SixSinesEditor::idle()
             strncpy(patchCopy.name, aum->hackPointer, 255);
             setPatchNameDisplay();
         }
+        else if (aum->action == Synth::AudioToUIMsg::SET_PATCH_DIRTY_STATE)
+        {
+            patchCopy.dirty = (bool)aum->paramId;
+            presetManager->setDirtyState(patchCopy.dirty);
+            presetButton->repaint();
+        }
+        else
+        {
+            SXSNLOG("Ignored patch message " << aum->action);
+        }
         aum = audioToUI.pop();
     }
 }
@@ -645,6 +655,7 @@ void SixSinesEditor::sendEntirePatchToAudio(const std::string &s)
         uiToAudio.push({Synth::UIToAudioMsg::END_EDIT, p->meta.id});
     }
     uiToAudio.push({Synth::UIToAudioMsg::START_AUDIO});
+    uiToAudio.push({Synth::UIToAudioMsg::SEND_PATCH_IS_CLEAN, true});
 }
 
 void SixSinesEditor::setParamValueOnCopy(uint32_t paramId, float value, bool notifyAudio)

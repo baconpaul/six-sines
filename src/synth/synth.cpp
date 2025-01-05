@@ -256,6 +256,13 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             {
                 resetPlaymode();
             }
+
+            auto d = patch.dirty;
+            if (!d)
+            {
+                patch.dirty = true;
+                audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
+            }
         }
         break;
         case UIToAudioMsg::BEGIN_EDIT:
@@ -289,6 +296,12 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             memset(patch.name, 0, sizeof(patch.name));
             strncpy(patch.name, uiM->hackPointer, 255);
             audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
+        }
+        break;
+        case UIToAudioMsg::SEND_PATCH_IS_CLEAN:
+        {
+            patch.dirty = false;
+            audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
         }
         break;
         case UIToAudioMsg::EDITOR_ATTACH_DETATCH:
@@ -363,6 +376,7 @@ void Synth::pushFullUIRefresh()
         audioToUi.push(au);
     }
     audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
+    audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
 }
 
 } // namespace baconpaul::six_sines

@@ -22,6 +22,7 @@ namespace baconpaul::six_sines
 
 void Patch::resetToInit()
 {
+    dirty = false;
     // Sweep any new param since this stream to default
     for (auto [id, p] : paramMap)
     {
