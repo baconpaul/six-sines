@@ -22,7 +22,7 @@
 #include <sst/jucegui/components/TextPushButton.h>
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
-#include "ruled-label.h"
+#include "sst/jucegui/components/RuledLabel.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -61,7 +61,7 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         c->addAndMakeVisible(*shapes[1]);
         c->addAndMakeVisible(*shapes[2]);
 
-        titleLab = std::make_unique<RuledLabel>();
+        titleLab = std::make_unique<jcmp::RuledLabel>();
         titleLab->setText("Envelope");
         asComp()->addAndMakeVisible(*titleLab);
 
@@ -123,7 +123,7 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
     std::array<std::unique_ptr<jcmp::Knob>, nShape> shapes;
     std::array<std::unique_ptr<PatchContinuous>, nShape> shapesD;
     std::array<std::unique_ptr<jcmp::Label>, nels> lab;
-    std::unique_ptr<RuledLabel> titleLab;
+    std::unique_ptr<jcmp::RuledLabel> titleLab;
 
     std::unique_ptr<jcmp::TextPushButton> triggerButton;
     void setTriggerLabel()

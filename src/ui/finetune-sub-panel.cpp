@@ -24,7 +24,7 @@ FineTuneSubPanel::FineTuneSubPanel(SixSinesEditor &e) : HasEditor(e)
     setupModulation(e, on);
     setupLFO(e, on);
 
-    depTitle = std::make_unique<RuledLabel>();
+    depTitle = std::make_unique<jcmp::RuledLabel>();
     depTitle->setText("Tune");
     addAndMakeVisible(*depTitle);
 

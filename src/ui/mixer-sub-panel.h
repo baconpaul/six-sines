@@ -50,7 +50,7 @@ struct MixerSubPanel : juce::Component,
     std::unique_ptr<PatchContinuous::cubic_t> lfoToPanDA;
     std::unique_ptr<jcmp::Label> lfoToPanL;
 
-    std::unique_ptr<RuledLabel> modLabelE, modLabelL;
+    std::unique_ptr<jcmp::RuledLabel> modLabelE, modLabelL;
     std::unique_ptr<jcmp::Knob> envToLev;
     std::unique_ptr<PatchContinuous::cubic_t> envToLevDA;
     std::unique_ptr<jcmp::Label> envToLevL;

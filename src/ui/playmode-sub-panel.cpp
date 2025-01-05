@@ -27,7 +27,7 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     bUpL->setText("+");
     bDnL = std::make_unique<jcmp::Label>();
     bDnL->setText("-");
-    bendTitle = std::make_unique<RuledLabel>();
+    bendTitle = std::make_unique<jcmp::RuledLabel>();
     bendTitle->setText("Bend");
 
     addAndMakeVisible(*bendTitle);
@@ -36,7 +36,7 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     addAndMakeVisible(*bDn);
     addAndMakeVisible(*bDnL);
 
-    playTitle = std::make_unique<RuledLabel>();
+    playTitle = std::make_unique<jcmp::RuledLabel>();
     playTitle->setText("Play");
     addAndMakeVisible(*playTitle);
 
@@ -102,12 +102,12 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     uniSpreadL->setText("Spread");
     addAndMakeVisible(*uniSpreadL);
 
-    uniTitle = std::make_unique<RuledLabel>();
+    uniTitle = std::make_unique<jcmp::RuledLabel>();
     uniTitle->setText("Unison");
     addAndMakeVisible(*uniTitle);
     editor.componentRefreshByID[on.unisonCount.meta.id] = op;
 
-    mpeTitle = std::make_unique<RuledLabel>();
+    mpeTitle = std::make_unique<jcmp::RuledLabel>();
     mpeTitle->setText("MPE");
     addAndMakeVisible(*mpeTitle);
 
@@ -124,14 +124,14 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     mpeRangeL->setText("Bend");
     addAndMakeVisible(*mpeRangeL);
 
-    tsposeTitle = std::make_unique<RuledLabel>();
+    tsposeTitle = std::make_unique<jcmp::RuledLabel>();
     tsposeTitle->setText("Octave");
     addAndMakeVisible(*tsposeTitle);
 
     createComponent(editor, *this, on.octTranspose, tsposeButton, tsposeButtonD);
     addAndMakeVisible(*tsposeButton);
 
-    voiceLimitL = std::make_unique<RuledLabel>();
+    voiceLimitL = std::make_unique<jcmp::RuledLabel>();
     voiceLimitL->setText("Voices");
     addAndMakeVisible(*voiceLimitL);
     voiceLimit = std::make_unique<jcmp::MenuButton>();
@@ -146,7 +146,7 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     };
     addAndMakeVisible(*voiceLimit);
 
-    panicTitle = std::make_unique<RuledLabel>();
+    panicTitle = std::make_unique<jcmp::RuledLabel>();
     panicTitle->setText("Panic");
     panicButton = std::make_unique<jcmp::TextPushButton>();
     panicButton->setLabel("Sound Off");

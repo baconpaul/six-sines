@@ -33,11 +33,11 @@ struct PlayModeSubPanel : juce::Component, HasEditor
 
     void beginEdit() {}
 
-    std::unique_ptr<RuledLabel> playTitle;
+    std::unique_ptr<jcmp::RuledLabel> playTitle;
     std::unique_ptr<jcmp::MultiSwitch> playMode;
     std::unique_ptr<PatchDiscrete> playModeD;
 
-    std::unique_ptr<RuledLabel> bendTitle, uniTitle, mpeTitle, tsposeTitle, panicTitle;
+    std::unique_ptr<jcmp::RuledLabel> bendTitle, uniTitle, mpeTitle, tsposeTitle, panicTitle;
 
     std::unique_ptr<jcmp::Label> bUpL, bDnL;
     std::unique_ptr<PatchContinuous> bUpD, bDnD;
@@ -77,7 +77,7 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<PatchDiscrete> tsposeButtonD;
 
     std::unique_ptr<jcmp::MenuButton> voiceLimit;
-    std::unique_ptr<RuledLabel> voiceLimitL;
+    std::unique_ptr<jcmp::RuledLabel> voiceLimitL;
 
     std::unique_ptr<jcmp::TextPushButton> panicButton;
 

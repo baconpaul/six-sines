@@ -44,7 +44,7 @@ struct FineTuneSubPanel : juce::Component,
     std::unique_ptr<PatchContinuous::cubic_t> lfoDepDA;
     std::unique_ptr<jcmp::Label> lfoDepL;
 
-    std::unique_ptr<RuledLabel> depTitle;
+    std::unique_ptr<jcmp::RuledLabel> depTitle;
 
     std::unique_ptr<jcmp::MultiSwitch> envMul;
     std::unique_ptr<PatchDiscrete> envMulD;

@@ -87,15 +87,15 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     addAndMakeVisible(*lfoToRatioFine);
     addAndMakeVisible(*lfoToRatioFineL);
 
-    modTitle = std::make_unique<RuledLabel>();
+    modTitle = std::make_unique<jcmp::RuledLabel>();
     modTitle->setText("Env Depth");
     addAndMakeVisible(*modTitle);
 
-    lfoModTitle = std::make_unique<RuledLabel>();
+    lfoModTitle = std::make_unique<jcmp::RuledLabel>();
     lfoModTitle->setText("LFO Depth");
     addAndMakeVisible(*lfoModTitle);
 
-    wavTitle = std::make_unique<RuledLabel>();
+    wavTitle = std::make_unique<jcmp::RuledLabel>();
     wavTitle->setText("Wave");
     addAndMakeVisible(*wavTitle);
 
@@ -110,7 +110,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     wavPainter = std::make_unique<WavPainter>(sn.waveForm, sn.startingPhase);
     addAndMakeVisible(*wavPainter);
 
-    keyTrackTitle = std::make_unique<RuledLabel>();
+    keyTrackTitle = std::make_unique<jcmp::RuledLabel>();
     keyTrackTitle->setText("Pitch");
     addAndMakeVisible(*keyTrackTitle);
 

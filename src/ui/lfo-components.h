@@ -22,7 +22,7 @@
 #include <sst/jucegui/components/MultiSwitch.h>
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
-#include "ruled-label.h"
+#include "sst/jucegui/components/RuledLabel.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -49,7 +49,7 @@ template <typename Comp, typename Patch> struct LFOComponents
         createComponent(e, *c, v.lfoShape, shape, shapeD);
         c->addAndMakeVisible(*shape);
 
-        titleLab = std::make_unique<RuledLabel>();
+        titleLab = std::make_unique<jcmp::RuledLabel>();
         titleLab->setText("LFO");
         c->addAndMakeVisible(*titleLab);
 
@@ -109,7 +109,7 @@ template <typename Comp, typename Patch> struct LFOComponents
 
     std::unique_ptr<jcmp::MultiSwitch> shape;
     std::unique_ptr<PatchDiscrete> shapeD;
-    std::unique_ptr<RuledLabel> titleLab;
+    std::unique_ptr<jcmp::RuledLabel> titleLab;
 
     std::unique_ptr<jcmp::ToggleButton> tempoSync;
     std::unique_ptr<PatchDiscrete> tempoSyncD;

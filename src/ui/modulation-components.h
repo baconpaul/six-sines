@@ -21,7 +21,7 @@
 #include <sst/jucegui/components/HSliderFilled.h>
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
-#include "ruled-label.h"
+#include "sst/jucegui/components/RuledLabel.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -36,7 +36,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
     {
         patchPtr = &v;
         auto c = asComp();
-        modTitleLab = std::make_unique<RuledLabel>();
+        modTitleLab = std::make_unique<jcmp::RuledLabel>();
         modTitleLab->setText("Modulation");
         asComp()->addAndMakeVisible(*modTitleLab);
 
@@ -224,7 +224,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
         p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
     }
 
-    std::unique_ptr<RuledLabel> modTitleLab;
+    std::unique_ptr<jcmp::RuledLabel> modTitleLab;
 
     std::array<std::unique_ptr<jcmp::MenuButton>, numModsPer> sourceMenu;
     std::array<std::unique_ptr<jcmp::MenuButton>, numModsPer> targetMenu;

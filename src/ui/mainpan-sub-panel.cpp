@@ -24,7 +24,7 @@ MainPanSubPanel::MainPanSubPanel(SixSinesEditor &e) : HasEditor(e)
     setupModulation(e, on);
     setupLFO(e, on);
 
-    depTitle = std::make_unique<RuledLabel>();
+    depTitle = std::make_unique<jcmp::RuledLabel>();
     depTitle->setText("Pan");
     addAndMakeVisible(*depTitle);
 

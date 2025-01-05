@@ -53,11 +53,11 @@ void MixerSubPanel::setSelectedIndex(int idx)
     createComponent(editor, *this, sn.envIsMultiplcative, envMul, envMulD);
     addAndMakeVisible(*envMul);
 
-    modLabelE = std::make_unique<RuledLabel>();
+    modLabelE = std::make_unique<jcmp::RuledLabel>();
     modLabelE->setText(std::string() + "Env" + u8"\U00002192");
     addAndMakeVisible(*modLabelE);
 
-    modLabelL = std::make_unique<RuledLabel>();
+    modLabelL = std::make_unique<jcmp::RuledLabel>();
     modLabelL->setText(std::string() + "LFO" + u8"\U00002192");
     addAndMakeVisible(*modLabelL);
 
