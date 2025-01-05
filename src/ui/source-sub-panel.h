@@ -23,7 +23,7 @@
 #include "dahdsr-components.h"
 #include "lfo-components.h"
 #include "modulation-components.h"
-#include "ruled-label.h"
+#include "sst/jucegui/components/RuledLabel.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -60,7 +60,7 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::JogUpDownButton> wavButton;
     std::unique_ptr<PatchDiscrete> wavButtonD;
 
-    std::unique_ptr<RuledLabel> modTitle, lfoModTitle, wavTitle, keyTrackTitle;
+    std::unique_ptr<jcmp::RuledLabel> modTitle, lfoModTitle, wavTitle, keyTrackTitle;
 
     std::unique_ptr<juce::Component> wavPainter;
 

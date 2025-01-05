@@ -43,7 +43,7 @@ struct SelfSubPanel : juce::Component,
     std::unique_ptr<PatchContinuous::cubic_t> lfoToFbDA;
     std::unique_ptr<jcmp::Label> lfoToFbL;
 
-    std::unique_ptr<RuledLabel> modLabelE, modLabelL;
+    std::unique_ptr<jcmp::RuledLabel> modLabelE, modLabelL;
     std::unique_ptr<jcmp::Knob> envToLev;
     std::unique_ptr<PatchContinuous::cubic_t> envToLevDA;
     std::unique_ptr<jcmp::Label> envToLevL;

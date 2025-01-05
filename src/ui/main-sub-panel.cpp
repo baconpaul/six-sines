@@ -27,7 +27,7 @@ MainSubPanel::MainSubPanel(SixSinesEditor &e)
     setupModulation(e, on);
     setupLFO(e, on);
 
-    velTitle = std::make_unique<RuledLabel>();
+    velTitle = std::make_unique<jcmp::RuledLabel>();
     velTitle->setText("Mod");
     addAndMakeVisible(*velTitle);
 

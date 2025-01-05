@@ -28,7 +28,7 @@
 #include "dahdsr-components.h"
 #include "modulation-components.h"
 #include "lfo-components.h"
-#include "ruled-label.h"
+#include "sst/jucegui/components/RuledLabel.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -53,7 +53,7 @@ struct MainSubPanel : juce::Component,
 
     std::unique_ptr<jcmp::Label> lfoDepL;
 
-    std::unique_ptr<RuledLabel> velTitle;
+    std::unique_ptr<jcmp::RuledLabel> velTitle;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H
