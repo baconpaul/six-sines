@@ -154,6 +154,9 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     setSize(688, 812);
 
     uiToAudio.push({Synth::UIToAudioMsg::EDITOR_ATTACH_DETATCH, true});
+    uiToAudio.push({Synth::UIToAudioMsg::REQUEST_REFRESH, true});
+    if (flushOperator)
+        flushOperator();
 }
 SixSinesEditor::~SixSinesEditor()
 {
@@ -224,7 +227,18 @@ void SixSinesEditor::paint(juce::Graphics &g)
     g.drawText("https://github.com/baconpaul/six-sines", getLocalBounds().reduced(3, 3),
                juce::Justification::bottomLeft);
 
-    auto bi = std::string(__DATE__) + " " + std::string(__TIME__) + " " + BUILD_HASH;
+    std::string os = "";
+#if JUCE_MAC
+    os = "macOS";
+#endif
+#if JUCE_WINDOWS
+    os = "Windows";
+#endif
+#if JUCE_LINUX
+    os = "Linux";
+#endif
+
+    auto bi = os + " " + BUILD_HASH;
     g.drawText(bi, getLocalBounds().reduced(3, 3), juce::Justification::bottomRight);
 
     g.drawText(DISPLAY_VERSION, getLocalBounds().reduced(3, 3), juce::Justification::centredBottom);
