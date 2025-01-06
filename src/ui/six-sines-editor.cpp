@@ -55,6 +55,7 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     : jcmp::WindowPanel(true), audioToUI(atou), uiToAudio(utoa), flushOperator(fo)
 {
     setTitle("Six Sines - an Audio Rate Modulation Synthesizer");
+    setAccessible(true);
     sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
 
     sheet_t::addClass(PatchMenu).withBaseClass(jcmp::JogUpDownButton::Styles::styleClass);
