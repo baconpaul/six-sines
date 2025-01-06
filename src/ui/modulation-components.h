@@ -34,6 +34,8 @@ template <typename Comp, typename Patch> struct ModulationComponents
     Patch *patchPtr{nullptr};
     void setupModulation(SixSinesEditor &e, Patch &v)
     {
+        using kt_t = sst::jucegui::accessibility::KeyboardTraverser;
+
         patchPtr = &v;
         auto c = asComp();
         modTitleLab = std::make_unique<jcmp::RuledLabel>();
@@ -81,6 +83,10 @@ template <typename Comp, typename Patch> struct ModulationComponents
             c->addAndMakeVisible(*depthSlider[i]);
             c->addAndMakeVisible(*sourceMenu[i]);
             c->addAndMakeVisible(*targetMenu[i]);
+
+            kt_t::assignTraversalIndex(sourceMenu[i].get(), i * 5 + 900);
+            kt_t::assignTraversalIndex(targetMenu[i].get(), i * 5 + 901);
+            kt_t::assignTraversalIndex(depthSlider[i].get(), i * 5 + 902);
         }
     }
 

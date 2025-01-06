@@ -23,6 +23,8 @@ namespace baconpaul::six_sines::ui
 {
 MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor(e)
 {
+    using kt_t = sst::jucegui::accessibility::KeyboardTraverser;
+
     auto &mn = editor.patchCopy.mixerNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
@@ -55,6 +57,10 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
         panLabels[i] = std::make_unique<jcmp::Label>();
         panLabels[i]->setText("Pan");
         addAndMakeVisible(*panLabels[i]);
+
+        kt_t::assignTraversalIndex(power[i].get(), i * 12 + 50);
+        kt_t::assignTraversalIndex(knobs[i].get(), i * 12 + 51);
+        kt_t::assignTraversalIndex(panKnobs[i].get(), i * 12 + 52);
     }
 
     highlight = std::make_unique<KnobHighlight>();

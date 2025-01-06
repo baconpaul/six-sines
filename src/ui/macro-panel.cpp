@@ -29,6 +29,8 @@ MacroPanel::MacroPanel(SixSinesEditor &e) : jcmp::NamedPanel("Macros"), HasEdito
         knobs[i]->setDrawLabel(false);
         addAndMakeVisible(*knobs[i]);
 
+        sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(knobs[i].get(), i + 1);
+
         labels[i] = std::make_unique<jcmp::Label>();
         labels[i]->setText("Macro " + std::to_string(i + 1));
         addAndMakeVisible(*labels[i]);
