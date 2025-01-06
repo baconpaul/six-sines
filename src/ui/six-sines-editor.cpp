@@ -52,9 +52,11 @@ static constexpr sheet_t::Class PatchMenu("six-sines.patch-menu");
 
 SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &utoa,
                                std::function<void()> fo)
-    : audioToUI(atou), uiToAudio(utoa), flushOperator(fo)
+    : jcmp::WindowPanel(true), audioToUI(atou), uiToAudio(utoa), flushOperator(fo)
 {
+    setTitle("Six Sines - an Audio Rate Modulation Synthesizer");
     sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
+
     sheet_t::addClass(PatchMenu).withBaseClass(jcmp::JogUpDownButton::Styles::styleClass);
 
     setStyle(sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
@@ -111,6 +113,13 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     playModeSubPanel = std::make_unique<PlayModeSubPanel>(*this);
     singlePanel->addChildComponent(*playModeSubPanel);
 
+    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(sourcePanel.get(), 20000);
+    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(mainPanel.get(), 30000);
+    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(matrixPanel.get(), 40000);
+    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(mixerPanel.get(), 50000);
+    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(macroPanel.get(), 60000);
+    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(singlePanel.get(), 70000);
+
     auto startMsg = Synth::UIToAudioMsg{Synth::UIToAudioMsg::REQUEST_REFRESH};
     uiToAudio.push(startMsg);
     flushOperator();
@@ -130,6 +139,7 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     presetButton->onPopupMenu = [this]() { showPresetPopup(); };
     addAndMakeVisible(*presetButton);
     setPatchNameDisplay();
+    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(presetButton.get(), 174);
 
     {
         std::lock_guard<std::mutex> grd(sixSinesLookAndFeelSetupMutex);

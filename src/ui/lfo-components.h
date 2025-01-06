@@ -33,6 +33,8 @@ template <typename Comp, typename Patch> struct LFOComponents
     LFOComponents() {}
     void setupLFO(SixSinesEditor &e, const Patch &v)
     {
+        using kt_t = sst::jucegui::accessibility::KeyboardTraverser;
+
         auto c = asComp();
         createComponent(e, *c, v.lfoRate, rate, rateD);
         rateL = std::make_unique<jcmp::Label>();
@@ -69,6 +71,13 @@ template <typename Comp, typename Patch> struct LFOComponents
         c->addAndMakeVisible(*isEnv);
 
         rateD->setTemposyncPowerPartner(tempoSyncD.get());
+
+        kt_t::assignTraversalIndex(shape.get(), 200);
+        kt_t::assignTraversalIndex(bipolar.get(), 201);
+        kt_t::assignTraversalIndex(tempoSync.get(), 204);
+        kt_t::assignTraversalIndex(rate.get(), 203);
+        kt_t::assignTraversalIndex(deform.get(), 205);
+        kt_t::assignTraversalIndex(isEnv.get(), 211);
     }
 
     juce::Rectangle<int> layoutLFOAt(int x, int y, int extraWidth = 0)

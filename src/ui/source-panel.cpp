@@ -17,12 +17,14 @@
 #include "source-panel.h"
 #include "source-sub-panel.h"
 #include "ui-constants.h"
+#include "sst/jucegui/accessibility/KeyboardTraverser.h"
 #include "knob-highlight.h"
 
 namespace baconpaul::six_sines::ui
 {
 SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEditor(e)
 {
+    using kt_t = sst::jucegui::accessibility::KeyboardTraverser;
     auto &mn = editor.patchCopy.sourceNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
@@ -34,6 +36,9 @@ SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEdi
         power[i]->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
         power[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*power[i]);
+
+        kt_t::assignTraversalIndex(power[i].get(), i * 5 + 20);
+        kt_t::assignTraversalIndex(knobs[i].get(), i * 5 + 21);
 
         labels[i] = std::make_unique<jcmp::Label>();
         labels[i]->setText("Op " + std::to_string(i + 1) + " Ratio");

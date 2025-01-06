@@ -23,6 +23,8 @@ namespace baconpaul::six_sines::ui
 {
 MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEditor(e)
 {
+    using kt_t = sst::jucegui::accessibility::KeyboardTraverser;
+
     auto &mn = editor.patchCopy.selfNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
@@ -49,6 +51,8 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
                                           true);
             w->repaint();
         };
+        kt_t::assignTraversalIndex(Spower[i].get(), i * 50 + 47);
+        kt_t::assignTraversalIndex(Sknobs[i].get(), i * 50 + 48);
     }
 
     auto &mx = editor.patchCopy.matrixNodes;
@@ -86,6 +90,10 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
                                           true);
             w->repaint();
         };
+
+        kt_t::assignTraversalIndex(Mpower[i].get(), ti * 50 + si * 5 + 1);
+        kt_t::assignTraversalIndex(Mpmrm[i].get(), ti * 50 + +si * 5 + 2);
+        kt_t::assignTraversalIndex(Mknobs[i].get(), ti * 50 + si * 5 + 3);
     }
 
     highlight = std::make_unique<KnobHighlight>();
