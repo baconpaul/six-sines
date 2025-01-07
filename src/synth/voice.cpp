@@ -252,7 +252,6 @@ void Voice::cleanup()
 
 void Voice::setupPortaTo(uint16_t newKey, float log2Time)
 {
-    auto sign = newKey > voiceValues.key ? -1 : 1;
     if (log2Time < -8 + 1e-5)
     {
         voiceValues.portaSign = 0;
@@ -262,13 +261,18 @@ void Voice::setupPortaTo(uint16_t newKey, float log2Time)
     }
     auto blocks = monoValues.twoToTheX.twoToThe(log2Time) * monoValues.sr.sampleRate / blockSize;
 
+    auto sign = 0;
     if (voiceValues.portaDiff > 1e-5)
     {
         auto sourceKey = voiceValues.key + voiceValues.portaDiff * voiceValues.portaSign;
+        sign = newKey > sourceKey ? -1 : 1; // we are headed towards the source so set sign properly
+
         voiceValues.portaDiff = std::abs(sourceKey - newKey);
     }
     else
     {
+        sign = newKey > voiceValues.key ? -1 : 1;
+
         voiceValues.portaDiff = std::abs(voiceValues.key - newKey);
     }
     voiceValues.dPorta = voiceValues.portaDiff / blocks;
