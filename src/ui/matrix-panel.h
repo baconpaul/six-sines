@@ -34,6 +34,9 @@ struct MatrixPanel : jcmp::NamedPanel, HasEditor
 
     void beginEdit(size_t, bool);
 
+    void mouseDown(const juce::MouseEvent &e) override;
+    juce::Rectangle<int> rectangleFor(int idx, bool self);
+
     std::unique_ptr<juce::Component> highlight;
     void clearHighlight()
     {

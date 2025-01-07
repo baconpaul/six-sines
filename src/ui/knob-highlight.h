@@ -20,6 +20,12 @@ namespace baconpaul::six_sines::ui
 {
 struct KnobHighlight : public juce::Component
 {
+    KnobHighlight()
+    {
+        setAccessible(false);
+        setWantsKeyboardFocus(false);
+        setInterceptsMouseClicks(false, false);
+    }
     void paint(juce::Graphics &g) override
     {
         g.setColour(juce::Colour(0xFF * 0.3, 0x90 * 0.3, 00));

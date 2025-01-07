@@ -160,6 +160,47 @@ void MatrixPanel::paint(juce::Graphics &g)
     }
 }
 
+void MatrixPanel::mouseDown(const juce::MouseEvent &e)
+{
+    for (int i = 0; i < numOps; ++i)
+    {
+        if (rectangleFor(i, true).contains(e.position.toInt()))
+        {
+            beginEdit(i, true);
+            return;
+        }
+    }
+
+    for (int i = 0; i < matrixSize; ++i)
+    {
+        if (rectangleFor(i, false).contains(e.position.toInt()))
+        {
+            beginEdit(i, false);
+            return;
+        }
+    }
+}
+
+juce::Rectangle<int> MatrixPanel::rectangleFor(int idx, bool self)
+{
+    auto b = getContentArea().reduced(uicMargin, 0);
+
+    if (self)
+    {
+        return juce::Rectangle<int>(b.getX() + idx * (uicPowerKnobWidth + uicMargin),
+                                    b.getY() + idx * (uicLabeledKnobHeight + uicMargin),
+                                    uicPowerKnobWidth + 2, uicLabeledKnobHeight);
+    }
+    else
+    {
+        auto si = MatrixIndex::sourceIndexAt(idx);
+        auto ti = MatrixIndex::targetIndexAt(idx);
+        auto y = b.getY() + ti * (uicLabeledKnobHeight + uicMargin);
+        auto x = b.getX() + si * (uicPowerKnobWidth + uicMargin);
+        return juce::Rectangle<int>(x, y, uicPowerKnobWidth + 2, uicLabeledKnobHeight);
+    }
+}
+
 void MatrixPanel::beginEdit(size_t idx, bool self)
 {
     editor.hideAllSubPanels();
@@ -182,27 +223,9 @@ void MatrixPanel::beginEdit(size_t idx, bool self)
         editor.matrixSubPanel->setSelectedIndex(idx);
     }
 
-    if (self)
-    {
-        highlight->setVisible(true);
-        auto b = getContentArea().reduced(uicMargin, 0);
-        highlight->setBounds(b.getX() + idx * (uicPowerKnobWidth + uicMargin),
-                             b.getY() + idx * (uicLabeledKnobHeight + uicMargin),
-                             uicPowerKnobWidth + 2, uicLabeledKnobHeight);
-        highlight->toBack();
-    }
-    else
-    {
-        highlight->setVisible(true);
-        auto b = getContentArea().reduced(uicMargin, 0);
-        auto si = MatrixIndex::sourceIndexAt(idx);
-        auto ti = MatrixIndex::targetIndexAt(idx);
-        auto y = b.getY() + ti * (uicLabeledKnobHeight + uicMargin);
-        auto x = b.getX() + si * (uicPowerKnobWidth + uicMargin);
-
-        highlight->setBounds(x, y, uicPowerKnobWidth + 2, uicLabeledKnobHeight);
-        highlight->toBack();
-    }
+    highlight->setVisible(true);
+    highlight->setBounds(rectangleFor(idx, self));
+    highlight->toBack();
 }
 
 } // namespace baconpaul::six_sines::ui

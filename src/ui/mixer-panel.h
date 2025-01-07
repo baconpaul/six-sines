@@ -44,6 +44,9 @@ struct MixerPanel : jcmp::NamedPanel, HasEditor
             highlight->setVisible(false);
     }
 
+    void mouseDown(const juce::MouseEvent &e) override;
+    juce::Rectangle<int> rectangleFor(int idx);
+
     std::array<std::unique_ptr<jcmp::Knob>, numOps> knobs;
     std::array<std::unique_ptr<PatchContinuous>, numOps> knobsData;
     std::array<std::unique_ptr<jcmp::ToggleButton>, numOps> power;
