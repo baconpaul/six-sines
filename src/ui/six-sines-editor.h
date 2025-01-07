@@ -122,6 +122,8 @@ struct SixSinesEditor : jcmp::WindowPanel
 
     bool keyPressed(const juce::KeyPress &key) override;
 
+    void showNavigationMenu();
+
     std::unique_ptr<jcmp::VUMeter> vuMeter;
 
     // To turn this on, recompile with it on in six-sines-editor.cpp
