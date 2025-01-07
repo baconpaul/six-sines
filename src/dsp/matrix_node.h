@@ -104,10 +104,19 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             }
         }
 
-        mech::mul_block<blockSize>(modlev, from.output, mod);
 
         if (isrm)
         {
+            // we want op * ( 1 - depth ) + op * rm * depth or
+            // op * ( 1 + depth ( rm - 1 ) )
+            // since the multiplier of depth is rmLevel and it starts at one that means
+            for (int i=0; i<blockSize; ++i)
+            {
+                onto.rmLevel[i] += modlev[i] * (from.output[i] - 1.0);
+            }
+#if OLD_WAY
+            mech::mul_block<blockSize>(modlev, from.output, mod);
+
             if (onto.rmAssigned)
             {
                 mech::accumulate_from_to<blockSize>(mod, onto.rmLevel);
@@ -118,9 +127,12 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
 
                 mech::copy_from_to<blockSize>(mod, onto.rmLevel);
             }
+#endif
         }
         else
         {
+            mech::mul_block<blockSize>(modlev, from.output, mod);
+
             for (int j = 0; j < blockSize; ++j)
             {
                 onto.phaseInput[j] += (int32_t)((1 << 27) * (mod[j]));
