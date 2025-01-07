@@ -83,6 +83,11 @@ void MixerPanel::resized()
 
 void MixerPanel::mouseDown(const juce::MouseEvent &e)
 {
+    if (e.mods.isPopupMenu())
+    {
+        editor.showNavigationMenu();
+        return;
+    }
     for (int i = 0; i < numOps; ++i)
     {
         if (rectangleFor(i).contains(e.position.toInt()))

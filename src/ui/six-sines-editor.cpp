@@ -711,11 +711,144 @@ void SixSinesEditor::postPatchChange(const std::string &dn)
     repaint();
 }
 
+void SixSinesEditor::showNavigationMenu()
+{
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("Navigation");
+    p.addSeparator();
+    p.addItem("Preset Browser",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                  {
+                      w->presetButton->grabKeyboardFocus();
+                  }
+              });
+    p.addSeparator();
+
+    auto src = juce::PopupMenu();
+    for (int i = 0; i < numOps; ++i)
+    {
+        src.addItem(sourcePanel->knobs[i]->getTitle(),
+                    [i, w = juce::Component::SafePointer(this)]()
+                    {
+                        if (w)
+                        {
+                            w->sourcePanel->beginEdit(i);
+                            w->sourcePanel->knobs[i]->grabKeyboardFocus();
+                        }
+                    });
+    }
+    p.addSubMenu("Sources", src);
+
+    auto fb = juce::PopupMenu();
+    for (int i = 0; i < numOps; ++i)
+    {
+        fb.addItem(matrixPanel->Sknobs[i]->getTitle(),
+                   [i, w = juce::Component::SafePointer(this)]()
+                   {
+                       if (w)
+                       {
+                           w->matrixPanel->beginEdit(i, true);
+                           w->matrixPanel->Sknobs[i]->grabKeyboardFocus();
+                       }
+                   });
+    }
+    p.addSubMenu("Matrix Feedback", fb);
+
+    auto md = juce::PopupMenu();
+    for (int i = 0; i < matrixSize; ++i)
+    {
+        md.addItem(matrixPanel->Mknobs[i]->getTitle(),
+                   [i, w = juce::Component::SafePointer(this)]()
+                   {
+                       if (w)
+                       {
+                           w->matrixPanel->beginEdit(i, false);
+                           w->matrixPanel->Mknobs[i]->grabKeyboardFocus();
+                       }
+                   });
+    }
+    p.addSubMenu("Matrix Modulation", md);
+
+    auto mx = juce::PopupMenu();
+    for (int i = 0; i < numOps; ++i)
+    {
+        mx.addItem(mixerPanel->knobs[i]->getTitle(),
+                   [i, w = juce::Component::SafePointer(this)]()
+                   {
+                       if (w)
+                       {
+                           w->mixerPanel->beginEdit(i);
+                           w->mixerPanel->knobs[i]->grabKeyboardFocus();
+                       }
+                   });
+    }
+    p.addSubMenu("Mixer", mx);
+
+    auto mc = juce::PopupMenu();
+    for (int i = 0; i < numOps; ++i)
+    {
+        mc.addItem(macroPanel->knobs[i]->getTitle(),
+                   [i, w = juce::Component::SafePointer(this)]()
+                   {
+                       if (w)
+                       {
+                           w->macroPanel->knobs[i]->grabKeyboardFocus();
+                       }
+                   });
+    }
+    p.addSubMenu("Macros", mc);
+
+    auto mn = juce::PopupMenu();
+    int idx{0};
+    for (const auto &l : {&mainPanel->lev, &mainPanel->pan, &mainPanel->tun})
+    {
+        mn.addItem((*l)->getTitle(),
+                   [idx, x = (*l).get(), w = juce::Component::SafePointer(this)]()
+                   {
+                       if (w)
+                       {
+                           w->mainPanel->beginEdit(idx);
+                           x->grabKeyboardFocus();
+                       }
+                   });
+        idx++;
+    }
+    p.addSubMenu("Main", mn);
+
+    p.addSeparator();
+
+    auto enam = std::string("Edit Area");
+    if (!singlePanel->getName().isEmpty())
+        enam = "Edit " + singlePanel->getName().toStdString();
+    p.addItem(enam,
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                  {
+                      w->singlePanel->grabKeyboardFocus();
+                  }
+              });
+
+    p.addItem("Settings",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                  {
+                      w->mainPanel->beginEdit(3);
+                      w->singlePanel->grabKeyboardFocus();
+                  }
+              });
+
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
+}
+
 bool SixSinesEditor::keyPressed(const juce::KeyPress &key)
 {
     if (key.getModifiers().isCommandDown() && (char)key.getKeyCode() == 'N')
     {
-        SXSNLOG("Navigation Menu");
+        showNavigationMenu();
         return true;
     }
 
