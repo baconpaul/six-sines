@@ -29,9 +29,9 @@ jobs:
             name: macos
             cmake_args: -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -GNinja
 
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             name: linux-x64
-            cmake_args: -GNinja
+            cmake_args: -GNinja -DCMAKE_CXX_COMPLIER=g++-14 -DCMAKE_C_COMPILER=gcc-14
 
     steps:
       - name: Checkout code
