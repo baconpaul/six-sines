@@ -87,6 +87,7 @@ void Voice::renderBlock()
     {
         if (!src[i].active)
         {
+            src[i].clearOutputs();
             continue;
         }
         src[i].zeroInputs();

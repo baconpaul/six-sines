@@ -123,6 +123,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         rmAssigned = false;
     }
 
+    void clearOutputs() { memset(output, 0, sizeof(output)); }
+
     void snapActive() { active = activeV > 0.5; }
 
     float baseFrequency{0};
