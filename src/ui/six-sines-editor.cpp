@@ -713,11 +713,28 @@ void SixSinesEditor::postPatchChange(const std::string &dn)
 
 bool SixSinesEditor::keyPressed(const juce::KeyPress &key)
 {
-    if (key.getModifiers().isCommandDown() && (char)key.getKeyCode() == 78)
+    if (key.getModifiers().isCommandDown() && (char)key.getKeyCode() == 'N')
     {
         SXSNLOG("Navigation Menu");
         return true;
     }
+
+    if (key.getModifiers().isCommandDown() && (char)key.getKeyCode() == 'A')
+    {
+        auto c = getCurrentlyFocusedComponent();
+        auto psgf = panelSelectGestureFor.find(c);
+
+        if (psgf != panelSelectGestureFor.end())
+            psgf->second();
+        return true;
+    }
+
+    if (key.getModifiers().isCommandDown() && (char)key.getKeyCode() == 'J')
+    {
+        singlePanel->grabKeyboardFocus();
+        return true;
+    }
+
     return false;
 }
 

@@ -92,6 +92,24 @@ void MainPanel::resized()
     // voiceLimit->setBounds(vb);
 }
 
+void MainPanel::mouseDown(const juce::MouseEvent &e)
+{
+    for (int i = 0; i < numOps; ++i)
+    {
+        if (rectangleFor(i).contains(e.position.toInt()))
+        {
+            beginEdit(i);
+        }
+    }
+}
+
+juce::Rectangle<int> MainPanel::rectangleFor(int idx)
+{
+    auto b = getContentArea().reduced(uicMargin, 0);
+    return juce::Rectangle<int>(b.getX() + idx * uicKnobSize + (idx ? idx - 0.5 : 0) * uicMargin,
+                                b.getY(), uicKnobSize + uicMargin, uicLabeledKnobHeight);
+}
+
 void MainPanel::beginEdit(int which)
 {
     if (which == 3)

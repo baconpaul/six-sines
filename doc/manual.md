@@ -121,6 +121,31 @@ Press the COG icon at the top of the UI to get the settings
 screen, where you can control MPE, Mono mode, pitch bend depth,
 and more.
 
+## Screen Reader and Accessible Support
+
+Six Sines supports screen readers and accessible gestures, making
+the UI and programming model as inscrutable to these assistive technologies
+as it is to users with a visual display. Since the UI is quite big there's
+a few extra features for screen reader navigation.
+
+First, standard edit gestures should work on all controls, and I tried
+really hard to make sure tab order makes sense and labels are reasonable. If
+you find one which is wrong, please just drop a note on discord or github.
+
+The structure of the UI is that knbos (like "Op3 feedback level") a panel
+in the bottom 1/4 of the screen to edit the modulators and stuff. This panel
+arrives when you mouse click or edit the knob. A few features make this
+easier to navigate for a screen reader.
+
+If on a knob in the top third, `Command-A' will arm that knob (namely select the
+knob modulation panel in the area below)
+
+If on a knob in the top third, `Command-J` will jump to the control panel in the
+bottom
+
+And finally from anywhere in the UI, `Command-N` will expose a menu allowing
+you to focus any of the focusable top-section knobs or preset manager.
+
 ## Good Luck, and..
 
 Good luck! Its fun. But tricky. If you want to add to this manual

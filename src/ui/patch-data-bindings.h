@@ -199,6 +199,7 @@ void createComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique
     cm->setSource(pc.get());
 
     e.componentByID[id] = juce::Component::SafePointer<juce::Component>(cm.get());
+    e.panelSelectGestureFor[cm.get()] = [args..., &panel]() { panel.beginEdit(args...); };
 }
 
 template <typename P, typename T, typename Rescaler, typename... Args>
@@ -234,6 +235,7 @@ void createRescaledComponent(SixSinesEditor &e, P &panel, const Param &parm, std
     cm->setSource(rc.get());
 
     e.componentByID[id] = juce::Component::SafePointer<juce::Component>(cm.get());
+    e.panelSelectGestureFor[cm.get()] = [args..., &panel]() { panel.beginEdit(args...); };
 }
 
 } // namespace baconpaul::six_sines::ui

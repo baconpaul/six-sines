@@ -81,6 +81,25 @@ void MixerPanel::resized()
     }
 }
 
+void MixerPanel::mouseDown(const juce::MouseEvent &e)
+{
+    for (int i = 0; i < numOps; ++i)
+    {
+        if (rectangleFor(i).contains(e.position.toInt()))
+        {
+            beginEdit(i);
+        }
+    }
+}
+
+juce::Rectangle<int> MixerPanel::rectangleFor(int idx)
+{
+    auto b = getContentArea().reduced(uicMargin, 0);
+    return juce::Rectangle<int>(b.getX(), b.getY() + idx * (uicLabeledKnobHeight + uicMargin),
+                                uicPowerKnobWidth + uicMargin + uicKnobSize + 2,
+                                uicLabeledKnobHeight);
+}
+
 void MixerPanel::beginEdit(size_t idx)
 {
     editor.hideAllSubPanels();
@@ -90,9 +109,7 @@ void MixerPanel::beginEdit(size_t idx)
     editor.singlePanel->setName("Op " + std::to_string(idx + 1) + " Mix");
 
     highlight->setVisible(true);
-    auto b = getContentArea().reduced(uicMargin, 0);
-    highlight->setBounds(b.getX(), b.getY() + idx * (uicLabeledKnobHeight + uicMargin),
-                         uicPowerKnobWidth + uicMargin + uicKnobSize + 2, uicLabeledKnobHeight);
+    highlight->setBounds(rectangleFor(idx));
     highlight->toBack();
 }
 

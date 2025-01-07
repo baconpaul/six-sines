@@ -33,6 +33,9 @@ struct MainPanel : jcmp::NamedPanel, HasEditor
 
     void resized() override;
 
+    void mouseDown(const juce::MouseEvent &e) override;
+    juce::Rectangle<int> rectangleFor(int idx);
+
     void beginEdit(int which);
 
     std::unique_ptr<juce::Component> highlight;
