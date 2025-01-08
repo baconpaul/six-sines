@@ -303,6 +303,8 @@ struct Synth
     sst::basic_blocks::dsp::VUPeak vuPeak;
     int32_t updateVuEvery{(int32_t)(48000 * 2.5 / 60 / blockSize)}; // approx
     int32_t lastVuUpdate{updateVuEvery};
+
+    const clap_host_t *clapHost{nullptr};
 };
 } // namespace baconpaul::six_sines
 #endif // SYNTH_H

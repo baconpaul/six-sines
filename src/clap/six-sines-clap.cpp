@@ -48,6 +48,8 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     {
         engine = std::make_unique<Synth>();
 
+        engine->clapHost = h;
+
         clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
         clapJuceShim->setResizable(false);
     }
@@ -343,8 +345,10 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     ADD_SHIM_LINUX_TIMER(clapJuceShim)
     std::unique_ptr<juce::Component> createEditor() override
     {
-        return std::make_unique<baconpaul::six_sines::ui::SixSinesEditor>(
+        auto res = std::make_unique<baconpaul::six_sines::ui::SixSinesEditor>(
             engine->audioToUi, engine->uiToAudio, [this]() { _host.paramsRequestFlush(); });
+        res->clapHost = _host.host();
+        return res;
     }
 
     bool registerOrUnregisterTimer(clap_id &id, int ms, bool reg) override

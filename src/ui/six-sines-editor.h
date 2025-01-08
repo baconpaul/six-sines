@@ -132,6 +132,8 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::unique_ptr<sst::jucegui::accessibility::FocusDebugger> focusDebugger;
 
     std::unordered_map<juce::Component *, std::function<void()>> panelSelectGestureFor;
+
+    const clap_host_t *clapHost{nullptr};
 };
 
 struct HasEditor

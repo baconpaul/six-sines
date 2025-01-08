@@ -104,13 +104,12 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             }
         }
 
-
         if (isrm)
         {
             // we want op * ( 1 - depth ) + op * rm * depth or
             // op * ( 1 + depth ( rm - 1 ) )
             // since the multiplier of depth is rmLevel and it starts at one that means
-            for (int i=0; i<blockSize; ++i)
+            for (int i = 0; i < blockSize; ++i)
             {
                 onto.rmLevel[i] += modlev[i] * (from.output[i] - 1.0);
             }

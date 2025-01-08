@@ -160,6 +160,23 @@ struct PatchDiscrete : jdat::Discrete
     int getMax() const override { return static_cast<int>(std::round(p->meta.maxVal)); }
 };
 
+inline const juce::Identifier &getParamComponentPropertyId()
+{
+    static juce::Identifier idIndex{"sixsines-paramid"};
+    return idIndex;
+}
+inline void setParamIdOn(juce::Component *c, uint32_t pid)
+{
+    c->getProperties().set(getParamComponentPropertyId(), (int64_t)pid);
+}
+inline std::optional<uint32_t> getParamIdFrom(juce::Component *c)
+{
+    auto hasidx = c->getProperties().getVarPointer(getParamComponentPropertyId());
+    if (hasidx)
+        return (int64_t)(*hasidx);
+    return std::nullopt;
+}
+
 template <typename P, typename T, typename Q, typename... Args>
 void createComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique_ptr<T> &cm,
                      std::unique_ptr<Q> &pc, Args... args)
@@ -197,7 +214,7 @@ void createComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique
         }
     };
     cm->setSource(pc.get());
-
+    setParamIdOn(cm.get(), id);
     e.componentByID[id] = juce::Component::SafePointer<juce::Component>(cm.get());
     e.panelSelectGestureFor[cm.get()] = [args..., &panel]() { panel.beginEdit(args...); };
 }
@@ -233,6 +250,7 @@ void createRescaledComponent(SixSinesEditor &e, P &panel, const Param &parm, std
         e.hideTooltip();
     };
     cm->setSource(rc.get());
+    setParamIdOn(cm.get(), id);
 
     e.componentByID[id] = juce::Component::SafePointer<juce::Component>(cm.get());
     e.panelSelectGestureFor[cm.get()] = [args..., &panel]() { panel.beginEdit(args...); };

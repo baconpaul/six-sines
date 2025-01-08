@@ -15,6 +15,8 @@
 
 #include "six-sines-editor.h"
 
+#include "sst/clap_juce_shim/menu_helper.h"
+
 #include "finetune-sub-panel.h"
 #include "patch-data-bindings.h"
 #include "main-panel.h"
@@ -495,6 +497,13 @@ void SixSinesEditor::popupMenuForContinuous(jcmp::ContinuousParamEditor *e)
                   w->continuous()->setValueFromGUI(w->continuous()->getDefaultValue());
                   w->repaint();
               });
+
+    // I could also stick the param id onto the component properties I guess
+    auto pid = getParamIdFrom(e);
+    if (pid.has_value())
+    {
+        sst::clap_juce_shim::populateMenuForClapParam(p, *pid, clapHost);
+    }
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
 }
