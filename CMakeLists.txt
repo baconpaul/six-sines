@@ -119,7 +119,7 @@ target_link_libraries(${VST3_TARGET} PRIVATE ${PROJECT_NAME}-impl)
 target_add_vst3_wrapper(TARGET ${VST3_TARGET}
         OUTPUT_NAME "${PRODUCT_NAME}"
         SUPPORTS_ALL_NOTE_EXPRESSIONS TRUE
-        # SINGLE_PLUGIN_TUID 1234C648CCAABA57976D20DEFF9BDCBA
+        SINGLE_PLUGIN_TUID 1234C648CCAABA57976D20DEDEADBEEF
 )
 if (WIN32)
     # Question - do we want this default in the helpers

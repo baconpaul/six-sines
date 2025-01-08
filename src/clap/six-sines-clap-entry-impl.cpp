@@ -103,7 +103,7 @@ static const clap_plugin_info_as_vst3 *clap_get_vst3_info(const clap_plugin_fact
             &cid,
             ""
     };
-    // return &info;
+    //return &info;
     return nullptr;
 }
 
