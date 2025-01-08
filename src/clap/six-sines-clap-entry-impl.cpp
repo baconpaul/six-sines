@@ -97,6 +97,13 @@ static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint3
 static const clap_plugin_info_as_vst3 *clap_get_vst3_info(const clap_plugin_factory_as_vst3 *f,
                                                           uint32_t index)
 {
+    static array_of_16_bytes cid COMPONENT_ID(0x2112C001, 0xDEADBEEF, 0xBAAAFF00, 0x1234ABCD);
+    static clap_plugin_info_as_vst3 info {
+        "BaconPaul",
+            &cid,
+            ""
+    };
+    // return &info;
     return nullptr;
 }
 
