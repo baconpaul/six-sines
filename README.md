@@ -8,6 +8,14 @@ If you want to read a manual, [go here](doc/manual.md)
 
 If you want to download a release or recent version, [go here](https://github.com/baconpaul/six-sines/releases)
 
+## Hey are there any demos of this?
+
+Kinsey Dulcet, who designed many of the factory patches, has a demo
+track showing the more-80s-inspired sounds you can make. She's also
+working on a more 2020s inspired version, and that's pretty exciting!
+
+<iframe width="100%" height="300" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/2001201187&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true"></iframe><div style="font-size: 10px; color: #cccccc;line-break: anywhere;word-break: normal;overflow: hidden;white-space: nowrap;text-overflow: ellipsis; font-family: Interstate,Lucida Grande,Lucida Sans Unicode,Lucida Sans,Garuda,Verdana,Tahoma,sans-serif;font-weight: 100;"><a href="https://soundcloud.com/kinseydulcet" title="Kinsey Dulcet" target="_blank" style="color: #cccccc; text-decoration: none;">Kinsey Dulcet</a> · <a href="https://soundcloud.com/kinseydulcet/retrocade-nights-six-sines-demo" title="Retrocade Nights (Six Sines Demo)" target="_blank" style="color: #cccccc; text-decoration: none;">Retrocade Nights (Six Sines Demo)</a></div>
+
 ## Background
 
 The project exists for a few reasons
