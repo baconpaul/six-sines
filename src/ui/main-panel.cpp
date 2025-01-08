@@ -28,20 +28,20 @@ MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
 {
     createComponent(editor, *this, editor.patchCopy.output.level, lev, levData, 0);
     addAndMakeVisible(*lev);
-    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(lev.get(), 1);
+    sst::jucegui::component_adapters::setTraversalId(lev.get(), 1);
     levLabel = std::make_unique<jcmp::Label>();
     levLabel->setText("Level");
     addAndMakeVisible(*levLabel);
 
     createComponent(editor, *this, editor.patchCopy.output.pan, pan, panData, 1);
-    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(pan.get(), 2);
+    sst::jucegui::component_adapters::setTraversalId(pan.get(), 2);
     addAndMakeVisible(*pan);
     panLabel = std::make_unique<jcmp::Label>();
     panLabel->setText("Pan");
     addAndMakeVisible(*panLabel);
 
     createComponent(editor, *this, editor.patchCopy.output.fineTune, tun, tunData, 2);
-    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(tun.get(), 3);
+    sst::jucegui::component_adapters::setTraversalId(tun.get(), 3);
     addAndMakeVisible(*tun);
     tunLabel = std::make_unique<jcmp::Label>();
     tunLabel->setText("Tune");
@@ -65,7 +65,7 @@ MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
             beginEdit(3);
         }
     };
-    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(playScreen, 4);
+    sst::jucegui::component_adapters::setTraversalId(playScreen, 4);
 
     highlight = std::make_unique<KnobHighlight>();
     addChildComponent(*highlight);

@@ -58,9 +58,9 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
         panLabels[i]->setText("Pan");
         addAndMakeVisible(*panLabels[i]);
 
-        kt_t::assignTraversalIndex(power[i].get(), i * 12 + 50);
-        kt_t::assignTraversalIndex(knobs[i].get(), i * 12 + 51);
-        kt_t::assignTraversalIndex(panKnobs[i].get(), i * 12 + 52);
+        sst::jucegui::component_adapters::setTraversalId(power[i].get(), i * 12 + 50);
+        sst::jucegui::component_adapters::setTraversalId(knobs[i].get(), i * 12 + 51);
+        sst::jucegui::component_adapters::setTraversalId(panKnobs[i].get(), i * 12 + 52);
     }
 
     highlight = std::make_unique<KnobHighlight>();

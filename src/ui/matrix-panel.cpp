@@ -51,8 +51,8 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
                                           true);
             w->repaint();
         };
-        kt_t::assignTraversalIndex(Spower[i].get(), i * 50 + 47);
-        kt_t::assignTraversalIndex(Sknobs[i].get(), i * 50 + 48);
+        sst::jucegui::component_adapters::setTraversalId(Spower[i].get(), i * 50 + 47);
+        sst::jucegui::component_adapters::setTraversalId(Sknobs[i].get(), i * 50 + 48);
     }
 
     auto &mx = editor.patchCopy.matrixNodes;
@@ -91,9 +91,9 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
             w->repaint();
         };
 
-        kt_t::assignTraversalIndex(Mpower[i].get(), ti * 50 + si * 5 + 1);
-        kt_t::assignTraversalIndex(Mpmrm[i].get(), ti * 50 + +si * 5 + 2);
-        kt_t::assignTraversalIndex(Mknobs[i].get(), ti * 50 + si * 5 + 3);
+        sst::jucegui::component_adapters::setTraversalId(Mpower[i].get(), ti * 50 + si * 5 + 1);
+        sst::jucegui::component_adapters::setTraversalId(Mpmrm[i].get(), ti * 50 + +si * 5 + 2);
+        sst::jucegui::component_adapters::setTraversalId(Mknobs[i].get(), ti * 50 + si * 5 + 3);
     }
 
     highlight = std::make_unique<KnobHighlight>();

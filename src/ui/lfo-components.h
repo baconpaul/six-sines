@@ -72,12 +72,12 @@ template <typename Comp, typename Patch> struct LFOComponents
 
         rateD->setTemposyncPowerPartner(tempoSyncD.get());
 
-        kt_t::assignTraversalIndex(shape.get(), 200);
-        kt_t::assignTraversalIndex(bipolar.get(), 201);
-        kt_t::assignTraversalIndex(tempoSync.get(), 204);
-        kt_t::assignTraversalIndex(rate.get(), 203);
-        kt_t::assignTraversalIndex(deform.get(), 205);
-        kt_t::assignTraversalIndex(isEnv.get(), 211);
+        sst::jucegui::component_adapters::setTraversalId(shape.get(), 200);
+        sst::jucegui::component_adapters::setTraversalId(bipolar.get(), 201);
+        sst::jucegui::component_adapters::setTraversalId(tempoSync.get(), 204);
+        sst::jucegui::component_adapters::setTraversalId(rate.get(), 203);
+        sst::jucegui::component_adapters::setTraversalId(deform.get(), 205);
+        sst::jucegui::component_adapters::setTraversalId(isEnv.get(), 211);
     }
 
     juce::Rectangle<int> layoutLFOAt(int x, int y, int extraWidth = 0)
