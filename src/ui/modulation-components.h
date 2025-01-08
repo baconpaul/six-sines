@@ -84,9 +84,9 @@ template <typename Comp, typename Patch> struct ModulationComponents
             c->addAndMakeVisible(*sourceMenu[i]);
             c->addAndMakeVisible(*targetMenu[i]);
 
-            kt_t::assignTraversalIndex(sourceMenu[i].get(), i * 5 + 900);
-            kt_t::assignTraversalIndex(targetMenu[i].get(), i * 5 + 901);
-            kt_t::assignTraversalIndex(depthSlider[i].get(), i * 5 + 902);
+            sst::jucegui::component_adapters::setTraversalId(sourceMenu[i].get(), i * 5 + 900);
+            sst::jucegui::component_adapters::setTraversalId(targetMenu[i].get(), i * 5 + 901);
+            sst::jucegui::component_adapters::setTraversalId(depthSlider[i].get(), i * 5 + 902);
         }
     }
 

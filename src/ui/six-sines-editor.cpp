@@ -116,12 +116,12 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     playModeSubPanel = std::make_unique<PlayModeSubPanel>(*this);
     singlePanel->addChildComponent(*playModeSubPanel);
 
-    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(sourcePanel.get(), 20000);
-    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(mainPanel.get(), 30000);
-    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(matrixPanel.get(), 40000);
-    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(mixerPanel.get(), 50000);
-    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(macroPanel.get(), 60000);
-    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(singlePanel.get(), 70000);
+    sst::jucegui::component_adapters::setTraversalId(sourcePanel.get(), 20000);
+    sst::jucegui::component_adapters::setTraversalId(mainPanel.get(), 30000);
+    sst::jucegui::component_adapters::setTraversalId(matrixPanel.get(), 40000);
+    sst::jucegui::component_adapters::setTraversalId(mixerPanel.get(), 50000);
+    sst::jucegui::component_adapters::setTraversalId(macroPanel.get(), 60000);
+    sst::jucegui::component_adapters::setTraversalId(singlePanel.get(), 70000);
 
     auto startMsg = Synth::UIToAudioMsg{Synth::UIToAudioMsg::REQUEST_REFRESH};
     uiToAudio.push(startMsg);
@@ -142,7 +142,7 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     presetButton->onPopupMenu = [this]() { showPresetPopup(); };
     addAndMakeVisible(*presetButton);
     setPatchNameDisplay();
-    sst::jucegui::accessibility::KeyboardTraverser::assignTraversalIndex(presetButton.get(), 174);
+    sst::jucegui::component_adapters::setTraversalId(presetButton.get(), 174);
 
     {
         std::lock_guard<std::mutex> grd(sixSinesLookAndFeelSetupMutex);
@@ -499,7 +499,7 @@ void SixSinesEditor::popupMenuForContinuous(jcmp::ContinuousParamEditor *e)
               });
 
     // I could also stick the param id onto the component properties I guess
-    auto pid = getParamIdFrom(e);
+    auto pid = sst::jucegui::component_adapters::getClapParamId(e);
     if (pid.has_value())
     {
         sst::clap_juce_shim::populateMenuForClapParam(p, *pid, clapHost);

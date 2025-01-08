@@ -85,11 +85,11 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         patchPartPtr = &v;
         setTriggerLabel();
 
-        kt_t::assignTraversalIndex(triggerButton.get(), 40);
+        sst::jucegui::component_adapters::setTraversalId(triggerButton.get(), 40);
         for (int i = 0; i < nels; ++i)
-            kt_t::assignTraversalIndex(slider[i].get(), 10 + i);
+            sst::jucegui::component_adapters::setTraversalId(slider[i].get(), 10 + i);
         for (int i = 0; i < 3; ++i)
-            kt_t::assignTraversalIndex(shapes[i].get(), 20 + i);
+            sst::jucegui::component_adapters::setTraversalId(shapes[i].get(), 20 + i);
     }
 
     juce::Rectangle<int> layoutDAHDSRAt(int x, int y)

@@ -37,8 +37,8 @@ SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEdi
         power[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*power[i]);
 
-        kt_t::assignTraversalIndex(power[i].get(), i * 5 + 20);
-        kt_t::assignTraversalIndex(knobs[i].get(), i * 5 + 21);
+        sst::jucegui::component_adapters::setTraversalId(power[i].get(), i * 5 + 20);
+        sst::jucegui::component_adapters::setTraversalId(knobs[i].get(), i * 5 + 21);
 
         labels[i] = std::make_unique<jcmp::Label>();
         labels[i]->setText("Op " + std::to_string(i + 1) + " Ratio");
