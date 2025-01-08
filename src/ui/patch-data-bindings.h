@@ -167,13 +167,13 @@ inline const juce::Identifier &getParamComponentPropertyId()
 }
 inline void setParamIdOn(juce::Component *c, uint32_t pid)
 {
-    c->getProperties().set(getParamComponentPropertyId(), (int64_t)pid);
+    c->getProperties().set(getParamComponentPropertyId(), (juce::int64)pid);
 }
 inline std::optional<uint32_t> getParamIdFrom(juce::Component *c)
 {
     auto hasidx = c->getProperties().getVarPointer(getParamComponentPropertyId());
     if (hasidx)
-        return (int64_t)(*hasidx);
+        return (uint32_t)((juce::int64)(*hasidx));
     return std::nullopt;
 }
 
