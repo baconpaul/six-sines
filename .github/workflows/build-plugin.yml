@@ -86,7 +86,7 @@ jobs:
           mv build/VST3/*.vst3 build/insttmp
           mv build/*.exe build/insttmp
           
-          7z a -r build/inst/windows-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip build/insttmp/*
+          7z a -r build/inst/six-sines-windows-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip build/insttmp/*
 
       - name: Make linux tgz
         if: github.event_name != 'pull_request' && runner.os == 'Linux'
@@ -105,7 +105,7 @@ jobs:
           cd build/insttmp
           ls -al
 
-          tar cvzf ../inst/linux-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.tgz .
+          tar cvzf ../inst/six-sines-linux-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.tgz .
 
 
       - name: Make Mac
