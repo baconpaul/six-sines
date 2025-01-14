@@ -147,6 +147,7 @@ void Synth::process(const clap_output_events_t *outq)
     }
 
     resampler->populateNextBlockSize(output[0], output[1]);
+    resampler->renormalizePhases();
 }
 
 void Synth::addToVoiceList(Voice *v)

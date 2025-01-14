@@ -108,9 +108,13 @@ void SinTable::initializeStatics()
               });
 
     // Waveform 3: Saw-ish with sin 4 transitions
-    // What we need is the point where the derivatie of sin n 2pi x = deriv -2x
-    // or n 2pi cos(n 2pix) = -2
-    // or x = 1/n 2pix * acos(-2/n 2pi)
+    // ALl in x < 0 < 1
+    // a = 1 - 2 x
+    // b = sin 6pi x
+    // c = sin(pi (32 (x - 0.5)^6 + 0.5))
+    // res = b + c * (a-b)
+    // dres = db + dc (a-b) + c (da - db)
+
     static constexpr double sqrFreq{4};
     static constexpr double twoPiS{sqrFreq * twoPi};
     auto osp = 1.0 / (twoPiS);
@@ -119,19 +123,24 @@ void SinTable::initializeStatics()
     fillTable(WaveForm::SAWISH,
               [co](double x, int Q)
               {
-                  float v{0}, dv{0};
-                  if (x <= co || x > 1.0 - co)
-                  {
-                      v = sin(twoPiS * x);
-                      dv = twoPiS * cos(twoPiS * x);
-                  }
-                  else
-                  {
-                      v = 1.0 - 2 * x;
-                      dv = -2.0;
-                  }
+                  auto a = 1.0 - 2 * x;
+                  auto da = -2;
 
-                  // Above is a downward saw and we want upward
+                  auto b = sin(6 * M_PI * x);
+                  auto db = 6 * M_PI * cos(6 * M_PI * x);
+
+                  auto c = sin(M_PI * (32 * pow((x - 0.5), 6) + 0.5));
+                  // gross
+                  auto eps = 0.00001;
+                  auto cp = sin(M_PI * (32 * pow((x + eps - 0.5), 6) + 0.5));
+                  auto cm = sin(M_PI * (32 * pow((x - eps - 0.5), 6) + 0.5));
+                  auto dc = (cp - cm) / 2 * eps;
+
+                  auto v = b + c * (a - b);
+                  auto dv = db + dc * (a - b) + c * (da - db);
+
+                  // Convert to upward saw
+
                   return std::make_pair(-v, -dv);
               });
 
