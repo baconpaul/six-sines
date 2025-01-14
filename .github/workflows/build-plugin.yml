@@ -91,6 +91,7 @@ jobs:
       - name: Make linux tgz
         if: github.event_name != 'pull_request' && runner.os == 'Linux'
         run: |
+          find build -name "Six Sines*" -print
           mkdir build/inst
           mkdir build/insttmp
           mv build/*.clap build/insttmp
