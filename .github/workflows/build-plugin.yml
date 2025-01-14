@@ -91,12 +91,20 @@ jobs:
       - name: Make linux tgz
         if: github.event_name != 'pull_request' && runner.os == 'Linux'
         run: |
+          find build -name "Six Sines*" -print
+
           mkdir build/inst
           mkdir build/insttmp
+
           mv build/*.clap build/insttmp
-          mv "build/Six Sines" build/isnttmp 
+          mv "build/Six Sines" build/insttmp
           mv build/Release/*.vst3 build/insttmp
+
+          find build -name "Six Sines*" -print
+
           cd build/insttmp
+          ls -al
+
           tar cvzf ../inst/linux-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.tgz .
 
 
