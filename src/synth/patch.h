@@ -1134,6 +1134,19 @@ struct Patch
                                      .withDefault(false)
                                      .withID(id(39))),
 
+              sampleRateStrategy(
+                  intMd()
+                      .withName(name() + " Sample Rate Strategy")
+                      .withGroupName(name())
+                      .withDefault(SampleRateStrategy::SR_110120)
+                      .withID(id(40))
+                      .withRange(SampleRateStrategy::SR_110120, SampleRateStrategy::SR_220240)
+                      .withUnorderedMapFormatting({
+                          {SampleRateStrategy::SR_110120, "110.25/120 kHz"},
+                          {SampleRateStrategy::SR_132144, "136.3/144 kHz"},
+                          {SampleRateStrategy::SR_176192, "176.4/192 kHz"},
+                          {SampleRateStrategy::SR_220240, "220.5/240 kHz"},
+                      })),
               ModulationMixin(name(), id(120)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this](int i)
@@ -1164,6 +1177,7 @@ struct Patch
         Param mpeActive, mpeBendRange;
         Param octTranspose, fineTune, pan, lfoDepth;
         Param attackFloorOnRetrig, rephaseOnRetrigger;
+        Param sampleRateStrategy;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -1188,7 +1202,8 @@ struct Patch
                                      &fineTune,
                                      &lfoDepth,
                                      &attackFloorOnRetrig,
-                                     &rephaseOnRetrigger};
+                                     &rephaseOnRetrigger,
+                                     &sampleRateStrategy};
             appendDAHDSRParams(res);
 
             for (int i = 0; i < numModsPer; ++i)

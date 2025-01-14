@@ -44,6 +44,7 @@ struct Synth
 {
     float output alignas(16)[2][blockSize];
 
+    SampleRateStrategy sampleRateStrategy{SampleRateStrategy::SR_110120};
     using resampler_t = sst::basic_blocks::dsp::LanczosResampler<blockSize>;
     std::unique_ptr<resampler_t> resampler;
 
@@ -232,7 +233,7 @@ struct Synth
 
     bool audioRunning{true};
 
-    double realSampleRate{0};
+    double hostSampleRate{0}, engineSampleRate{0};
     void setSampleRate(double sampleRate);
 
     void process(const clap_output_events_t *);
@@ -295,10 +296,10 @@ struct Synth
     void postLoad()
     {
         doFullRefresh = true;
-        resetPlaymode();
+        reapplyControlSettings();
     }
 
-    void resetPlaymode();
+    void reapplyControlSettings();
 
     sst::basic_blocks::dsp::VUPeak vuPeak;
     int32_t updateVuEvery{(int32_t)(48000 * 2.5 / 60 / blockSize)}; // approx

@@ -25,7 +25,6 @@ namespace baconpaul::six_sines
 {
 
 static constexpr size_t blockSize{8};
-static constexpr float overSampleFactor{2.5};
 
 static constexpr size_t numOps{6};
 static constexpr size_t matrixSize{(numOps * (numOps - 1)) / 2};
@@ -34,6 +33,15 @@ static constexpr size_t numMacros{6};
 static constexpr size_t maxVoices{64};
 
 static constexpr size_t numModsPer{3};
+
+// These values are streamed
+enum SampleRateStrategy
+{
+    SR_110120 = 0, // If in 44.1 land use 110.25, if not use 120 (2.5x the 'base' rate)
+    SR_132144 = 1, // or 3x
+    SR_176192 = 2, // or 4x
+    SR_220240 = 3  // or 5x
+};
 
 } // namespace baconpaul::six_sines
 

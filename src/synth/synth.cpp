@@ -38,7 +38,7 @@ Synth::Synth()
         monoValues.macroPtr[i] = &patch.macroNodes[i].level.value;
     }
 
-    resetPlaymode();
+    reapplyControlSettings();
 }
 
 Synth::~Synth()
@@ -51,14 +51,55 @@ Synth::~Synth()
 
 void Synth::setSampleRate(double sampleRate)
 {
-    realSampleRate = sampleRate;
-    monoValues.sr.setSampleRate(sampleRate * overSampleFactor);
+    hostSampleRate = sampleRate;
+    // Look for 44 variants
+    bool is441{false};
+    auto hsrBy441 = hostSampleRate / (44100 / 2);
+    if (std::fabs(hsrBy441 - std::round(hsrBy441)) < 1e-3)
+    {
+        is441 = true;
+    }
+
+    double internalRate{0.f};
+    double mul{0.f};
+    switch (sampleRateStrategy)
+    {
+    case SR_110120:
+    {
+        mul = 2.5;
+    }
+    break;
+    case SR_132144:
+    {
+        mul = 3.0;
+    }
+    break;
+    case SR_176192:
+    {
+        mul = 4;
+    }
+    break;
+    case SR_220240:
+    {
+        mul = 5;
+    }
+    break;
+    }
+
+    if (is441)
+        internalRate = 44100 * mul;
+    else
+        internalRate = 48000 * mul;
+
+    engineSampleRate = internalRate;
+    SXSNLOG("Setting SampleRates: " << SXSNV(hostSampleRate) << SXSNV(engineSampleRate));
+    monoValues.sr.setSampleRate(internalRate);
 
     lagHandler.setRate(60, blockSize, monoValues.sr.sampleRate);
     vuPeak.setSampleRate(monoValues.sr.sampleRate);
 
     resampler =
-        std::make_unique<resampler_t>((float)monoValues.sr.sampleRate, (float)realSampleRate);
+        std::make_unique<resampler_t>((float)monoValues.sr.sampleRate, (float)hostSampleRate);
 }
 
 void Synth::process(const clap_output_events_t *outq)
@@ -253,9 +294,10 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             if (dest->meta.id == patch.output.playMode.meta.id ||
                 dest->meta.id == patch.output.polyLimit.meta.id ||
                 dest->meta.id == patch.output.pianoModeActive.meta.id ||
-                dest->meta.id == patch.output.mpeActive.meta.id)
+                dest->meta.id == patch.output.mpeActive.meta.id ||
+                dest->meta.id == patch.output.sampleRateStrategy.meta.id)
             {
-                resetPlaymode();
+                reapplyControlSettings();
             }
 
             auto d = patch.dirty;
@@ -320,8 +362,19 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
     }
 }
 
-void Synth::resetPlaymode()
+void Synth::reapplyControlSettings()
 {
+    if (sampleRateStrategy != (SampleRateStrategy)patch.output.sampleRateStrategy.value)
+    {
+        sampleRateStrategy = (SampleRateStrategy)patch.output.sampleRateStrategy.value;
+
+        if (hostSampleRate > 0)
+        {
+            voiceManager->allSoundsOff();
+            setSampleRate(hostSampleRate);
+        }
+    }
+
     auto val = (int)std::round(patch.output.playMode.value);
     if (val != 0)
     {
