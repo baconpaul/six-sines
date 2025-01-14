@@ -121,6 +121,23 @@ Press the COG icon at the top of the UI to get the settings
 screen, where you can control MPE, Mono mode, pitch bend depth,
 and more.
 
+## Oversampling
+
+The setting screen contains an oversampling control. The Six Sines oversampling
+strategy has the engine run at a fixed rate mostly independnt of
+host sample rate which is stored in the patch and you control.
+
+Mostly, because our resampler (a short FIR interpolator) works
+way better at round multiple downsampling. 2.5x is a lot better than
+2.61x or such. So our oversample levels are fixed offsets from
+either 44.1 or 48khz. If you choose, say, "132.3/144khz" as you engine 
+sample rate, if your host sample rate is a multiple of 44.1 we will
+choose the lower, and of 48 the higher.
+
+You may need to adjust oversampling in some high feedback cases.
+It of course burns cpu as it goes up and for most patches
+the default 2.5x is just fine.
+
 ## Screen Reader and Accessible Support
 
 Six Sines supports screen readers and accessible gestures, making

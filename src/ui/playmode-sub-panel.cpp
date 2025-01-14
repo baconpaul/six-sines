@@ -157,6 +157,12 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     addAndMakeVisible(*panicButton);
     addAndMakeVisible(*panicTitle);
 
+    createComponent(editor, *this, editor.patchCopy.output.sampleRateStrategy, srStrat, srStratD);
+    addAndMakeVisible(*srStrat);
+    srStratLab = std::make_unique<jcmp::RuledLabel>();
+    srStratLab->setText("Oversampling");
+    addAndMakeVisible(*srStratLab);
+
     setEnabledState();
 }
 
@@ -227,6 +233,13 @@ void PlayModeSubPanel::resized()
     positionTitleLabelAt(depx, bbx.getY(), bbx.getWidth(), panicTitle);
     bbx = bbx.translated(0, uicTitleLabelHeight);
     panicButton->setBounds(bbx.withHeight(uicLabelHeight));
+
+    depx += bbx.getWidth() + uicMargin;
+    bbx = bbx.withWidth(2.0 * bbx.getWidth());
+    depy = r.getY();
+    positionTitleLabelAt(depx, depy, bbx.getWidth(), srStratLab);
+    bbx = juce::Rectangle<int>(depx, depy + uicTitleLabelHeight, bbx.getWidth(), uicLabelHeight);
+    srStrat->setBounds(bbx);
 }
 
 void PlayModeSubPanel::setTriggerButtonLabel()
