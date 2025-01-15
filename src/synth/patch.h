@@ -168,7 +168,7 @@ struct Patch
                                                         {3, "Triangle"},
                                                         {4, "Pulse"},
                                                         {5, "Noise"},
-                                                        {6, "S&H"}})),
+                                                        {6, "S and H"}})),
               lfoActive(boolMd()
                             .withDefault(true)
                             .withID(id0 + 4)
