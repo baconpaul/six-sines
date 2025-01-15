@@ -17,18 +17,18 @@
 
 namespace baconpaul::six_sines
 {
-thread_local double SinTable::xTable[nQuadrants][nPoints + 1];
-thread_local float SinTable::quadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
-thread_local float SinTable::dQuadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
+double SinTable::xTable[nQuadrants][nPoints + 1];
+float SinTable::quadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
+float SinTable::dQuadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
 
-thread_local float SinTable::cubicHermiteCoefficients[nQuadrants][nPoints];
-thread_local float SinTable::linterpCoefficients[2][nPoints];
+float SinTable::cubicHermiteCoefficients[nQuadrants][nPoints];
+float SinTable::linterpCoefficients[2][nPoints];
 
-thread_local SIMD_M128 SinTable::simdFullQuad alignas(
-    16)[NUM_WAVEFORMS][nQuadrants * nPoints]; // for each quad it is q, q+1, dq + 1
-thread_local SIMD_M128 SinTable::simdCubic alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
+SIMD_M128 SinTable::simdFullQuad alignas(
+    16)[NUM_WAVEFORMS][nQuadrants * nPoints];       // for each quad it is q, q+1, dq + 1
+SIMD_M128 SinTable::simdCubic alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
 
-thread_local bool SinTable::staticsInitialized{false};
+bool SinTable::staticsInitialized{false};
 
 void SinTable::fillTable(int WF, std::function<std::pair<double, double>(double x, int Q)> der)
 {

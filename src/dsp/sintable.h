@@ -48,17 +48,17 @@ struct SinTable
     };
 
     static constexpr size_t nPoints{1 << 12}, nQuadrants{4};
-    static thread_local double xTable[nQuadrants][nPoints + 1];
-    static thread_local float quadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
-    static thread_local float dQuadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
+    static double xTable[nQuadrants][nPoints + 1];
+    static float quadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
+    static float dQuadrantTable[NUM_WAVEFORMS][nQuadrants][nPoints + 1];
 
-    static thread_local float cubicHermiteCoefficients[nQuadrants][nPoints];
-    static thread_local float linterpCoefficients[2][nPoints];
+    static float cubicHermiteCoefficients[nQuadrants][nPoints];
+    static float linterpCoefficients[2][nPoints];
 
-    static thread_local SIMD_M128 simdFullQuad alignas(
-        16)[NUM_WAVEFORMS][nQuadrants * nPoints]; // for each quad it is q, q+1, dq + 1
-    static thread_local SIMD_M128 simdCubic alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
-    static thread_local bool staticsInitialized;
+    static SIMD_M128 simdFullQuad alignas(
+        16)[NUM_WAVEFORMS][nQuadrants * nPoints];    // for each quad it is q, q+1, dq + 1
+    static SIMD_M128 simdCubic alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
+    static bool staticsInitialized;
 
     SIMD_M128 *simdQuad;
 
