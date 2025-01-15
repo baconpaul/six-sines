@@ -80,7 +80,7 @@ struct Synth
         void moveVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
         {
             v->setupPortaTo(k, synth.patch.output.portaTime.value);
-            v->voiceValues.key = k;
+            v->voiceValues.setKey(k);
             v->voiceValues.velocity = ve;
             v->retriggerAllEnvelopesForKeyPress();
         }
@@ -88,7 +88,7 @@ struct Synth
         void moveAndRetriggerVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
         {
             v->setupPortaTo(k, synth.patch.output.portaTime.value);
-            v->voiceValues.key = k;
+            v->voiceValues.setKey(k);
             v->voiceValues.velocity = ve;
             v->voiceValues.setGated(true);
             v->retriggerAllEnvelopesForReGate();
@@ -157,7 +157,7 @@ struct Synth
                             obuf[vc].voice = &synth.voices[i];
                             synth.voices[i].used = true;
                             synth.voices[i].voiceValues.setGated(true);
-                            synth.voices[i].voiceValues.key = key;
+                            synth.voices[i].voiceValues.setKey(key);
                             synth.voices[i].voiceValues.channel = ch;
                             synth.voices[i].voiceValues.velocity = vel;
                             synth.voices[i].voiceValues.releaseVelocity = 0;

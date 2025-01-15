@@ -49,6 +49,7 @@ struct ModMatrixConfig
         GATED = voiceLevel + 50,
         RELEASED = voiceLevel + 51,
         UNISON_VAL = voiceLevel + 60,
+        KEYTRACK_FROM_60 = voiceLevel + 61,
 
         MPE_PRESSURE = voiceLevel + 100,
         MPE_TIMBRE = voiceLevel + 101,

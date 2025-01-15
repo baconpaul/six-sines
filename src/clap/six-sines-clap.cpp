@@ -55,7 +55,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
         clapJuceShim->setResizable(false);
     }
-    virtual ~SixSinesClap() {};
+    virtual ~SixSinesClap(){};
 
     std::unique_ptr<Synth> engine;
     size_t blockPos{0};

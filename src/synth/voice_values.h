@@ -25,7 +25,7 @@ namespace baconpaul::six_sines
 {
 struct VoiceValues
 {
-    VoiceValues() : gated(gatedV) {}
+    VoiceValues() : gated(gatedV), key(keyV) {}
 
     const bool &gated;
     float gatedFloat, ungatedFloat;
@@ -35,7 +35,14 @@ struct VoiceValues
         gatedFloat = g ? 1.f : 0.f;
         ungatedFloat = 1.0 - gatedFloat;
     }
-    int key{0}, channel{0};
+    void setKey(int k)
+    {
+        keyV = k;
+        keytrackFrom60 = (k - 60) / 12.0;
+    }
+    const int &key;
+    float keytrackFrom60;
+    int channel{0};
     float velocity{0}, releaseVelocity{0};
 
     float polyAt{0};
@@ -54,6 +61,7 @@ struct VoiceValues
 
   private:
     bool gatedV{false};
+    int keyV{0};
 };
 };     // namespace baconpaul::six_sines
 #endif // MONO_VALUES_H
