@@ -7,6 +7,10 @@ if (APPLE)
 endif()
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Never want shared if not specified")
+if (${BUILD_SHARED_LIBS})
+    message(WARNING "You have set BUILD_SHARED_LIBS to ON. This is an untested and unlikedly to work config")
+endif()
+
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
