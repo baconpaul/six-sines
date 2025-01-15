@@ -28,6 +28,8 @@
 
 #include "ui/six-sines-editor.h"
 
+#include <clapwrapper/vst3.h>
+
 namespace baconpaul::six_sines
 {
 
@@ -53,7 +55,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
         clapJuceShim->setResizable(false);
     }
-    virtual ~SixSinesClap(){};
+    virtual ~SixSinesClap() {};
 
     std::unique_ptr<Synth> engine;
     size_t blockPos{0};
@@ -364,6 +366,23 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             _host.timerSupportUnregister(id);
         }
         return true;
+    }
+
+    static uint32_t vst3_getNumMIDIChannels(const clap_plugin *plugin, uint32_t note_port)
+    {
+        return 16;
+    }
+    static uint32_t vst3_supportedNoteExpressions(const clap_plugin *plugin) { return 0; }
+
+    const void *extension(const char *id) noexcept override
+    {
+        if (strcmp(id, CLAP_PLUGIN_AS_VST3) == 0)
+        {
+            static clap_plugin_as_vst3 v3p{vst3_getNumMIDIChannels, vst3_supportedNoteExpressions};
+            return &v3p;
+        }
+
+        return nullptr;
     }
 };
 
