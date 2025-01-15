@@ -53,6 +53,7 @@ ModMatrixConfig::ModMatrixConfig()
     add(GATED, "Voice", "Gated");
     add(RELEASED, "Voice", "Released");
     add(UNISON_VAL, "Voice", "Unison Position");
+    add(KEYTRACK_FROM_60, "Voice", "Keytrack from 60");
 
     add(MPE_PRESSURE, "MPE", "Pressure");
     add(MPE_TIMBRE, "MPE", "Timbre");

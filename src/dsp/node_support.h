@@ -378,6 +378,9 @@ template <typename T> struct ModulationSupport
         case ModMatrixConfig::Source::RELEASED:
             sourcePointers[which] = &voiceValues.ungatedFloat;
             break;
+        case ModMatrixConfig::Source::KEYTRACK_FROM_60:
+            sourcePointers[which] = &voiceValues.keytrackFrom60;
+            break;
 
         case ModMatrixConfig::Source::MPE_PRESSURE:
             sourcePointers[which] = &voiceValues.mpePressure;
