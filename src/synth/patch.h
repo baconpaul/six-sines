@@ -164,11 +164,11 @@ struct Patch
                            .withID(id0 + 3)
                            .withUnorderedMapFormatting({{0, "Sine"},
                                                         {1, "Ramp"},
-                                                        {2, "RampNeg"},
-                                                        {3, "Tri"},
+                                                        {2, "Sawtooth"},
+                                                        {3, "Triangle"},
                                                         {4, "Pulse"},
                                                         {5, "Noise"},
-                                                        {6, "SnH"}})),
+                                                        {6, "S and H"}})),
               lfoActive(boolMd()
                             .withDefault(true)
                             .withID(id0 + 4)
