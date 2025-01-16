@@ -53,7 +53,6 @@ jobs:
       - name: Setup VERSION file for Nightly
         if: ${{ github.ref == 'refs/heads/main' && github.repository_owner == 'baconpaul' }}
         run: |
-          
           echo Nightly-`date +"%Y-%m-%d"` > VERSION
 
       - name: Setup VERSION file for Release
@@ -141,31 +140,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_plugin]
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Upload to Nightly
+        uses: surge-synthesizer/sst-githubactions/upload-to-release@main
         with:
-          path: artifacts
-      - name: Show Installer Directory
-        run: |
-          ls -R artifacts
-      - name: Delete old release assets
-        uses: mknejp/delete-release-assets@v1
-        with:
-          token: ${{ github.token }}
-          tag: Nightly # This may also be of the form 'refs/tags/staging'
-          assets: '*'
-      - name: Upload release assets
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: artifacts/**/**/**
           tag: Nightly
-          file_glob: true
-      - name: Tag Repo
-        uses: richardsimko/update-tag@v1.0.7
+          reuse_tag: true
+          create_tag: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post to Discord
+        uses: surge-synthesizer/sst-githubactions/discord-release-notify@main
         with:
-          tag_name: Nightly
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tag: Nightly
+          title: "A New Six Sines Nightly is Available"
+          subtitle: "Have fun!"
 
   publish-plugin-release:
     name: Publish Release
@@ -173,27 +162,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_plugin]
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Upload to Release
+        uses: surge-synthesizer/sst-githubactions/upload-to-release@main
         with:
-          path: artifacts
-      - name: Show Installer Directory
-        run: |
-          ls -R artifacts
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: |
-            ${{ github.event.repository.name }} Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-
-      - name: Upload release assets
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: artifacts/**/**/**
           tag: ${{ github.ref_name }}
-          file_glob: true
+          reuse_tag: false
+          create_tag: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post to Discord
+        uses: surge-synthesizer/sst-githubactions/discord-release-notify@main
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tag: ${{ github.ref_name }}
+          title: "A New Six Sines Release is Available"
+          subtitle: "But really, what does stable mean?"
