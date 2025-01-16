@@ -220,7 +220,6 @@ void Synth::process(const clap_output_events_t *outq)
             d.end_of_input = 0;
             d.src_ratio = sampleRateRatio;
 
-            assert(d.input_frames_used == blockSize);
             src_process(lState, &d);
             auto lgen = d.output_frames_gen;
 
@@ -231,7 +230,6 @@ void Synth::process(const clap_output_events_t *outq)
             d.end_of_input = 0;
             d.src_ratio = sampleRateRatio;
 
-            assert(d.input_frames_used == blockSize);
             src_process(rState, &d);
             auto rgen = d.output_frames_gen;
 
