@@ -198,12 +198,13 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &fbBase, &lfoToFB, &activeV, &envToFB;
+    const float &fbBase, &lfoToFB, &activeV, &envToFB, &overdriveV;
     MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, MonoValues &mv, const VoiceValues &vv)
         : selfNode(sn), monoValues(mv), voiceValues(vv), onto(on), fbBase(sn.fbLevel),
-          lfoToFB(sn.lfoToFB), activeV(sn.active), envToFB(sn.envToFB), EnvelopeSupport(sn, mv, vv),
-          LFOSupport(sn, mv), ModulationSupport(sn, mv, vv){};
+          lfoToFB(sn.lfoToFB), activeV(sn.active), envToFB(sn.envToFB), overdriveV(sn.overdrive),
+          EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv), ModulationSupport(sn, mv, vv){};
     bool active{true}, lfoMul{false};
+    float overdriveFactor{1.0};
 
     void attack()
     {
@@ -214,6 +215,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
             calculateModulation();
             envAttack();
             lfoAttack();
+            overdriveFactor = overdriveV > 0.5 ? 10.0 : 1.0;
         }
     }
     void applyBlock()
@@ -253,7 +255,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
         }
         for (int j = 0; j < blockSize; ++j)
         {
-            onto.feedbackLevel[j] = (int32_t)((1 << 24) * modlev[j]);
+            onto.feedbackLevel[j] = (int32_t)((1 << 24) * modlev[j] * overdriveFactor);
         }
     }
 

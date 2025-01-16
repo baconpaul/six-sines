@@ -51,6 +51,10 @@ struct SelfSubPanel : juce::Component,
     std::unique_ptr<jcmp::MultiSwitch> envMul;
     std::unique_ptr<PatchDiscrete> envMulD;
 
+    std::unique_ptr<jcmp::ToggleButton> overdrive;
+    std::unique_ptr<PatchDiscrete> overdriveD;
+    std::unique_ptr<jcmp::RuledLabel> overdriveTitle;
+
     void setEnabledState();
 };
 } // namespace baconpaul::six_sines::ui

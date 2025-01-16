@@ -584,6 +584,11 @@ struct Patch
                           .withGroupName(name(idx))
                           .withID(id(27, idx))
                           .withDefault(0)),
+              overdrive(boolMd()
+                            .withName(name(idx) + " Overdrive")
+                            .withGroupName(name(idx))
+                            .withDefault(false)
+                            .withID(id(28, idx))),
               ModulationMixin(name(idx), id(40, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
@@ -610,14 +615,14 @@ struct Patch
             return name(index);
         }
 
-        Param fbLevel, lfoToFB, envToFB;
+        Param fbLevel, lfoToFB, envToFB, overdrive;
         Param active;
 
         std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&fbLevel, &active, &lfoToFB, &envToFB};
+            std::vector<Param *> res{&fbLevel, &active, &lfoToFB, &envToFB, &overdrive};
             appendDAHDSRParams(res);
             appendLFOParams(res);
 
