@@ -43,6 +43,14 @@ enum SampleRateStrategy
     SR_220240 = 3  // or 5x
 };
 
+enum ResamplerEngine
+{
+    SRC_FAST,
+    SRC_MEDIUM,
+    SRC_BEST,
+    LANCZOS
+};
+
 } // namespace baconpaul::six_sines
 
 inline std::string fileTrunc(const std::string &f)

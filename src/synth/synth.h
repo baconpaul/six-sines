@@ -19,8 +19,10 @@
 #include <memory>
 #include <array>
 
-#include <clap/clap.h>
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
+#include "samplerate.h"
+
+#include <clap/clap.h>
 #include "sst/basic-blocks/dsp/Lag.h"
 #include "sst/basic-blocks/dsp/VUPeak.h"
 #include "sst/basic-blocks/tables/EqualTuningProvider.h"
@@ -45,8 +47,12 @@ struct Synth
     float output alignas(16)[2][blockSize];
 
     SampleRateStrategy sampleRateStrategy{SampleRateStrategy::SR_110120};
+    ResamplerEngine resamplerEngine{ResamplerEngine::SRC_FAST};
+
     using resampler_t = sst::basic_blocks::dsp::LanczosResampler<blockSize>;
     std::unique_ptr<resampler_t> resampler;
+
+    SRC_STATE *lState{nullptr}, *rState{nullptr};
 
     Patch patch;
     MonoValues monoValues;
@@ -233,7 +239,7 @@ struct Synth
 
     bool audioRunning{true};
 
-    double hostSampleRate{0}, engineSampleRate{0};
+    double hostSampleRate{0}, engineSampleRate{0}, sampleRateRatio{0};
     void setSampleRate(double sampleRate);
 
     void process(const clap_output_events_t *);

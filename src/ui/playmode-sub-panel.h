@@ -84,6 +84,8 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<jcmp::RuledLabel> srStratLab;
     std::unique_ptr<jcmp::JogUpDownButton> srStrat;
     std::unique_ptr<PatchDiscrete> srStratD;
+    std::unique_ptr<jcmp::JogUpDownButton> rsEng;
+    std::unique_ptr<PatchDiscrete> rsEngD;
 
     void showPolyLimitMenu();
     int getPolyLimit();

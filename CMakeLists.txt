@@ -94,6 +94,7 @@ target_link_libraries(${PROJECT_NAME}-impl PRIVATE
         sst-plugininfra sst-plugininfra::filesystem sst-plugininfra::tinyxml sst-plugininfra::strnatcmp
         sst::clap_juce_shim sst::clap_juce_shim_headers
         ${PROJECT_NAME}-patches
+        samplerate
 )
 
 # Hmm - why do I need this?

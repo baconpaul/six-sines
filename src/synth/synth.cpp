@@ -97,17 +97,51 @@ void Synth::setSampleRate(double sampleRate)
 
     lagHandler.setRate(60, blockSize, monoValues.sr.sampleRate);
     vuPeak.setSampleRate(monoValues.sr.sampleRate);
+    sampleRateRatio = hostSampleRate / engineSampleRate;
 
-    resampler =
-        std::make_unique<resampler_t>((float)monoValues.sr.sampleRate, (float)hostSampleRate);
+    if (resamplerEngine == LANCZOS)
+    {
+        SXSNLOG("Setting Lanczos Resampler");
+        resampler =
+            std::make_unique<resampler_t>((float)monoValues.sr.sampleRate, (float)hostSampleRate);
+    }
+    else
+    {
+        if (lState)
+        {
+            src_delete(lState);
+        }
+        if (rState)
+        {
+            src_delete(rState);
+        }
+        int ec;
+        auto mode = SRC_SINC_FASTEST;
+        if (resamplerEngine == SRC_MEDIUM)
+        {
+            SXSNLOG("Setting SRC Resampler - SRC_SINC_MEDIUM_QUALITY");
+            mode = SRC_SINC_MEDIUM_QUALITY;
+        }
+        if (resamplerEngine == SRC_BEST)
+        {
+            SXSNLOG("Setting SRC Resampler - SRC_SINC_BEST_QUALITY");
+            mode = SRC_SINC_BEST_QUALITY;
+        }
+        else
+        {
+            SXSNLOG("Setting SRC Resampler - SRC_SINC_FASTEST");
+        }
+        lState = src_new(mode, 1, &ec);
+        rState = src_new(mode, 1, &ec);
+        src_set_ratio(lState, sampleRateRatio);
+        src_set_ratio(rState, sampleRateRatio);
+    }
 }
 
 void Synth::process(const clap_output_events_t *outq)
 {
     if (!SinTable::staticsInitialized)
         SinTable::initializeStatics();
-
-    assert(resampler);
 
     processUIQueue(outq);
 
@@ -119,8 +153,18 @@ void Synth::process(const clap_output_events_t *outq)
 
     monoValues.attackFloorOnRetrig = patch.output.attackFloorOnRetrig > 0.5;
 
-    while (resampler->inputsRequiredToGenerateOutputs(blockSize) > 0)
+    int loops{0};
+
+    SRC_DATA d;
+
+    int generated{0};
+
+    if (resamplerEngine == LANCZOS)
+        generated = (resampler->inputsRequiredToGenerateOutputs(blockSize) > 0 ? 0 : blockSize);
+
+    while (generated < blockSize)
     {
+        loops++;
         lagHandler.process();
 
         float lOutput alignas(16)[2][blockSize];
@@ -159,9 +203,40 @@ void Synth::process(const clap_output_events_t *outq)
             assert(!v->next && !v->prior);
         }
 
-        for (int i = 0; i < blockSize; ++i)
+        if (resamplerEngine == LANCZOS)
         {
-            resampler->push(lOutput[0][i], lOutput[1][i]);
+            for (int i = 0; i < blockSize; ++i)
+            {
+                resampler->push(lOutput[0][i], lOutput[1][i]);
+            }
+            generated = (resampler->inputsRequiredToGenerateOutputs(blockSize) > 0 ? 0 : blockSize);
+        }
+        else
+        {
+            d.data_in = lOutput[0];
+            d.data_out = output[0] + generated;
+            d.input_frames = blockSize;
+            d.output_frames = blockSize - generated;
+            d.end_of_input = 0;
+            d.src_ratio = sampleRateRatio;
+
+            assert(d.input_frames_used == blockSize);
+            src_process(lState, &d);
+            auto lgen = d.output_frames_gen;
+
+            d.data_in = lOutput[1];
+            d.data_out = output[1] + generated;
+            d.input_frames = blockSize;
+            d.output_frames = blockSize - generated;
+            d.end_of_input = 0;
+            d.src_ratio = sampleRateRatio;
+
+            assert(d.input_frames_used == blockSize);
+            src_process(rState, &d);
+            auto rgen = d.output_frames_gen;
+
+            assert(lgen == rgen);
+            generated += lgen;
         }
 
         if (isEditorAttached)
@@ -187,8 +262,11 @@ void Synth::process(const clap_output_events_t *outq)
         }
     }
 
-    resampler->populateNextBlockSize(output[0], output[1]);
-    resampler->renormalizePhases();
+    if (resamplerEngine == LANCZOS)
+    {
+        resampler->populateNextBlockSize(output[0], output[1]);
+        resampler->renormalizePhases();
+    }
 }
 
 void Synth::addToVoiceList(Voice *v)
@@ -295,7 +373,8 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
                 dest->meta.id == patch.output.polyLimit.meta.id ||
                 dest->meta.id == patch.output.pianoModeActive.meta.id ||
                 dest->meta.id == patch.output.mpeActive.meta.id ||
-                dest->meta.id == patch.output.sampleRateStrategy.meta.id)
+                dest->meta.id == patch.output.sampleRateStrategy.meta.id ||
+                dest->meta.id == patch.output.resampleEngine.meta.id)
             {
                 reapplyControlSettings();
             }
@@ -364,9 +443,11 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
 
 void Synth::reapplyControlSettings()
 {
-    if (sampleRateStrategy != (SampleRateStrategy)patch.output.sampleRateStrategy.value)
+    if (sampleRateStrategy != (SampleRateStrategy)patch.output.sampleRateStrategy.value ||
+        resamplerEngine != (ResamplerEngine)patch.output.resampleEngine.value)
     {
         sampleRateStrategy = (SampleRateStrategy)patch.output.sampleRateStrategy.value;
+        resamplerEngine = (ResamplerEngine)patch.output.resampleEngine.value;
 
         if (hostSampleRate > 0)
         {
