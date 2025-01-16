@@ -1147,6 +1147,18 @@ struct Patch
                           {SampleRateStrategy::SR_176192, "176.4/192 kHz"},
                           {SampleRateStrategy::SR_220240, "220.5/240 kHz"},
                       })),
+              resampleEngine(intMd()
+                                 .withName(name() + " Resampler Engine")
+                                 .withGroupName(name())
+                                 .withDefault(ResamplerEngine::SRC_FAST)
+                                 .withRange(ResamplerEngine::SRC_FAST, ResamplerEngine::LANCZOS)
+                                 .withID(id(41))
+                                 .withUnorderedMapFormatting({
+                                     {ResamplerEngine::SRC_FAST, "SRC Fast (rec)"},
+                                     {ResamplerEngine::SRC_MEDIUM, "SRC Medium"},
+                                     {ResamplerEngine::SRC_BEST, "SRC Expensive"},
+                                     {ResamplerEngine::LANCZOS, "Lanczos A=4"},
+                                 })),
               ModulationMixin(name(), id(120)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this](int i)
@@ -1177,7 +1189,7 @@ struct Patch
         Param mpeActive, mpeBendRange;
         Param octTranspose, fineTune, pan, lfoDepth;
         Param attackFloorOnRetrig, rephaseOnRetrigger;
-        Param sampleRateStrategy;
+        Param sampleRateStrategy, resampleEngine;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -1203,7 +1215,8 @@ struct Patch
                                      &lfoDepth,
                                      &attackFloorOnRetrig,
                                      &rephaseOnRetrigger,
-                                     &sampleRateStrategy};
+                                     &sampleRateStrategy,
+                                     &resampleEngine};
             appendDAHDSRParams(res);
 
             for (int i = 0; i < numModsPer; ++i)

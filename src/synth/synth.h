@@ -19,15 +19,8 @@
 #include <memory>
 #include <array>
 
-#define RESAMPLER_IS_SRC 1
-
-#if RESAMPLER_IS_LANCZOS
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
-#endif
-
-#if RESAMPLER_IS_SRC
 #include "samplerate.h"
-#endif
 
 #include <clap/clap.h>
 #include "sst/basic-blocks/dsp/Lag.h"
@@ -45,7 +38,6 @@
 #include "mono_values.h"
 #include "mod_matrix.h"
 
-
 namespace baconpaul::six_sines
 {
 struct PresetManager;
@@ -55,15 +47,12 @@ struct Synth
     float output alignas(16)[2][blockSize];
 
     SampleRateStrategy sampleRateStrategy{SampleRateStrategy::SR_110120};
+    ResamplerEngine resamplerEngine{ResamplerEngine::SRC_FAST};
 
-#if RESAMPLER_IS_LANCZOS
     using resampler_t = sst::basic_blocks::dsp::LanczosResampler<blockSize>;
     std::unique_ptr<resampler_t> resampler;
-#endif
 
-#if RESAMPLER_IS_SRC
     SRC_STATE *lState{nullptr}, *rState{nullptr};
-#endif
 
     Patch patch;
     MonoValues monoValues;
