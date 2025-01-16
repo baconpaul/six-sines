@@ -39,12 +39,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Select Xcode Version
-        if: runner.os == 'macOS'
-        run: sudo xcode-select -switch /Applications/Xcode_15.1.app
-
-      - name: Install Ninja
-        uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Prepare for JUCE
+        uses: surge-synthesizer/sst-githubactions/prepare-for-juce@main
+        with:
+          os: ${{ runner.os }}
 
       - uses: apple-actions/import-codesign-certs@v3
         if: runner.os == 'macOS' && github.event_name != 'pull_request'
@@ -62,14 +60,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v') && github.repository_owner == 'baconpaul'
         run: |
           echo ${{ github.ref_name }} > VERSION
-
-      - name: Install Linux Deps; pick GCC12
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt install libfontconfig1-dev libasound2-dev libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libfreetype6-dev libglu1-mesa-dev libjack-jackd2-dev
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12
 
       - name: Build release version
         if: github.event_name != 'pull_request'
