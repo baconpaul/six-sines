@@ -97,9 +97,28 @@ void Synth::setSampleRate(double sampleRate)
 
     lagHandler.setRate(60, blockSize, monoValues.sr.sampleRate);
     vuPeak.setSampleRate(monoValues.sr.sampleRate);
+    sampleRateRatio = hostSampleRate / engineSampleRate;
 
+#if RESAMPLER_IS_LANCZOS
     resampler =
         std::make_unique<resampler_t>((float)monoValues.sr.sampleRate, (float)hostSampleRate);
+#endif
+
+#if RESAMPLER_IS_SRC
+    if (lState)
+    {
+        src_delete(lState);
+    }
+    if (rState)
+    {
+        src_delete(rState);
+    }
+    int ec;
+    lState = src_new(SRC_SINC_FASTEST, 1, &ec);
+    rState = src_new(SRC_SINC_FASTEST, 1, &ec);
+    src_set_ratio(lState, sampleRateRatio);
+    src_set_ratio(rState, sampleRateRatio);
+#endif
 }
 
 void Synth::process(const clap_output_events_t *outq)
@@ -119,8 +138,21 @@ void Synth::process(const clap_output_events_t *outq)
 
     monoValues.attackFloorOnRetrig = patch.output.attackFloorOnRetrig > 0.5;
 
+
+    int loops{0};
+
+#if RESAMPLER_IS_LANCZOS
     while (resampler->inputsRequiredToGenerateOutputs(blockSize) > 0)
+#endif
+
+#if RESAMPLER_IS_SRC
+    SRC_DATA d;
+
+    int generated{0};
+    while (generated < blockSize)
+#endif
     {
+        loops ++;
         lagHandler.process();
 
         float lOutput alignas(16)[2][blockSize];
@@ -159,10 +191,40 @@ void Synth::process(const clap_output_events_t *outq)
             assert(!v->next && !v->prior);
         }
 
+#if RESAMPLER_IS_LANCZOS
         for (int i = 0; i < blockSize; ++i)
         {
             resampler->push(lOutput[0][i], lOutput[1][i]);
         }
+#endif
+
+#if RESAMPLER_IS_SRC
+        d.data_in = lOutput[0];
+        d.data_out = output[0] + generated;
+        d.input_frames = blockSize;
+        d.output_frames = blockSize - generated;
+        d.end_of_input = 0;
+        d.src_ratio = sampleRateRatio;
+
+        assert(d.input_frames_used == blockSize);
+        src_process(lState, &d);
+        auto lgen = d.output_frames_gen;
+
+        d.data_in = lOutput[1];
+        d.data_out = output[1] + generated;
+        d.input_frames = blockSize;
+        d.output_frames = blockSize - generated;
+        d.end_of_input = 0;
+        d.src_ratio = sampleRateRatio;
+
+        assert(d.input_frames_used == blockSize);
+        src_process(rState, &d);
+        auto rgen = d.output_frames_gen;
+
+        assert(lgen == rgen);
+        generated += lgen;
+
+#endif
 
         if (isEditorAttached)
         {
@@ -186,9 +248,10 @@ void Synth::process(const clap_output_events_t *outq)
             }
         }
     }
-
+#if RESAMPLER_IS_LANCZOS
     resampler->populateNextBlockSize(output[0], output[1]);
     resampler->renormalizePhases();
+#endif
 }
 
 void Synth::addToVoiceList(Voice *v)

@@ -28,3 +28,5 @@ if (APPLE)
 endif()
 
 add_subdirectory(clap-libs/clap-wrapper)
+
+add_subdirectory(libsamplerate)
