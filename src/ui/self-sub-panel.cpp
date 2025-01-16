@@ -55,6 +55,13 @@ void SelfSubPanel::setSelectedIndex(int idx)
     modLabelL->setText(std::string() + "LFO" + u8"\U00002192");
     addAndMakeVisible(*modLabelL);
 
+    overdriveTitle = std::make_unique<jcmp::RuledLabel>();
+    overdriveTitle->setText("OverDrv");
+    addAndMakeVisible(*overdriveTitle);
+    createComponent(editor, *this, n.overdrive, overdrive, overdriveD);
+    addAndMakeVisible(*overdrive);
+    overdrive->setLabel("10x");
+
     auto op = [w = juce::Component::SafePointer(this)]()
     {
         if (w)
@@ -76,7 +83,7 @@ void SelfSubPanel::resized()
     pn = pn.translated(uicMargin, 0);
     auto r = layoutLFOAt(pn.getX(), p.getY());
 
-    auto xtraW = 4;
+    auto xtraW = 12;
     auto depx = r.getX() + uicMargin;
     auto depy = r.getY();
 
@@ -88,7 +95,15 @@ void SelfSubPanel::resized()
     depx += uicKnobSize + uicMargin + 2 * xtraW;
     positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, modLabelL);
 
-    positionKnobAndLabel(depx + xtraW, r.getY() + uicTitleLabelHeight, lfoToFb, lfoToFbL);
+    depy += uicTitleLabelHeight + uicMargin;
+    positionKnobAndLabel(depx + xtraW, depy, lfoToFb, lfoToFbL);
+
+    depy = r.getY();
+    depx += uicKnobSize + uicMargin + 2 * xtraW;
+    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, overdriveTitle);
+    depy += uicTitleLabelHeight;
+    overdrive->setBounds(depx, depy, uicKnobSize + 2 * xtraW, uicLabelHeight);
+    // positionKnobAndLabel(depx + xtraW, r.getY() + uicTitleLabelHeight, overdrive, overdriveD);
 
     layoutModulation(p);
 }
