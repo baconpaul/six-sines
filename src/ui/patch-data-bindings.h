@@ -88,6 +88,12 @@ struct PatchContinuous : jdat::Continuous
             if (onPullFromMin)
                 onPullFromMin();
         }
+
+        if (p->value == p->meta.defaultVal && f != p->value)
+        {
+            if (onPullFromDef)
+                onPullFromDef();
+        }
         p->value = f;
         editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pid, f});
         editor.flushOperator();
@@ -105,7 +111,7 @@ struct PatchContinuous : jdat::Continuous
     jdat::Discrete *tsPowerPartner{nullptr};
     void setTemposyncPowerPartner(jdat::Discrete *d) { tsPowerPartner = d; }
 
-    std::function<void()> onPullFromMin{nullptr};
+    std::function<void()> onPullFromMin{nullptr}, onPullFromDef{nullptr};
 
     using cubic_t = sst::jucegui::component_adapters::CubicThrowRescaler<PatchContinuous>;
 };

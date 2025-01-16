@@ -41,7 +41,7 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         Slabels[i]->setText("Op " + std::to_string(i + 1) + " " + u8"\U000021A9");
         addAndMakeVisible(*Slabels[i]);
 
-        SknobsData[i]->under->onPullFromMin = [i, w = juce::Component::SafePointer(this)]()
+        SknobsData[i]->under->onPullFromDef = [i, w = juce::Component::SafePointer(this)]()
         {
             if (!w)
                 return;
