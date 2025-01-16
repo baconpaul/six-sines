@@ -39,12 +39,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Select Xcode Version
-        if: runner.os == 'macOS'
-        run: sudo xcode-select -switch /Applications/Xcode_15.1.app
-
-      - name: Install Ninja
-        uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Prepare for JUCE
+        uses: surge-synthesizer/sst-githubactions/prepare-for-juce@main
+        with:
+          os: ${{ runner.os }}
 
       - uses: apple-actions/import-codesign-certs@v3
         if: runner.os == 'macOS' && github.event_name != 'pull_request'
@@ -55,21 +53,12 @@ jobs:
       - name: Setup VERSION file for Nightly
         if: ${{ github.ref == 'refs/heads/main' && github.repository_owner == 'baconpaul' }}
         run: |
-          
           echo Nightly-`date +"%Y-%m-%d"` > VERSION
 
       - name: Setup VERSION file for Release
         if: startsWith(github.ref, 'refs/tags/v') && github.repository_owner == 'baconpaul'
         run: |
           echo ${{ github.ref_name }} > VERSION
-
-      - name: Install Linux Deps; pick GCC12
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt install libfontconfig1-dev libasound2-dev libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libfreetype6-dev libglu1-mesa-dev libjack-jackd2-dev
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12
 
       - name: Build release version
         if: github.event_name != 'pull_request'
@@ -151,31 +140,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_plugin]
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Upload to Nightly
+        uses: surge-synthesizer/sst-githubactions/upload-to-release@main
         with:
-          path: artifacts
-      - name: Show Installer Directory
-        run: |
-          ls -R artifacts
-      - name: Delete old release assets
-        uses: mknejp/delete-release-assets@v1
-        with:
-          token: ${{ github.token }}
-          tag: Nightly # This may also be of the form 'refs/tags/staging'
-          assets: '*'
-      - name: Upload release assets
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: artifacts/**/**/**
           tag: Nightly
-          file_glob: true
-      - name: Tag Repo
-        uses: richardsimko/update-tag@v1.0.7
+          reuse_tag: true
+          create_tag: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post to Discord
+        uses: surge-synthesizer/sst-githubactions/discord-release-notify@main
         with:
-          tag_name: Nightly
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tag: Nightly
+          title: "A New Six Sines Nightly is Available"
+          subtitle: "Have fun!"
 
   publish-plugin-release:
     name: Publish Release
@@ -183,27 +162,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_plugin]
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Upload to Release
+        uses: surge-synthesizer/sst-githubactions/upload-to-release@main
         with:
-          path: artifacts
-      - name: Show Installer Directory
-        run: |
-          ls -R artifacts
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: |
-            ${{ github.event.repository.name }} Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-
-      - name: Upload release assets
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: artifacts/**/**/**
           tag: ${{ github.ref_name }}
-          file_glob: true
+          reuse_tag: false
+          create_tag: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post to Discord
+        uses: surge-synthesizer/sst-githubactions/discord-release-notify@main
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tag: ${{ github.ref_name }}
+          title: "A New Six Sines Release is Available"
+          subtitle: "But really, what does stable mean?"
