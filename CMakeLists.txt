@@ -91,7 +91,11 @@ target_link_libraries(${PROJECT_NAME}-impl PRIVATE
         mts-esp-client
         fmt-header-only
         sst-basic-blocks sst-voicemanager sst-jucegui sst-cpputils
-        sst-plugininfra sst-plugininfra::filesystem sst-plugininfra::tinyxml sst-plugininfra::strnatcmp
+        sst-plugininfra
+        sst-plugininfra::filesystem
+        sst-plugininfra::tinyxml
+        sst-plugininfra::strnatcmp
+        sst-plugininfra::patchbase
         sst::clap_juce_shim sst::clap_juce_shim_headers
         ${PROJECT_NAME}-patches
         samplerate

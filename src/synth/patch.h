@@ -25,26 +25,24 @@
 #include "sst/cpputils/constructors.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
 #include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
+#include "sst/plugininfra/patch-support/patch_base.h"
 #include "synth/matrix_index.h"
 #include "dsp/sintable.h"
 
 namespace baconpaul::six_sines
 {
 namespace scpu = sst::cpputils;
+namespace pats = sst::plugininfra::patch_support;
 using md_t = sst::basic_blocks::params::ParamMetaData;
-struct Param
+struct Param : pats::ParamBase
 {
-    Param(const md_t &m) : value(m.defaultVal), meta(m) {}
-    float value{0};
-    const md_t meta{};
+    Param(const md_t &m) : pats::ParamBase(m) {}
 
     Param &operator=(const float &val)
     {
         value = val;
         return *this;
     }
-
-    operator const float &() const { return value; }
 
     uint64_t adhocFeatures{0};
     enum AdHocFeatureValues : uint64_t
@@ -54,12 +52,10 @@ struct Param
     };
 };
 
-struct Patch
+struct Patch : pats::PatchBase<Patch, Param>
 {
-    bool dirty{false};
     static constexpr uint32_t patchVersion{8};
-    std::vector<const Param *> params;
-    std::unordered_map<uint32_t, Param *> paramMap;
+    static constexpr const char *id{"org.baconpaul.six-sines"};
 
     static constexpr uint32_t floatFlags{CLAP_PARAM_IS_AUTOMATABLE};
     static constexpr uint32_t boolFlags{CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED};
@@ -73,29 +69,15 @@ struct Patch
     static md_t intMd() { return md_t().asInt().withFlags(boolFlags); }
 
     Patch()
-        : sourceNodes(scpu::make_array_bind_first_index<SourceNode, numOps>()),
+        : pats::PatchBase<Patch, Param>(),
+          sourceNodes(scpu::make_array_bind_first_index<SourceNode, numOps>()),
           selfNodes(scpu::make_array_bind_first_index<SelfNode, numOps>()),
           matrixNodes(scpu::make_array_bind_first_index<MatrixNode, matrixSize>()),
           mixerNodes(scpu::make_array_bind_first_index<MixerNode, numOps>()),
           macroNodes(scpu::make_array_bind_first_index<MacroNode, numMacros>()),
           fineTuneMod("Fine Tune Mod", "Fine Tune", 0), mainPanMod("Main Pan Mod", "Main Pan", 1)
     {
-        auto pushParams = [this](auto &from)
-        {
-            auto m = from.params();
-            params.insert(params.end(), m.begin(), m.end());
-            for (auto &p : m)
-            {
-                if (paramMap.find(p->meta.id) != paramMap.end())
-                {
-                    SXSNLOG("Duplicate param id " << p->meta.id);
-                    SXSNLOG(" - New Param   : '" << p->meta.name << "'");
-                    SXSNLOG(" - Other Param : '" << paramMap[p->meta.id]->meta.name << "'");
-                    std::terminate();
-                }
-                paramMap.emplace(p->meta.id, p);
-            }
-        };
+        auto pushParams = [this](auto &from) { this->pushMultipleParams(from.params()); };
 
         pushParams(output);
         std::for_each(sourceNodes.begin(), sourceNodes.end(), pushParams);
@@ -1242,14 +1224,7 @@ struct Patch
 
     ModulationOnlyNode fineTuneMod, mainPanMod;
 
-    void resetToInit();
-    std::string toState() const;
-    bool fromState(const std::string &);
-
     char name[256]{"Init"};
-
-  private:
-    bool fromStateV1(const std::string &);
 
     float migrateParamValueFromVersion(Param *p, float value, uint32_t version);
     void migratePatchFromVersion(uint32_t version);
