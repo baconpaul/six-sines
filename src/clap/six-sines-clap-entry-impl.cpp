@@ -14,6 +14,8 @@
  */
 
 #include "configuration.h"
+#include "sst/plugininfra/misc_platform.h"
+#include "sst/plugininfra/version_information.h"
 #include "clap/six-sines-clap-entry-impl.h"
 #include "clap/plugin.h"
 #include "clapwrapper/vst3.h"
@@ -23,9 +25,6 @@
 #include <cstring>
 #include <string.h>
 #include <clap/clap.h>
-#if WIN32
-#include <windows.h>
-#endif
 
 namespace baconpaul::six_sines
 {
@@ -47,7 +46,7 @@ const clap_plugin_descriptor *getDescriptor()
                                           "https://baconpaul.org",
                                           "",
                                           "",
-                                          "0.0.1",
+                                          sst::plugininfra::VersionInformation::project_version,
                                           "Synth with Audio Rate Modulation or something",
                                           &features[0]};
     return &desc;
@@ -131,22 +130,8 @@ const void *get_factory(const char *factory_id)
 }
 bool clap_init(const char *p)
 {
-#if WIN32
-#define WIN_DEBUG_CONSOLE_ACTIVE 0
-#if WIN_DEBUG_CONSOLE_ACTIVE
-    static FILE *confp{nullptr};
-    AllocConsole();
-    freopen_s(&confp, "CONOUT$", "w", stdout);
-    HANDLE hConOut =
-        CreateFile("CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                   NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    SetStdHandle(STD_OUTPUT_HANDLE, hConOut);
-    std::cout.clear();
-    std::wcout.clear();
-    printf("Hello Console\n");
-    std::cout << "Heya" << std::endl;
-#endif
-#endif
+    // sst::plugininfra::misc_platform::allocateConsole();
+    SXSNLOG("Initializing Six Sines");
     return true;
 }
 void clap_deinit() {}

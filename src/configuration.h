@@ -19,7 +19,9 @@
 #include <stddef.h>
 #include <cstdint>
 #include <string>
+#include <cstring>
 #include <iostream>
+#include "sst/plugininfra/version_information.h"
 
 namespace baconpaul::six_sines
 {
@@ -55,10 +57,10 @@ enum ResamplerEngine
 
 inline std::string fileTrunc(const std::string &f)
 {
-    auto p = f.find("/src/");
+    auto p = f.find(sst::plugininfra::VersionInformation::cmake_source_dir);
     if (p != std::string::npos)
     {
-        return f.substr(p + 1);
+        return f.substr(p + strlen(sst::plugininfra::VersionInformation::cmake_source_dir) + 1);
     }
     return f;
 }

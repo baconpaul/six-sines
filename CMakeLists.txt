@@ -22,7 +22,6 @@ include(cmake/compile-options.cmake)
 
 ## New version
 include(libs/sst/sst-plugininfra/cmake/git-version-functions.cmake)
-
 version_from_versionfile_or_git()
 message(STATUS "DISPLAY_VERSION=${GIT_IMPLIED_DISPLAY_VERSION}; COMMIT_HASH=${GIT_COMMIT_HASH}; BRANCH=${GIT_BRANCH}")
 
@@ -66,8 +65,6 @@ add_library(${PROJECT_NAME}-impl STATIC
 target_include_directories(${PROJECT_NAME}-impl PUBLIC src)
 target_compile_definitions(${PROJECT_NAME}-impl PRIVATE
         PRODUCT_NAME="${PRODUCT_NAME}"
-        BUILD_HASH="${GIT_COMMIT_HASH}"
-        DISPLAY_VERSION="${GIT_IMPLIED_DISPLAY_VERSION}"
 )
 target_link_libraries(${PROJECT_NAME}-impl PUBLIC
         clap
@@ -83,6 +80,7 @@ target_link_libraries(${PROJECT_NAME}-impl PRIVATE
         sst-plugininfra::tinyxml
         sst-plugininfra::strnatcmp
         sst-plugininfra::patchbase
+        sst-plugininfra::version_information
         sst::clap_juce_shim sst::clap_juce_shim_headers
         ${PROJECT_NAME}-patches
         samplerate
