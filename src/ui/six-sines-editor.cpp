@@ -15,6 +15,7 @@
 
 #include "six-sines-editor.h"
 
+#include "sst/plugininfra/version_information.h"
 #include "sst/clap_juce_shim/menu_helper.h"
 
 #include "finetune-sub-panel.h"
@@ -267,10 +268,11 @@ void SixSinesEditor::paint(juce::Graphics &g)
     os = "Linux";
 #endif
 
-    auto bi = os + " " + BUILD_HASH;
+    auto bi = os + " " + sst::plugininfra::VersionInformation::git_commit_hash;
     g.drawText(bi, getLocalBounds().reduced(3, 3), juce::Justification::bottomRight);
 
-    g.drawText(DISPLAY_VERSION, getLocalBounds().reduced(3, 3), juce::Justification::centredBottom);
+    g.drawText(sst::plugininfra::VersionInformation::git_implied_display_version,
+               getLocalBounds().reduced(3, 3), juce::Justification::centredBottom);
 }
 
 void SixSinesEditor::resized()
