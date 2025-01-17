@@ -193,7 +193,17 @@ struct Synth
             v->voiceValues.setGated(false);
             v->voiceValues.releaseVelocity = rv;
         }
-        void setNoteExpression(Voice *, int32_t, double) {}
+        void setNoteExpression(Voice *v, int32_t e, double val)
+        {
+            switch (e)
+            {
+            case CLAP_NOTE_EXPRESSION_TUNING:
+                v->voiceValues.noteExpressionTuningInSemis = val;
+                break;
+            default:
+                break;
+            }
+        }
         void setVoicePolyphonicParameterModulation(Voice *, uint32_t, double) {}
         void setPolyphonicAftertouch(Voice *v, int8_t a) { v->voiceValues.polyAt = a / 127.0; }
 
