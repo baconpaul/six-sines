@@ -72,8 +72,12 @@ jobs:
           mkdir build/inst
           mkdir build/insttmp
           mv build/CLAP/*.clap build/insttmp
-          mv build/VST3/*.vst3 build/insttmp
+          mv build/*.vst3 build/insttmp
           mv build/*.exe build/insttmp
+
+          pushd build/insttmp
+          ls -al
+          popd
           
           7z a -r build/inst/six-sines-windows-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip build/insttmp/*
 
