@@ -1,17 +1,16 @@
 cmake_minimum_required(VERSION 3.28)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-# I don't want to deal with filesystem from two places right now
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "Build for 10.15")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-## This could be a function in plugin infra
+## Temporarily use a date driven project version. Move to 1.0 when we ship 1.0
 string(TIMESTAMP DAY_OF_YEAR "%j")
 string(TIMESTAMP YEAR "%Y")
 math(EXPR PART0 "${YEAR}-2023 + 2")
 math(EXPR PART1 "${DAY_OF_YEAR}/2")
 message(STATUS "Using date-driven version starting with '0'. 0.${PART0}.${PART1}.0")
-## end function in plugin infra
+
 
 project(six-sines VERSION 0.${PART0}.${PART1}.0 LANGUAGES C CXX)
 set(PRODUCT_NAME "Six Sines")
@@ -21,26 +20,12 @@ option(USE_SANITIZER "Build and link with ASAN" FALSE)
 option(COPY_AFTER_BUILD "Will copy after build" TRUE)
 include(cmake/compile-options.cmake)
 
-## THis can be way better, and go to plugin infra
-file(READ ${CMAKE_SOURCE_DIR}/VERSION VERSION_FILE)
-string(STRIP ${VERSION_FILE} VERSION_FILE)
-message(STATUS "Version is ${VERSION_FILE}")
+## New version
+include(libs/sst/sst-plugininfra/cmake/git-version-functions.cmake)
 
-find_package(Git)
+version_from_versionfile_or_git()
+message(STATUS "DISPLAY_VERSION=${GIT_IMPLIED_DISPLAY_VERSION}; COMMIT_HASH=${GIT_COMMIT_HASH}; BRANCH=${GIT_BRANCH}")
 
-if (Git_FOUND)
-    execute_process(
-            COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            OUTPUT_VARIABLE BUILD_HASH
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-else ()
-    set(BUILD_HASH "unknown")
-endif ()
-
-message(STATUS "Compiling with git hash ${BUILD_HASH}")
-## End of way better in plugin infra bit
 
 include(cmake/CmakeRC.cmake)
 file(GLOB_RECURSE PATCHES  "resources/factory_patches/*.sxsnp")
@@ -81,8 +66,8 @@ add_library(${PROJECT_NAME}-impl STATIC
 target_include_directories(${PROJECT_NAME}-impl PUBLIC src)
 target_compile_definitions(${PROJECT_NAME}-impl PRIVATE
         PRODUCT_NAME="${PRODUCT_NAME}"
-        BUILD_HASH="${BUILD_HASH}"
-        DISPLAY_VERSION="${VERSION_FILE}"
+        BUILD_HASH="${GIT_COMMIT_HASH}"
+        DISPLAY_VERSION="${GIT_IMPLIED_DISPLAY_VERSION}"
 )
 target_link_libraries(${PROJECT_NAME}-impl PUBLIC
         clap

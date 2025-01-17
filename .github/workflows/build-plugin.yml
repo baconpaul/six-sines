@@ -63,7 +63,7 @@ jobs:
       - name: Build release version
         if: github.event_name != 'pull_request'
         run: |
-          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release -DCOPY_AFTER_BUILD=FALSE
+          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release -DCOPY_AFTER_BUILD=FALSE -DGITHUB_ACTIONS_BUILD=TRUE
           cmake --build ./build --config Release --target six-sines_all --parallel 3
 
       - name: Make windows zip
@@ -121,7 +121,7 @@ jobs:
       - name: Configure pull request version
         if: github.event_name == 'pull_request'
         run: |
-          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Debug -DCOPY_AFTER_BUILD=FALSE 
+          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Debug -DCOPY_AFTER_BUILD=FALSE  -DGITHUB_ACTIONS_BUILD=TRUE 
 
       - name: Build pull request version
         if: github.event_name == 'pull_request'
