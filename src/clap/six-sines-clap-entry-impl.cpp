@@ -39,16 +39,20 @@ const clap_plugin_descriptor *getDescriptor()
     static const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT,
                                      CLAP_PLUGIN_FEATURE_SYNTHESIZER, "Free and Open Source",
                                      "Audio Rate Modulation", nullptr};
-    static clap_plugin_descriptor desc = {CLAP_VERSION,
-                                          "org.baconpaul.six-sines",
-                                          PRODUCT_NAME,
-                                          "BaconPaul",
-                                          "https://baconpaul.org",
-                                          "",
-                                          "",
-                                          sst::plugininfra::VersionInformation::project_version,
-                                          "Synth with Audio Rate Modulation or something",
-                                          &features[0]};
+
+    static char versionNum[1024];
+
+    static clap_plugin_descriptor desc = {
+        CLAP_VERSION,
+        "org.baconpaul.six-sines",
+        PRODUCT_NAME,
+        "BaconPaul",
+        "https://baconpaul.org",
+        "",
+        "",
+        sst::plugininfra::VersionInformation::project_version_and_hash,
+        "Synth with Audio Rate Modulation or something",
+        &features[0]};
     return &desc;
 }
 
