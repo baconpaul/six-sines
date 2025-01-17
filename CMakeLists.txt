@@ -5,22 +5,23 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "Build for 10.15")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+## This could be a function in plugin infra
 string(TIMESTAMP DAY_OF_YEAR "%j")
 string(TIMESTAMP YEAR "%Y")
 math(EXPR PART0 "${YEAR}-2023 + 2")
 math(EXPR PART1 "${DAY_OF_YEAR}/2")
 message(STATUS "Using date-driven version starting with '0'. 0.${PART0}.${PART1}.0")
+## end function in plugin infra
 
 project(six-sines VERSION 0.${PART0}.${PART1}.0 LANGUAGES C CXX)
-
 set(PRODUCT_NAME "Six Sines")
 
-# use asan as an option (currently mac only)
+
 option(USE_SANITIZER "Build and link with ASAN" FALSE)
 option(COPY_AFTER_BUILD "Will copy after build" TRUE)
-
 include(cmake/compile-options.cmake)
 
+## THis can be way better, and go to plugin infra
 file(READ ${CMAKE_SOURCE_DIR}/VERSION VERSION_FILE)
 string(STRIP ${VERSION_FILE} VERSION_FILE)
 message(STATUS "Version is ${VERSION_FILE}")
@@ -39,6 +40,7 @@ else ()
 endif ()
 
 message(STATUS "Compiling with git hash ${BUILD_HASH}")
+## End of way better in plugin infra bit
 
 include(cmake/CmakeRC.cmake)
 file(GLOB_RECURSE PATCHES  "resources/factory_patches/*.sxsnp")
@@ -101,80 +103,30 @@ target_link_libraries(${PROJECT_NAME}-impl PRIVATE
         samplerate
 )
 
-# Hmm - why do I need this?
-add_compile_definitions(CLAP_WRAPPER_LOGLEVEL=0)
+make_clapfirst_plugins(
+        TARGET_NAME ${PROJECT_NAME}
+        IMPL_TARGET ${PROJECT_NAME}-impl
 
-set(CLAP_TARGET ${PROJECT_NAME}_clap)
-add_library(${CLAP_TARGET} MODULE
-        src/clap/six-sines-clap-entry.cpp
-)
-target_link_libraries(${CLAP_TARGET} ${PROJECT_NAME}-impl)
-target_library_make_clap(TARGET ${CLAP_TARGET}
-        CLAP_NAME "${PRODUCT_NAME}"
-        CLAP_MACOS_BUNDLE_IDENTIFIER org.baconpaul.six-sines.clap
-        CLAP_MACOS_BUNDLE_VERSION ${PROJECT_VERSION}
-        COPY_AFTER_BUILD TRUE
-)
-set_target_properties(${CLAP_TARGET} PROPERTIES BUNDLE TRUE MACOSX_BUNDLE TRUE)
-
-set(VST3_TARGET ${PROJECT_NAME}_vst3)
-add_library(${VST3_TARGET} MODULE)
-target_sources(${VST3_TARGET} PRIVATE src/clap/six-sines-clap-entry.cpp)
-target_link_libraries(${VST3_TARGET} PRIVATE ${PROJECT_NAME}-impl)
-target_add_vst3_wrapper(TARGET ${VST3_TARGET}
         OUTPUT_NAME "${PRODUCT_NAME}"
-        SUPPORTS_ALL_NOTE_EXPRESSIONS TRUE
+
+        ENTRY_SOURCE src/clap/six-sines-clap-entry.cpp
+
+        BUNDLE_IDENTIFER "org.baconpaul.six-sines"
+        BUNDLE_VERSION ${PROJECT_VERSION}
+
+        COPY_AFTER_BUILD ${COPY_AFTER_BUILD}
+
+        PLUGIN_FORMATS CLAP VST3 AUV2
+
+        # You can add a target-per-standalone you want. Syntax here is
+        #   target-postfix output-name clap-id
+        # This allows you to make multiple standalones from a multi-plugin clap
+        STANDALONE_CONFIGURATIONS
+            standalone "${PRODUCT_NAME}" "org.baconpaul.six-sines"
+
+        STANDALONE_MACOS_ICON "${CMAKE_SOURCE_DIR}/resources/mac_installer/Icon.icns"
 )
-if (WIN32)
-    # Question - do we want this default in the helpers
-    set_target_properties(${VST3_TARGET}
-            PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY VST3
-    )
-endif()
-if (${COPY_AFTER_BUILD})
-    target_vst3_copy_after_build(TARGET ${VST3_TARGET})
-endif()
-
-if (APPLE)
-    set(AUV2_TARGET ${PROJECT_NAME}_auv2)
-    add_library(${AUV2_TARGET} MODULE)
-    target_sources(${AUV2_TARGET} PRIVATE src/clap/six-sines-clap-entry.cpp)
-    target_link_libraries(${AUV2_TARGET} PRIVATE ${PROJECT_NAME}-impl)
-    message(STATUS "Adding AUv2 with ${PROJECT_VERSION}")
-    target_add_auv2_wrapper(
-            TARGET ${AUV2_TARGET}
-            OUTPUT_NAME "${PRODUCT_NAME}"
-            BUNDLE_IDENTIFIER "org.baconpaul.six-sines.auv2"
-            BUNDLE_VERSION ${PROJECT_VERSION}
-
-            CLAP_TARGET_FOR_CONFIG ${PROJECT_NAME}_clap
-    )
-
-    if (${COPY_AFTER_BUILD})
-        message(STATUS "ifm: will install auv2")
-        target_auv2_copy_after_build(TARGET ${AUV2_TARGET})
-    endif()
-endif()
 
 
-set(sat ${PROJECT_NAME}_standalone)
-add_executable(${sat})
-target_sources(${sat} PRIVATE src/clap/six-sines-clap-entry.cpp)
-target_link_libraries(${sat} PRIVATE ${PROJECT_NAME}-impl)
-target_add_standalone_wrapper(TARGET ${sat}
-        OUTPUT_NAME "${PRODUCT_NAME}"
-        STATICALLY_LINKED_CLAP_ENTRY True
-        MACOS_ICON "${CMAKE_SOURCE_DIR}/resources/mac_installer/Icon.icns"
-        PLUGIN_ID "org.baconpaul.six-sines")
 
-add_custom_target(${PROJECT_NAME}_all)
-add_dependencies(${PROJECT_NAME}_all
-        ${PROJECT_NAME}_clap
-        ${PROJECT_NAME}_standalone
-        ${PROJECT_NAME}_vst3
-)
-if (APPLE)
-    add_dependencies(${PROJECT_NAME}_all ${PROJECT_NAME}_auv2)
-endif()
 

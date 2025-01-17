@@ -63,7 +63,7 @@ jobs:
       - name: Build release version
         if: github.event_name != 'pull_request'
         run: |
-          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release -DCOPY_AFTER_BUILD=FALSE
           cmake --build ./build --config Release --target six-sines_all --parallel 3
 
       - name: Make windows zip
@@ -72,8 +72,12 @@ jobs:
           mkdir build/inst
           mkdir build/insttmp
           mv build/CLAP/*.clap build/insttmp
-          mv build/VST3/*.vst3 build/insttmp
+          mv build/*.vst3 build/insttmp
           mv build/*.exe build/insttmp
+
+          pushd build/insttmp
+          ls -al
+          popd
           
           7z a -r build/inst/six-sines-windows-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip build/insttmp/*
 
@@ -117,7 +121,7 @@ jobs:
       - name: Configure pull request version
         if: github.event_name == 'pull_request'
         run: |
-          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Debug 
+          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Debug -DCOPY_AFTER_BUILD=FALSE 
 
       - name: Build pull request version
         if: github.event_name == 'pull_request'
