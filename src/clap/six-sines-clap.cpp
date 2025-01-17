@@ -372,7 +372,10 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     {
         return 16;
     }
-    static uint32_t vst3_supportedNoteExpressions(const clap_plugin *plugin) { return 0; }
+    static uint32_t vst3_supportedNoteExpressions(const clap_plugin *plugin)
+    {
+        return clap_supported_note_expressions::AS_VST3_NOTE_EXPRESSION_TUNING;
+    }
 
     const void *extension(const char *id) noexcept override
     {

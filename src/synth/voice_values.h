@@ -52,6 +52,8 @@ struct VoiceValues
 
     float mpeBendInSemis{0}, mpeBendNormalized{0}, mpeTimbre{0}, mpePressure{0};
 
+    float noteExpressionTuningInSemis{0};
+
     float uniRatioMul{1.0};
     float uniPanShift{0.0};
     int uniIndex{0};
