@@ -50,16 +50,6 @@ jobs:
           p12-file-base64: ${{ secrets.MAC_CERTS_P12 }}
           p12-password: ${{ secrets.CERT_PWD }}
 
-      - name: Setup VERSION file for Nightly
-        if: ${{ github.ref == 'refs/heads/main' && github.repository_owner == 'baconpaul' }}
-        run: |
-          echo Nightly-`date +"%Y-%m-%d"` > VERSION
-
-      - name: Setup VERSION file for Release
-        if: startsWith(github.ref, 'refs/tags/v') && github.repository_owner == 'baconpaul'
-        run: |
-          echo ${{ github.ref_name }} > VERSION
-
       - name: Build release version
         if: github.event_name != 'pull_request'
         run: |
