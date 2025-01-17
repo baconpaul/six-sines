@@ -19,6 +19,7 @@
 #include <stddef.h>
 #include <cstdint>
 #include <string>
+#include <cstring>
 #include <iostream>
 #include "sst/plugininfra/version_information.h"
 
