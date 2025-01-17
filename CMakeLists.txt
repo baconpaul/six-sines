@@ -24,7 +24,7 @@ include(cmake/compile-options.cmake)
 include(libs/sst/sst-plugininfra/cmake/git-version-functions.cmake)
 
 version_from_versionfile_or_git()
-message(STATUS "DISPLAY_VERSION=${GIT_IMPLIED_DISPLAY_VERSION}; COMMIT_HASH=${GIT_COMMIT_HASH}")
+message(STATUS "DISPLAY_VERSION=${GIT_IMPLIED_DISPLAY_VERSION}; COMMIT_HASH=${GIT_COMMIT_HASH}; BRANCH=${GIT_BRANCH}")
 
 
 include(cmake/CmakeRC.cmake)
