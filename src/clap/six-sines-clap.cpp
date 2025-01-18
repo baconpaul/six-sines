@@ -206,8 +206,12 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             case CLAP_EVENT_PARAM_VALUE:
             {
                 auto pevt = reinterpret_cast<const clap_event_param_value *>(nextEvent);
-                engine->handleParamValue(static_cast<baconpaul::six_sines::Param *>(pevt->cookie),
-                                         pevt->param_id, pevt->value);
+                auto par =
+                    sst::plugininfra::patch_support::paramFromClapEvent<Param>(pevt, engine->patch);
+                if (par)
+                {
+                    engine->handleParamValue(par, pevt->param_id, pevt->value);
+                }
             }
             break;
 
