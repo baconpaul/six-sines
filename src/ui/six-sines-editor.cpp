@@ -606,7 +606,12 @@ void SixSinesEditor::showPresetPopup()
               });
     p.addItem("Get the Source", []()
               { juce::URL("https://github.com/baconpaul/six-sines/").launchInDefaultBrowser(); });
-
+    p.addItem("Acknowledgements",
+              []()
+              {
+                  juce::URL("https://github.com/baconpaul/six-sines/blob/main/doc/ack.md")
+                      .launchInDefaultBrowser();
+              });
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
 }
 
