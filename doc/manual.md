@@ -24,7 +24,7 @@ Each of the 6 operators can output to audio or can modulate
 themselves (feedback) or subsequent operators. So operator 3
 can feedback its own signal or modulate operators 4, 5, and 6.
 
-Modulation of subseuqent operators can be phase modulation
+Modulation of subsequent operators can be phase modulation
 (the 'phi' symbol) or digital ring/audio-rate-amplitude modulation
 (the 'A' symbol).
 
@@ -33,7 +33,7 @@ modulation architecture. Each knob on the screen represents
 a node with an independent envelope and LFO per voice.
 So each operator, operator modulation application,
 operator feedback, and operator level can be indpendently
-and individualyy modulated.
+and individually modulated.
 
 Woof. That's work. But its fun!
 
@@ -73,7 +73,7 @@ providing modulation for ops 4, 5, and 6.
 
 ![Six Sines Main Screen Node](sxsn_sub.png)
 
-Once you click a knbo to select it or edit it the bottom
+Once you click a knob to select it or edit it the bottom
 part of the user interface shows the modulation screen for
 that node. Node 'classes' (ratio, cross matrix, feedback, mixer, main)
 have subtly different modulation screens but the core idea is an 
@@ -100,7 +100,7 @@ In monophonic mode, a voice is created only when no voice is
 playing. If a subsequent key press happens, the voice is moved
 and retriggered.
 
-Retrigering retriggers envelopes and each enveope can trigger
+Retriggering retriggers envelopes and each enveope can trigger
 on one of four ways.
 
 - On voice start only. If you use this it can sound like a stuck
@@ -124,13 +124,13 @@ and more.
 ## Oversampling
 
 The setting screen contains an oversampling control. The Six Sines oversampling
-strategy has the engine run at a fixed rate mostly independnt of
-host sample rate which is stored in the patch and you control.
+strategy has the engine run at a fixed rate mostly independent of
+the host sample rate which is stored in the patch and you control.
 
 Mostly, because our resampler (a short FIR interpolator) works
 way better at round multiple downsampling. 2.5x is a lot better than
 2.61x or such. So our oversample levels are fixed offsets from
-either 44.1 or 48khz. If you choose, say, "132.3/144khz" as you engine 
+either 44.1 or 48khz. If you choose, say, "132.3/144khz" as your engine 
 sample rate, if your host sample rate is a multiple of 44.1 we will
 choose the lower, and of 48 the higher.
 
