@@ -4,15 +4,8 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "Build for 10.15")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-## Temporarily use a date driven project version. Move to 1.0 when we ship 1.0
-string(TIMESTAMP DAY_OF_YEAR "%j")
-string(TIMESTAMP YEAR "%Y")
-math(EXPR PART0 "${YEAR}-2023 + 2")
-math(EXPR PART1 "${DAY_OF_YEAR}/2")
-message(STATUS "Using date-driven version starting with '0'. 0.${PART0}.${PART1}.0")
 
-
-project(six-sines VERSION 0.${PART0}.${PART1}.0 LANGUAGES C CXX)
+project(six-sines VERSION 1.0.0.0 LANGUAGES C CXX)
 set(PRODUCT_NAME "Six Sines")
 
 
