@@ -8,8 +8,8 @@ engine with a couple of tricks which make it sound pretty good.
 You can download the latest release or Nightly version of
 Six Sines [here](https://github.com/baconpaul/six-sines/releases).
 Six Sines is free and open source software. You can get, study,
-modify, and re-use the source for it [here](https://github.com/baconpaul/six-sines)
-And please read the [acknowldgements](doc/ack.md) for a list of thanks.
+modify, and re-use the source for it [here](https://github.com/baconpaul/six-sines).
+And please read the [acknowldgements](ack.md) for a list of thanks.
 
 And following in the legacy of other PM and FM synths, it is not
 exactly easy to program. The sort of 'symmetric/maximal' signal
