@@ -8,6 +8,8 @@ If you want to read a manual, [go here](doc/manual.md)
 
 If you want to download a release or recent version, [go here](https://github.com/baconpaul/six-sines/releases)
 
+And please read the [acknowldgements](doc/ack.md) for a list of thanks.
+
 ## Hey are there any demos of this?
 
 Kinsey Dulcet, who designed many of the factory patches, has a demo
