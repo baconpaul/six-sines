@@ -27,7 +27,7 @@ was a labor of love.
 Once we stabilized also had substantial patch contributions from
 
 - Metamyther
-- Triniton
+- Trinitou
 - dj.tuBIG/MaliceX
 
 Thanks to everyone who contributed patches to highlight the synth!
