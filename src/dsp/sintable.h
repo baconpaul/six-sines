@@ -34,6 +34,7 @@ struct SinTable
         SIN_FIFTH,
         SQUARISH,
         SAWISH,
+        TRIANGLE,
         SIN_OF_CUBED,
 
         TX2,
@@ -43,6 +44,11 @@ struct SinTable
         TX6,
         TX7,
         TX8,
+
+        SPIKY_TX2,
+        SPIKY_TX4,
+        SPIKY_TX6,
+        SPIKY_TX8,
 
         NUM_WAVEFORMS
     };

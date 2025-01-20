@@ -49,12 +49,13 @@ struct Param : pats::ParamBase
     {
         ENVTIME = 1 << 0,     // tag for ADSR envs we changed version 2-3
         TRIGGERMODE = 1 << 1, // trigger mode for when we nuked voice
+        WAVEFORM = 1 << 2,
     };
 };
 
 struct Patch : pats::PatchBase<Patch, Param>
 {
-    static constexpr uint32_t patchVersion{8};
+    static constexpr uint32_t patchVersion{9};
     static constexpr const char *id{"org.baconpaul.six-sines"};
 
     static constexpr uint32_t floatFlags{CLAP_PARAM_IS_AUTOMATABLE};
@@ -425,6 +426,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                    {SinTable::WaveForm::SIN_FIFTH, "Sin^5 x"},
                                                    {SinTable::WaveForm::SQUARISH, "Squarish"},
                                                    {SinTable::WaveForm::SAWISH, "Sawish"},
+                                                   {SinTable::WaveForm::TRIANGLE, "Triangle"},
                                                    {SinTable::WaveForm::SIN_OF_CUBED, "Sin(x^3)"},
                                                    {SinTable::WaveForm::TX2, "TX 2"},
                                                    {SinTable::WaveForm::TX3, "TX 3"},
@@ -432,7 +434,12 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                    {SinTable::WaveForm::TX5, "TX 5"},
                                                    {SinTable::WaveForm::TX6, "TX 6"},
                                                    {SinTable::WaveForm::TX7, "TX 7"},
-                                                   {SinTable::WaveForm::TX8, "TX 8"}})),
+                                                   {SinTable::WaveForm::TX8, "TX 8"},
+                                                   {SinTable::WaveForm::SPIKY_TX2, "Spiky TX 2"},
+                                                   {SinTable::WaveForm::SPIKY_TX4, "Spiky TX 4"},
+                                                   {SinTable::WaveForm::SPIKY_TX6, "Spiky TX 6"},
+                                                   {SinTable::WaveForm::SPIKY_TX8, "Spiky TX 8"}})),
+
               keyTrack(boolMd()
                            .withName(name(idx) + " Keytrack")
                            .withGroupName(name(idx))
@@ -473,6 +480,7 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         {
             index = idx;
+            waveForm.adhocFeatures = Param::AdHocFeatureValues::WAVEFORM;
         }
 
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Source"; }

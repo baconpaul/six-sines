@@ -349,7 +349,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
 
             auto wf = (SinTable::WaveForm)(from.waveForm);
             if (wf == SinTable::TX3 || wf == SinTable::TX4 || wf == SinTable::TX7 ||
-                wf == SinTable::TX8)
+                wf == SinTable::TX8 || wf == SinTable::SPIKY_TX4 || wf == SinTable::SPIKY_TX8)
             {
                 doBlock = true;
             }
