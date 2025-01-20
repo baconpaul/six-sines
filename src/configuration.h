@@ -50,7 +50,9 @@ enum ResamplerEngine
     SRC_FAST,
     SRC_MEDIUM,
     SRC_BEST,
-    LANCZOS
+    LANCZOS,
+    LINTERP,
+    ZOH
 };
 
 } // namespace baconpaul::six_sines

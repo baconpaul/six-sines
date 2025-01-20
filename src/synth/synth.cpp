@@ -122,10 +122,20 @@ void Synth::setSampleRate(double sampleRate)
             SXSNLOG("Setting SRC Resampler - SRC_SINC_MEDIUM_QUALITY");
             mode = SRC_SINC_MEDIUM_QUALITY;
         }
-        if (resamplerEngine == SRC_BEST)
+        else if (resamplerEngine == SRC_BEST)
         {
             SXSNLOG("Setting SRC Resampler - SRC_SINC_BEST_QUALITY");
             mode = SRC_SINC_BEST_QUALITY;
+        }
+        else if (resamplerEngine == LINTERP)
+        {
+            SXSNLOG("Setting SRC Resampler - SRC_LINEAR");
+            mode = SRC_LINEAR;
+        }
+        else if (resamplerEngine == ZOH)
+        {
+            SXSNLOG("Setting SRC Resampler - SRC_ZERO_ORDER_HOLD");
+            mode = SRC_ZERO_ORDER_HOLD;
         }
         else
         {

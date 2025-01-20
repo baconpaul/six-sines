@@ -1146,13 +1146,15 @@ struct Patch : pats::PatchBase<Patch, Param>
                                  .withName(name() + " Resampler Engine")
                                  .withGroupName(name())
                                  .withDefault(ResamplerEngine::SRC_FAST)
-                                 .withRange(ResamplerEngine::SRC_FAST, ResamplerEngine::LANCZOS)
+                                 .withRange(ResamplerEngine::SRC_FAST, ResamplerEngine::ZOH)
                                  .withID(id(41))
                                  .withUnorderedMapFormatting({
                                      {ResamplerEngine::SRC_FAST, "SRC Fast (rec)"},
                                      {ResamplerEngine::SRC_MEDIUM, "SRC Medium"},
                                      {ResamplerEngine::SRC_BEST, "SRC Expensive"},
                                      {ResamplerEngine::LANCZOS, "Lanczos A=4"},
+                                     {ResamplerEngine::LINTERP, "Linear Interp"},
+                                     {ResamplerEngine::ZOH, "ZOH"},
                                  })),
               ModulationMixin(name(), id(120)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
