@@ -24,6 +24,8 @@
 #include "ui-constants.h"
 #include "sst/jucegui/components/RuledLabel.h"
 
+#include "ui/layout/Layout.h"
+
 namespace baconpaul::six_sines::ui
 {
 namespace jcmp = sst::jucegui::components;
@@ -94,34 +96,42 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
 
     juce::Rectangle<int> layoutDAHDSRAt(int x, int y)
     {
-        if (!titleLab)
+        if (!titleLab || !slider[0])
             return {};
 
-        auto lh = uicTitleLabelHeight;
-        auto c = asComp();
-        auto h = c->getHeight() - y;
-        auto q = h - uicLabelHeight - uicLabelGap - lh;
-        auto w = uicSliderWidth;
+        namespace jlo = sst::jucegui::layout;
 
-        positionTitleLabelAt(x, y, nels * uicSliderWidth, titleLab);
+        auto lo = jlo::VList()
+                      .at(x, y)
+                      .withHeight(asComp()->getHeight() - y)
+                      .withWidth(nels * uicSliderWidth);
 
-        auto bx = juce::Rectangle<int>(x, y + lh, w, h - lh);
+        lo.add(titleLabelLayout(titleLab));
+        auto sliders = jlo::HList().expandToFill();
+
         for (int i = 0; i < nels; ++i)
         {
-            if (!slider[i])
-                continue;
-            slider[i]->setBounds(bx.withHeight(q).withTrimmedTop(uicSliderWidth));
+            auto sliderStack = jlo::VList().withWidth(uicSliderWidth);
+
             if (i == 0)
-                triggerButton->setBounds(bx.withHeight(uicSliderWidth).reduced(2));
-            if (i % 2)
-            {
-                shapes[i / 2]->setBounds(bx.withHeight(uicSliderWidth));
-            }
-            lab[i]->setBounds(bx.withTrimmedTop(q + uicLabelGap));
-            bx = bx.translated(uicSliderWidth, 0);
+                sliderStack.add(
+                    jlo::Component(*triggerButton).withHeight(uicSliderWidth).insetBy(2));
+            else if (i % 2)
+                sliderStack.add(jlo::Component(*shapes[i / 2]).withHeight(uicSliderWidth));
+            else
+                sliderStack.addGap(uicSliderWidth);
+
+            sliderStack.add(jlo::Component(*slider[i]).expandToFill());
+
+            sliderStack.addGap(uicLabelGap);
+            sliderStack.add(jlo::Component(*lab[i]).withHeight(uicLabelHeight));
+
+            sliders.add(sliderStack);
         }
-        bx = bx.translated(-uicSliderWidth, 0);
-        return juce::Rectangle<int>(x, y, 0, 0).withLeft(bx.getRight()).withBottom(bx.getBottom());
+
+        lo.add(sliders);
+        auto usedSpace = lo.doLayout();
+        return usedSpace.translated(usedSpace.getWidth(), 0);
     }
 
     static constexpr int nels{6};   // dahdsr

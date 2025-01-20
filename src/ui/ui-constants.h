@@ -17,6 +17,7 @@
 #define BACONPAUL_SIX_SINES_UI_UI_CONSTANTS_H
 
 #include <cstdint>
+#include "ui/layout/Layout.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -32,6 +33,8 @@ static constexpr uint32_t uicTitleLabelInnerBox{18};
 
 static constexpr uint32_t uicLabeledKnobHeight{uicKnobSize + uicLabelHeight + uicLabelGap};
 static constexpr uint32_t uicPowerKnobWidth{uicKnobSize + uicPowerButtonSize + uicMargin};
+
+static constexpr uint32_t uicModulationWidth{150};
 
 template <typename K, typename L>
 inline void positionKnobAndLabel(uint32_t x, uint32_t y, const K &k, const L &l)
@@ -86,5 +89,30 @@ template <typename T> inline void positionTitleLabelAt(int x, int y, int w, cons
 {
     t->setBounds(x, y, w, uicTitleLabelInnerBox);
 }
+
+// put this in UIC
+template <typename T> inline sst::jucegui::layout::LayoutComponent titleLabelLayout(T &f)
+{
+    namespace jlo = sst::jucegui::layout;
+
+    auto res = jlo::VList().withHeight(uicTitleLabelHeight);
+    res.add(jlo::Component(*f).withHeight(uicTitleLabelInnerBox));
+    res.add(jlo::Gap().withHeight(uicTitleLabelHeight - uicTitleLabelInnerBox));
+    return res;
+};
+
+template <typename K, typename L>
+inline sst::jucegui::layout::LayoutComponent labelKnobLayout(const K &k, const L &l)
+{
+    namespace jlo = sst::jucegui::layout;
+    auto res =
+        jlo::VList().withHeight(uicKnobSize + uicLabelGap + uicLabelHeight).withWidth(uicKnobSize);
+    res.add(jlo::Component(*k).withHeight(uicKnobSize));
+    res.add(jlo::Gap().withHeight(uicLabelGap));
+    res.add(jlo::Component(*l).withHeight(uicLabelHeight));
+
+    return res;
+}
+
 } // namespace baconpaul::six_sines::ui
 #endif // UI_CONSTANTS_H

@@ -23,6 +23,7 @@
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
 #include "sst/jucegui/components/RuledLabel.h"
+#include "ui/layout/Layout.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -85,31 +86,34 @@ template <typename Comp, typename Patch> struct LFOComponents
         if (!titleLab)
             return {};
 
-        auto c = asComp();
-        auto lh = uicLabelHeight;
-        auto h = c->getHeight() - y;
-        auto q = h - lh;
-        auto w = uicKnobSize * 1.5;
+        namespace jlo = sst::jucegui::layout;
 
-        positionTitleLabelAt(x, y, w + uicMargin + uicKnobSize + extraWidth, titleLab);
+        auto lo = jlo::VList()
+                      .at(x, y)
+                      .withHeight(asComp()->getHeight() - y)
+                      .withWidth(uicKnobSize * 2.5 + uicMargin);
 
-        auto shapeH = 2 * uicLabeledKnobHeight - uicMargin - lh + 5;
-        auto bx = juce::Rectangle<int>(x, y + uicTitleLabelHeight, w, h - lh);
-        shape->setBounds(bx.withHeight(shapeH));
-        tempoSync->setBounds(bx.withTrimmedTop(shapeH + uicMargin).withHeight(lh));
-        bipolar->setBounds(bx.withTrimmedTop(shapeH + 2 * uicMargin + lh).withHeight(lh));
-        isEnv->setBounds(bx.withTrimmedTop(shapeH + 2 * uicMargin + lh)
-                             .withHeight(lh)
-                             .translated(w + uicMargin, 0)
-                             .withWidth(uicKnobSize));
+        lo.add(titleLabelLayout(titleLab));
 
-        bx = bx.translated(w + uicMargin, 0);
-        positionKnobAndLabel(bx.getX(), bx.getY(), rate, rateL);
-        positionKnobAndLabel(bx.getX(), bx.getY() + uicLabeledKnobHeight + uicMargin, deform,
-                             deformL);
-        bx = bx.translated(uicKnobSize + uicMargin, 0);
-        return juce::Rectangle<int>(x + w + uicKnobSize + uicMargin + extraWidth, y, 0, 0)
-            .withBottom(bx.getBottom());
+        auto columns = jlo::HList().expandToFill().withAutoGap(uicMargin);
+
+        auto col1 = jlo::VList().withWidth(uicKnobSize * 1.5).withAutoGap(uicMargin);
+        col1.add(jlo::Component(*shape).withHeight(2 * uicLabeledKnobHeight - uicLabelHeight));
+        col1.add(jlo::Component(*tempoSync).withHeight(uicLabelHeight));
+        col1.add(jlo::Component(*bipolar).withHeight(uicLabelHeight));
+
+        auto col2 = jlo::VList().withWidth(uicKnobSize).withAutoGap(uicMargin);
+        col2.add(labelKnobLayout(rate, rateL));
+        col2.add(labelKnobLayout(deform, deformL));
+        col2.add(jlo::Component(*isEnv).withHeight(uicLabelHeight));
+
+        columns.add(col1);
+        columns.add(col2);
+
+        lo.add(columns);
+
+        auto usedSpace = lo.doLayout();
+        return usedSpace.translated(usedSpace.getWidth(), 0);
     }
 
     std::unique_ptr<jcmp::Knob> rate, deform;
