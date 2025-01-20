@@ -76,6 +76,60 @@ float Patch::migrateParamValueFromVersion(Param *p, float value, uint32_t versio
                 return value + 1;
         }
     }
+
+    if (p->adhocFeatures & (uint64_t)Param::AdHocFeatureValues::WAVEFORM && version < 9)
+    {
+        /* version 8
+        *   SIN = 0, // these stream so you know....
+        SIN_FIFTH,
+        SQUARISH,
+        SAWISH,
+        SIN_OF_CUBED,
+
+        TX2,
+        TX3,
+        TX4,
+        TX5,
+        TX6,
+        TX7,
+        TX8,
+
+        version 9 and later
+
+        SIN = 0, // these stream so you know....
+        SIN_FIFTH,
+        SQUARISH,
+        SAWISH,
+        TRIANGLE,
+        SIN_OF_CUBED,
+
+        TX2,
+        TX3,
+        TX4,
+        TX5,
+        TX6,
+        TX7,
+        TX8,
+
+        SPIKY_TX2,
+        SPIKY_TX4,
+        SPIKY_TX6,
+        SPIKY_TX8,
+        */
+
+        // work around triangle
+        if (value > 3)
+            value = value + 1;
+
+        if (value == SinTable::TX2)
+            value = SinTable::SPIKY_TX2;
+        if (value == SinTable::TX4)
+            value = SinTable::SPIKY_TX4;
+        if (value == SinTable::TX6)
+            value = SinTable::SPIKY_TX6;
+        if (value == SinTable::TX8)
+            value = SinTable::SPIKY_TX8;
+    }
     return value;
 }
 

@@ -144,6 +144,23 @@ void SinTable::initializeStatics()
                   return std::make_pair(-v, -dv);
               });
 
+    fillTable(WaveForm::TRIANGLE,
+              [](double x, int Q)
+              {
+                  if (Q == 0)
+                  {
+                      return std::make_pair(4 * x, 4.0);
+                  }
+                  else if (Q == 3)
+                  {
+                      return std::make_pair(4 * x - 4, 4.0);
+                  }
+                  else
+                  {
+                      return std::make_pair(2.0 - 4.0 * x, -4.0);
+                  }
+                  return std::make_pair(0.0, 0.0);
+              });
     fillTable(WaveForm::SIN_OF_CUBED,
               [](double x, int Q)
               {
@@ -157,7 +174,25 @@ void SinTable::initializeStatics()
                   return std::make_pair(v, dv);
               });
 
-    fillTable(SinTable::WaveForm::TX2,
+    fillTable(SinTable::TX2,
+              [](double x, int Q) -> std::pair<double, double>
+              {
+                  auto v = 0.0;
+                  auto dv = 0.0;
+                  if (Q == 0 || Q == 1)
+                  {
+                      v = 0.5 * (sin(4.0 * M_PI * (x - 0.125)) + 1);
+                      dv = 2.0 * M_PI * cos(4.0 * M_PI * (x - 0.125));
+                  }
+                  else
+                  {
+                      v = -0.5 * (sin(4.0 * M_PI * (x - 0.125)) + 1);
+                      dv = -2.0 * M_PI * cos(4.0 * M_PI * (x - 0.125));
+                  }
+                  return {v, dv};
+              });
+
+    fillTable(SinTable::WaveForm::SPIKY_TX2,
               [](double x, int Q)
               {
                   double v, dv;
@@ -211,7 +246,21 @@ void SinTable::initializeStatics()
                   return std::make_pair(v, dv);
               });
 
-    fillTable(SinTable::WaveForm::TX4,
+    fillTable(SinTable::TX4,
+              [](double x, int Q) -> std::pair<double, double>
+              {
+                  auto v = 0.0;
+                  auto dv = 0.0;
+                  if (Q == 0 || Q == 1)
+                  {
+                      v = 0.5 * (sin(4.0 * M_PI * (x - 0.125)) + 1);
+                      dv = 2.0 * M_PI * cos(4.0 * M_PI * (x - 0.125));
+                  }
+
+                  return {v, dv};
+              });
+
+    fillTable(SinTable::WaveForm::SPIKY_TX4,
               [](double x, int Q)
               {
                   double v, dv;
@@ -263,6 +312,23 @@ void SinTable::initializeStatics()
               });
 
     fillTable(SinTable::WaveForm::TX6,
+              [](double x, int Q) -> std::pair<double, double>
+              {
+                  auto v = 0.0;
+                  auto dv = 0.0;
+                  if (Q == 0)
+                  {
+                      v = 0.5 * (sin(8.0 * M_PI * (x - 0.0625)) + 1);
+                      dv = 4.0 * M_PI * cos(8.0 * M_PI * (x - 0.0625));
+                  }
+                  else if (Q == 1)
+                  {
+                      v = -0.5 * (sin(8.0 * M_PI * (x - 0.0625)) + 1);
+                      dv = -4.0 * M_PI * cos(8.0 * M_PI * (x - 0.0625));
+                  }
+                  return {v, dv};
+              });
+    fillTable(SinTable::WaveForm::SPIKY_TX6,
               [](double x, int Q)
               {
                   double v{0}, dv{0};
@@ -328,6 +394,19 @@ void SinTable::initializeStatics()
               });
 
     fillTable(SinTable::WaveForm::TX8,
+              [](double x, int Q) -> std::pair<double, double>
+              {
+                  auto v = 0.0;
+                  auto dv = 0.0;
+                  if (Q == 0 || Q == 1)
+                  {
+                      v = 0.5 * (sin(8.0 * M_PI * (x - 0.0625)) + 1);
+                      dv = 4.0 * M_PI * cos(8.0 * M_PI * (x - 0.0625));
+                  }
+
+                  return {v, dv};
+              });
+    fillTable(SinTable::WaveForm::SPIKY_TX8,
               [](double x, int Q)
               {
                   double v{0}, dv{0};
