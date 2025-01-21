@@ -46,11 +46,12 @@ static constexpr clap::helpers::CheckingLevel checkLevel = clap::helpers::Checki
 
 using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
 
+template <bool multiOut>
 struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 {
     SixSinesClap(const clap_host *h) : plugHelper_t(getDescriptor(), h)
     {
-        engine = std::make_unique<Synth>();
+        engine = std::make_unique<Synth>(multiOut);
 
         engine->clapHost = h;
 
@@ -73,20 +74,35 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     void onMainThread() noexcept override {}
 
     bool implementsAudioPorts() const noexcept override { return true; }
-    uint32_t audioPortsCount(bool isInput) const noexcept override { return isInput ? 0 : 1; }
+    uint32_t audioPortsCount(bool isInput) const noexcept override
+    {
+        return isInput ? 0 : (multiOut ? 7 : 1);
+    }
     bool audioPortsInfo(uint32_t index, bool isInput,
                         clap_audio_port_info *info) const noexcept override
     {
         assert(!isInput);
-        assert(index == 0);
-        if (isInput || index != 0)
+        if (isInput || index > (multiOut ? 6 : 0))
             return false;
-        info->id = 75241;
+        info->id = 75241 + index;
         info->in_place_pair = CLAP_INVALID_ID;
-        strncpy(info->name, "Main Out", sizeof(info->name));
-        info->flags = CLAP_AUDIO_PORT_IS_MAIN;
+        if (index == 0)
+            strncpy(info->name, "Main Out", sizeof(info->name));
+        else
+            snprintf(info->name, sizeof(info->name) - 1, "Operator %d", index);
+        if (index == 0)
+            info->flags = CLAP_AUDIO_PORT_IS_MAIN;
+        else
+            info->flags = 0;
         info->channel_count = 2;
         info->port_type = CLAP_PORT_STEREO;
+        return true;
+    }
+    bool implementsAudioPortsActivation() const noexcept override { return true; }
+    bool audioPortsActivationCanActivateWhileProcessing() const noexcept override { return true; }
+    bool audioPortsActivationSetActive(bool is_input, uint32_t port_index, bool is_active,
+                                       uint32_t sample_size) noexcept override
+    {
         return true;
     }
 
@@ -152,6 +168,14 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
             out[0][s] = engine->output[0][blockPos];
             out[1][s] = engine->output[1][blockPos];
+
+            if (multiOut)
+            {
+                for (auto i = 2; i < 2 * numOps + 2; ++i)
+                {
+                    out[i][s] = engine->output[i][blockPos];
+                }
+            }
 
             blockPos++;
             if (blockPos == blockSize)
@@ -334,10 +358,18 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
 } // namespace clapimpl
 
-const clap_plugin *makePlugin(const clap_host *h)
+const clap_plugin *makePlugin(const clap_host *h, bool multiOut)
 {
-    auto res = new baconpaul::six_sines::clapimpl::SixSinesClap(h);
-    return res->clapPlugin();
+    if (multiOut)
+    {
+        auto res = new baconpaul::six_sines::clapimpl::SixSinesClap<true>(h);
+        return res->clapPlugin();
+    }
+    else
+    {
+        auto res = new baconpaul::six_sines::clapimpl::SixSinesClap<false>(h);
+        return res->clapPlugin();
+    }
 }
 } // namespace baconpaul::six_sines
 

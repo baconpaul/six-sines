@@ -44,15 +44,21 @@ struct PresetManager;
 
 struct Synth
 {
-    float output alignas(16)[2][blockSize];
+    float output alignas(16)[2 * (1 + numOps)][blockSize];
+
+    bool isMultiOut{false};
 
     SampleRateStrategy sampleRateStrategy{SampleRateStrategy::SR_110120};
     ResamplerEngine resamplerEngine{ResamplerEngine::SRC_FAST};
+    inline bool usesLanczos() const
+    {
+        return resamplerEngine == ResamplerEngine::LANCZOS || resamplerEngine == ZOH ||
+               resamplerEngine == LINTERP;
+    }
 
     using resampler_t = sst::basic_blocks::dsp::LanczosResampler<blockSize>;
-    std::unique_ptr<resampler_t> resampler;
-
-    SRC_STATE *lState{nullptr}, *rState{nullptr};
+    std::array<std::unique_ptr<resampler_t>, 1 + numOps> resampler;
+    std::array<SRC_STATE *, 1 + numOps> lState{}, rState{};
 
     Patch patch;
     MonoValues monoValues;
@@ -244,13 +250,15 @@ struct Synth
     VMMonoResponder monoResponder;
     std::unique_ptr<voiceManager_t> voiceManager;
 
-    Synth();
+    Synth(bool isMultiOut);
     ~Synth();
 
     bool audioRunning{true};
 
     double hostSampleRate{0}, engineSampleRate{0}, sampleRateRatio{0};
     void setSampleRate(double sampleRate);
+
+    template <bool multiOut> void processInternal(const clap_output_events_t *);
 
     void process(const clap_output_events_t *);
     void processUIQueue(const clap_output_events_t *);

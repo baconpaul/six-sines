@@ -690,15 +690,15 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
         mech::mul_block<blockSize>(lfo.outputBlock, l2f, lfo.outputBlock);
         mech::accumulate_from_to<blockSize>(lfo.outputBlock, finalEnvLevel);
 
-        mech::scale_by<blockSize>(finalEnvLevel, output[0], output[1]);
-
-        // Apply main output
+        // push this into final env level so we dont traverse output twice then clients can use it
         velocityLag.setTarget(voiceValues.velocity);
         velocityLag.process();
         auto lv = std::clamp(level + levMod, 0.f, 1.f);
         auto v = 1.f - velSen * (1.f - velocityLag.v);
         lv = 0.15 * std::clamp(v * lv * lv * lv, 0.f, 1.f);
-        mech::scale_by<blockSize>(lv, output[0], output[1]);
+        mech::scale_by<blockSize>(lv, finalEnvLevel);
+
+        mech::scale_by<blockSize>(finalEnvLevel, output[0], output[1]);
 
         auto pn = panMod + pan + panModNode.level;
         if (pn != 0.f)

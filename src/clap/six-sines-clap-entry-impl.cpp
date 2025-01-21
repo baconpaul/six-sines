@@ -29,7 +29,7 @@
 namespace baconpaul::six_sines
 {
 
-extern const clap_plugin *makePlugin(const clap_host *);
+extern const clap_plugin *makePlugin(const clap_host *, bool);
 
 /*
  * Clap Factory API
@@ -56,12 +56,38 @@ const clap_plugin_descriptor *getDescriptor()
     return &desc;
 }
 
-uint32_t clap_get_plugin_count(const clap_plugin_factory *) { return 1; };
+const clap_plugin_descriptor *getMultiOutDescriptor()
+{
+    static const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT,
+                                     CLAP_PLUGIN_FEATURE_SYNTHESIZER, "Free and Open Source",
+                                     "Audio Rate Modulation", nullptr};
+
+    static char versionNum[1024];
+
+    static clap_plugin_descriptor desc = {
+        CLAP_VERSION,
+        "org.baconpaul.six-sines.seven-outs",
+        PRODUCT_NAME ", Seven Outs",
+        "BaconPaul",
+        "https://baconpaul.org",
+        "",
+        "",
+        sst::plugininfra::VersionInformation::project_version_and_hash,
+        "Synth with Audio Rate Modulation or something",
+        &features[0]};
+    return &desc;
+}
+
+uint32_t clap_get_plugin_count(const clap_plugin_factory *) { return 2; };
 const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)
 {
     if (w == 0)
     {
         return getDescriptor();
+    }
+    if (w == 1)
+    {
+        return getMultiOutDescriptor();
     }
 
     return nullptr;
@@ -73,7 +99,12 @@ const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_h
 
     if (strcmp(plugin_id, getDescriptor()->id) == 0)
     {
-        return makePlugin(host);
+        return makePlugin(host, false);
+    }
+
+    if (strcmp(plugin_id, getMultiOutDescriptor()->id) == 0)
+    {
+        return makePlugin(host, true);
     }
     return nullptr;
 }
@@ -85,11 +116,19 @@ const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_h
 static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint32_t index,
                                clap_plugin_info_as_auv2_t *info)
 {
-    if (index != 0)
+    if (index > 1)
         return false;
 
-    strncpy(info->au_type, "aumu", 5); // use the features to determine the type
-    strncpy(info->au_subt, "sxSn", 5);
+    if (index == 0)
+    {
+        strncpy(info->au_type, "aumu", 5); // use the features to determine the type
+        strncpy(info->au_subt, "sxSn", 5);
+    }
+    if (index == 1)
+    {
+        strncpy(info->au_type, "aumu", 5); // use the features to determine the type
+        strncpy(info->au_subt, "sx7n", 5);
+    }
 
     return true;
 }
