@@ -26,8 +26,8 @@ namespace baconpaul::six_sines
 namespace mech = sst::basic_blocks::mechanics;
 namespace sdsp = sst::basic_blocks::dsp;
 
-Synth::Synth()
-    : responder(*this), monoResponder(*this),
+Synth::Synth(bool mo)
+    : isMultiOut(mo), responder(*this), monoResponder(*this),
       voices(sst::cpputils::make_array<Voice, VMConfig::maxVoiceCount>(patch, monoValues))
 {
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
@@ -38,6 +38,9 @@ Synth::Synth()
         monoValues.macroPtr[i] = &patch.macroNodes[i].level.value;
     }
 
+    std::fill(lState.begin(), lState.end(), nullptr);
+    std::fill(rState.begin(), rState.end(), nullptr);
+
     reapplyControlSettings();
 }
 
@@ -47,10 +50,21 @@ Synth::~Synth()
     {
         MTS_DeregisterClient(monoValues.mtsClient);
     }
+
+    for (auto ls : lState)
+        if (ls)
+            src_delete(ls);
+    for (auto rs : rState)
+        if (rs)
+            src_delete(rs);
 }
 
 void Synth::setSampleRate(double sampleRate)
 {
+    auto ohsr = hostSampleRate;
+    auto oesr = engineSampleRate;
+    ;
+
     hostSampleRate = sampleRate;
     // Look for 44 variants
     bool is441{false};
@@ -92,63 +106,54 @@ void Synth::setSampleRate(double sampleRate)
         internalRate = 48000 * mul;
 
     engineSampleRate = internalRate;
-    SXSNLOG("Setting SampleRates: " << SXSNV(hostSampleRate) << SXSNV(engineSampleRate));
+    if (engineSampleRate != oesr || hostSampleRate != ohsr)
+        SXSNLOG("Setting SampleRates: " << SXSNV(hostSampleRate) << SXSNV(engineSampleRate));
+
     monoValues.sr.setSampleRate(internalRate);
 
     lagHandler.setRate(60, blockSize, monoValues.sr.sampleRate);
     vuPeak.setSampleRate(monoValues.sr.sampleRate);
     sampleRateRatio = hostSampleRate / engineSampleRate;
 
-    if (resamplerEngine == LANCZOS)
+    if (usesLanczos())
     {
-        SXSNLOG("Setting Lanczos Resampler");
-        resampler =
-            std::make_unique<resampler_t>((float)monoValues.sr.sampleRate, (float)hostSampleRate);
+        for (int i = 0; i < (isMultiOut ? (1 + numOps) : 1); ++i)
+            resampler[i] = std::make_unique<resampler_t>((float)monoValues.sr.sampleRate,
+                                                         (float)hostSampleRate);
     }
     else
     {
-        if (lState)
-        {
-            src_delete(lState);
-        }
-        if (rState)
-        {
-            src_delete(rState);
-        }
-        int ec;
         auto mode = SRC_SINC_FASTEST;
         if (resamplerEngine == SRC_MEDIUM)
         {
-            SXSNLOG("Setting SRC Resampler - SRC_SINC_MEDIUM_QUALITY");
             mode = SRC_SINC_MEDIUM_QUALITY;
         }
         else if (resamplerEngine == SRC_BEST)
         {
-            SXSNLOG("Setting SRC Resampler - SRC_SINC_BEST_QUALITY");
             mode = SRC_SINC_BEST_QUALITY;
         }
-        else if (resamplerEngine == LINTERP)
+
+        for (int i = 0; i < (isMultiOut ? (1 + numOps) : 1); ++i)
         {
-            SXSNLOG("Setting SRC Resampler - SRC_LINEAR");
-            mode = SRC_LINEAR;
+            if (lState[i])
+            {
+                src_delete(lState[i]);
+            }
+            if (rState[i])
+            {
+                src_delete(rState[i]);
+            }
+            int ec;
+
+            lState[i] = src_new(mode, 1, &ec);
+            rState[i] = src_new(mode, 1, &ec);
+            src_set_ratio(lState[i], sampleRateRatio);
+            src_set_ratio(rState[i], sampleRateRatio);
         }
-        else if (resamplerEngine == ZOH)
-        {
-            SXSNLOG("Setting SRC Resampler - SRC_ZERO_ORDER_HOLD");
-            mode = SRC_ZERO_ORDER_HOLD;
-        }
-        else
-        {
-            SXSNLOG("Setting SRC Resampler - SRC_SINC_FASTEST");
-        }
-        lState = src_new(mode, 1, &ec);
-        rState = src_new(mode, 1, &ec);
-        src_set_ratio(lState, sampleRateRatio);
-        src_set_ratio(rState, sampleRateRatio);
     }
 }
 
-void Synth::process(const clap_output_events_t *outq)
+template <bool multiOut> void Synth::processInternal(const clap_output_events_t *outq)
 {
     if (!SinTable::staticsInitialized)
         SinTable::initializeStatics();
@@ -169,17 +174,23 @@ void Synth::process(const clap_output_events_t *outq)
 
     int generated{0};
 
-    if (resamplerEngine == LANCZOS)
-        generated = (resampler->inputsRequiredToGenerateOutputs(blockSize) > 0 ? 0 : blockSize);
+    if (usesLanczos())
+        generated = (resampler[0]->inputsRequiredToGenerateOutputs(blockSize) > 0 ? 0 : blockSize);
+
+    std::array<bool, numOps> mixerActive;
+    if constexpr (multiOut)
+    {
+        std::fill(mixerActive.begin(), mixerActive.end(), false);
+    }
 
     while (generated < blockSize)
     {
         loops++;
         lagHandler.process();
 
-        float lOutput alignas(16)[2][blockSize];
-        memset(lOutput, 0, sizeof(output));
-        // this can be way more efficient
+        float lOutput alignas(16)[2 * (1 + (multiOut ? numOps : 0))][blockSize];
+        memset(lOutput, 0, sizeof(lOutput));
+
         auto cvoice = head;
         Voice *removeVoice{nullptr};
 
@@ -190,6 +201,26 @@ void Synth::process(const clap_output_events_t *outq)
 
             mech::accumulate_from_to<blockSize>(cvoice->output[0], lOutput[0]);
             mech::accumulate_from_to<blockSize>(cvoice->output[1], lOutput[1]);
+
+            if constexpr (multiOut)
+            {
+                // TODO if voice active check
+                float stp[2][blockSize];
+                for (int i = 0; i < numOps; ++i)
+                {
+                    if (!cvoice->mixerNode[i].active)
+                    {
+                        continue;
+                    }
+                    mixerActive[i] = true;
+                    mech::mul_block<blockSize>(cvoice->out.finalEnvLevel,
+                                               cvoice->mixerNode[i].output[0], stp[0]);
+                    mech::mul_block<blockSize>(cvoice->out.finalEnvLevel,
+                                               cvoice->mixerNode[i].output[1], stp[1]);
+                    mech::accumulate_from_to<blockSize>(stp[0], lOutput[2 + 2 * i]);
+                    mech::accumulate_from_to<blockSize>(stp[1], lOutput[2 + 2 * i + 1]);
+                }
+            }
 
             if (cvoice->out.env.stage > OutputNode::env_t::s_release || cvoice->fadeBlocks == 0)
             {
@@ -213,38 +244,59 @@ void Synth::process(const clap_output_events_t *outq)
             assert(!v->next && !v->prior);
         }
 
-        if (resamplerEngine == LANCZOS)
+        if (usesLanczos())
         {
-            for (int i = 0; i < blockSize; ++i)
+            if constexpr (multiOut)
             {
-                resampler->push(lOutput[0][i], lOutput[1][i]);
+                for (int rsi = 0; rsi < numOps + 1; ++rsi)
+                {
+                    for (int i = 0; i < blockSize; ++i)
+                    {
+                        resampler[rsi]->push(lOutput[rsi * 2][i], lOutput[rsi * 2 + 1][i]);
+                    }
+                }
             }
-            generated = (resampler->inputsRequiredToGenerateOutputs(blockSize) > 0 ? 0 : blockSize);
+            else
+            {
+                for (int i = 0; i < blockSize; ++i)
+                {
+                    resampler[0]->push(lOutput[0][i], lOutput[1][i]);
+                }
+            }
+            generated =
+                (resampler[0]->inputsRequiredToGenerateOutputs(blockSize) > 0 ? 0 : blockSize);
         }
         else
         {
-            d.data_in = lOutput[0];
-            d.data_out = output[0] + generated;
-            d.input_frames = blockSize;
-            d.output_frames = blockSize - generated;
-            d.end_of_input = 0;
-            d.src_ratio = sampleRateRatio;
+            int gen0{0};
+            for (int rsi = 0; rsi < (multiOut ? (numOps + 1) : 1); ++rsi)
+            {
+                d.data_in = lOutput[2 * rsi];
+                d.data_out = output[2 * rsi] + generated;
+                d.input_frames = blockSize;
+                d.output_frames = blockSize - generated;
+                d.end_of_input = 0;
+                d.src_ratio = sampleRateRatio;
 
-            src_process(lState, &d);
-            auto lgen = d.output_frames_gen;
+                src_process(lState[rsi], &d);
+                auto lgen = d.output_frames_gen;
 
-            d.data_in = lOutput[1];
-            d.data_out = output[1] + generated;
-            d.input_frames = blockSize;
-            d.output_frames = blockSize - generated;
-            d.end_of_input = 0;
-            d.src_ratio = sampleRateRatio;
+                d.data_in = lOutput[2 * rsi + 1];
+                d.data_out = output[2 * rsi + 1] + generated;
+                d.input_frames = blockSize;
+                d.output_frames = blockSize - generated;
+                d.end_of_input = 0;
+                d.src_ratio = sampleRateRatio;
 
-            src_process(rState, &d);
-            auto rgen = d.output_frames_gen;
-
-            assert(lgen == rgen);
-            generated += lgen;
+                src_process(rState[rsi], &d);
+                auto rgen = d.output_frames_gen;
+                assert(lgen == rgen);
+                if (rsi == 0)
+                {
+                    gen0 = lgen;
+                }
+            }
+            generated += gen0;
         }
 
         if (isEditorAttached)
@@ -272,9 +324,60 @@ void Synth::process(const clap_output_events_t *outq)
 
     if (resamplerEngine == LANCZOS)
     {
-        resampler->populateNextBlockSize(output[0], output[1]);
-        resampler->renormalizePhases();
+        if constexpr (multiOut)
+        {
+            for (int rsi = 0; rsi < numOps + 1; ++rsi)
+            {
+                resampler[rsi]->populateNextBlockSize(output[rsi * 2], output[rsi * 2 + 1]);
+                resampler[rsi]->renormalizePhases();
+            }
+        }
+        else
+        {
+            resampler[0]->populateNextBlockSize(output[0], output[1]);
+            resampler[0]->renormalizePhases();
+        }
     }
+    if (resamplerEngine == ZOH)
+    {
+        if constexpr (multiOut)
+        {
+            for (int rsi = 0; rsi < numOps + 1; ++rsi)
+            {
+                resampler[rsi]->populateNextBlockSizeZOH(output[rsi * 2], output[rsi * 2 + 1]);
+                resampler[rsi]->renormalizePhases();
+            }
+        }
+        else
+        {
+            resampler[0]->populateNextBlockSizeZOH(output[0], output[1]);
+            resampler[0]->renormalizePhases();
+        }
+    }
+    if (resamplerEngine == LINTERP)
+    {
+        if constexpr (multiOut)
+        {
+            for (int rsi = 0; rsi < numOps + 1; ++rsi)
+            {
+                resampler[rsi]->populateNextBlockSizeLin(output[rsi * 2], output[rsi * 2 + 1]);
+                resampler[rsi]->renormalizePhases();
+            }
+        }
+        else
+        {
+            resampler[0]->populateNextBlockSizeLin(output[0], output[1]);
+            resampler[0]->renormalizePhases();
+        }
+    }
+}
+
+void Synth::process(const clap_output_events_t *o)
+{
+    if (isMultiOut)
+        processInternal<true>(o);
+    else
+        processInternal<false>(o);
 }
 
 void Synth::addToVoiceList(Voice *v)
