@@ -57,6 +57,20 @@ jobs:
           cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release -DCOPY_AFTER_BUILD=FALSE -DGITHUB_ACTIONS_BUILD=TRUE
           cmake --build ./build --config Release --target six-sines_all --parallel 3
 
+      - name: Configure pull request version
+        if: github.event_name == 'pull_request'
+        run: |
+          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Debug -DCOPY_AFTER_BUILD=FALSE  -DGITHUB_ACTIONS_BUILD=TRUE 
+
+      - name: Build pull request version
+        if: github.event_name == 'pull_request'
+        run: |
+          cmake --build ./build --config Debug --target six-sines_all --parallel 3
+
+      - name: Find all the six sines
+        run: |
+          find build -name "Six Sines*" -print
+
       - name: Make windows zip
         if: github.event_name != 'pull_request' && runner.os == 'Windows'
         run: |
@@ -71,26 +85,6 @@ jobs:
           popd
           
           7z a -r build/inst/six-sines-windows-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip build/insttmp/*
-
-      - name: Make linux tgz
-        if: github.event_name != 'pull_request' && runner.os == 'Linux'
-        run: |
-          find build -name "Six Sines*" -print
-
-          mkdir build/inst
-          mkdir build/insttmp
-
-          mv build/*.clap build/insttmp
-          mv "build/Six Sines" build/insttmp
-          mv build/Release/*.vst3 build/insttmp
-
-          find build -name "Six Sines*" -print
-
-          cd build/insttmp
-          ls -al
-
-          tar cvzf ../inst/six-sines-linux-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.tgz .
-
 
       - name: Make Mac
         if: github.event_name != 'pull_request' && runner.os == 'macOS'
@@ -109,21 +103,8 @@ jobs:
 
           codesign -d --entitlement - installer-tmp/APP/Six\ Sines.app
 
-      - name: Configure pull request version
-        if: github.event_name == 'pull_request'
-        run: |
-          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Debug -DCOPY_AFTER_BUILD=FALSE  -DGITHUB_ACTIONS_BUILD=TRUE 
-
-      - name: Build pull request version
-        if: github.event_name == 'pull_request'
-        run: |
-          cmake --build ./build --config Debug --target six-sines_all --parallel 3
-
-      - name: Find all the six sines
-        run: |
-          find build -name "Six Sines*" -print
-
       - name: Upload artifact
+        if: github.event_name != 'pull_request' && runner.os != 'Linux'  # We get this through docker
         uses: actions/upload-artifact@v4
         with:
           path: build/inst
@@ -131,7 +112,7 @@ jobs:
 
 
   build_plugin_docker:
-    name: Docker Build Ubuntu20 ${{ matrix.name }}
+    name: Build - Docker Ubuntu 20
     runs-on: ubuntu-latest
 
     steps:
@@ -176,11 +157,11 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          path: build/installer
+          path: build/inst
           name: build-docker-linux
 
   publish-plugin-nightly:
-    name: Publish Nightlu
+    name: Publish Nightly
     if: ${{ github.ref == 'refs/heads/main' && github.repository_owner == 'baconpaul' }}
     runs-on: ubuntu-latest
     needs: [build_plugin, build_plugin_docker]
