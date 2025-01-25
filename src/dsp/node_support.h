@@ -272,11 +272,12 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     }
 };
 
-template <typename T> struct ModulationSupport
+template <typename Bundle, typename Node> struct ModulationSupport
 {
-    const T &paramBundle;
+    const Bundle &paramBundle;
     MonoValues &monoValues;
     const VoiceValues &voiceValues;
+    Node *enclosingNode{nullptr};
 
     // array makes ref clumsy so show pointers instead
     bool anySources{false};
@@ -286,8 +287,8 @@ template <typename T> struct ModulationSupport
 
     float modr01, modrpm1, modrnorm, modrhalfnorm;
 
-    ModulationSupport(const T &mn, MonoValues &mv, const VoiceValues &vv)
-        : paramBundle(mn), monoValues(mv), voiceValues(vv),
+    ModulationSupport(const Bundle &mn, Node *p, MonoValues &mv, const VoiceValues &vv)
+        : paramBundle(mn), enclosingNode(p), monoValues(mv), voiceValues(vv),
           depthPointers(sst::cpputils::make_array_lambda<const float *, numModsPer>(
               [this](int i) { return &paramBundle.moddepth[i].value; }))
     {
@@ -403,6 +404,14 @@ template <typename T> struct ModulationSupport
             break;
         case ModMatrixConfig::Source::RANDOM_HALFNORM:
             sourcePointers[which] = &modrhalfnorm;
+            break;
+
+        case ModMatrixConfig::Source::INTERNAL_LFO:
+            sourcePointers[which] = &(enclosingNode->lfo.outputBlock[blockSize - 1]);
+            break;
+
+        case ModMatrixConfig::Source::INTERNAL_ENV:
+            sourcePointers[which] = &(enclosingNode->env.outputCache[blockSize - 1]);
             break;
 
         default:

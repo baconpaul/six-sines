@@ -63,6 +63,9 @@ ModMatrixConfig::ModMatrixConfig()
     add(RANDOM_NORM, "Random", "Rand Normal");
     add(RANDOM_HALFNORM, "Random", "Rand HalfNorm");
 
+    add(INTERNAL_LFO, "Voice Modulators", "LFO");
+    add(INTERNAL_ENV, "Voice Modulators", "Envelope");
+
     std::sort(sources.begin(), sources.end(),
               [](const SourceObj &a, const SourceObj &b)
               {

@@ -58,7 +58,10 @@ struct ModMatrixConfig
         RANDOM_01 = voiceLevel + 200,
         RANDOM_PM1 = voiceLevel + 201,
         RANDOM_NORM = voiceLevel + 202,
-        RANDOM_HALFNORM = voiceLevel + 203
+        RANDOM_HALFNORM = voiceLevel + 203,
+
+        INTERNAL_LFO = voiceLevel + 400,
+        INTERNAL_ENV = voiceLevel + 401
     };
     ModMatrixConfig();
 
