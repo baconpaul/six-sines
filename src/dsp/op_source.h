@@ -31,7 +31,7 @@ namespace baconpaul::six_sines
 {
 struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                               LFOSupport<Patch::SourceNode, false>,
-                              ModulationSupport<Patch::SourceNode>
+                              ModulationSupport<Patch::SourceNode, OpSource>
 {
     int32_t phaseInput alignas(16)[blockSize];
     int32_t feedbackLevel alignas(16)[blockSize];
@@ -59,11 +59,11 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     OpSource(const Patch::SourceNode &sn, MonoValues &mv, const VoiceValues &vv)
         : sourceNode(sn), monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv),
-          LFOSupport(sn, mv), ModulationSupport(sn, mv, vv), ratio(sn.ratio), activeV(sn.active),
-          envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio), waveForm(sn.waveForm),
-          kt(sn.keyTrack), ktv(sn.keyTrackValue), startPhase(sn.startingPhase),
-          octTranspose(sn.octTranspose), lfoToRatioFine(sn.lfoToRatioFine),
-          envToRatioFine(sn.envToRatioFine)
+          LFOSupport(sn, mv), ModulationSupport(sn, this, mv, vv), ratio(sn.ratio),
+          activeV(sn.active), envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio),
+          waveForm(sn.waveForm), kt(sn.keyTrack), ktv(sn.keyTrackValue),
+          startPhase(sn.startingPhase), octTranspose(sn.octTranspose),
+          lfoToRatioFine(sn.lfoToRatioFine), envToRatioFine(sn.envToRatioFine)
     {
         reset();
     }

@@ -33,7 +33,7 @@ namespace mech = sst::basic_blocks::mechanics;
 
 struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
                         public LFOSupport<Patch::MatrixNode>,
-                        public ModulationSupport<Patch::MatrixNode>
+                        public ModulationSupport<Patch::MatrixNode, MatrixNodeFrom>
 {
     OpSource &onto, &from;
 
@@ -45,7 +45,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
                    const VoiceValues &vv)
         : matrixNode(mn), monoValues(mv), voiceValues(vv), onto(on), from(fr), level(mn.level),
           pmrmV(mn.pmOrRM), activeV(mn.active), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
-          lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel), ModulationSupport(mn, mv, vv)
+          lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel), ModulationSupport(mn, this, mv, vv)
     {
     }
 
@@ -190,7 +190,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
 
 struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
                         LFOSupport<Patch::SelfNode>,
-                        ModulationSupport<Patch::SelfNode>
+                        ModulationSupport<Patch::SelfNode, MatrixNodeSelf>
 {
     OpSource &onto;
 
@@ -202,7 +202,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
     MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, MonoValues &mv, const VoiceValues &vv)
         : selfNode(sn), monoValues(mv), voiceValues(vv), onto(on), fbBase(sn.fbLevel),
           lfoToFB(sn.lfoToFB), activeV(sn.active), envToFB(sn.envToFB), overdriveV(sn.overdrive),
-          EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv), ModulationSupport(sn, mv, vv){};
+          EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv), ModulationSupport(sn, this, mv, vv){};
     bool active{true}, lfoMul{false};
     float overdriveFactor{1.0};
 
@@ -311,7 +311,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
 
 struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
                    LFOSupport<Patch::MixerNode>,
-                   ModulationSupport<Patch::MixerNode>
+                   ModulationSupport<Patch::MixerNode, MixerNode>
 {
     float output alignas(16)[2][blockSize];
     OpSource &from;
@@ -327,7 +327,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         : mixerNode(mn), monoValues(mv), voiceValues(vv), from(f), pan(mn.pan), level(mn.level),
           activeF(mn.active), lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan),
           envToLevel(mn.envToLevel), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
-          ModulationSupport(mn, mv, vv)
+          ModulationSupport(mn, this, mv, vv)
     {
         memset(output, 0, sizeof(output));
     }
@@ -489,7 +489,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
 
 // Single point modulation
 struct ModulationOnlyNode : EnvelopeSupport<Patch::ModulationOnlyNode>,
-                            ModulationSupport<Patch::ModulationOnlyNode>,
+                            ModulationSupport<Patch::ModulationOnlyNode, ModulationOnlyNode>,
                             LFOSupport<Patch::ModulationOnlyNode>
 {
     // float level alignas(16)[blockSize];
@@ -503,7 +503,7 @@ struct ModulationOnlyNode : EnvelopeSupport<Patch::ModulationOnlyNode>,
     const float &lfoD, &envD;
 
     ModulationOnlyNode(const Patch::ModulationOnlyNode &mn, MonoValues &mv, const VoiceValues &vv)
-        : ModulationSupport(mn, mv, vv), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
+        : ModulationSupport(mn, this, mv, vv), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
           modNode(mn), monoValues(mv), voiceValues(vv), lfoD(mn.lfoDepth), envD(mn.envDepth)
     {
     }
@@ -616,7 +616,7 @@ struct ModulationOnlyNode : EnvelopeSupport<Patch::ModulationOnlyNode>,
 };
 
 struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
-                    ModulationSupport<Patch::OutputNode>,
+                    ModulationSupport<Patch::OutputNode, OutputNode>,
                     LFOSupport<Patch::OutputNode>
 {
     float output alignas(16)[2][blockSize];
@@ -636,7 +636,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     OutputNode(const Patch::OutputNode &on, const Patch::ModulationOnlyNode &panMN,
                const Patch::ModulationOnlyNode &ftMN, std::array<MixerNode, numOps> &f,
                MonoValues &mv, const VoiceValues &vv)
-        : outputNode(on), ModulationSupport(on, mv, vv), monoValues(mv), voiceValues(vv),
+        : outputNode(on), ModulationSupport(on, this, mv, vv), monoValues(mv), voiceValues(vv),
           fromArr(f), level(on.level), bendUp(on.bendUp), bendDown(on.bendDown),
           octTranspose(on.octTranspose), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),
           LFOSupport(on, mv), defTrigV(on.defaultTrigger), pan(on.pan), fineTune(on.fineTune),
