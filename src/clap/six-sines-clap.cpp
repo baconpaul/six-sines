@@ -244,6 +244,8 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             return false;
 
         engine->postLoad();
+
+        _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES);
         _host.paramsRequestFlush();
         return true;
     }
