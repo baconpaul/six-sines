@@ -273,6 +273,20 @@ void SixSinesEditor::paint(juce::Graphics &g)
 
     g.drawText(sst::plugininfra::VersionInformation::git_implied_display_version,
                getLocalBounds().reduced(3, 3), juce::Justification::centredBottom);
+
+#if !defined(NDEBUG) || !NDEBUG
+    g.setColour(juce::Colours::red);
+    g.setFont(juce::FontOptions(30));
+    auto dr = juce::Rectangle<int>(0, 0, np, ht);
+    g.setColour(juce::Colours::black.withAlpha(0.5f));
+    g.fillRect(dr);
+
+    g.setColour(juce::Colours::white);
+    g.drawRect(dr, 1);
+    g.drawText("DEBUG", dr.translated(1, 1), juce::Justification::centred);
+    g.setColour(juce::Colours::red);
+    g.drawText("DEBUG", dr, juce::Justification::centred);
+#endif
 }
 
 void SixSinesEditor::resized()
