@@ -48,13 +48,14 @@ template <typename T> struct EnvelopeSupport
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV, &tmV, &emV, &oneShV;
+    const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV, &tmV, &emV, &oneShV,
+        &fromZV;
     const float &ash, &dsh, &rsh;
     EnvelopeSupport(const T &mn, const MonoValues &mv, const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), env(&mv.sr), delay(mn.delay), attackv(mn.attack),
           hold(mn.hold), decay(mn.decay), sustain(mn.sustain), release(mn.release),
           powerV(mn.envPower), ash(mn.aShape), dsh(mn.dShape), rsh(mn.rShape), tmV(mn.triggerMode),
-          emV(mn.envIsMultiplcative), oneShV(mn.envIsOneShot)
+          emV(mn.envIsMultiplcative), oneShV(mn.envIsOneShot), fromZV(mn.envTriggersFromZero)
     {
     }
 
@@ -118,8 +119,23 @@ template <typename T> struct EnvelopeSupport
             }
             else
             {
+                auto svs = startingValue;
+                if (fromZV > 0.5)
+                {
+                    startingValue = 0;
+                }
                 env.attackFromWithDelay(startingValue, delay,
                                         std::clamp(attackv + attackMod, minAttack, 1.f));
+                if (fromZV > 0.5)
+                {
+                    static constexpr float dbs{1.f / blockSize};
+                    auto v = 1.0;
+                    for (int i = 0; i < blockSize; ++i)
+                    {
+                        env.outputCache[i] = v * svs;
+                        v -= dbs;
+                    }
+                }
             }
         }
         else if (constantEnv)

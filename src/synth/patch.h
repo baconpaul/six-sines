@@ -191,7 +191,8 @@ struct Patch : pats::PatchBase<Patch, Param>
 
     struct DAHDSRMixin
     {
-        DAHDSRMixin(const std::string name, int id0, bool longAdsr, bool alwaysAdd = false)
+        DAHDSRMixin(const std::string name, int id0, bool longAdsr, bool alwaysAdd = false,
+                    int id1 = -1)
             : delay(floatEnvRateMd()
                         .withName(name + " Env Delay")
                         .withGroupName(name)
@@ -266,7 +267,12 @@ struct Patch : pats::PatchBase<Patch, Param>
                                .withName(name + " Is OneShot")
                                .withGroupName(name)
                                .withDefault(false)
-                               .withID(id0 + 12))
+                               .withID(id0 + 12)),
+              envTriggersFromZero(boolMd()
+                                      .withName(name + " Triggers from Zero")
+                                      .withGroupName(name)
+                                      .withDefault(false)
+                                      .withID((id1 > 0 ? id1 : (id0 + 13)) + 0))
         {
             delay.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
             attack.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
@@ -278,7 +284,8 @@ struct Patch : pats::PatchBase<Patch, Param>
         }
 
         Param delay, attack, hold, decay, sustain, release, envPower;
-        Param aShape, dShape, rShape, triggerMode, envIsMultiplcative, envIsOneShot;
+        Param aShape, dShape, rShape, triggerMode, envIsMultiplcative, envIsOneShot,
+            envTriggersFromZero;
 
         void appendDAHDSRParams(std::vector<Param *> &res)
         {
@@ -295,6 +302,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             res.push_back(&triggerMode);
             res.push_back(&envIsMultiplcative);
             res.push_back(&envIsOneShot);
+            res.push_back(&envTriggersFromZero);
         }
     };
 
@@ -672,7 +680,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                       .withGroupName(name(idx))
                       .withID(id(35, idx))
                       .withUnorderedMapFormatting({{0, std::string() + u8"\U000003C6"}, {1, "A"}})),
-              DAHDSRMixin(name(idx), id(2, idx), false), LFOMixin(name(idx), id(14, idx)),
+              DAHDSRMixin(name(idx), id(2, idx), false, false, id(50, idx)),
+              LFOMixin(name(idx), id(14, idx)),
               lfoToDepth(floatMd()
                              .asPercentBipolar()
                              .withName(name(idx) + " LFO to Depth")
@@ -785,12 +794,13 @@ struct Patch : pats::PatchBase<Patch, Param>
                          .withFlags(CLAP_PARAM_IS_STEPPED)
                          .withDefault(idx == 0 ? true : false)
                          .withID(id(1, idx))),
-              DAHDSRMixin(name(idx), id(2, idx), false), pan(floatMd()
-                                                                 .asPercentBipolar()
-                                                                 .withName(name(idx) + " Pan")
-                                                                 .withGroupName(name(idx))
-                                                                 .withDefault(0.f)
-                                                                 .withID(id(15, idx))),
+              DAHDSRMixin(name(idx), id(2, idx), false, false, id(20, idx)),
+              pan(floatMd()
+                      .asPercentBipolar()
+                      .withName(name(idx) + " Pan")
+                      .withGroupName(name(idx))
+                      .withDefault(0.f)
+                      .withID(id(15, idx))),
               LFOMixin(name(idx), id(30, idx)),
               lfoToLevel(floatMd()
                              .asPercentBipolar()

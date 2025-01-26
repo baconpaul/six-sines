@@ -184,6 +184,7 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
             return;
         auto tmv = (int)std::round(patchPartPtr->triggerMode.value);
         auto osv = (bool)std::round(patchPartPtr->envIsOneShot.value);
+        auto tfz = (bool)std::round(patchPartPtr->envTriggersFromZero.value);
 
         auto genSet = [w = juce::Component::SafePointer(asComp())](int nv)
         {
@@ -229,6 +230,20 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
 
                       w->editor.uiToAudio.push(
                           {Synth::UIToAudioMsg::Action::SET_PARAM, pid, (float)(!osv)});
+                      w->editor.flushOperator();
+                  });
+        p.addItem("Retrigger from Zero", true, tfz,
+                  [tfz, w = juce::Component::SafePointer(asComp())]()
+                  {
+                      if (!w)
+                          return;
+
+                      auto pid = w->patchPartPtr->envTriggersFromZero.meta.id;
+                      w->editor.patchCopy.paramMap.at(pid)->value = !(tfz);
+                      w->setTriggerLabel();
+
+                      w->editor.uiToAudio.push(
+                          {Synth::UIToAudioMsg::Action::SET_PARAM, pid, (float)(!tfz)});
                       w->editor.flushOperator();
                   });
         p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
