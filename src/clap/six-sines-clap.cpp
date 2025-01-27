@@ -223,7 +223,9 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             case CLAP_EVENT_NOTE_OFF:
             {
                 auto nevt = reinterpret_cast<const clap_event_note *>(nextEvent);
-                vm->processNoteOffEvent(nevt->port_index, nevt->channel, nevt->key, nevt->note_id,
+                auto nid = nevt->note_id;
+                nid = -1; // see issue #168
+                vm->processNoteOffEvent(nevt->port_index, nevt->channel, nevt->key, nid,
                                         nevt->velocity);
             }
             break;
