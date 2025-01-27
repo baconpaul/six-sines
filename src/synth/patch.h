@@ -24,6 +24,7 @@
 #include "configuration.h"
 #include "sst/cpputils/constructors.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
+#include "sst/basic-blocks/dsp/Lag.h"
 #include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
 #include "sst/plugininfra/patch-support/patch_base.h"
 #include "synth/matrix_index.h"
@@ -51,6 +52,9 @@ struct Param : pats::ParamBase
         TRIGGERMODE = 1 << 1, // trigger mode for when we nuked voice
         WAVEFORM = 1 << 2,
     };
+
+    sst::basic_blocks::dsp::LinearLag<float, false> lag;
+    Param *nextLag{nullptr}, *prevLag{nullptr};
 };
 
 struct Patch : pats::PatchBase<Patch, Param>
