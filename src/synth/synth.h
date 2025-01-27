@@ -314,6 +314,22 @@ struct Synth
     {
         if (lagHandler.active)
             lagHandler.instantlySnap();
+
+        auto curr = lagHead;
+        lagHead = nullptr;
+        while (curr)
+        {
+            curr->lag.snapToTarget();
+            curr->value = curr->lag.v;
+            auto cc = curr;
+            curr = curr->nextLag;
+            if (curr)
+            {
+                curr->prevLag = nullptr;
+            }
+            cc->nextLag = nullptr;
+            cc->prevLag = nullptr;
+        }
     }
 
     void pushFullUIRefresh();
@@ -321,9 +337,16 @@ struct Synth
     {
         doFullRefresh = true;
         reapplyControlSettings();
+
+        for (auto &[i, p] : patch.paramMap)
+        {
+            p->lag.snapTo(p->value);
+        }
     }
 
     void reapplyControlSettings();
+
+    Param *lagHead{nullptr};
 
     sst::basic_blocks::dsp::VUPeak vuPeak;
     int32_t updateVuEvery{(int32_t)(48000 * 2.5 / 60 / blockSize)}; // approx

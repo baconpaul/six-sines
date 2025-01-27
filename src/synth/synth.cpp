@@ -63,7 +63,6 @@ void Synth::setSampleRate(double sampleRate)
 {
     auto ohsr = hostSampleRate;
     auto oesr = engineSampleRate;
-    ;
 
     hostSampleRate = sampleRate;
     // Look for 44 variants
@@ -151,6 +150,15 @@ void Synth::setSampleRate(double sampleRate)
             src_set_ratio(rState[i], sampleRateRatio);
         }
     }
+
+    for (auto &[i, p] : patch.paramMap)
+    {
+        p->lag.setRateInMilliseconds(64.0 / 48000.0, engineSampleRate, 1.0 / blockSize);
+        p->lag.snapTo(p->value);
+        p->nextLag = nullptr;
+        p->prevLag = nullptr;
+    }
+    lagHead = nullptr;
 }
 
 template <bool multiOut> void Synth::processInternal(const clap_output_events_t *outq)
@@ -164,6 +172,35 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
     {
         memset(output, 0, sizeof(output));
         return;
+    }
+
+    auto curr = lagHead;
+    while (curr)
+    {
+        curr->lag.process();
+        curr->value = curr->lag.v;
+        if (!curr->lag.isActive())
+        {
+            if (lagHead == curr)
+                lagHead = curr->nextLag;
+
+            auto nl = curr->nextLag;
+            if (curr->prevLag)
+            {
+                curr->prevLag->nextLag = curr->nextLag;
+            }
+            if (curr->nextLag)
+            {
+                curr->nextLag->prevLag = curr->prevLag;
+            }
+            curr->prevLag = nullptr;
+            curr->nextLag = nullptr;
+            curr = nl;
+        }
+        else
+        {
+            curr = curr->nextLag;
+        }
     }
 
     monoValues.attackFloorOnRetrig = patch.output.attackFloorOnRetrig > 0.5;
@@ -609,7 +646,18 @@ void Synth::handleParamValue(Param *p, uint32_t pid, float value)
         p = patch.paramMap.at(pid);
     }
 
-    p->value = value;
+    // p->value = value;
+    p->lag.setTarget(value);
+    if (lagHead == nullptr)
+    {
+        lagHead = p;
+    }
+    else if (p != lagHead && p->nextLag == nullptr && p->prevLag == nullptr)
+    {
+        p->nextLag = lagHead;
+        lagHead->prevLag = p;
+        lagHead = p;
+    }
     AudioToUIMsg au = {AudioToUIMsg::UPDATE_PARAM, pid, value};
     audioToUi.push(au);
 }
