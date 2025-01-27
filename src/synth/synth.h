@@ -75,6 +75,7 @@ struct Synth
     Voice *removeFromVoiceList(Voice *); // returns next
     void dumpVoiceList();
     int voiceCount{0};
+    int priorKey{};
 
     struct VMResponder
     {
@@ -120,6 +121,7 @@ struct Synth
 
         void terminateVoice(Voice *voice)
         {
+            synth.priorKey = voice->voiceValues.key;
             voice->voiceValues.setGated(false);
             voice->fadeBlocks = Voice::fadeOverBlocks;
         }
@@ -169,6 +171,8 @@ struct Synth
                             obuf[vc].voice = &synth.voices[i];
                             synth.voices[i].used = true;
                             synth.voices[i].voiceValues.setGated(true);
+                            synth.voices[i].voiceValues.portaDiff = std::abs(synth.priorKey - key);
+                            synth.voices[i].setupPortaTo(key, synth.patch.output.portaTime.value);
                             synth.voices[i].voiceValues.setKey(key);
                             synth.voices[i].voiceValues.channel = ch;
                             synth.voices[i].voiceValues.velocity = vel;
