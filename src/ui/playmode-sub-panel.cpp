@@ -14,6 +14,7 @@
  */
 
 #include "playmode-sub-panel.h"
+#include <sst/jucegui/layouts/ListLayout.h>
 
 namespace baconpaul::six_sines::ui
 {
@@ -82,6 +83,7 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     addAndMakeVisible(*triggerButton);
 
     createComponent(editor, *this, on.pianoModeActive, pianoModeButton, pianoModeButtonD);
+    pianoModeButton->setLabel("Piano Mode");
     addAndMakeVisible(*pianoModeButton);
 
     createComponent(editor, *this, on.unisonCount, uniCt, uniCtD);
@@ -98,9 +100,13 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
 
     createComponent(editor, *this, on.unisonSpread, uniSpread, uniSpreadD);
     addAndMakeVisible(*uniSpread);
-    uniSpreadL = std::make_unique<jcmp::Label>();
-    uniSpreadL->setText("Spread");
-    addAndMakeVisible(*uniSpreadL);
+    uniSpreadG = std::make_unique<jcmp::GlyphPainter>(jcmp::GlyphPainter::TUNING);
+    addAndMakeVisible(*uniSpreadG);
+
+    createComponent(editor, *this, on.unisonPan, uniPan, uniPanD);
+    addAndMakeVisible(*uniPan);
+    uniPanG = std::make_unique<jcmp::GlyphPainter>(jcmp::GlyphPainter::STEREO);
+    addAndMakeVisible(*uniPanG);
 
     uniTitle = std::make_unique<jcmp::RuledLabel>();
     uniTitle->setText("Unison");
@@ -170,80 +176,63 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
 
 void PlayModeSubPanel::resized()
 {
-    auto r = getLocalBounds().reduced(uicMargin, 0);
-    auto depx = r.getX();
-    auto depy = getLocalBounds().getY();
-    auto xtraW = 15;
-    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, voiceLimitL);
-    depy += uicTitleLabelHeight;
-    voiceLimit->setBounds(
-        juce::Rectangle<int>(depx, depy, uicKnobSize + 2 * xtraW, uicLabelHeight));
-    depy += uicLabelHeight + uicMargin;
+    namespace jlo = sst::jucegui::layouts;
+    auto lo = jlo::HList().at(uicMargin, 0).withAutoGap(2 * uicMargin);
 
-    auto pmw{14};
-    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, bendTitle);
-    auto bbx = juce::Rectangle<int>(depx, depy + uicTitleLabelHeight, uicKnobSize + 2 * xtraW,
-                                    uicLabelHeight);
-    bUpL->setBounds(bbx.withWidth(pmw));
-    bUp->setBounds(bbx.withTrimmedLeft(pmw + uicMargin));
-    bbx = bbx.translated(0, uicLabelHeight + uicMargin);
+    // Voice Bend and Octave
+    auto skinny = uicKnobSize + 30;
+    auto vbol = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
 
-    bDnL->setBounds(bbx.withWidth(pmw));
-    bDn->setBounds(bbx.withTrimmedLeft(pmw + uicMargin));
-    bbx = bbx.translated(0, uicLabelHeight + uicMargin);
+    vbol.add(titleLabelGaplessLayout(voiceLimitL));
+    vbol.add(jlo::Component(*voiceLimit).withHeight(uicLabelHeight));
+    vbol.add(titleLabelGaplessLayout(bendTitle));
 
-    positionTitleLabelAt(bbx.getX(), bbx.getY(), bbx.getWidth(), tsposeTitle);
-    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
-    tsposeButton->setBounds(bbx.withHeight(uicLabelHeight));
+    vbol.add(sideLabel(bUpL, bUp));
+    vbol.add(sideLabel(bDnL, bDn));
 
-    depx += bbx.getWidth() + uicMargin;
-    depy = r.getY();
-    positionTitleLabelAt(depx, depy, bbx.getWidth(), playTitle);
-    bbx = juce::Rectangle<int>(depx, depy + uicTitleLabelHeight, bbx.getWidth(), uicLabelHeight);
-    playMode->setBounds(bbx.withHeight(2 * uicLabelHeight + uicMargin));
-    bbx = bbx.translated(0, 2 * uicLabelHeight + 2 * uicMargin);
-    triggerButton->setBounds(bbx.withHeight(uicLabelHeight));
-    bbx = bbx.translated(0, uicLabelHeight + uicMargin);
-    pianoModeButton->setBounds(bbx.withHeight(uicLabelHeight));
-    pianoModeButton->setLabel("Piano Mode");
-    bbx = bbx.translated(0, uicLabelHeight + uicMargin);
+    vbol.add(titleLabelGaplessLayout(tsposeTitle));
+    vbol.add(jlo::Component(*tsposeButton).withHeight(uicLabelHeight));
 
-    positionKnobAndLabel(bbx.getX() + xtraW, bbx.getY() + uicMargin, portaTime, portaL);
+    lo.add(vbol);
 
-    depx += bbx.getWidth() + uicMargin;
-    depy = r.getY();
-    positionTitleLabelAt(depx, depy, bbx.getWidth(), uniTitle);
-    bbx = juce::Rectangle<int>(depx, depy + uicTitleLabelHeight, bbx.getWidth(), uicLabelHeight);
-    uniCt->setBounds(bbx.withHeight(uicLabelHeight));
-    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
-    uniCtL->setBounds(bbx.withHeight(uicLabelHeight));
-    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
-    uniRPhase->setBounds(bbx.withHeight(uicLabelHeight));
-    positionKnobAndLabel(bbx.getX() + xtraW, portaTime->getY(), uniSpread, uniSpreadL);
+    // Play mode
+    auto pml = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
+    pml.add(titleLabelGaplessLayout(playTitle));
+    pml.add(jlo::Component(*playMode).withHeight(2 * uicLabelHeight + 2 * uicMargin));
+    pml.add(jlo::Component(*triggerButton).withHeight(uicLabelHeight));
+    pml.add(jlo::Component(*pianoModeButton).withHeight(uicLabelHeight));
+    pml.add(jlo::Component(*portaL).withHeight(uicLabelHeight));
+    pml.add(jlo::Component(*portaTime).withHeight(uicLabelHeight));
+    lo.add(pml);
 
-    depx += bbx.getWidth() + uicMargin;
-    depy = r.getY();
-    positionTitleLabelAt(depx, depy, bbx.getWidth(), mpeTitle);
-    bbx = juce::Rectangle<int>(depx, depy + uicTitleLabelHeight, bbx.getWidth(), uicLabelHeight);
-    mpeActiveButton->setBounds(bbx.withHeight(uicLabelHeight));
-    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
-    mpeRange->setBounds(bbx.withHeight(uicLabelHeight));
-    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
-    mpeRangeL->setBounds(bbx.withHeight(uicLabelHeight));
-    bbx = bbx.translated(0, 2 * uicMargin + uicLabelHeight);
+    // Unison Controls
+    auto uml = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
+    uml.add(titleLabelGaplessLayout(uniTitle));
+    uml.add(jlo::Component(*uniCt).withHeight(uicLabelHeight));
+    uml.add(jlo::Component(*uniCtL).withHeight(uicLabelHeight));
+    uml.add(jlo::Component(*uniRPhase).withHeight(uicLabelHeight));
+    uml.add(sideLabel(uniSpreadG, uniSpread));
+    uml.add(sideLabel(uniPanG, uniPan));
 
-    positionTitleLabelAt(depx, bbx.getY(), bbx.getWidth(), panicTitle);
-    bbx = bbx.translated(0, uicTitleLabelHeight);
-    panicButton->setBounds(bbx.withHeight(uicLabelHeight));
+    lo.add(uml);
 
-    depx += bbx.getWidth() + uicMargin;
-    bbx = bbx.withWidth(2.0 * bbx.getWidth());
-    depy = r.getY();
-    positionTitleLabelAt(depx, depy, bbx.getWidth(), srStratLab);
-    bbx = juce::Rectangle<int>(depx, depy + uicTitleLabelHeight, bbx.getWidth(), uicLabelHeight);
-    srStrat->setBounds(bbx);
-    bbx = bbx.translated(0, uicMargin + uicLabelHeight);
-    rsEng->setBounds(bbx);
+    auto mpl = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
+    mpl.add(titleLabelGaplessLayout(mpeTitle));
+    mpl.add(jlo::Component(*mpeActiveButton).withHeight(uicLabelHeight));
+    mpl.add(jlo::Component(*mpeRange).withHeight(uicLabelHeight));
+    mpl.add(jlo::Component(*mpeRangeL).withHeight(uicLabelHeight));
+
+    mpl.add(titleLabelGaplessLayout(panicTitle));
+    mpl.add(jlo::Component(*panicButton).withHeight(uicLabelHeight));
+    lo.add(mpl);
+
+    auto rsl = jlo::VList().withWidth(2 * skinny).withAutoGap(uicMargin);
+    rsl.add(titleLabelGaplessLayout(srStratLab));
+    rsl.add(jlo::Component(*srStrat).withHeight(uicLabelHeight));
+    rsl.add(jlo::Component(*rsEng).withHeight(uicLabelHeight));
+    lo.add(rsl);
+
+    lo.doLayout();
 }
 
 void PlayModeSubPanel::setTriggerButtonLabel()
@@ -326,7 +315,9 @@ void PlayModeSubPanel::setEnabledState()
 
     auto uc = editor.patchCopy.output.unisonCount.value;
     uniSpread->setEnabled(uc > 1.5);
-    uniSpreadL->setEnabled(uc > 1.5);
+    uniSpreadG->setEnabled(uc > 1.5);
+    uniPan->setEnabled(uc > 1.5);
+    uniPanG->setEnabled(uc > 1.5);
     uniRPhase->setEnabled(uc > 1.5);
     if (uc < 1.5)
         uniCtL->setText("Voice");

@@ -50,7 +50,7 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<jcmp::ToggleButton> pianoModeButton;
     std::unique_ptr<PatchDiscrete> pianoModeButtonD;
 
-    std::unique_ptr<jcmp::Knob> portaTime;
+    std::unique_ptr<jcmp::HSliderFilled> portaTime;
     std::unique_ptr<PatchContinuous> portaTimeD;
     std::unique_ptr<jcmp::Label> portaL;
     void setEnabledState();
@@ -62,9 +62,9 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<jcmp::ToggleButton> uniRPhase;
     std::unique_ptr<PatchDiscrete> uniRPhaseDD;
 
-    std::unique_ptr<jcmp::Knob> uniSpread;
-    std::unique_ptr<PatchContinuous> uniSpreadD;
-    std::unique_ptr<jcmp::Label> uniSpreadL;
+    std::unique_ptr<jcmp::HSliderFilled> uniSpread, uniPan;
+    std::unique_ptr<PatchContinuous> uniSpreadD, uniPanD;
+    std::unique_ptr<jcmp::GlyphPainter> uniSpreadG, uniPanG;
 
     std::unique_ptr<jcmp::ToggleButton> mpeActiveButton;
     std::unique_ptr<PatchDiscrete> mpeActiveButtonD;

@@ -1170,6 +1170,12 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      {ResamplerEngine::LINTERP, "Linear Interp"},
                                      {ResamplerEngine::ZOH, "ZOH"},
                                  })),
+              unisonPan(floatMd()
+                            .withName(name() + " Unison Stereo Field")
+                            .asPercent()
+                            .withDefault(0.8)
+                            .withGroupName(name())
+                            .withID(id(42))),
               ModulationMixin(name(), id(120)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this](int i)
@@ -1196,7 +1202,7 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         Param level, velSensitivity, playMode;
         Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, pianoModeActive;
-        Param unisonCount, unisonSpread, uniPhaseRand;
+        Param unisonCount, unisonSpread, uniPhaseRand, unisonPan;
         Param mpeActive, mpeBendRange;
         Param octTranspose, fineTune, pan, lfoDepth;
         Param attackFloorOnRetrig, rephaseOnRetrigger;
@@ -1217,6 +1223,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &pianoModeActive,
                                      &unisonCount,
                                      &unisonSpread,
+                                     &unisonPan,
                                      &uniPhaseRand,
                                      &mpeActive,
                                      &mpeBendRange,

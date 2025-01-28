@@ -101,6 +101,22 @@ template <typename T> inline sst::jucegui::layouts::LayoutComponent titleLabelLa
     return res;
 };
 
+template <typename T> inline sst::jucegui::layouts::LayoutComponent titleLabelGaplessLayout(T &f)
+{
+    namespace jlo = sst::jucegui::layouts;
+
+    return jlo::Component(*f).withHeight(uicTitleLabelInnerBox);
+};
+
+template <typename L, typename C>
+inline sst::jucegui::layouts::LayoutComponent sideLabel(const L &l, const C &c)
+{
+    namespace jlo = sst::jucegui::layouts;
+    auto ul = jlo::HList().withHeight(uicLabelHeight);
+    ul.add(jlo::Component(*l).withWidth(14));
+    ul.add(jlo::Component(*c).expandToFill());
+    return ul;
+};
 template <typename K, typename L>
 inline sst::jucegui::layouts::LayoutComponent labelKnobLayout(const K &k, const L &l)
 {
