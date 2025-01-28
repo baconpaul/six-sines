@@ -75,9 +75,15 @@ void Voice::renderBlock()
     retuneKey += out.fineTune * 0.01 + out.ftModNode.level * 2;
 
     if (voiceValues.portaDiff > 1e-5)
+    {
         voiceValues.portaDiff -= voiceValues.dPorta;
+        voiceValues.portaFrac += voiceValues.dPortaFrac;
+    }
     else
+    {
         voiceValues.portaDiff = 0;
+        voiceValues.portaFrac = 0;
+    }
 
     auto octSh = std::clamp((int)std::round(out.octTranspose), -3, 3);
     static constexpr float octFac[7] = {1.0 / 8.0, 1.0 / 4.0, 1.0 / 2.0, 1.0, 2.0, 4.0, 8.0};
@@ -223,8 +229,10 @@ void Voice::cleanup()
     fadeBlocks = -1;
     voiceValues.setGated(false);
     voiceValues.portaDiff = 0;
+    voiceValues.portaFrac = 0;
     voiceValues.portaSign = 0;
     voiceValues.dPorta = 0;
+    voiceValues.dPortaFrac = 0;
     voiceValues.mpeBendInSemis = 0;
 
     for (auto &s : src)
@@ -259,6 +267,8 @@ void Voice::setupPortaTo(uint16_t newKey, float log2Time)
         voiceValues.portaSign = 0;
         voiceValues.portaDiff = 0;
         voiceValues.dPorta = 0;
+        voiceValues.portaFrac = 0;
+        voiceValues.dPortaFrac = 0;
         return;
     }
     auto blocks = monoValues.twoToTheX.twoToThe(log2Time) * monoValues.sr.sampleRate / blockSize;
@@ -278,6 +288,8 @@ void Voice::setupPortaTo(uint16_t newKey, float log2Time)
         voiceValues.portaDiff = std::abs(voiceValues.key - newKey);
     }
     voiceValues.dPorta = voiceValues.portaDiff / blocks;
+    voiceValues.dPortaFrac = 1.0 / blocks;
+    voiceValues.portaFrac = 0;
     voiceValues.portaSign = sign;
 }
 
