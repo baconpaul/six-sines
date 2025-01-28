@@ -137,7 +137,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
     {
         auto modW{uicModulationWidth};
 
-        namespace jlo = sst::jucegui::layout;
+        namespace jlo = sst::jucegui::layouts;
 
         auto lo = jlo::VList()
                       .at(r.getRight() - uicModulationWidth, r.getY())
