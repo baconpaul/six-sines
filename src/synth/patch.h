@@ -1246,6 +1246,10 @@ struct Patch : pats::PatchBase<Patch, Param>
 
     char name[256]{"Init"};
 
+    int priorKey{-1};
+    int priorDiff{0};
+    int priorSign{0};
+
     float migrateParamValueFromVersion(Param *p, float value, uint32_t version);
     void migratePatchFromVersion(uint32_t version);
 };

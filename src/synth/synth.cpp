@@ -225,6 +225,14 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
             if (cvoice->out.env.stage > OutputNode::env_t::s_release || cvoice->fadeBlocks == 0)
             {
                 auto rvoice = cvoice;
+
+                if (voiceCount == 1 && patch.output.playMode > 0)
+                {
+                    patch.priorKey = rvoice->voiceValues.key;
+                    patch.priorDiff = rvoice->voiceValues.portaDiff;
+                    patch.priorSign = rvoice->voiceValues.portaSign;
+                }
+
                 cvoice = removeFromVoiceList(cvoice);
                 rvoice->next = removeVoice;
                 removeVoice = rvoice;
