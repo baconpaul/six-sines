@@ -47,7 +47,7 @@ struct VoiceValues
 
     float polyAt{0};
 
-    float portaDiff{0}, dPorta{0};
+    float portaDiff{0}, dPorta{0}, portaFrac{0}, dPortaFrac{0};
     int portaSign{0};
 
     float mpeBendInSemis{0}, mpeBendNormalized{0}, mpeTimbre{0}, mpePressure{0};
