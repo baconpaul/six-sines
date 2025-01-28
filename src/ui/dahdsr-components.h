@@ -24,7 +24,7 @@
 #include "ui-constants.h"
 #include "sst/jucegui/components/RuledLabel.h"
 
-#include "ui/layout/Layout.h"
+#include "sst/jucegui/layouts/ListLayout.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -99,7 +99,7 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         if (!titleLab || !slider[0])
             return {};
 
-        namespace jlo = sst::jucegui::layout;
+        namespace jlo = sst::jucegui::layouts;
 
         auto lo = jlo::VList()
                       .at(x, y)

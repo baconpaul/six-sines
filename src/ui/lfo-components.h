@@ -23,7 +23,7 @@
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
 #include "sst/jucegui/components/RuledLabel.h"
-#include "ui/layout/Layout.h"
+#include "sst/jucegui/layouts/ListLayout.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -86,7 +86,7 @@ template <typename Comp, typename Patch> struct LFOComponents
         if (!titleLab)
             return {};
 
-        namespace jlo = sst::jucegui::layout;
+        namespace jlo = sst::jucegui::layouts;
 
         auto lo = jlo::VList()
                       .at(x, y)
