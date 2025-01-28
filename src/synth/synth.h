@@ -150,7 +150,8 @@ struct Synth
                     }
                     uniVal[i] = val;
                     uniScale[i] = 2 * (i - 1.0 * (ct - 1) / 2) / (ct - 1);
-                    uniPan[i] = 0.8 * uniScale[i]; // bring it in a bit
+                    uniPan[i] =
+                        std::clamp(synth.patch.output.unisonPan.value * uniScale[i], -1.f, 1.f);
                 }
             }
 
@@ -187,7 +188,6 @@ struct Synth
                             made++;
                             lastStart = i + 1;
                             break;
-                            ;
                         }
                     }
                 }
