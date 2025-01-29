@@ -153,7 +153,7 @@ void Synth::setSampleRate(double sampleRate)
 
     for (auto &[i, p] : patch.paramMap)
     {
-        p->lag.setRateInMilliseconds(64.0 / 48000.0, engineSampleRate, 1.0 / blockSize);
+        p->lag.setRateInMilliseconds(1000.0 * 64.0 / 48000.0, engineSampleRate, 1.0 / blockSize);
         p->lag.snapTo(p->value);
         p->nextLag = nullptr;
         p->prevLag = nullptr;
