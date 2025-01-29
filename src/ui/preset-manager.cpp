@@ -305,20 +305,32 @@ void PresetManager::setStateForDisplayName(const std::string &s)
     {
         q = q.substr(sp + 1);
     }
-    if (q != s)
+
+    if (s == "Init")
     {
-        if (s == "Init")
+        discreteDataBinding->setValueFromModel(0);
+    }
+    else
+    {
+        bool found{false};
+        int idx{1};
+        for (const auto &[c, pp] : factoryPatchVector)
         {
-            discreteDataBinding->setValueFromModel(0);
-        }
-        else
-        {
-            bool found{false};
-            int idx{1};
-            for (const auto &[c, pp] : factoryPatchVector)
+            auto p = pp.substr(0, pp.find(".sxsnp"));
+            if (p == s)
             {
-                auto p = pp.substr(0, pp.find(".sxsnp"));
-                if (p == s)
+                discreteDataBinding->setValueFromModel(idx);
+                found = true;
+                break;
+            }
+            idx++;
+        }
+        if (!found)
+        {
+            for (auto &p : userPatches)
+            {
+                auto pn = p.filename().replace_extension("").u8string();
+                if (s == pn)
                 {
                     discreteDataBinding->setValueFromModel(idx);
                     found = true;
@@ -326,25 +338,11 @@ void PresetManager::setStateForDisplayName(const std::string &s)
                 }
                 idx++;
             }
-            if (!found)
-            {
-                for (auto &p : userPatches)
-                {
-                    auto pn = p.filename().replace_extension("").u8string();
-                    if (s == pn)
-                    {
-                        discreteDataBinding->setValueFromModel(idx);
-                        found = true;
-                        break;
-                    }
-                    idx++;
-                }
-            }
-            if (!found)
-            {
-                discreteDataBinding->setExtra(s);
-                discreteDataBinding->setValueFromModel(-1);
-            }
+        }
+        if (!found)
+        {
+            discreteDataBinding->setExtra(s);
+            discreteDataBinding->setValueFromModel(-1);
         }
     }
 }
