@@ -49,6 +49,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         &lfoToRatioFine;                                          // in  frequency multiple
     const float &waveForm, &kt, &ktv, &startPhase, &octTranspose; // in octaves;
     bool active{false};
+    bool unisonParticipatesPan{true}, unisonParticipatesTune{true};
+    bool operatorOutputsToMain{true}, operatorOutputsToOp{true};
 
     // todo waveshape
 
@@ -98,6 +100,28 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             else
             {
                 lfoFacP = &one;
+            }
+
+            unisonParticipatesPan = (int)(sourceNode.unisonParticipation.value) & 2;
+            unisonParticipatesTune = (int)(sourceNode.unisonParticipation.value) & 1;
+
+            auto u2m = (int)(sourceNode.unisonToMain.value);
+            auto u2op = (int)(sourceNode.unisonToOpOut.value);
+
+            operatorOutputsToMain = true;
+            if (u2m == 1)
+            {
+                operatorOutputsToMain = !(voiceValues.hasCenterVoice) || voiceValues.isCenterVoice;
+            }
+            else if (u2m == 2)
+            {
+                operatorOutputsToMain = false;
+            }
+
+            operatorOutputsToOp = true;
+            if (u2op == 1)
+            {
+                operatorOutputsToOp = !(voiceValues.hasCenterVoice) || voiceValues.isCenterVoice;
             }
         }
     }
@@ -174,7 +198,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                       lfoFac * lfoRatioAtten * (lfoToRatio + centsScale * lfoToRatioFine) *
                           lfo.outputBlock[0] +
                       ratioMod) *
-                  voiceValues.uniRatioMul;
+                  (unisonParticipatesTune ? voiceValues.uniRatioMul : 1.f);
 
         if (firstTime)
             priorRF = rf;

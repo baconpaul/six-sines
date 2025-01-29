@@ -155,6 +155,16 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     tsposeButtonL->setText("Octave");
     addAndMakeVisible(*tsposeButtonL);
 
+    unisonBehaviorB = std::make_unique<jcmp::TextPushButton>();
+    unisonBehaviorB->setLabel("Unison");
+    unisonBehaviorB->setOnCallback(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->showUnisonFeaturesMenu();
+        });
+    addAndMakeVisible(*unisonBehaviorB);
+
     setEnabledState();
 
     resized();
@@ -197,6 +207,7 @@ void SourceSubPanel::resized()
     auto c1 = jlo::VList().withWidth(uicKnobSize + 18).withAutoGap(uicMargin);
     c1.add(jlo::Component(*tsposeButton).withHeight(uicLabelHeight));
     c1.add(jlo::Component(*tsposeButtonL).withHeight(uicLabelHeight));
+    c1.add(jlo::Component(*unisonBehaviorB).withHeight(uicLabelHeight));
     sktcol.add(c1);
 
     auto c2 = jlo::VList().withWidth(uicKnobSize + 18).withAutoGap(uicMargin);
@@ -225,7 +236,81 @@ void SourceSubPanel::setEnabledState()
     keyTrackValue->setEnabled(ekt);
     keyTrackValueLL->setEnabled(ekt);
     tsposeButton->setEnabled(!ekt);
+
+    unisonBehaviorB->setEnabled(editor.patchCopy.output.unisonCount > 1);
     repaint();
+}
+
+void SourceSubPanel::showUnisonFeaturesMenu()
+{
+    if (editor.patchCopy.output.unisonCount < 1.5)
+        return;
+
+    auto p = juce::PopupMenu();
+    auto canCenter = (int)(editor.patchCopy.output.unisonCount.value) % 2;
+    auto upart = (int)editor.patchCopy.sourceNodes[index].unisonParticipation.value;
+    auto upid = editor.patchCopy.sourceNodes[index].unisonParticipation.meta.id;
+    p.addSectionHeader("Op " + std::to_string(index + 1) + " Unison Behavior");
+    p.addSeparator();
+    p.addItem("Participates in Tuning", true, (upart & 1),
+              [upid, upart, w = juce::Component::SafePointer(this)]()
+              {
+                  if (!w)
+                      return;
+
+                  auto onoff = upart & 1;
+                  auto nv = (upart & (~1)) | (onoff ? 0 : 1);
+                  w->editor.sendParamSetValue(upid, nv);
+              });
+    p.addItem("Participates in Pan", true, (upart & 2),
+              [upid, upart, w = juce::Component::SafePointer(this)]()
+              {
+                  if (!w)
+                      return;
+
+                  auto onoff = upart & 2;
+                  auto nv = (upart & (~2)) | (onoff ? 0 : 2);
+                  w->editor.sendParamSetValue(upid, nv);
+              });
+    p.addSeparator();
+    auto u2m = (int)editor.patchCopy.sourceNodes[index].unisonToMain.value;
+    auto u2mid = editor.patchCopy.sourceNodes[index].unisonToMain.meta.id;
+
+    p.addItem("All Voices to Main", true, u2m == 0,
+              [w = juce::Component::SafePointer(this), u2mid]()
+              {
+                  if (w)
+                      w->editor.sendParamSetValue(u2mid, 0);
+              });
+    p.addItem("Center Voice Only to Main", canCenter, u2m == 1,
+              [w = juce::Component::SafePointer(this), u2mid]()
+              {
+                  if (w)
+                      w->editor.sendParamSetValue(u2mid, 1);
+              });
+    p.addItem("No Voices to Main", true, u2m == 2,
+              [w = juce::Component::SafePointer(this), u2mid]()
+              {
+                  if (w)
+                      w->editor.sendParamSetValue(u2mid, 2);
+              });
+    p.addSeparator();
+    auto u2o = (int)editor.patchCopy.sourceNodes[index].unisonToOpOut.value;
+    auto u2oid = editor.patchCopy.sourceNodes[index].unisonToOpOut.meta.id;
+    p.addItem("All Voices to Op " + std::to_string(index + 1) + "Out", true, u2o == 0,
+              [w = juce::Component::SafePointer(this), u2oid]()
+              {
+                  if (w)
+                      w->editor.sendParamSetValue(u2oid, 0);
+              });
+    p.addItem("Center Voice Only to Op " + std::to_string(index + 1) + " Out", canCenter, u2o == 1,
+              [w = juce::Component::SafePointer(this), u2oid]()
+              {
+                  if (w)
+                      w->editor.sendParamSetValue(u2oid, 1);
+              });
+
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
 }
 
 } // namespace baconpaul::six_sines::ui

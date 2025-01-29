@@ -59,6 +59,7 @@ struct VoiceValues
     int uniIndex{0};
     int uniCount{1};
     float uniPMScale{0.f}; // -1 to 1 for unison field
+    bool hasCenterVoice{false}, isCenterVoice{false};
     bool phaseRandom{false}, rephaseOnRetrigger{false};
 
   private:

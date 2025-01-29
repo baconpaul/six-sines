@@ -67,6 +67,8 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::ToggleButton> keyTrack;
     std::unique_ptr<PatchDiscrete> keyTrackD;
 
+    std::unique_ptr<jcmp::TextPushButton> unisonBehaviorB;
+
     std::unique_ptr<jcmp::HSliderFilled> keyTrackValue;
     std::unique_ptr<PatchContinuous> keyTrackValueD;
     std::unique_ptr<jcmp::Label> keyTrackValueLL;
@@ -80,6 +82,7 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::Label> tsposeButtonL;
 
     void setEnabledState();
+    void showUnisonFeaturesMenu();
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

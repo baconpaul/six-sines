@@ -249,6 +249,10 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
                     {
                         continue;
                     }
+                    if (!cvoice->mixerNode[i].from.operatorOutputsToOp)
+                    {
+                        continue;
+                    }
                     mixerActive[i] = true;
                     mech::mul_block<blockSize>(cvoice->out.finalEnvLevel,
                                                cvoice->mixerNode[i].output[0], stp[0]);

@@ -119,6 +119,7 @@ struct SixSinesEditor : jcmp::WindowPanel
 
     void sendEntirePatchToAudio(const std::string &patchName);
     void setParamValueOnCopy(uint32_t id, float value, bool notifyAudio);
+    void sendParamSetValue(uint32_t id, float value);
 
     bool keyPressed(const juce::KeyPress &key) override;
 

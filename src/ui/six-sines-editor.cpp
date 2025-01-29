@@ -689,6 +689,13 @@ void SixSinesEditor::sendEntirePatchToAudio(const std::string &s)
     uiToAudio.push({Synth::UIToAudioMsg::SEND_PATCH_IS_CLEAN, true});
 }
 
+void SixSinesEditor::sendParamSetValue(uint32_t id, float value)
+{
+    patchCopy.paramMap.at(id)->value = value;
+    uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, id, value});
+    flushOperator();
+}
+
 void SixSinesEditor::setParamValueOnCopy(uint32_t paramId, float value, bool notifyAudio)
 {
     patchCopy.paramMap[paramId]->value = value;
