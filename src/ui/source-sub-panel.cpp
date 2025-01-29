@@ -14,6 +14,7 @@
  */
 
 #include "source-sub-panel.h"
+#include <sst/jucegui/layouts/ListLayout.h>
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
 #include "dsp/sintable.h" // for drawing
@@ -37,11 +38,13 @@ struct WavPainter : juce::Component
         int nPixels{getWidth()};
         auto dPhase = (1 << 26) / (nPixels - 1);
         auto p = juce::Path();
+        auto h = getHeight() - 2;
+        auto ho = 1;
         for (int i = 0; i < nPixels; ++i)
         {
             auto sv = st.at(phase);
             auto x = i;
-            auto y = (1 - (sv + 1) * 0.5) * getHeight();
+            auto y = (1 - (sv + 1) * 0.5) * h + ho;
             if (i == 0)
                 p.startNewSubPath(x, y);
             else
@@ -121,7 +124,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     createComponent(editor, *this, sn.keyTrackValue, keyTrackValue, keyTrackValueD);
     addAndMakeVisible(*keyTrackValue);
     keyTrackValueLL = std::make_unique<jcmp::Label>();
-    keyTrackValueLL->setText("f @ r=1");
+    keyTrackValueLL->setText("f");
     addAndMakeVisible(*keyTrackValueLL);
 
     createComponent(editor, *this, sn.startingPhase, startingPhase, startingPhaseD);
@@ -165,52 +168,52 @@ void SourceSubPanel::resized()
     pn = pn.translated(uicMargin, 0);
     auto r = layoutLFOAt(pn.getX(), p.getY());
 
-    auto depx = r.getX() + 2 * uicMargin;
-    auto depy = r.getY();
+    namespace jlo = sst::jucegui::layouts;
+    auto lo = jlo::HList().at(r.getX() + uicMargin, r.getY()).withAutoGap(uicMargin * 2);
 
-    // spanning label so
-    positionTitleLabelAt(depx, depy, uicKnobSize * 2 + uicMargin, modTitle);
-    depy += uicTitleLabelHeight;
-    positionKnobAndLabel(depx, depy, envToRatio, envToRatioL);
-    positionKnobAndLabel(depx + uicKnobSize + uicMargin, depy, envToRatioFine, envToRatioFineL);
+    auto kl = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin * 2).withAutoGap(uicMargin);
+    kl.add(titleLabelGaplessLayout(modTitle));
 
-    depy += uicLabeledKnobHeight + uicMargin + 1;
-    positionTitleLabelAt(depx, depy, uicKnobSize * 2 + uicMargin, lfoModTitle);
-    depy += uicTitleLabelHeight;
-    positionKnobAndLabel(depx, depy, lfoToRatio, lfoToRatioL);
-    positionKnobAndLabel(depx + uicKnobSize + uicMargin, depy, lfoToRatioFine, lfoToRatioFineL);
+    auto hl = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
+    hl.add(labelKnobLayout(envToRatio, envToRatioL));
+    hl.add(labelKnobLayout(envToRatioFine, envToRatioFineL));
+    kl.add(hl);
 
-    depx = r.getX() + 2 * uicMargin;
-    depy += uicLabeledKnobHeight + uicMargin;
+    kl.add(titleLabelGaplessLayout(lfoModTitle));
 
-    depx += 2 * uicKnobSize + 3 * uicMargin;
-    depy = r.getY();
-    auto xtraW = 8;
-    positionTitleLabelAt(depx, depy, 2 * uicKnobSize + uicMargin + 4 * xtraW, keyTrackTitle);
-    depy += uicLabelHeight + uicMargin;
-    auto bbx = juce::Rectangle<int>(depx, depy, uicKnobSize + 2 * xtraW, uicLabelHeight);
-    keyTrack->setBounds(bbx);
-    bbx = bbx.translated(0, uicLabelHeight + 2 * uicMargin);
-    tsposeButton->setBounds(bbx.withHeight(uicLabelHeight));
-    bbx = bbx.translated(0, uicLabelHeight + uicMargin);
-    tsposeButtonL->setBounds(bbx.withHeight(uicLabelHeight));
-    bbx = bbx.translated(0, uicLabelHeight + uicMargin);
-    positionKnobAndLabel(depx + 3 * xtraW + uicKnobSize + uicMargin, depy, keyTrackValue,
-                         keyTrackValueLL);
+    hl = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
+    hl.add(labelKnobLayout(lfoToRatio, lfoToRatioL));
+    hl.add(labelKnobLayout(lfoToRatioFine, lfoToRatioFineL));
+    kl.add(hl);
 
-    int plw{14};
-    depy = bbx.getY();
-    positionTitleLabelAt(depx, depy, uicKnobSize * 2 + uicMargin + 4 * xtraW, wavTitle);
-    depy += uicTitleLabelHeight;
-    wavButton->setBounds(depx, depy, uicKnobSize * 2 + uicMargin + 4 * xtraW, uicLabelHeight);
-    depy += uicLabelHeight + uicMargin;
-    startingPhaseL->setBounds(depx, depy - uicMargin / 2, plw, uicLabelHeight - uicMargin);
+    lo.add(kl);
 
-    startingPhase->setBounds(depx + plw, depy, uicKnobSize * 2 + +4 * xtraW + uicMargin - plw,
-                             uicLabelHeight - uicMargin);
-    depy += uicLabelHeight;
-    wavPainter->setBounds(depx, depy, uicKnobSize * 2 + uicMargin + 4 * xtraW,
-                          uicLabelHeight * 1.8);
+    auto ktl = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin + 36).withAutoGap(uicMargin);
+    ktl.add(titleLabelGaplessLayout(keyTrackTitle));
+    ;
+
+    auto sktcol = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
+
+    auto c1 = jlo::VList().withWidth(uicKnobSize + 18).withAutoGap(uicMargin);
+    c1.add(jlo::Component(*tsposeButton).withHeight(uicLabelHeight));
+    c1.add(jlo::Component(*tsposeButtonL).withHeight(uicLabelHeight));
+    sktcol.add(c1);
+
+    auto c2 = jlo::VList().withWidth(uicKnobSize + 18).withAutoGap(uicMargin);
+    c2.add(jlo::Component(*keyTrack).withHeight(uicLabelHeight));
+    c2.add(sideLabelSlider(keyTrackValueLL, keyTrackValue));
+    sktcol.add(c2);
+
+    ktl.add(sktcol);
+
+    ktl.add(titleLabelGaplessLayout(wavTitle));
+    ktl.add(jlo::Component(*wavButton).withHeight(uicLabelHeight));
+    ktl.add(sideLabelSlider(startingPhaseL, startingPhase));
+    ktl.add(jlo::Component(*wavPainter).withHeight(uicLabelHeight * 1.8));
+
+    lo.add(ktl);
+
+    lo.doLayout();
 
     layoutModulation(p);
 }

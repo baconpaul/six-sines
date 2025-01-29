@@ -202,7 +202,7 @@ void PlayModeSubPanel::resized()
     pml.add(jlo::Component(*triggerButton).withHeight(uicLabelHeight));
     pml.add(jlo::Component(*pianoModeButton).withHeight(uicLabelHeight));
     pml.add(jlo::Component(*portaL).withHeight(uicLabelHeight));
-    pml.add(jlo::Component(*portaTime).withHeight(uicLabelHeight));
+    pml.add(jlo::Component(*portaTime).withHeight(uicLabelHeight).insetBy(0, 2));
     lo.add(pml);
 
     // Unison Controls
@@ -211,8 +211,8 @@ void PlayModeSubPanel::resized()
     uml.add(jlo::Component(*uniCt).withHeight(uicLabelHeight));
     uml.add(jlo::Component(*uniCtL).withHeight(uicLabelHeight));
     uml.add(jlo::Component(*uniRPhase).withHeight(uicLabelHeight));
-    uml.add(sideLabel(uniSpreadG, uniSpread));
-    uml.add(sideLabel(uniPanG, uniPan));
+    uml.add(sideLabelSlider(uniSpreadG, uniSpread));
+    uml.add(sideLabelSlider(uniPanG, uniPan));
 
     lo.add(uml);
 

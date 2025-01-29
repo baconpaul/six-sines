@@ -117,6 +117,17 @@ inline sst::jucegui::layouts::LayoutComponent sideLabel(const L &l, const C &c)
     ul.add(jlo::Component(*c).expandToFill());
     return ul;
 };
+
+template <typename L, typename C>
+inline sst::jucegui::layouts::LayoutComponent sideLabelSlider(const L &l, const C &c)
+{
+    namespace jlo = sst::jucegui::layouts;
+    auto ul = jlo::HList().withHeight(uicLabelHeight);
+    ul.add(jlo::Component(*l).withWidth(14));
+    ul.add(jlo::Component(*c).insetBy(0, 2).expandToFill());
+    return ul;
+};
+
 template <typename K, typename L>
 inline sst::jucegui::layouts::LayoutComponent labelKnobLayout(const K &k, const L &l)
 {
