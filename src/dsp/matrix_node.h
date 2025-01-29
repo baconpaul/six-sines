@@ -346,6 +346,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
             envAttack();
             lfoAttack();
             dcBlocker.reset();
+            memset(output, 0, sizeof(output));
 
             auto wf = (SinTable::WaveForm)(from.waveForm);
             if (wf == SinTable::TX3 || wf == SinTable::TX4 || wf == SinTable::TX7 ||
@@ -408,9 +409,10 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
             }
         }
 
-        auto pn = std::clamp(pan + lfoPanAtten * lfoToPan * lfo.outputBlock[blockSize - 1] +
-                                 voiceValues.uniPanShift + panMod,
-                             -1.f, 1.f);
+        auto pn =
+            std::clamp(pan + lfoPanAtten * lfoToPan * lfo.outputBlock[blockSize - 1] +
+                           (from.unisonParticipatesPan ? voiceValues.uniPanShift : 0.f) + panMod,
+                       -1.f, 1.f);
         if (pn != 0.f)
         {
             pn = (pn + 1) * 0.5;
@@ -669,8 +671,11 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
         calculateModulation();
         for (const auto &from : fromArr)
         {
-            mech::accumulate_from_to<blockSize>(from.output[0], output[0]);
-            mech::accumulate_from_to<blockSize>(from.output[1], output[1]);
+            if (from.from.operatorOutputsToMain)
+            {
+                mech::accumulate_from_to<blockSize>(from.output[0], output[0]);
+                mech::accumulate_from_to<blockSize>(from.output[1], output[1]);
+            }
         }
 
         envProcess(false);

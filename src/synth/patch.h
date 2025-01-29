@@ -476,6 +476,33 @@ struct Patch : pats::PatchBase<Patch, Param>
                                .withRange(-3, 3)
                                .withDefault(0)
                                .withID(id(9, idx))),
+              unisonParticipation(intMd()
+                                      .withRange(0, 3)
+                                      .withDefault(3)
+                                      .withID(id(14, idx))
+                                      .withName(name(idx) + " Unison Participation")
+                                      .withGroupName(name(idx))
+                                      .withUnorderedMapFormatting({{0, "Skip Unison"},
+                                                                   {1, "Tuning Only"},
+                                                                   {2, "Pan Only"},
+                                                                   {3, "Tuning and Pan"}})),
+              unisonToMain(
+                  intMd()
+                      .withRange(0, 2)
+                      .withDefault(0)
+                      .withID(id(15, idx))
+                      .withName(name(idx) + " Unison Main Output")
+                      .withGroupName(name(idx))
+                      .withUnorderedMapFormatting(
+                          {{0, "All to Main"}, {1, "Center to Main"}, {2, "None to Main"}})),
+              unisonToOpOut(intMd()
+                                .withRange(0, 1)
+                                .withDefault(0)
+                                .withID(id(16, idx))
+                                .withName(name(idx) + " Unison Operator Output Output")
+                                .withGroupName(name(idx))
+                                .withUnorderedMapFormatting(
+                                    {{0, "All to Op Output"}, {1, "Center to Op Output"}})),
 
               DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx)),
               ModulationMixin(name(idx), id(150, idx)),
@@ -518,13 +545,17 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         Param startingPhase, octTranspose;
 
+        Param unisonParticipation, unisonToMain, unisonToOpOut;
+
         std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&ratio,        &active,         &envToRatio,    &lfoToRatio,
-                                     &waveForm,     &keyTrack,       &keyTrackValue, &startingPhase,
-                                     &octTranspose, &envToRatioFine, &lfoToRatioFine};
+            std::vector<Param *> res{&ratio,          &active,         &envToRatio,
+                                     &lfoToRatio,     &waveForm,       &keyTrack,
+                                     &keyTrackValue,  &startingPhase,  &octTranspose,
+                                     &envToRatioFine, &lfoToRatioFine, &unisonParticipation,
+                                     &unisonToMain,   &unisonToOpOut};
             for (int i = 0; i < numModsPer; ++i)
                 res.push_back(&modtarget[i]);
             appendDAHDSRParams(res);
