@@ -94,6 +94,8 @@ make_clapfirst_plugins(
 
         PLUGIN_FORMATS CLAP VST3 AUV2
 
+        ASSET_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_assets
+
         # You can add a target-per-standalone you want. Syntax here is
         #   target-postfix output-name clap-id
         # This allows you to make multiple standalones from a multi-plugin clap
