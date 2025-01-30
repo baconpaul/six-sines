@@ -115,6 +115,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             }
             else if (u2m == 2)
             {
+                operatorOutputsToMain = !(voiceValues.hasCenterVoice) || !voiceValues.isCenterVoice;
+            }
+            else if (u2m == 3)
+            {
                 operatorOutputsToMain = false;
             }
 
@@ -123,13 +127,18 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             {
                 operatorOutputsToOp = !(voiceValues.hasCenterVoice) || voiceValues.isCenterVoice;
             }
+            else if (u2op == 2)
+            {
+                operatorOutputsToOp = !(voiceValues.hasCenterVoice) || !voiceValues.isCenterVoice;
+            }
         }
     }
 
     void resetPhaseOnly()
     {
         phase = 4 << 27;
-        if (voiceValues.phaseRandom)
+        unisonParticipatesTune = (int)(sourceNode.unisonParticipation.value) & 1;
+        if (voiceValues.phaseRandom && unisonParticipatesTune)
         {
             phase += monoValues.rng.unifU32() & ((1 << 27) - 1);
         }
