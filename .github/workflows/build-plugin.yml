@@ -96,7 +96,7 @@ jobs:
           
           mkdir build/inst
           cd build/six-sines_assets
-          ../libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh "Six Sines" . ../resources/mac_installer ../inst `date +"%Y-%m-%d"`-`git rev-parse --short HEAD`
+          ../../libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh "Six Sines" . ../resources/mac_installer ../inst `date +"%Y-%m-%d"`-`git rev-parse --short HEAD`
 
           codesign -d --entitlement - installer-tmp/APP/Six\ Sines.app
 
