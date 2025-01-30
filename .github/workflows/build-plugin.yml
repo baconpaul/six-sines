@@ -75,16 +75,13 @@ jobs:
         if: github.event_name != 'pull_request' && runner.os == 'Windows'
         run: |
           mkdir build/inst
-          mkdir build/insttmp
-          mv build/CLAP/*.clap build/insttmp
-          mv build/*.vst3 build/insttmp
-          mv build/*.exe build/insttmp
-
-          pushd build/insttmp
-          ls -al
-          popd
           
-          7z a -r build/inst/six-sines-windows-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip build/insttmp/*
+          cp resources/mac_installer/License.txt build/six-sines_assets
+          cp resources/ReadmeZip.txt build/six-sines_assets
+          pushd build/six-sines_assets
+          ls -al
+
+          7z a -r ..//inst/six-sines-windows-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip *
 
       - name: Make Mac
         if: github.event_name != 'pull_request' && runner.os == 'macOS'
@@ -98,8 +95,8 @@ jobs:
           
           
           mkdir build/inst
-          cd build
-          ../libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh "Six Sines" . ../resources/mac_installer inst `date +"%Y-%m-%d"`-`git rev-parse --short HEAD`
+          cd build/six-sines_assets
+          ../libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh "Six Sines" . ../resources/mac_installer ../inst `date +"%Y-%m-%d"`-`git rev-parse --short HEAD`
 
           codesign -d --entitlement - installer-tmp/APP/Six\ Sines.app
 
@@ -136,15 +133,9 @@ jobs:
           find build -name "Six Sines*" -print
 
           mkdir build/inst
-          mkdir build/insttmp
-
-          mv build/*.clap build/insttmp
-          mv "build/Six Sines" build/insttmp
-          mv build/Release/*.vst3 build/insttmp
-
-          find build -name "Six Sines*" -print
-
-          cd build/insttmp
+          cp resources/mac_installer/License.txt build/six-sines_assets
+          cp resources/ReadmeZip.txt build/six-sines_assets
+          pushd build/six-sines_assets
           ls -al
 
           tar cvzf ../inst/six-sines-linux-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.tgz .
