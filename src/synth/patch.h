@@ -486,23 +486,25 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                                    {1, "Tuning Only"},
                                                                    {2, "Pan Only"},
                                                                    {3, "Tuning and Pan"}})),
-              unisonToMain(
-                  intMd()
-                      .withRange(0, 2)
-                      .withDefault(0)
-                      .withID(id(15, idx))
-                      .withName(name(idx) + " Unison Main Output")
-                      .withGroupName(name(idx))
-                      .withUnorderedMapFormatting(
-                          {{0, "All to Main"}, {1, "Center to Main"}, {2, "None to Main"}})),
+              unisonToMain(intMd()
+                               .withRange(0, 3)
+                               .withDefault(0)
+                               .withID(id(15, idx))
+                               .withName(name(idx) + " Unison Main Output")
+                               .withGroupName(name(idx))
+                               .withUnorderedMapFormatting({{0, "All to Main"},
+                                                            {1, "Center to Main"},
+                                                            {2, "Sides to Main"},
+                                                            {3, "None to Main"}})),
               unisonToOpOut(intMd()
-                                .withRange(0, 1)
+                                .withRange(0, 2)
                                 .withDefault(0)
                                 .withID(id(16, idx))
                                 .withName(name(idx) + " Unison Operator Output Output")
                                 .withGroupName(name(idx))
-                                .withUnorderedMapFormatting(
-                                    {{0, "All to Op Output"}, {1, "Center to Op Output"}})),
+                                .withUnorderedMapFormatting({{0, "All to Op Output"},
+                                                             {1, "Center to Op Output"},
+                                                             {2, "Sides to Op Output"}})),
 
               DAHDSRMixin(name(idx), id(100, idx), false), LFOMixin(name(idx), id(45, idx)),
               ModulationMixin(name(idx), id(150, idx)),
