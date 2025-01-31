@@ -83,28 +83,26 @@ void SelfSubPanel::resized()
     pn = pn.translated(uicMargin, 0);
     auto r = layoutLFOAt(pn.getX(), p.getY());
 
-    auto xtraW = 12;
     auto depx = r.getX() + uicMargin;
     auto depy = r.getY();
 
     namespace jlo = sst::jucegui::layouts;
     auto lo = jlo::HList().at(depx, depy).withAutoGap(uicMargin * 2);
 
-    auto el = jlo::VList().withWidth(uicKnobSize + 2 * xtraW).withAutoGap(uicMargin);
+    auto el = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
     el.add(titleLabelGaplessLayout(modLabelE));
     el.add(labelKnobLayout(envToLev, envToLevL).centerInParent());
     el.add(jlo::Component(*envMul).withHeight(2 * uicLabelHeight + uicMargin));
     lo.add(el);
 
-    auto ll = jlo::VList().withWidth(uicKnobSize + 2 * xtraW).withAutoGap(uicMargin);
+    auto ll = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
     ll.add(titleLabelGaplessLayout(modLabelL));
     ll.add(labelKnobLayout(lfoToFb, lfoToFbL).centerInParent());
     lo.add(ll);
 
-    auto od = jlo::VList().withWidth(uicKnobSize + 2 * xtraW).withAutoGap(uicMargin);
+    auto od = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
     od.add(titleLabelGaplessLayout(overdriveTitle));
-    od.add(
-        jlo::Component(*overdrive).withHeight(uicLabelHeight).withWidth(uicKnobSize + 2 * xtraW));
+    od.add(jlo::Component(*overdrive).withHeight(uicLabelHeight).withWidth(uicSubPanelColumnWidth));
     lo.add(od);
 
     lo.doLayout();

@@ -52,15 +52,19 @@ void MainSubPanel::resized()
     auto r = layoutDAHDSRAt(p.getX(), p.getY());
     r = layoutLFOAt(r.getX() + uicMargin, p.getY());
 
-    auto depx = r.getX() + 2 * uicMargin;
+    auto depx = r.getX() + uicMargin;
     auto depy = r.getY();
-    auto xtraW = 10;
-    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, velTitle);
 
-    depy += uicTitleLabelHeight;
-    positionKnobAndLabel(depx + xtraW, depy, velSen, velSenL);
-    depy += uicLabeledKnobHeight + uicMargin;
-    positionKnobAndLabel(depx + xtraW, depy, lfoDep, lfoDepL);
+    namespace jlo = sst::jucegui::layouts;
+    auto lo = jlo::HList().at(depx, depy).withAutoGap(uicMargin * 2);
+
+    auto el = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
+    el.add(titleLabelGaplessLayout(velTitle));
+    el.add(labelKnobLayout(velSen, velSenL).centerInParent());
+    el.add(labelKnobLayout(lfoDep, lfoDepL).centerInParent());
+    lo.add(el);
+
+    lo.doLayout();
 
     layoutModulation(p);
 }

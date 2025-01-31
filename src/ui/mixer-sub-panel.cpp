@@ -82,22 +82,25 @@ void MixerSubPanel::resized()
     auto gh = (pn.getHeight() - 2 * uicPowerButtonSize) / 2;
     auto r = layoutLFOAt(pn.getX() + uicMargin, p.getY());
 
-    auto xtraW = 4;
     auto depx = r.getX() + uicMargin;
     auto depy = r.getY();
 
-    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, modLabelE);
-    positionKnobAndLabel(depx + xtraW, r.getY() + uicTitleLabelHeight, envToLev, envToLevL);
-    envMul->setBounds(depx, r.getY() + uicTitleLabelHeight + uicLabeledKnobHeight + uicMargin,
-                      uicKnobSize + 2 * xtraW, 2 * uicLabelHeight + uicMargin);
+    namespace jlo = sst::jucegui::layouts;
+    auto lo = jlo::HList().at(depx, depy).withAutoGap(uicMargin * 2);
 
-    depx += uicKnobSize + uicMargin + 2 * xtraW;
-    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, modLabelL);
+    auto el = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
+    el.add(titleLabelGaplessLayout(modLabelE));
+    el.add(labelKnobLayout(envToLev, envToLevL).centerInParent());
+    el.add(jlo::Component(*envMul).withHeight(2 * uicLabelHeight + uicMargin));
+    lo.add(el);
 
-    positionKnobAndLabel(depx + xtraW, r.getY() + uicTitleLabelHeight, lfoToLevel, lfoToLevelL);
-    positionKnobAndLabel(depx + xtraW,
-                         r.getY() + uicTitleLabelHeight + uicLabeledKnobHeight + uicMargin,
-                         lfoToPan, lfoToPanL);
+    auto ll = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
+    ll.add(titleLabelGaplessLayout(modLabelL));
+    ll.add(labelKnobLayout(lfoToLevel, lfoToLevelL).centerInParent());
+    ll.add(labelKnobLayout(lfoToPan, lfoToPanL).centerInParent());
+    lo.add(ll);
+
+    lo.doLayout();
 
     layoutModulation(p);
 }
