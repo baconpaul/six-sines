@@ -184,6 +184,8 @@ struct Synth
                             synth.voices[i].voiceValues.uniPMScale = uniScale[vc];
                             synth.voices[i].voiceValues.phaseRandom = (vc > 0 && upr);
                             synth.voices[i].voiceValues.rephaseOnRetrigger = (!upr && prt);
+                            synth.voices[i].voiceValues.noteExpressionTuningInSemis = 0;
+                            synth.voices[i].voiceValues.noteExpressionPanBipolar = 0;
                             synth.voices[i].attack();
 
                             synth.addToVoiceList(&synth.voices[i]);
@@ -208,6 +210,9 @@ struct Synth
             {
             case CLAP_NOTE_EXPRESSION_TUNING:
                 v->voiceValues.noteExpressionTuningInSemis = val;
+                break;
+            case CLAP_NOTE_EXPRESSION_PAN:
+                v->voiceValues.noteExpressionPanBipolar = 2 * val - 1;
                 break;
             default:
                 break;

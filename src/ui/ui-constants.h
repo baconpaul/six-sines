@@ -34,6 +34,8 @@ static constexpr uint32_t uicTitleLabelInnerBox{18};
 static constexpr uint32_t uicLabeledKnobHeight{uicKnobSize + uicLabelHeight + uicLabelGap};
 static constexpr uint32_t uicPowerKnobWidth{uicKnobSize + uicPowerButtonSize + uicMargin};
 
+static constexpr uint32_t uicSubPanelColumnWidth{uicKnobSize + 24};
+
 static constexpr uint32_t uicModulationWidth{150};
 
 template <typename K, typename L>

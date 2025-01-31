@@ -51,16 +51,19 @@ void MainPanSubPanel::resized()
     auto gh = (pn.getHeight() - 2 * uicPowerButtonSize) / 2;
     auto r = layoutLFOAt(pn.getX() + uicMargin, p.getY());
 
-    auto xtraW = 10;
-    auto depx = r.getX() + 2 * uicMargin;
+    auto depx = r.getX() + uicMargin;
     auto depy = r.getY();
 
-    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, depTitle);
+    namespace jlo = sst::jucegui::layouts;
+    auto lo = jlo::HList().at(depx, depy).withAutoGap(uicMargin * 2);
 
-    positionKnobAndLabel(depx + xtraW, r.getY() + uicTitleLabelHeight, envDepth, envDepthLL);
-    positionKnobAndLabel(depx + xtraW,
-                         r.getY() + uicTitleLabelHeight + uicMargin + uicLabeledKnobHeight, lfoDep,
-                         lfoDepL);
+    auto el = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
+    el.add(titleLabelGaplessLayout(depTitle));
+    el.add(labelKnobLayout(envDepth, envDepthLL).centerInParent());
+    el.add(labelKnobLayout(lfoDep, lfoDepL).centerInParent());
+    lo.add(el);
+
+    lo.doLayout();
 
     layoutModulation(p);
 }

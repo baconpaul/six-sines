@@ -708,7 +708,9 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
 
         mech::scale_by<blockSize>(finalEnvLevel, output[0], output[1]);
 
-        auto pn = panMod + pan + panModNode.level;
+        auto pn = std::clamp(panMod + pan + panModNode.level + voiceValues.noteExpressionPanBipolar,
+                             -1.f, 1.f);
+        ;
         if (pn != 0.f)
         {
             pn = (pn + 1) * 0.5;
