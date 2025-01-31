@@ -40,16 +40,18 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
     const Patch::MatrixNode &matrixNode;
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
-    const float &level, &activeV, &pmrmV, &lfoToDepth, &envToLevel;
+    const float &level, &activeV, &pmrmV, &lfoToDepth, &envToLevel, &overdriveV;
     MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr, MonoValues &mv,
                    const VoiceValues &vv)
         : matrixNode(mn), monoValues(mv), voiceValues(vv), onto(on), from(fr), level(mn.level),
           pmrmV(mn.pmOrRM), activeV(mn.active), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
-          lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel), ModulationSupport(mn, this, mv, vv)
+          lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel), overdriveV(mn.overdrive),
+          ModulationSupport(mn, this, mv, vv)
     {
     }
 
     bool active{false}, isrm{false};
+    float overdriveFactor{1.0};
 
     void attack()
     {
@@ -61,6 +63,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             calculateModulation();
             envAttack();
             lfoAttack();
+            overdriveFactor = overdriveV > 0.5 ? 10.0 : 1.0;
         }
     }
 
@@ -134,7 +137,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
 
             for (int j = 0; j < blockSize; ++j)
             {
-                onto.phaseInput[j] += (int32_t)((1 << 27) * (mod[j]));
+                onto.phaseInput[j] += (int32_t)((1 << 27) * (overdriveFactor * mod[j]));
             }
         }
     }
