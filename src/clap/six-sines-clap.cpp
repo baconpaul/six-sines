@@ -146,7 +146,15 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             engine->monoValues.tempoSyncRatio = 1.f;
         }
 
-        float **out = process->audio_outputs[0].data32;
+        static constexpr int outBus{multiOut ? 1 + numOps : 1};
+        static constexpr int outChan{multiOut ? (1 + numOps) * 2 : 2};
+        float *out[outChan];
+        for (auto i = 0; i < outBus; ++i)
+        {
+            auto lo = process->audio_outputs[i].data32;
+            out[2 * i] = lo[0];
+            out[2 * i + 1] = lo[1];
+        }
 
         for (auto s = 0U; s < process->frames_count; ++s)
         {
@@ -166,16 +174,8 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 engine->process(outq);
             }
 
-            out[0][s] = engine->output[0][blockPos];
-            out[1][s] = engine->output[1][blockPos];
-
-            if (multiOut)
-            {
-                for (auto i = 2; i < 2 * numOps + 2; ++i)
-                {
-                    out[i][s] = engine->output[i][blockPos];
-                }
-            }
+            for (auto i = 0; i < outChan; ++i)
+                out[i][s] = engine->output[i][blockPos];
 
             blockPos++;
             if (blockPos == blockSize)
