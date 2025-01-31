@@ -14,6 +14,7 @@
  */
 
 #include "matrix-sub-panel.h"
+#include <sst/jucegui/layouts/ListLayout.h>
 
 namespace baconpaul::six_sines::ui
 {
@@ -53,6 +54,13 @@ void MatrixSubPanel::setSelectedIndex(int idx)
     modLabelL->setText(std::string() + "LFO" + u8"\U00002192");
     addAndMakeVisible(*modLabelL);
 
+    overdriveTitle = std::make_unique<jcmp::RuledLabel>();
+    overdriveTitle->setText("OverDrv");
+    addAndMakeVisible(*overdriveTitle);
+    createComponent(editor, *this, m.overdrive, overdrive, overdriveD);
+    addAndMakeVisible(*overdrive);
+    overdrive->setLabel("10x");
+
     auto op = [w = juce::Component::SafePointer(this)]()
     {
         if (w)
@@ -75,19 +83,31 @@ void MatrixSubPanel::resized()
     pn = pn.translated(uicMargin, 0);
     auto r = layoutLFOAt(pn.getX(), p.getY());
 
-    auto xtraW = 4;
+    auto xtraW = 12;
     auto depx = r.getX() + uicMargin;
     auto depy = r.getY();
 
-    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, modLabelE);
-    positionKnobAndLabel(depx + xtraW, r.getY() + uicTitleLabelHeight, envToLev, envToLevL);
-    envMul->setBounds(depx, r.getY() + uicTitleLabelHeight + uicLabeledKnobHeight + uicMargin,
-                      uicKnobSize + 2 * xtraW, 2 * uicLabelHeight + uicMargin);
+    namespace jlo = sst::jucegui::layouts;
+    auto lo = jlo::HList().at(depx, depy).withAutoGap(uicMargin * 2);
 
-    depx += uicKnobSize + uicMargin + 2 * xtraW;
-    positionTitleLabelAt(depx, depy, uicKnobSize + 2 * xtraW, modLabelL);
+    auto el = jlo::VList().withWidth(uicKnobSize + 2 * xtraW).withAutoGap(uicMargin);
+    el.add(titleLabelGaplessLayout(modLabelE));
+    el.add(labelKnobLayout(envToLev, envToLevL).centerInParent());
+    el.add(jlo::Component(*envMul).withHeight(2 * uicLabelHeight + uicMargin));
+    lo.add(el);
 
-    positionKnobAndLabel(depx + xtraW, r.getY() + uicTitleLabelHeight, lfoToDepth, lfoToDepthL);
+    auto ll = jlo::VList().withWidth(uicKnobSize + 2 * xtraW).withAutoGap(uicMargin);
+    ll.add(titleLabelGaplessLayout(modLabelL));
+    ll.add(labelKnobLayout(lfoToDepth, lfoToDepthL).centerInParent());
+    lo.add(ll);
+
+    auto od = jlo::VList().withWidth(uicKnobSize + 2 * xtraW).withAutoGap(uicMargin);
+    od.add(titleLabelGaplessLayout(overdriveTitle));
+    od.add(
+        jlo::Component(*overdrive).withHeight(uicLabelHeight).withWidth(uicKnobSize + 2 * xtraW));
+    lo.add(od);
+
+    lo.doLayout();
 
     layoutModulation(p);
 }

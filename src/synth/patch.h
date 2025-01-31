@@ -731,6 +731,11 @@ struct Patch : pats::PatchBase<Patch, Param>
                              .withGroupName(name(idx))
                              .withID(id(27, idx))
                              .withDefault(1.f)),
+              overdrive(boolMd()
+                            .withName(name(idx) + " Overdrive")
+                            .withGroupName(name(idx))
+                            .withDefault(false)
+                            .withID(id(28, idx))),
 
               ModulationMixin(name(idx), id(70, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
@@ -753,6 +758,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param pmOrRM;
         Param lfoToDepth;
         Param envToLevel;
+        Param overdrive;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -774,7 +780,8 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &active, &pmOrRM, &lfoToDepth, &envToLevel};
+            std::vector<Param *> res{&level,      &active,     &pmOrRM,
+                                     &lfoToDepth, &envToLevel, &overdrive};
             appendDAHDSRParams(res);
             appendLFOParams(res);
 
