@@ -53,6 +53,16 @@ struct Param : pats::ParamBase
         WAVEFORM = 1 << 2,
     };
 
+    bool isTemposynced() const
+    {
+        if (tempoSyncPartner)
+            return tempoSyncPartner->value;
+
+        return false;
+    }
+
+    Param *tempoSyncPartner{nullptr};
+
     sst::basic_blocks::dsp::LinearLag<float, false> lag;
     Param *nextLag{nullptr}, *prevLag{nullptr};
 };
@@ -178,6 +188,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                  .withName(name + " Is Enveloped")
                                  .withGroupName(name))
         {
+            lfoRate.tempoSyncPartner = &tempoSync;
         }
 
         Param lfoRate, lfoDeform, lfoShape, lfoActive, tempoSync, lfoBipolar, lfoIsEnveloped;
