@@ -32,20 +32,27 @@ void SelfSubPanel::setSelectedIndex(int idx)
     setupLFO(editor, editor.patchCopy.selfNodes[idx]);
     setupModulation(editor, editor.patchCopy.selfNodes[idx]);
 
+    auto travidx{400};
+    auto traverse = [&travidx](auto &c)
+    { sst::jucegui::component_adapters::setTraversalId(c.get(), travidx++); };
+
     createRescaledComponent(editor, *this, n.lfoToFB, lfoToFb, lfoToFbDA);
     addAndMakeVisible(*lfoToFb);
     lfoToFbL = std::make_unique<jcmp::Label>();
     lfoToFbL->setText("Depth");
     addAndMakeVisible(*lfoToFbL);
+    traverse(lfoToFb);
 
     createRescaledComponent(editor, *this, n.envToFB, envToLev, envToLevDA);
     addAndMakeVisible(*envToLev);
     envToLevL = std::make_unique<jcmp::Label>();
     envToLevL->setText("Level");
     addAndMakeVisible(*envToLevL);
+    traverse(envToLev);
 
     createComponent(editor, *this, n.envIsMultiplcative, envMul, envMulD);
     addAndMakeVisible(*envMul);
+    traverse(envMul);
 
     modLabelE = std::make_unique<jcmp::RuledLabel>();
     modLabelE->setText(std::string() + "Env" + u8"\U00002192");
@@ -61,6 +68,7 @@ void SelfSubPanel::setSelectedIndex(int idx)
     createComponent(editor, *this, n.overdrive, overdrive, overdriveD);
     addAndMakeVisible(*overdrive);
     overdrive->setLabel("10x");
+    traverse(overdrive);
 
     auto op = [w = juce::Component::SafePointer(this)]()
     {

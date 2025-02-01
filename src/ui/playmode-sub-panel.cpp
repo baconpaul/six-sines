@@ -302,7 +302,8 @@ void PlayModeSubPanel::showTriggerButtonMenu()
                                             (float)(!atfl)});
               });
 
-    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&this->editor));
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&this->editor),
+                    makeMenuAccessibleButtonCB(triggerButton.get()));
 }
 
 void PlayModeSubPanel::setEnabledState()

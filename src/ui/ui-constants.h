@@ -143,5 +143,22 @@ inline sst::jucegui::layouts::LayoutComponent labelKnobLayout(const K &k, const 
     return res;
 }
 
+inline std::function<void(int)> makeMenuAccessibleButtonCB(juce::Component *c)
+{
+    return [w = juce::Component::SafePointer(c)](int)
+    {
+        if (w)
+        {
+            w->grabKeyboardFocus();
+            auto h = w->getAccessibilityHandler();
+            if (h)
+            {
+                h->grabFocus();
+                h->notifyAccessibilityEvent(juce::AccessibilityEvent::titleChanged);
+            }
+        }
+    };
+}
+
 } // namespace baconpaul::six_sines::ui
 #endif // UI_CONSTANTS_H

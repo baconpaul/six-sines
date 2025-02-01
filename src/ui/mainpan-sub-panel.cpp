@@ -24,6 +24,10 @@ MainPanSubPanel::MainPanSubPanel(SixSinesEditor &e) : HasEditor(e)
     setupModulation(e, on);
     setupLFO(e, on);
 
+    auto travidx{400};
+    auto traverse = [&travidx](auto &c)
+    { sst::jucegui::component_adapters::setTraversalId(c.get(), travidx++); };
+
     depTitle = std::make_unique<jcmp::RuledLabel>();
     depTitle->setText("Pan");
     addAndMakeVisible(*depTitle);
@@ -33,12 +37,14 @@ MainPanSubPanel::MainPanSubPanel(SixSinesEditor &e) : HasEditor(e)
     envDepthLL = std::make_unique<jcmp::Label>();
     envDepthLL->setText(std::string() + "Env " + u8"\U00002192");
     addAndMakeVisible(*envDepthLL);
+    traverse(envDepth);
 
     createRescaledComponent(editor, *this, on.lfoDepth, lfoDep, lfoDepDA);
     addAndMakeVisible(*lfoDep);
     lfoDepL = std::make_unique<jcmp::Label>();
     lfoDepL->setText(std::string() + "LFO " + u8"\U00002192");
     addAndMakeVisible(*lfoDepL);
+    traverse(lfoDep);
 
     resized();
     repaint();

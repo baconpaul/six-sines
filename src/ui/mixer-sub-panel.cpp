@@ -32,26 +32,34 @@ void MixerSubPanel::setSelectedIndex(int idx)
     setupLFO(editor, sn);
     setupModulation(editor, sn);
 
+    auto travidx{400};
+    auto traverse = [&travidx](auto &c)
+    { sst::jucegui::component_adapters::setTraversalId(c.get(), travidx++); };
+
     createRescaledComponent(editor, *this, sn.lfoToLevel, lfoToLevel, lfoToLevelDA);
     addAndMakeVisible(*lfoToLevel);
     lfoToLevelL = std::make_unique<jcmp::Label>();
     lfoToLevelL->setText("Level");
     addAndMakeVisible(*lfoToLevelL);
+    traverse(lfoToLevel);
 
     createRescaledComponent(editor, *this, sn.lfoToPan, lfoToPan, lfoToPanDA);
     addAndMakeVisible(*lfoToPan);
     lfoToPanL = std::make_unique<jcmp::Label>();
     lfoToPanL->setText("Pan");
     addAndMakeVisible(*lfoToPanL);
+    traverse(lfoToPan);
 
     createRescaledComponent(editor, *this, sn.envToLevel, envToLev, envToLevDA);
     addAndMakeVisible(*envToLev);
     envToLevL = std::make_unique<jcmp::Label>();
     envToLevL->setText("Level");
     addAndMakeVisible(*envToLevL);
+    traverse(envToLev);
 
     createComponent(editor, *this, sn.envIsMultiplcative, envMul, envMulD);
     addAndMakeVisible(*envMul);
+    traverse(envMul);
 
     modLabelE = std::make_unique<jcmp::RuledLabel>();
     modLabelE->setText(std::string() + "Env" + u8"\U00002192");

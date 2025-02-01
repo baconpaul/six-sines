@@ -198,7 +198,8 @@ template <typename Comp, typename Patch> struct ModulationComponents
                           });
             }
         }
-        p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
+        p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor),
+                        makeMenuAccessibleButtonCB(targetMenu[index].get()));
     }
     void showSourceMenu(int index)
     {
@@ -243,7 +244,8 @@ template <typename Comp, typename Patch> struct ModulationComponents
         {
             p.addSubMenu(currCat, s);
         }
-        p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
+        p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor),
+                        makeMenuAccessibleButtonCB(sourceMenu[index].get()));
     }
 
     std::unique_ptr<jcmp::RuledLabel> modTitleLab;

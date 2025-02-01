@@ -69,6 +69,7 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
 
         createComponent(editor, *this, mx[i].pmOrRM, Mpmrm[i], MpmrmD[i], i, false);
         Mpmrm[i]->direction = sst::jucegui::components::MultiSwitch::HORIZONTAL;
+        Mpmrm[i]->setAbbreviatedLabelMap({{0, std::string() + u8"\U000003C6"}, {1, "A"}});
         addAndMakeVisible(*Mpmrm[i]);
 
         auto si = MatrixIndex::sourceIndexAt(i);

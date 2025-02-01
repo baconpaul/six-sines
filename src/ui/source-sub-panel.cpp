@@ -68,6 +68,10 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     setupLFO(editor, sn);
     setupModulation(editor, sn);
 
+    auto travidx{400};
+    auto traverse = [&travidx](auto &c)
+    { sst::jucegui::component_adapters::setTraversalId(c.get(), travidx++); };
+
     createComponent(editor, *this, sn.envToRatio, envToRatio, envToRatioD);
     createComponent(editor, *this, sn.envToRatioFine, envToRatioFine, envToRatioFineD);
     envToRatioL = std::make_unique<jcmp::Label>();
@@ -78,6 +82,8 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     addAndMakeVisible(*envToRatio);
     addAndMakeVisible(*envToRatioFine);
     addAndMakeVisible(*envToRatioFineL);
+    traverse(envToRatio);
+    traverse(envToRatioFine);
 
     createComponent(editor, *this, sn.lfoToRatio, lfoToRatio, lfoToRatioD);
     createComponent(editor, *this, sn.lfoToRatioFine, lfoToRatioFine, lfoToRatioFineD);
@@ -89,6 +95,8 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     addAndMakeVisible(*lfoToRatio);
     addAndMakeVisible(*lfoToRatioFine);
     addAndMakeVisible(*lfoToRatioFineL);
+    traverse(lfoToRatio);
+    traverse(lfoToRatioFine);
 
     modTitle = std::make_unique<jcmp::RuledLabel>();
     modTitle->setText("Env Depth");
@@ -102,6 +110,9 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     wavTitle->setText("Wave");
     addAndMakeVisible(*wavTitle);
 
+    wavPainter = std::make_unique<WavPainter>(sn.waveForm, sn.startingPhase);
+    addAndMakeVisible(*wavPainter);
+
     createComponent(editor, *this, sn.waveForm, wavButton, wavButtonD);
     addAndMakeVisible(*wavButton);
     wavButtonD->onGuiSetValue = [this]()
@@ -109,26 +120,11 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
         wavPainter->repaint();
         wavButton->repaint();
     };
-
-    wavPainter = std::make_unique<WavPainter>(sn.waveForm, sn.startingPhase);
-    addAndMakeVisible(*wavPainter);
-
-    keyTrackTitle = std::make_unique<jcmp::RuledLabel>();
-    keyTrackTitle->setText("Pitch");
-    addAndMakeVisible(*keyTrackTitle);
-
-    createComponent(editor, *this, sn.keyTrack, keyTrack, keyTrackD);
-    keyTrack->setLabel("KeyTrak");
-    addAndMakeVisible(*keyTrack);
-
-    createComponent(editor, *this, sn.keyTrackValue, keyTrackValue, keyTrackValueD);
-    addAndMakeVisible(*keyTrackValue);
-    keyTrackValueLL = std::make_unique<jcmp::Label>();
-    keyTrackValueLL->setText("f");
-    addAndMakeVisible(*keyTrackValueLL);
+    traverse(wavButton);
 
     createComponent(editor, *this, sn.startingPhase, startingPhase, startingPhaseD);
     addAndMakeVisible(*startingPhase);
+    traverse(startingPhase);
     startingPhaseD->onGuiSetValue = [w = juce::Component::SafePointer(this)]()
     {
         if (!w)
@@ -140,6 +136,22 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     startingPhaseL->setText(std::string() + u8"\U000003C6");
     addAndMakeVisible(*startingPhaseL);
 
+    keyTrackTitle = std::make_unique<jcmp::RuledLabel>();
+    keyTrackTitle->setText("Pitch");
+    addAndMakeVisible(*keyTrackTitle);
+
+    createComponent(editor, *this, sn.keyTrack, keyTrack, keyTrackD);
+    keyTrack->setLabel("KeyTrak");
+    addAndMakeVisible(*keyTrack);
+    traverse(keyTrack);
+
+    createComponent(editor, *this, sn.keyTrackValue, keyTrackValue, keyTrackValueD);
+    addAndMakeVisible(*keyTrackValue);
+    keyTrackValueLL = std::make_unique<jcmp::Label>();
+    keyTrackValueLL->setText("f");
+    addAndMakeVisible(*keyTrackValueLL);
+    traverse(keyTrackValue);
+
     auto op = [w = juce::Component::SafePointer(this)]()
     {
         if (w)
@@ -150,6 +162,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
 
     createComponent(editor, *this, sn.octTranspose, tsposeButton, tsposeButtonD);
     addAndMakeVisible(*tsposeButton);
+    traverse(tsposeButton);
 
     tsposeButtonL = std::make_unique<jcmp::Label>();
     tsposeButtonL->setText("Octave");
@@ -164,6 +177,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
                 w->showUnisonFeaturesMenu();
         });
     addAndMakeVisible(*unisonBehaviorB);
+    traverse(unisonBehaviorB);
 
     setEnabledState();
 
@@ -322,7 +336,8 @@ void SourceSubPanel::showUnisonFeaturesMenu()
                       w->editor.sendParamSetValue(u2oid, 2);
               });
 
-    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
+                    makeMenuAccessibleButtonCB(unisonBehaviorB.get()));
 }
 
 } // namespace baconpaul::six_sines::ui
