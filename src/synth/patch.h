@@ -709,14 +709,14 @@ struct Patch : pats::PatchBase<Patch, Param>
                          .withFlags(CLAP_PARAM_IS_STEPPED)
                          .withDefault(false)
                          .withID(id(1, idx))),
-              pmOrRM(
-                  intMd()
-                      .withRange(0, 1)
-                      .withDefault(0)
-                      .withName(name(idx) + " PM or RM")
-                      .withGroupName(name(idx))
-                      .withID(id(35, idx))
-                      .withUnorderedMapFormatting({{0, std::string() + u8"\U000003C6"}, {1, "A"}})),
+              pmOrRM(intMd()
+                         .withRange(0, 1)
+                         .withDefault(0)
+                         .withName(name(idx) + " PM or RM")
+                         .withGroupName(name(idx))
+                         .withID(id(35, idx))
+                         .withUnorderedMapFormatting(
+                             {{0, "Phase Modulation"}, {1, "Ring Modulation"}})),
               DAHDSRMixin(name(idx), id(2, idx), false, false, id(50, idx)),
               LFOMixin(name(idx), id(14, idx)),
               lfoToDepth(floatMd()

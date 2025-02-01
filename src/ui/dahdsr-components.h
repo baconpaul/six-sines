@@ -246,7 +246,8 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
                           {Synth::UIToAudioMsg::Action::SET_PARAM, pid, (float)(!tfz)});
                       w->editor.flushOperator();
                   });
-        p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor));
+        p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor),
+                        makeMenuAccessibleButtonCB(triggerButton.get()));
     }
 };
 } // namespace baconpaul::six_sines::ui
