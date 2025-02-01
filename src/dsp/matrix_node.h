@@ -150,8 +150,9 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         depthAtten = 1.f;
         lfoAtten = 1.f;
         applyMod = 0.f;
-        attackMod = 0.f;
-        rateMod = 0.f;
+
+        envResetMod();
+        lfoResetMod();
 
         if (!anySources)
             return;
@@ -166,25 +167,28 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
                 if (!dp)
                     continue;
                 auto d = *dp;
-                switch ((Patch::MatrixNode::TargetID)matrixNode.modtarget[i].value)
+
+                auto handled = envHandleModulationValue((int)matrixNode.modtarget[i].value, d,
+                                                        sourcePointers[i]) ||
+                               lfoHandleModulationValue((int)matrixNode.modtarget[i].value, d,
+                                                        sourcePointers[i]);
+
+                if (!handled)
                 {
-                case Patch::MatrixNode::DIRECT:
-                    applyMod += d * *sourcePointers[i];
-                    break;
-                case Patch::MatrixNode::DEPTH_ATTEN:
-                    depthAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::MatrixNode::LFO_DEPTH_ATTEN:
-                    lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::MatrixNode::ENV_ATTACK:
-                    attackMod += d * *sourcePointers[i];
-                    break;
-                case Patch::MatrixNode::LFO_RATE:
-                    rateMod += d * *sourcePointers[i] * 4;
-                    break;
-                default:
-                    break;
+                    switch ((Patch::MatrixNode::TargetID)matrixNode.modtarget[i].value)
+                    {
+                    case Patch::MatrixNode::DIRECT:
+                        applyMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::MatrixNode::DEPTH_ATTEN:
+                        depthAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    case Patch::MatrixNode::LFO_DEPTH_ATTEN:
+                        lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    default:
+                        break;
+                    }
                 }
             }
         }
@@ -271,8 +275,9 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
         depthAtten = 1.f;
         lfoAtten = 1.f;
         fbMod = 0.f;
-        attackMod = 0.f;
-        rateMod = 0.f;
+
+        envResetMod();
+        lfoResetMod();
 
         if (!anySources)
             return;
@@ -287,25 +292,28 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
                 if (!dp)
                     continue;
                 auto d = *dp;
-                switch ((Patch::SelfNode::TargetID)selfNode.modtarget[i].value)
+
+                auto handled = envHandleModulationValue((int)selfNode.modtarget[i].value, d,
+                                                        sourcePointers[i]) ||
+                               lfoHandleModulationValue((int)selfNode.modtarget[i].value, d,
+                                                        sourcePointers[i]);
+
+                if (!handled)
                 {
-                case Patch::SelfNode::DIRECT:
-                    fbMod += d * *sourcePointers[i];
-                    break;
-                case Patch::SelfNode::DEPTH_ATTEN:
-                    depthAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::SelfNode::LFO_DEPTH_ATTEN:
-                    lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::SelfNode::ENV_ATTACK:
-                    attackMod += d * *sourcePointers[i];
-                    break;
-                case Patch::SelfNode::LFO_RATE:
-                    rateMod += d * *sourcePointers[i] * 4;
-                    break;
-                default:
-                    break;
+                    switch ((Patch::SelfNode::TargetID)selfNode.modtarget[i].value)
+                    {
+                    case Patch::SelfNode::DIRECT:
+                        fbMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::SelfNode::DEPTH_ATTEN:
+                        depthAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    case Patch::SelfNode::LFO_DEPTH_ATTEN:
+                        lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    default:
+                        break;
+                    }
                 }
             }
         }
@@ -443,10 +451,11 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         depthAtten = 1.f;
         lfoAtten = 1.f;
         levMod = 0.f;
-        attackMod = 0.f;
-        rateMod = 0.f;
         panMod = 0.f;
         lfoPanAtten = 1.f;
+
+        envResetMod();
+        lfoResetMod();
 
         if (!anySources)
             return;
@@ -461,31 +470,34 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
                 if (!dp)
                     continue;
                 auto d = *dp;
-                switch ((Patch::MixerNode::TargetID)mixerNode.modtarget[i].value)
+
+                auto handled = envHandleModulationValue((int)mixerNode.modtarget[i].value, d,
+                                                        sourcePointers[i]) ||
+                               lfoHandleModulationValue((int)mixerNode.modtarget[i].value, d,
+                                                        sourcePointers[i]);
+
+                if (!handled)
                 {
-                case Patch::MixerNode::DIRECT:
-                    levMod += d * *sourcePointers[i];
-                    break;
-                case Patch::MixerNode::PAN:
-                    panMod += d * *sourcePointers[i];
-                    break;
-                case Patch::MixerNode::DEPTH_ATTEN:
-                    depthAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::MixerNode::LFO_DEPTH_ATTEN:
-                    lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::MixerNode::LFO_DEPTH_PAN_ATTEN:
-                    lfoPanAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::MixerNode::ENV_ATTACK:
-                    attackMod += d * *sourcePointers[i];
-                    break;
-                case Patch::MixerNode::LFO_RATE:
-                    rateMod += d * *sourcePointers[i] * 4;
-                    break;
-                default:
-                    break;
+                    switch ((Patch::MixerNode::TargetID)mixerNode.modtarget[i].value)
+                    {
+                    case Patch::MixerNode::DIRECT:
+                        levMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::MixerNode::PAN:
+                        panMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::MixerNode::DEPTH_ATTEN:
+                        depthAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    case Patch::MixerNode::LFO_DEPTH_ATTEN:
+                        lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    case Patch::MixerNode::LFO_DEPTH_PAN_ATTEN:
+                        lfoPanAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    default:
+                        break;
+                    }
                 }
             }
         }
@@ -568,13 +580,14 @@ struct ModulationOnlyNode : EnvelopeSupport<Patch::ModulationOnlyNode>,
 
     void calculateModulation()
     {
-        attackMod = 0.f;
-        rateMod = 0.f;
         lfoAtten = 1.f;
         envAtten = 1.f;
         directMod = 0.f;
         edMod = 0.f;
         ldMod = 0.f;
+
+        envResetMod();
+        lfoResetMod();
 
         if (!anySources)
             return;
@@ -589,31 +602,34 @@ struct ModulationOnlyNode : EnvelopeSupport<Patch::ModulationOnlyNode>,
                 if (!dp)
                     continue;
                 auto d = *dp;
-                switch ((Patch::ModulationOnlyNode::TargetID)modNode.modtarget[i].value)
+
+                auto handled =
+                    envHandleModulationValue((int)modNode.modtarget[i].value, d,
+                                             sourcePointers[i]) ||
+                    lfoHandleModulationValue((int)modNode.modtarget[i].value, d, sourcePointers[i]);
+
+                if (!handled)
                 {
-                case Patch::ModulationOnlyNode::DIRECT:
-                    directMod += d * *sourcePointers[i];
-                    break;
-                case Patch::ModulationOnlyNode::ENVDEP_DIR:
-                    edMod += d * *sourcePointers[i];
-                    break;
-                case Patch::ModulationOnlyNode::LFODEP_DIR:
-                    ldMod += d * *sourcePointers[i];
-                    break;
-                case Patch::ModulationOnlyNode::DEPTH_ATTEN:
-                    envAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::ModulationOnlyNode::LFO_DEPTH_ATTEN:
-                    lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::ModulationOnlyNode::LFO_RATE:
-                    rateMod += d * *sourcePointers[i] * 4;
-                    break;
-                case Patch::ModulationOnlyNode::ENV_ATTACK:
-                    attackMod += d * *sourcePointers[i];
-                    break;
-                default:
-                    break;
+                    switch ((Patch::ModulationOnlyNode::TargetID)modNode.modtarget[i].value)
+                    {
+                    case Patch::ModulationOnlyNode::DIRECT:
+                        directMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::ModulationOnlyNode::ENVDEP_DIR:
+                        edMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::ModulationOnlyNode::LFODEP_DIR:
+                        ldMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::ModulationOnlyNode::DEPTH_ATTEN:
+                        envAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    case Patch::ModulationOnlyNode::LFO_DEPTH_ATTEN:
+                        lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    default:
+                        break;
+                    }
                 }
             }
         }
@@ -746,11 +762,12 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     void calculateModulation()
     {
         depthAtten = 1.f;
-        attackMod = 0.f;
         panMod = 0.f;
         levMod = 0.f;
-        rateMod = 0.f;
         lfoAtten = 1.f;
+
+        envResetMod();
+        lfoResetMod();
 
         if (!anySources)
             return;
@@ -765,28 +782,31 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
                 if (!dp)
                     continue;
                 auto d = *dp;
-                switch ((Patch::OutputNode::TargetID)outputNode.modtarget[i].value)
+
+                auto handled = envHandleModulationValue((int)outputNode.modtarget[i].value, d,
+                                                        sourcePointers[i]) ||
+                               lfoHandleModulationValue((int)outputNode.modtarget[i].value, d,
+                                                        sourcePointers[i]);
+
+                if (!handled)
                 {
-                case Patch::OutputNode::PAN:
-                    panMod += d * *sourcePointers[i];
-                    break;
-                case Patch::OutputNode::DIRECT:
-                    levMod += d * *sourcePointers[i];
-                    break;
-                case Patch::OutputNode::DEPTH_ATTEN:
-                    depthAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::OutputNode::LFO_DEPTH_ATTEN:
-                    lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::OutputNode::LFO_RATE:
-                    rateMod += d * *sourcePointers[i] * 4;
-                    break;
-                case Patch::OutputNode::ENV_ATTACK:
-                    attackMod += d * *sourcePointers[i];
-                    break;
-                default:
-                    break;
+                    switch ((Patch::OutputNode::TargetID)outputNode.modtarget[i].value)
+                    {
+                    case Patch::OutputNode::PAN:
+                        panMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::OutputNode::DIRECT:
+                        levMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::OutputNode::DEPTH_ATTEN:
+                        depthAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    case Patch::OutputNode::LFO_DEPTH_ATTEN:
+                        lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    default:
+                        break;
+                    }
                 }
             }
         }

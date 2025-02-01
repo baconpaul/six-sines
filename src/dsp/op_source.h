@@ -286,9 +286,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         envRatioAtten = 1.f;
         lfoRatioAtten = 1.f;
         ratioMod = 0.f;
-        attackMod = 0.f;
-        rateMod = 0.f;
         phaseMod = 0.f;
+
+        envResetMod();
+        lfoResetMod();
 
         if (!anySources)
             return;
@@ -303,28 +304,30 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                 if (!dp)
                     continue;
                 auto d = *dp;
-                switch ((Patch::SourceNode::TargetID)sourceNode.modtarget[i].value)
+
+                auto handled =
+                    envHandleModulationValue(sourceNode.modtarget[i].value, d, sourcePointers[i]) ||
+                    lfoHandleModulationValue(sourceNode.modtarget[i].value, d, sourcePointers[i]);
+
+                if (!handled)
                 {
-                case Patch::SourceNode::DIRECT:
-                    ratioMod += d * *sourcePointers[i] * 2;
-                    break;
-                case Patch::SourceNode::STARTING_PHASE:
-                    phaseMod += d * *sourcePointers[i];
-                    break;
-                case Patch::SourceNode::ENV_DEPTH_ATTEN:
-                    envRatioAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::SourceNode::LFO_DEPTH_ATTEN:
-                    lfoRatioAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
-                    break;
-                case Patch::SourceNode::ENV_ATTACK:
-                    attackMod += d * *sourcePointers[i];
-                    break;
-                case Patch::SourceNode::LFO_RATE:
-                    rateMod += d * *sourcePointers[i] * 4;
-                    break;
-                default:
-                    break;
+                    switch ((Patch::SourceNode::TargetID)sourceNode.modtarget[i].value)
+                    {
+                    case Patch::SourceNode::DIRECT:
+                        ratioMod += d * *sourcePointers[i] * 2;
+                        break;
+                    case Patch::SourceNode::STARTING_PHASE:
+                        phaseMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::SourceNode::ENV_DEPTH_ATTEN:
+                        envRatioAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    case Patch::SourceNode::LFO_DEPTH_ATTEN:
+                        lfoRatioAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    default:
+                        break;
+                    }
                 }
             }
         }

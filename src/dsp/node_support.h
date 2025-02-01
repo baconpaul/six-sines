@@ -26,6 +26,7 @@
 
 #include "synth/mono_values.h"
 #include "synth/voice_values.h"
+#include "synth/patch.h"
 
 namespace baconpaul::six_sines
 {
@@ -68,7 +69,8 @@ template <typename T> struct EnvelopeSupport
     using env_t = sst::basic_blocks::modulators::AHDSRShapedSC<SRProvider, blockSize, range_t>;
     env_t env;
 
-    float attackMod{0.f};
+    float delayMod{0.f}, attackMod{0.f}, holdMod{0.f}, decayMod{0.f}, sustainMod{0.f},
+        releaseMod{0.f};
     bool releaseEnvStarted{false}, releaseEnvUngated{false};
     bool envIsMult{true};
 
@@ -124,7 +126,7 @@ template <typename T> struct EnvelopeSupport
                 {
                     startingValue = 0;
                 }
-                env.attackFromWithDelay(startingValue, delay,
+                env.attackFromWithDelay(startingValue, std::clamp(delay + delayMod, 0.f, 1.f),
                                         std::clamp(attackv + attackMod, minAttack, 1.f));
                 if (fromZV > 0.5)
                 {
@@ -170,27 +172,35 @@ template <typename T> struct EnvelopeSupport
                 if (!releaseEnvStarted)
                 {
                     // never started - so attack from zero
-                    env.attackFromWithDelay(0.f, delay,
+                    env.attackFromWithDelay(0.f, std::clamp(delay + delayMod, 0.f, 1.f),
                                             std::clamp(attackv + attackMod, minAttack, 1.f));
                     releaseEnvStarted = true;
                 }
                 else if (releaseEnvUngated)
                 {
-                    env.attackFromWithDelay(env.outputCache[blockSize - 1], delay,
+                    env.attackFromWithDelay(env.outputCache[blockSize - 1],
+                                            std::clamp(delay + delayMod, 0.f, 1.f),
                                             std::clamp(attackv + attackMod, minAttack, 1.f));
                     releaseEnvStarted = true;
                     releaseEnvUngated = false;
                 }
             }
-            env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, minAttack, 1.f), hold,
-                                      decay, sustain, release, ash, dsh, rsh, !voiceValues.gated,
-                                      needsCurve);
+            env.processBlockWithDelay(std::clamp(delay + delayMod, 0.f, 1.f),
+                                      std::clamp(attackv + attackMod, minAttack, 1.f),
+                                      std::clamp(hold + holdMod, 0.f, 1.f),
+                                      std::clamp(decay + decayMod, 0.f, 1.f), sustain + sustainMod,
+                                      std::clamp(release + releaseMod, 0.f, 1.f), ash, dsh, rsh,
+                                      !voiceValues.gated, needsCurve);
         }
         else
         {
             auto gate = envIsOneShot ? env.stage < env_t::s_sustain : voiceValues.gated;
-            env.processBlockWithDelay(delay, std::clamp(attackv + attackMod, minAttack, 1.f), hold,
-                                      decay, sustain, release, ash, dsh, rsh, gate, needsCurve);
+            env.processBlockWithDelay(std::clamp(delay + delayMod, 0.f, 1.f),
+                                      std::clamp(attackv + attackMod, minAttack, 1.f),
+                                      std::clamp(hold + holdMod, 0.f, 1.f),
+                                      std::clamp(decay + decayMod, 0.f, 1.f), sustain + sustainMod,
+                                      std::clamp(release + releaseMod, 0.f, 1.f), ash, dsh, rsh,
+                                      gate, needsCurve);
         }
     }
 
@@ -199,6 +209,42 @@ template <typename T> struct EnvelopeSupport
         memset(env.outputCache, 0, sizeof(env.outputCache));
         env.stage = env_t::s_complete;
         active = false;
+    }
+
+    void envResetMod()
+    {
+        delayMod = 0.f;
+        attackMod = 0.f;
+        holdMod = 0.f;
+        decayMod = 0.f;
+        sustainMod = 0.f;
+        releaseMod = 0.f;
+    }
+
+    bool envHandleModulationValue(int target, const float depth, const float *source)
+    {
+        switch (target)
+        {
+        case Patch::DAHDSRMixin::ENV_DELAY:
+            delayMod = depth * *source;
+            return true;
+        case Patch::DAHDSRMixin::ENV_ATTACK:
+            attackMod = depth * *source;
+            return true;
+        case Patch::DAHDSRMixin::ENV_HOLD:
+            holdMod = depth * *source;
+            return true;
+        case Patch::DAHDSRMixin::ENV_DECAY:
+            decayMod = depth * *source;
+            return true;
+        case Patch::DAHDSRMixin::ENV_SUSTAIN:
+            sustainMod = depth * *source;
+            return true;
+        case Patch::DAHDSRMixin::ENV_RELEASE:
+            releaseMod = depth * *source;
+            return true;
+        }
+        return false;
     }
 };
 
@@ -221,7 +267,7 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     {
     }
 
-    float rateMod{0.f};
+    float lfoRateMod{0.f}, lfoDeformMod{0.f};
 
     int shape;
     bool tempoSync{false};
@@ -267,7 +313,8 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
             rate = -paramBundle.lfoRate.meta.snapToTemposync(-rate);
         }
 
-        lfo.process_block(rate + rateMod, lfoDeform, shape, false, monoValues.tempoSyncRatio);
+        lfo.process_block(rate + lfoRateMod, std::clamp(lfoDeform + lfoDeformMod, -1.f, 1.f), shape,
+                          false, monoValues.tempoSyncRatio);
 
         if (doSmooth)
         {
@@ -285,6 +332,26 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
                 lfo.outputBlock[j] = (lfo.outputBlock[j] + 1) * 0.5;
             }
         }
+    }
+
+    void lfoResetMod()
+    {
+        lfoRateMod = 0.f;
+        lfoDeformMod = 0.f;
+    }
+
+    bool lfoHandleModulationValue(int target, const float depth, const float *source)
+    {
+        switch (target)
+        {
+        case Patch::LFOMixin::LFO_RATE:
+            lfoRateMod = depth * *source * 4;
+            return true;
+        case Patch::LFOMixin::LFO_DEFORM:
+            lfoDeformMod = depth * *source;
+            return true;
+        }
+        return false;
     }
 };
 

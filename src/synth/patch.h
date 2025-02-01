@@ -191,10 +191,24 @@ struct Patch : pats::PatchBase<Patch, Param>
             res.push_back(&lfoBipolar);
             res.push_back(&lfoIsEnveloped);
         }
+
+        enum LFOTargets
+        {
+            LFO_RATE = 50,
+            LFO_DEFORM = 51
+        };
+
+        void appendLFOTargetName(std::vector<std::pair<int32_t, std::string>> &res)
+        {
+            res.emplace_back(-1, "");
+            res.emplace_back(LFOTargets::LFO_RATE, "LFO Rate");
+            res.emplace_back(LFOTargets::LFO_DEFORM, "LFO Deform");
+        }
     };
 
     struct DAHDSRMixin
     {
+
         DAHDSRMixin(const std::string name, int id0, bool longAdsr, bool alwaysAdd = false,
                     int id1 = -1)
             : delay(floatEnvRateMd()
@@ -308,6 +322,27 @@ struct Patch : pats::PatchBase<Patch, Param>
             res.push_back(&envIsOneShot);
             res.push_back(&envTriggersFromZero);
         }
+
+        enum DAHDSRTargets
+        {
+            ENV_DELAY = 45,
+            ENV_ATTACK = 40,
+            ENV_HOLD = 41,
+            ENV_DECAY = 42,
+            ENV_SUSTAIN = 43,
+            ENV_RELEASE = 44
+        };
+
+        void appendDAHDSRTargetName(std::vector<std::pair<int32_t, std::string>> &res)
+        {
+            res.emplace_back(-1, "");
+            res.emplace_back(ENV_DELAY, "Env Delay");
+            res.emplace_back(ENV_ATTACK, "Env Attack");
+            res.emplace_back(ENV_HOLD, "Env Hold");
+            res.emplace_back(ENV_DECAY, "Env Decay");
+            res.emplace_back(ENV_SUSTAIN, "Env Sustain");
+            res.emplace_back(ENV_RELEASE, "Env Release");
+        }
     };
 
     struct ModulationMixin
@@ -353,7 +388,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         static constexpr uint32_t idBase{1500}, idStride{250};
 
         // These stream
-        enum TargetID
+        enum TargetID : int32_t
         {
             SKIP = -1,
             NONE = 0,
@@ -361,21 +396,16 @@ struct Patch : pats::PatchBase<Patch, Param>
             STARTING_PHASE = 15,
             ENV_DEPTH_ATTEN = 20,
             LFO_DEPTH_ATTEN = 30,
-
-            ENV_ATTACK = 40,
-            LFO_RATE = 50
         };
 
-        std::vector<std::pair<TargetID, std::string>> targetList{
+        std::vector<std::pair<int32_t, std::string>> targetList{
             {TargetID::NONE, "Off"},
             {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Ratio"},
             {TargetID::STARTING_PHASE, "Phase"},
             {TargetID::ENV_DEPTH_ATTEN, "Env Sens"},
             {TargetID::LFO_DEPTH_ATTEN, "LFO Sens"},
-            {TargetID::SKIP, ""},
-            {TargetID::ENV_ATTACK, "Env Attack"},
-            {TargetID::LFO_RATE, "LFO Rate"},
+
         };
 
         SourceNode(size_t idx)
@@ -522,6 +552,8 @@ struct Patch : pats::PatchBase<Patch, Param>
         {
             index = idx;
             waveForm.adhocFeatures = Param::AdHocFeatureValues::WAVEFORM;
+            appendLFOTargetName(targetList);
+            appendDAHDSRTargetName(targetList);
         }
 
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Source"; }
@@ -569,28 +601,21 @@ struct Patch : pats::PatchBase<Patch, Param>
     struct SelfNode : public DAHDSRMixin, LFOMixin, ModulationMixin
     {
         // These stream
-        enum TargetID
+        enum TargetID : int32_t
         {
             SKIP = -1,
             NONE = 0,
             DIRECT = 10,
             DEPTH_ATTEN = 20,
-            LFO_DEPTH_ATTEN = 30,
-
-            ENV_ATTACK = 40,
-            LFO_RATE = 50
+            LFO_DEPTH_ATTEN = 30
         };
 
-        std::vector<std::pair<TargetID, std::string>> targetList{
+        std::vector<std::pair<int32_t, std::string>> targetList{
             {TargetID::NONE, "Off"},
             {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Feedback Level"},
             {TargetID::DEPTH_ATTEN, "Env Atten"},
-            {TargetID::LFO_DEPTH_ATTEN, "LFO Atten"},
-            {TargetID::SKIP, ""},
-            {TargetID::ENV_ATTACK, "Env Attack"},
-            {TargetID::LFO_RATE, "LFO Rate"},
-        };
+            {TargetID::LFO_DEPTH_ATTEN, "LFO Atten"}};
 
         // Once streamed you cant change these bases or the individual ids inside
         static constexpr uint32_t idBase{10000}, idStride{100};
@@ -637,6 +662,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                   }))
         {
             index = idx;
+            appendLFOTargetName(targetList);
+            appendDAHDSRTargetName(targetList);
         }
 
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Feedback"; }
@@ -673,27 +700,21 @@ struct Patch : pats::PatchBase<Patch, Param>
     {
         static constexpr uint32_t idBase{30000}, idStride{200};
 
-        enum TargetID
+        enum TargetID : int32_t
         {
             SKIP = -1,
             NONE = 0,
             DIRECT = 10,
             DEPTH_ATTEN = 20,
-            LFO_DEPTH_ATTEN = 30,
-
-            ENV_ATTACK = 40,
-            LFO_RATE = 50
+            LFO_DEPTH_ATTEN = 30
         };
 
-        std::vector<std::pair<TargetID, std::string>> targetList{
+        std::vector<std::pair<int32_t, std::string>> targetList{
             {TargetID::NONE, "Off"},
             {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Level"},
             {TargetID::DEPTH_ATTEN, "Env Atten"},
             {TargetID::LFO_DEPTH_ATTEN, "LFO Atten"},
-            {TargetID::SKIP, ""},
-            {TargetID::ENV_ATTACK, "Env Attack"},
-            {TargetID::LFO_RATE, "LFO Rate"},
         };
 
         MatrixNode(size_t idx)
@@ -751,6 +772,8 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         {
             index = idx;
+            appendLFOTargetName(targetList);
+            appendDAHDSRTargetName(targetList);
         }
 
         Param level;
@@ -797,7 +820,7 @@ struct Patch : pats::PatchBase<Patch, Param>
     {
         static constexpr uint32_t idBase{20000}, idStride{100};
 
-        enum TargetID
+        enum TargetID : int32_t
         {
             SKIP = -1,
             NONE = 0,
@@ -806,12 +829,9 @@ struct Patch : pats::PatchBase<Patch, Param>
             DEPTH_ATTEN = 20,
             LFO_DEPTH_ATTEN = 30,
             LFO_DEPTH_PAN_ATTEN = 35,
-
-            ENV_ATTACK = 40,
-            LFO_RATE = 50
         };
 
-        std::vector<std::pair<TargetID, std::string>> targetList{
+        std::vector<std::pair<int32_t, std::string>> targetList{
             {TargetID::NONE, "Off"},
             {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Amplitude"},
@@ -820,9 +840,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             {TargetID::DEPTH_ATTEN, "Env Atten"},
             {TargetID::LFO_DEPTH_ATTEN, std::string() + "LFO" + u8"\U00002192" + "Amp Atten"},
             {TargetID::LFO_DEPTH_PAN_ATTEN, std::string() + "LFO" + u8"\U00002192" + "Pan Atten"},
-            {TargetID::SKIP, ""},
-            {TargetID::ENV_ATTACK, "Env Attack"},
-            {TargetID::LFO_RATE, "LFO Rate"},
+
         };
 
         MixerNode(size_t idx)
@@ -878,6 +896,8 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         {
             index = idx;
+            appendLFOTargetName(targetList);
+            appendDAHDSRTargetName(targetList);
         }
 
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Mixer"; }
@@ -939,7 +959,7 @@ struct Patch : pats::PatchBase<Patch, Param>
     {
         static constexpr uint32_t idBase{50000}, idStride{1000};
 
-        enum TargetID
+        enum TargetID : int32_t
         {
             SKIP = -1,
             NONE = 0,
@@ -947,13 +967,10 @@ struct Patch : pats::PatchBase<Patch, Param>
             ENVDEP_DIR = 14,
             LFODEP_DIR = 17,
             DEPTH_ATTEN = 20,
-            LFO_DEPTH_ATTEN = 25,
-
-            ENV_ATTACK = 40,
-            LFO_RATE = 50
+            LFO_DEPTH_ATTEN = 25
         };
 
-        std::vector<std::pair<TargetID, std::string>> targetList{
+        std::vector<std::pair<int32_t, std::string>> targetList{
             {TargetID::NONE, "Off"},
             {TargetID::SKIP, ""},
             {TargetID::DIRECT, "TARGET"},
@@ -962,9 +979,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             {TargetID::SKIP, ""},
             {TargetID::DEPTH_ATTEN, "Env Atten"},
             {TargetID::LFO_DEPTH_ATTEN, "LFO Atten"},
-            {TargetID::SKIP, ""},
-            {TargetID::ENV_ATTACK, "Env Attack"},
-            {TargetID::LFO_RATE, "LFO Rate"}};
+        };
 
         ModulationOnlyNode(const std::string &opName, const std::string &outn, int idx)
             : DAHDSRMixin(opName, id(0, idx), false, true),
@@ -1000,6 +1015,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                     n = outn;
             }
             cacheName = opName;
+            appendLFOTargetName(targetList);
+            appendDAHDSRTargetName(targetList);
         }
 
         std::string cacheName{};
@@ -1029,7 +1046,7 @@ struct Patch : pats::PatchBase<Patch, Param>
     {
         static constexpr uint32_t idBase{500};
 
-        enum TargetID
+        enum TargetID : int32_t
         {
             SKIP = -1,
             NONE = 0,
@@ -1037,21 +1054,16 @@ struct Patch : pats::PatchBase<Patch, Param>
             PAN = 15,
             DEPTH_ATTEN = 20,
             LFO_DEPTH_ATTEN = 25,
-
-            ENV_ATTACK = 40,
-            LFO_RATE = 50
         };
 
-        std::vector<std::pair<TargetID, std::string>> targetList{
+        std::vector<std::pair<int32_t, std::string>> targetList{
             {TargetID::NONE, "Off"},
             {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Amplitude"},
             {TargetID::DEPTH_ATTEN, "Env Atten"},
             {TargetID::LFO_DEPTH_ATTEN, "LFO Atten"},
             {TargetID::PAN, "Pan"},
-            {TargetID::SKIP, ""},
-            {TargetID::ENV_ATTACK, "Env Attack"},
-            {TargetID::LFO_RATE, "LFO Rate"}};
+        };
 
         OutputNode()
             : DAHDSRMixin(name(), id(2), true), level(floatMd()
@@ -1235,6 +1247,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                       .withID(id(220)))
         {
             defaultTrigger.adhocFeatures = Param::AdHocFeatureValues::TRIGGERMODE;
+            appendLFOTargetName(targetList);
+            appendDAHDSRTargetName(targetList);
         }
 
         std::string name() const { return "Main"; }
