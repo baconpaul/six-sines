@@ -26,9 +26,9 @@ namespace baconpaul::six_sines::ui
 {
 struct MainPanSubPanel : juce::Component,
                          HasEditor,
-                         DAHDSRComponents<MainPanSubPanel, Patch::ModulationOnlyNode>,
-                         LFOComponents<MainPanSubPanel, Patch::ModulationOnlyNode>,
-                         ModulationComponents<MainPanSubPanel, Patch::ModulationOnlyNode>
+                         DAHDSRComponents<MainPanSubPanel, Patch::MainPanNode>,
+                         LFOComponents<MainPanSubPanel, Patch::MainPanNode>,
+                         ModulationComponents<MainPanSubPanel, Patch::MainPanNode>
 {
     MainPanSubPanel(SixSinesEditor &e);
     ~MainPanSubPanel() = default;

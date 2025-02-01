@@ -26,9 +26,9 @@ namespace baconpaul::six_sines::ui
 {
 struct FineTuneSubPanel : juce::Component,
                           HasEditor,
-                          DAHDSRComponents<FineTuneSubPanel, Patch::ModulationOnlyNode>,
-                          LFOComponents<FineTuneSubPanel, Patch::ModulationOnlyNode>,
-                          ModulationComponents<FineTuneSubPanel, Patch::ModulationOnlyNode>
+                          DAHDSRComponents<FineTuneSubPanel, Patch::FineTuneNode>,
+                          LFOComponents<FineTuneSubPanel, Patch::FineTuneNode>,
+                          ModulationComponents<FineTuneSubPanel, Patch::FineTuneNode>
 {
     FineTuneSubPanel(SixSinesEditor &e);
     ~FineTuneSubPanel() = default;
