@@ -53,6 +53,27 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     portaTime->setEnabled(false);
     portaL->setEnabled(false);
 
+    portaContinuationButton = std::make_unique<jcmp::TextPushButton>();
+    portaContinuationButton->setOnCallback(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+            {
+                w->showPortaContinuationMenu();
+            }
+        });
+    setPortaContinuationLabel();
+
+    editor.componentRefreshByID[on.portaContinuation.meta.id] =
+        [w = juce::Component::SafePointer(this)]()
+    {
+        if (w)
+        {
+            w->setPortaContinuationLabel();
+        }
+    };
+    addAndMakeVisible(*portaContinuationButton);
+
     auto op = [w = juce::Component::SafePointer(this)]()
     {
         if (w)
@@ -203,6 +224,7 @@ void PlayModeSubPanel::resized()
     pml.add(jlo::Component(*pianoModeButton).withHeight(uicLabelHeight));
     pml.add(jlo::Component(*portaL).withHeight(uicLabelHeight));
     pml.add(jlo::Component(*portaTime).withHeight(uicLabelHeight).insetBy(0, 2));
+    pml.add(jlo::Component(*portaContinuationButton).withHeight(uicLabelHeight));
     lo.add(pml);
 
     // Unison Controls
@@ -306,12 +328,59 @@ void PlayModeSubPanel::showTriggerButtonMenu()
                     makeMenuAccessibleButtonCB(triggerButton.get()));
 }
 
+void PlayModeSubPanel::setPortaContinuationLabel()
+{
+    auto v = (int)std::round(editor.patchCopy.output.portaContinuation.value);
+    switch (v)
+    {
+    case 0:
+        portaContinuationButton->setLabel("OnVoice");
+        break;
+    case 1:
+        portaContinuationButton->setLabel("FreeRun");
+        break;
+    case 2:
+        portaContinuationButton->setLabel("GateRun");
+        break;
+    }
+}
+
+void PlayModeSubPanel::showPortaContinuationMenu()
+{
+    auto tmv = (int)std::round(editor.patchCopy.output.portaContinuation.value);
+
+    auto genSet = [w = juce::Component::SafePointer(this)](int nv)
+    {
+        auto that = w;
+        return [nv, that]()
+        {
+            auto pid = that->editor.patchCopy.output.portaContinuation.meta.id;
+            that->editor.patchCopy.paramMap.at(pid)->value = nv;
+            that->setPortaContinuationLabel();
+
+            that->editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pid, (float)nv});
+            that->editor.flushOperator();
+        };
+    };
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("Portamento Continuation");
+    p.addSectionHeader("Experimental; May change before 1.1");
+    p.addSeparator();
+    p.addItem("Restart Porta on New Voice", true, tmv == 0, genSet(0));
+    p.addItem("Continue Porta While Released", true, tmv == 1, genSet(1));
+    p.addItem("Suspend Porta While Released", true, tmv == 2, genSet(2));
+
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&this->editor),
+                    makeMenuAccessibleButtonCB(portaContinuationButton.get()));
+}
+
 void PlayModeSubPanel::setEnabledState()
 {
     auto vm = editor.patchCopy.output.playMode.value;
     auto en = vm > 0.5;
     portaL->setEnabled(en);
     portaTime->setEnabled(en);
+    portaContinuationButton->setEnabled(en);
     pianoModeButton->setEnabled(!en);
 
     auto uc = editor.patchCopy.output.unisonCount.value;

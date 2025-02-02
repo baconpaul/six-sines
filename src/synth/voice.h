@@ -57,6 +57,7 @@ struct Voice
     void retriggerAllEnvelopesForKeyPress();
     void retriggerAllEnvelopesForReGate();
     void setupPortaTo(uint16_t newKey, float log2Seconds);
+    void restartPortaTo(float sourceKey, uint16_t newKey, float log2Seconds, float portaFrac);
 
     std::array<MixerNode, numOps> mixerNode;
     static constexpr int32_t fadeOverBlocks{32};

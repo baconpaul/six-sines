@@ -53,6 +53,10 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<jcmp::HSliderFilled> portaTime;
     std::unique_ptr<PatchContinuous> portaTimeD;
     std::unique_ptr<jcmp::Label> portaL;
+    std::unique_ptr<jcmp::TextPushButton> portaContinuationButton;
+    void setPortaContinuationLabel();
+    void showPortaContinuationMenu();
+
     void setEnabledState();
 
     std::unique_ptr<jcmp::JogUpDownButton> uniCt;
