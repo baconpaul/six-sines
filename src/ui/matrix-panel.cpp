@@ -97,7 +97,7 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         sst::jucegui::component_adapters::setTraversalId(Mknobs[i].get(), ti * 50 + si * 5 + 3);
     }
 
-    highlight = std::make_unique<KnobHighlight>();
+    highlight = std::make_unique<KnobHighlight>(editor);
     addChildComponent(*highlight);
 }
 MatrixPanel::~MatrixPanel() = default;
@@ -132,6 +132,13 @@ void MatrixPanel::paint(juce::Graphics &g)
     auto y = b.getY();
     auto fillCol = getColour(Styles::background).brighter(0.1).withAlpha(0.35f);
     auto strokeCol = getColour(Styles::background).brighter(0.2);
+
+    auto isLight = editor.defaultsProvider->getUserDefaultValue(Defaults::useLightSkin, false);
+    if (isLight)
+    {
+        fillCol = getColour(Styles::background).darker(0.15).withAlpha(0.6f);
+        strokeCol = getColour(Styles::background).darker(0.3);
+    }
     auto r = juce::Rectangle<int>(x + uicMargin, y, numOps * (uicPowerKnobWidth + uicMargin),
                                   uicLabeledKnobHeight)
                  .reduced(1);

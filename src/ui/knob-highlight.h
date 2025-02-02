@@ -16,11 +16,13 @@
 #ifndef BACONPAUL_SIX_SINES_UI_KNOB_HIGHLIGHT_H
 #define BACONPAUL_SIX_SINES_UI_KNOB_HIGHLIGHT_H
 
+#include "six-sines-editor.h"
+
 namespace baconpaul::six_sines::ui
 {
-struct KnobHighlight : public juce::Component
+struct KnobHighlight : public juce::Component, HasEditor
 {
-    KnobHighlight()
+    KnobHighlight(SixSinesEditor &e) : HasEditor(e)
     {
         setAccessible(false);
         setWantsKeyboardFocus(false);
@@ -28,11 +30,24 @@ struct KnobHighlight : public juce::Component
     }
     void paint(juce::Graphics &g) override
     {
-        g.setColour(juce::Colour(0xFF * 0.3, 0x90 * 0.3, 00));
-        g.fillRoundedRectangle(getLocalBounds().toFloat(), 4);
+        auto isLight = editor.defaultsProvider->getUserDefaultValue(Defaults::useLightSkin, false);
 
-        g.setColour(juce::Colour(0xFF * 0.5, 0x90 * 0.5, 80));
-        g.drawRoundedRectangle(getLocalBounds().toFloat(), 4, 2);
+        if (isLight)
+        {
+            g.setColour(juce::Colours::lightblue.withAlpha(0.3f));
+            g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(0.5), 4);
+
+            g.setColour(juce::Colours::navy);
+            g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5), 4, 1);
+        }
+        else
+        {
+            g.setColour(juce::Colour(0xFF * 0.3, 0x90 * 0.3, 00));
+            g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(0.5), 4);
+
+            g.setColour(juce::Colour(0xFF * 0.5, 0x90 * 0.5, 80));
+            g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5), 4, 1);
+        }
     }
 };
 } // namespace baconpaul::six_sines::ui

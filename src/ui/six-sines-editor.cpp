@@ -130,6 +130,12 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     setPatchNameDisplay();
     sst::jucegui::component_adapters::setTraversalId(presetButton.get(), 174);
 
+    defaultsProvider = std::make_unique<defaultsProvder_t>(
+        presetManager->userPath, "SixSinesUI", defaultName,
+        [](auto e, auto b) { SXSNLOG("[ERROR]" << e << " " << b); });
+    SXSNLOG("Preset namager user path is " << presetManager->userPath.u8string())
+    setSkinFromDefaults();
+
     {
         std::lock_guard<std::mutex> grd(sixSinesLookAndFeelSetupMutex);
         if (auto sp = sixSinesLookAndFeelWeakPointer.lock())
@@ -149,14 +155,16 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::HORIZONTAL);
     addAndMakeVisible(*vuMeter);
 
-    // Make sure to do this last
-    setSize(688, 812);
-
     uiToAudio.push({Synth::UIToAudioMsg::EDITOR_ATTACH_DETATCH, true});
     uiToAudio.push({Synth::UIToAudioMsg::REQUEST_REFRESH, true});
     if (flushOperator)
         flushOperator();
 
+    auto pzf = defaultsProvider->getUserDefaultValue(Defaults::zoomLevel, 100);
+    zoomFactor = pzf * 0.01;
+    setTransform(juce::AffineTransform().scaled(zoomFactor));
+
+    setSize(edWidth, edHeight);
 #define DEBUG_FOCUS 0
 #if DEBUG_FOCUS
     focusDebugger = std::make_unique<sst::jucegui::accessibility::FocusDebugger>(*this);
@@ -212,6 +220,8 @@ void SixSinesEditor::paint(juce::Graphics &g)
     jcmp::WindowPanel::paint(g);
     auto ft = style()->getFont(jcmp::Label::Styles::styleClass, jcmp::Label::Styles::labelfont);
 
+    bool isLight = defaultsProvider->getUserDefaultValue(Defaults::useLightSkin, false);
+
     g.setColour(juce::Colours::white.withAlpha(0.9f));
     auto q = ft.withHeight(30);
     g.setFont(q);
@@ -232,11 +242,17 @@ void SixSinesEditor::paint(juce::Graphics &g)
             else
                 p.lineTo(xp + i, 0.45 * (-sx + 1) * ht + 4);
         }
-        g.setColour(juce::Colours::white.withAlpha(0.9f - sqrt((fr - 1) / 7.0f)));
+        if (isLight)
+            g.setColour(juce::Colours::navy.withAlpha(0.9f - sqrt((fr - 1) / 7.0f)));
+        else
+            g.setColour(juce::Colours::white.withAlpha(0.9f - sqrt((fr - 1) / 7.0f)));
         g.strokePath(p, juce::PathStrokeType(1));
     }
 
-    g.setColour(juce::Colours::white.withAlpha(0.5f));
+    if (isLight)
+        g.setColour(juce::Colours::navy);
+    else
+        g.setColour(juce::Colours::white.withAlpha(0.5f));
     q = ft.withHeight(12);
     g.setFont(q);
     g.drawText("https://github.com/baconpaul/six-sines", getLocalBounds().reduced(3, 3),
@@ -597,6 +613,43 @@ void SixSinesEditor::showPresetPopup()
                   }
               });
     p.addSeparator();
+
+    auto uim = juce::PopupMenu();
+    auto isLight = defaultsProvider->getUserDefaultValue(Defaults::useLightSkin, 0);
+
+    for (auto scale : {75, 90, 100, 110, 125, 150})
+    {
+        uim.addItem("Zoom " + std::to_string(scale) + "%", true,
+                    std::fabs(zoomFactor * 100 - scale) < 2,
+                    [s = scale, w = juce::Component::SafePointer(this)]()
+                    {
+                        if (!w)
+                            return;
+                        w->setZoomFactor(s * 0.01);
+                    });
+    }
+
+    uim.addSeparator();
+    uim.addItem("Dark Mode", true, !isLight,
+                [w = juce::Component::SafePointer(this)]()
+                {
+                    if (!w)
+                        return;
+                    w->defaultsProvider->updateUserDefaultValue(Defaults::useLightSkin, false);
+                    w->setSkinFromDefaults();
+                });
+
+    uim.addItem("Light Mode", true, isLight,
+                [w = juce::Component::SafePointer(this)]()
+                {
+                    if (!w)
+                        return;
+                    w->defaultsProvider->updateUserDefaultValue(Defaults::useLightSkin, true);
+                    w->setSkinFromDefaults();
+                });
+    p.addSubMenu("User Interface", uim);
+
+    p.addSeparator();
     p.addItem("Read the Manual",
               []()
               {
@@ -909,6 +962,42 @@ void SixSinesEditor::parentHierarchyChanged()
         presetButton->setWantsKeyboardFocus(true);
         presetButton->grabKeyboardFocus();
     }
+}
+
+void SixSinesEditor::setSkinFromDefaults()
+{
+    auto b = defaultsProvider->getUserDefaultValue(Defaults::useLightSkin, 0);
+    if (b)
+    {
+        setStyle(sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
+            sst::jucegui::style::StyleSheet::LIGHT));
+        style()->setColour(PatchMenu, jcmp::MenuButton::Styles::fill,
+                           style()
+                               ->getColour(jcmp::base_styles::Base::styleClass,
+                                           jcmp::base_styles::Base::background)
+                               .darker(0.3f));
+    }
+    else
+    {
+        setStyle(sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
+            sst::jucegui::style::StyleSheet::DARK));
+    }
+
+    style()->setFont(
+        PatchMenu, jcmp::MenuButton::Styles::labelfont,
+        style()
+            ->getFont(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont)
+            .withHeight(18));
+}
+
+void SixSinesEditor::setZoomFactor(float zf)
+{
+    // SCLOG("Setting zoom factor to " << zf);
+    zoomFactor = zf;
+    setTransform(juce::AffineTransform().scaled(zoomFactor));
+    defaultsProvider->updateUserDefaultValue(Defaults::zoomLevel, zoomFactor * 100);
+    if (onZoomChanged)
+        onZoomChanged(zoomFactor);
 }
 
 } // namespace baconpaul::six_sines::ui
