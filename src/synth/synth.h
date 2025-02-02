@@ -178,7 +178,7 @@ struct Synth
                             synth.voices[i].voiceValues.uniIndex = vc;
                             synth.voices[i].voiceValues.hasCenterVoice = (ct > 1 && (ct % 2 == 1));
                             synth.voices[i].voiceValues.isCenterVoice =
-                                (ct > 1 && (ct % 2 == 1)) && (std::fabs(uniScale[i]) < 1e-4);
+                                (ct > 1 && (ct % 2 == 1)) && (std::fabs(uniScale[vc]) < 1e-4);
                             synth.voices[i].voiceValues.uniRatioMul = uniVal[vc];
                             synth.voices[i].voiceValues.uniPanShift = uniPan[vc];
                             synth.voices[i].voiceValues.uniPMScale = uniScale[vc];

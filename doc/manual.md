@@ -33,7 +33,7 @@ But the real trick of sound design with the thing is the
 modulation architecture. Each knob on the screen represents
 a node with an independent envelope and LFO per voice.
 So each operator, operator modulation application,
-operator feedback, and operator level can be indpendently
+operator feedback, and operator level can be independently
 and individually modulated.
 
 Woof. That's work. But its fun!
@@ -45,7 +45,7 @@ Woof. That's work. But its fun!
 The Six Sines interface has a patch selector and main menu
 with a VU meter at the top, then presents sections for each
 of the core functions. The operators span the top with the
-knob for each being their ratio, The modulation matrix is below,
+knob for each being their ratio, the modulation matrix is below,
 the mixer to the side, and then the main output above. The 
 macro section participates in modulation.
 
@@ -82,7 +82,7 @@ envelope, an LFO, application depth controls, and then performance
 modulation areas.
 
 The performance modulation area allows you to map MIDI and
-Macros to the modulation and level beyond the internal modualtors.
+Macros to the modulation and level beyond the internal modulators.
 
 ## Envelopes, Triggering, and Voice Modes
 
@@ -150,12 +150,12 @@ First, standard edit gestures should work on all controls, and I tried
 really hard to make sure tab order makes sense and labels are reasonable. If
 you find one which is wrong, please just drop a note on discord or github.
 
-The structure of the UI is that knbos (like "Op3 feedback level") a panel
+The structure of the UI is that knobs (like "Op3 feedback level") a panel
 in the bottom 1/4 of the screen to edit the modulators and stuff. This panel
 arrives when you mouse click or edit the knob. A few features make this
 easier to navigate for a screen reader.
 
-If on a knob in the top third, `Command-A' will arm that knob (namely select the
+If on a knob in the top third, `Command-A` will arm that knob (namely select the
 knob modulation panel in the area below)
 
 If on a knob in the top third, `Command-J` will jump to the control panel in the
