@@ -67,11 +67,16 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::ToggleButton> keyTrack;
     std::unique_ptr<PatchDiscrete> keyTrackD;
 
+    std::unique_ptr<jcmp::ToggleButton> keyTrackLow;
+    std::unique_ptr<PatchDiscrete> keyTrackLowD;
+
     std::unique_ptr<jcmp::TextPushButton> unisonBehaviorB;
 
     std::unique_ptr<jcmp::HSliderFilled> keyTrackValue;
     std::unique_ptr<PatchContinuous> keyTrackValueD;
-    std::unique_ptr<jcmp::Label> keyTrackValueLL;
+
+    std::unique_ptr<jcmp::HSliderFilled> keyTrackLowValue;
+    std::unique_ptr<PatchContinuous::cubic_t> keyTrackLowValueD;
 
     std::unique_ptr<jcmp::HSliderFilled> startingPhase;
     std::unique_ptr<PatchContinuous> startingPhaseD;

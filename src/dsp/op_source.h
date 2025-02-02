@@ -46,8 +46,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     bool keytrack{true};
     const float &ratio, &activeV, &envToRatio, &lfoToRatio, &envToRatioFine,
-        &lfoToRatioFine;                                          // in  frequency multiple
-    const float &waveForm, &kt, &ktv, &startPhase, &octTranspose; // in octaves;
+        &lfoToRatioFine; // in  frequency multiple
+    const float &waveForm, &kt, &ktv, &ktlo, &ktlov, &startPhase, &octTranspose; // in octaves;
     bool active{false};
     bool unisonParticipatesPan{true}, unisonParticipatesTune{true};
     bool operatorOutputsToMain{true}, operatorOutputsToOp{true};
@@ -64,6 +64,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
           LFOSupport(sn, mv), ModulationSupport(sn, this, mv, vv), ratio(sn.ratio),
           activeV(sn.active), envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio),
           waveForm(sn.waveForm), kt(sn.keyTrack), ktv(sn.keyTrackValue),
+          ktlo(sn.keyTrackValueIsLow), ktlov(sn.keyTrackLowFrequencyValue),
           startPhase(sn.startingPhase), octTranspose(sn.octTranspose),
           lfoToRatioFine(sn.lfoToRatioFine), envToRatioFine(sn.envToRatioFine)
     {
@@ -169,8 +170,15 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         }
         else
         {
-            // Consciously do *not* retune absolute mode oscillators
-            baseFrequency = 440 * monoValues.twoToTheX.twoToThe(ktv / 12);
+            if (ktlo > 0.5)
+            {
+                baseFrequency = ktlov; // its just in hertz
+            }
+            else
+            {
+                // Consciously do *not* retune absolute mode oscillators
+                baseFrequency = 440 * monoValues.twoToTheX.twoToThe(ktv / 12);
+            }
         }
     }
 

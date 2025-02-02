@@ -145,19 +145,27 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     addAndMakeVisible(*keyTrack);
     traverse(keyTrack);
 
+    createComponent(editor, *this, sn.keyTrackValueIsLow, keyTrackLow, keyTrackLowD);
+    keyTrackLow->setLabel("Lo");
+    addAndMakeVisible(*keyTrackLow);
+    traverse(keyTrackLow);
+
     createComponent(editor, *this, sn.keyTrackValue, keyTrackValue, keyTrackValueD);
     addAndMakeVisible(*keyTrackValue);
-    keyTrackValueLL = std::make_unique<jcmp::Label>();
-    keyTrackValueLL->setText("f");
-    addAndMakeVisible(*keyTrackValueLL);
     traverse(keyTrackValue);
+
+    createRescaledComponent(editor, *this, sn.keyTrackLowFrequencyValue, keyTrackLowValue,
+                            keyTrackLowValueD);
+    addChildComponent(*keyTrackLowValue);
 
     auto op = [w = juce::Component::SafePointer(this)]()
     {
         if (w)
             w->setEnabledState();
     };
+
     keyTrackD->onGuiSetValue = op;
+    keyTrackLowD->onGuiSetValue = op;
     editor.componentRefreshByID[sn.keyTrack.meta.id] = op;
 
     createComponent(editor, *this, sn.octTranspose, tsposeButton, tsposeButtonD);
@@ -214,7 +222,6 @@ void SourceSubPanel::resized()
 
     auto ktl = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin + 36).withAutoGap(uicMargin);
     ktl.add(titleLabelGaplessLayout(keyTrackTitle));
-    ;
 
     auto sktcol = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
 
@@ -226,7 +233,14 @@ void SourceSubPanel::resized()
 
     auto c2 = jlo::VList().withWidth(uicKnobSize + 18).withAutoGap(uicMargin);
     c2.add(jlo::Component(*keyTrack).withHeight(uicLabelHeight));
-    c2.add(sideLabelSlider(keyTrackValueLL, keyTrackValue));
+
+    // We have to get a bit crunched to get this in
+    namespace jlo = sst::jucegui::layouts;
+    auto ul = jlo::HList().withHeight(uicLabelHeight);
+    ul.add(jlo::Component(*keyTrackLow).withWidth(20));
+    ul.addGap(1);
+    ul.add(jlo::Component(*keyTrackValue).insetBy(0, 2).expandToFill());
+    c2.add(ul);
     sktcol.add(c2);
 
     ktl.add(sktcol);
@@ -240,6 +254,9 @@ void SourceSubPanel::resized()
 
     lo.doLayout();
 
+    // The keytrack low can sub in for the keytrack
+    keyTrackLowValue->setBounds(keyTrackValue->getBounds());
+
     layoutModulation(p);
 }
 
@@ -247,8 +264,14 @@ void SourceSubPanel::setEnabledState()
 {
     auto &sn = editor.patchCopy.sourceNodes[index];
     auto ekt = sn.keyTrack.value < 0.5;
-    keyTrackValue->setEnabled(ekt);
-    keyTrackValueLL->setEnabled(ekt);
+    auto ktl = sn.keyTrackValueIsLow > 0.5;
+    keyTrackValue->setEnabled(ekt && !ktl);
+    keyTrackValue->setVisible(!ktl);
+
+    keyTrackLowValue->setEnabled(ekt && ktl);
+    keyTrackLowValue->setVisible(ktl);
+
+    keyTrackLow->setEnabled(ekt);
     tsposeButton->setEnabled(!ekt);
 
     unisonBehaviorB->setEnabled(editor.patchCopy.output.unisonCount > 1);

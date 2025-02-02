@@ -498,6 +498,11 @@ struct Patch : pats::PatchBase<Patch, Param>
                            .withGroupName(name(idx))
                            .withID(id(6, idx))
                            .withDefault(true)),
+              keyTrackValueIsLow(boolMd()
+                                     .withName(name(idx) + " Keytrack Frequency is Low Frequency")
+                                     .withGroupName(name(idx))
+                                     .withID(id(17, idx))
+                                     .withDefault(false)),
               keyTrackValue(floatMd()
                                 .withName(name(idx) + " Absolute Frequency at Ratio=1")
                                 .withGroupName(name(idx))
@@ -505,6 +510,14 @@ struct Patch : pats::PatchBase<Patch, Param>
                                 .withRange(-70, 70)
                                 .withSemitoneZeroAt400Formatting()
                                 .withID(id(7, idx))),
+              keyTrackLowFrequencyValue(
+                  floatMd()
+                      .withName(name(idx) + " Keytrack Frequency at Ratio=1 (Low Frequency)")
+                      .withGroupName(name(idx))
+                      .withRange(0, 10)
+                      .withLinearScaleFormatting("Hz")
+                      .withID(id(18, idx))
+                      .withDefault(1)),
               startingPhase(floatMd()
                                 .withName(name(idx) + " Phase")
                                 .withGroupName(name(idx))
@@ -586,7 +599,7 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         Param waveForm;
 
-        Param keyTrack, keyTrackValue;
+        Param keyTrack, keyTrackValue, keyTrackLowFrequencyValue, keyTrackValueIsLow;
 
         Param startingPhase, octTranspose;
 
@@ -596,11 +609,22 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&ratio,          &active,         &envToRatio,
-                                     &lfoToRatio,     &waveForm,       &keyTrack,
-                                     &keyTrackValue,  &startingPhase,  &octTranspose,
-                                     &envToRatioFine, &lfoToRatioFine, &unisonParticipation,
-                                     &unisonToMain,   &unisonToOpOut};
+            std::vector<Param *> res{&ratio,
+                                     &active,
+                                     &envToRatio,
+                                     &lfoToRatio,
+                                     &waveForm,
+                                     &keyTrack,
+                                     &keyTrackLowFrequencyValue,
+                                     &keyTrackValueIsLow,
+                                     &keyTrackValue,
+                                     &startingPhase,
+                                     &octTranspose,
+                                     &envToRatioFine,
+                                     &lfoToRatioFine,
+                                     &unisonParticipation,
+                                     &unisonToMain,
+                                     &unisonToOpOut};
             for (int i = 0; i < numModsPer; ++i)
                 res.push_back(&modtarget[i]);
             appendDAHDSRParams(res);
