@@ -56,7 +56,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         engine->clapHost = h;
 
         clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
-        clapJuceShim->setResizable(false);
+        clapJuceShim->setResizable(true);
     }
     virtual ~SixSinesClap(){};
 
@@ -321,6 +321,23 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         auto res = std::make_unique<baconpaul::six_sines::ui::SixSinesEditor>(
             engine->audioToUi, engine->uiToAudio, [this]() { _host.paramsRequestFlush(); });
         res->clapHost = _host.host();
+
+        res->onZoomChanged = [this](auto f)
+        {
+            if (_host.canUseGui() && clapJuceShim->isEditorAttached())
+            {
+                auto s = f * clapJuceShim->getGuiScale();
+                _host.guiRequestResize(baconpaul::six_sines::ui::SixSinesEditor::edWidth * s,
+                                       baconpaul::six_sines::ui::SixSinesEditor::edHeight * s);
+            }
+        };
+
+        onShow = [e = res.get()]()
+        {
+            e->setZoomFactor(e->zoomFactor);
+            return true;
+        };
+
         return res;
     }
 

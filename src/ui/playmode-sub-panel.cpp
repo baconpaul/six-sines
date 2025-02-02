@@ -198,7 +198,7 @@ void PlayModeSubPanel::resized()
     // Play mode
     auto pml = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
     pml.add(titleLabelGaplessLayout(playTitle));
-    pml.add(jlo::Component(*playMode).withHeight(2 * uicLabelHeight + 2 * uicMargin));
+    pml.add(jlo::Component(*playMode).withHeight(2 * uicLabelHeight + uicMargin));
     pml.add(jlo::Component(*triggerButton).withHeight(uicLabelHeight));
     pml.add(jlo::Component(*pianoModeButton).withHeight(uicLabelHeight));
     pml.add(jlo::Component(*portaL).withHeight(uicLabelHeight));

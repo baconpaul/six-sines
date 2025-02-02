@@ -67,7 +67,7 @@ MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
     };
     sst::jucegui::component_adapters::setTraversalId(playScreen, 4);
 
-    highlight = std::make_unique<KnobHighlight>();
+    highlight = std::make_unique<KnobHighlight>(editor);
     addChildComponent(*highlight);
 }
 MainPanel::~MainPanel() = default;

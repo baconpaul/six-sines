@@ -33,6 +33,7 @@
 
 #include "synth/synth.h"
 #include "preset-manager.h"
+#include "ui-defaults.h"
 
 namespace jcmp = sst::jucegui::components;
 namespace jdat = sst::jucegui::data;
@@ -103,6 +104,10 @@ struct SixSinesEditor : jcmp::WindowPanel
     void setPatchNameTo(const std::string &);
     std::unique_ptr<juce::FileChooser> fileChooser;
 
+    std::unique_ptr<defaultsProvder_t> defaultsProvider;
+
+    void setSkinFromDefaults();
+
     std::unique_ptr<jcmp::ToolTip> toolTip;
     void showTooltipOn(juce::Component *c);
     void updateTooltip(jdat::Continuous *c);
@@ -124,6 +129,12 @@ struct SixSinesEditor : jcmp::WindowPanel
     bool keyPressed(const juce::KeyPress &key) override;
 
     void showNavigationMenu();
+
+    void setZoomFactor(float zf);
+    float zoomFactor{1.0f};
+    std::function<void(float)> onZoomChanged{nullptr};
+
+    static constexpr uint32_t edWidth{688}, edHeight{812};
 
     std::unique_ptr<jcmp::VUMeter> vuMeter;
 

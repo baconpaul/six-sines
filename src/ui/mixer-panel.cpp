@@ -63,7 +63,7 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
         sst::jucegui::component_adapters::setTraversalId(panKnobs[i].get(), i * 12 + 52);
     }
 
-    highlight = std::make_unique<KnobHighlight>();
+    highlight = std::make_unique<KnobHighlight>(editor);
     addChildComponent(*highlight);
 }
 MixerPanel::~MixerPanel() = default;

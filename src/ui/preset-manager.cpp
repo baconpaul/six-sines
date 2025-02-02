@@ -110,7 +110,7 @@ PresetManager::PresetManager(Patch &pp) : patch(pp)
 {
     try
     {
-        auto userPath = sst::plugininfra::paths::bestDocumentsFolderPathFor("SixSines");
+        userPath = sst::plugininfra::paths::bestDocumentsFolderPathFor("SixSines");
         fs::create_directories(userPath);
         userPatchesPath = userPath / "Patches";
         fs::create_directories(userPatchesPath);

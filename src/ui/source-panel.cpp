@@ -45,7 +45,7 @@ SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEdi
         addAndMakeVisible(*labels[i]);
     }
 
-    highlight = std::make_unique<KnobHighlight>();
+    highlight = std::make_unique<KnobHighlight>(editor);
     addChildComponent(*highlight);
 }
 SourcePanel::~SourcePanel() = default;
