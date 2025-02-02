@@ -1172,6 +1172,15 @@ struct Patch : pats::PatchBase<Patch, Param>
                             .withLog2SecondsFormatting()
                             .withMilisecondsBelowOneSecond()
                             .withCustomMinDisplay("Off")),
+              portaContinuation(intMd()
+                                    .withID(id(43))
+                                    .withName(name() + " Porta Continuation")
+                                    .withRange(0, 2)
+                                    .withDefault(0)
+                                    .withGroupName(name())
+                                    .withUnorderedMapFormatting(
+                                        {{0, "OnVoice"}, {1, "FreeRun"}, {2, "GateRun"}})),
+
               pianoModeActive(md_t()
                                   .asBool()
                                   .withName(name() + " Piano Mode Active")
@@ -1300,7 +1309,8 @@ struct Patch : pats::PatchBase<Patch, Param>
         uint32_t id(int f) const { return idBase + f; }
 
         Param level, velSensitivity, playMode;
-        Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, pianoModeActive;
+        Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, portaContinuation,
+            pianoModeActive;
         Param unisonCount, unisonSpread, uniPhaseRand, unisonPan;
         Param mpeActive, mpeBendRange;
         Param octTranspose, fineTune, pan, lfoDepth;
@@ -1319,6 +1329,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &polyLimit,
                                      &defaultTrigger,
                                      &portaTime,
+                                     &portaContinuation,
                                      &pianoModeActive,
                                      &unisonCount,
                                      &unisonSpread,

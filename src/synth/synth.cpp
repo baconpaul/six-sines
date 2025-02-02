@@ -225,6 +225,17 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
         loops++;
         lagHandler.process();
 
+        if (portaContinuation.updateEveryBlock && portaContinuation.active)
+        {
+            portaContinuation.portaFrac += portaContinuation.dPortaFrac;
+            portaContinuation.sourceKey += portaContinuation.dKey;
+            if (portaContinuation.portaFrac >= 1.0)
+            {
+                portaContinuation.active = false;
+                portaContinuation.updateEveryBlock = false;
+            }
+        }
+
         float lOutput alignas(16)[2 * (1 + (multiOut ? numOps : 0))][blockSize];
         memset(lOutput, 0, sizeof(lOutput));
 
@@ -435,6 +446,23 @@ void Synth::addToVoiceList(Voice *v)
 
 Voice *Synth::removeFromVoiceList(Voice *cvoice)
 {
+    if (patch.output.portaContinuation.value > 0.5 && voiceCount == 1 &&
+        cvoice->voiceValues.portaDiff > 1e-5)
+    {
+        portaContinuation.sourceKey =
+            cvoice->voiceValues.key + cvoice->voiceValues.portaDiff * cvoice->voiceValues.portaSign;
+        portaContinuation.portaFrac = cvoice->voiceValues.portaFrac;
+        portaContinuation.dPortaFrac = cvoice->voiceValues.dPortaFrac;
+        portaContinuation.dKey = -cvoice->voiceValues.dPorta * cvoice->voiceValues.portaSign;
+
+        portaContinuation.active = true;
+        portaContinuation.updateEveryBlock =
+            (int)std::round(patch.output.portaContinuation.value) == 1;
+    }
+    else
+    {
+        portaContinuation.active = false;
+    }
     if (cvoice->prior)
     {
         cvoice->prior->next = cvoice->next;

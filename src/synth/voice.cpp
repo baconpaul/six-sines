@@ -293,4 +293,28 @@ void Voice::setupPortaTo(uint16_t newKey, float log2Time)
     voiceValues.portaSign = sign;
 }
 
+void Voice::restartPortaTo(float sourceKey, uint16_t newKey, float log2Time, float portaFrac)
+{
+    if (log2Time < -8 + 1e-5)
+    {
+        voiceValues.portaSign = 0;
+        voiceValues.portaDiff = 0;
+        voiceValues.dPorta = 0;
+        voiceValues.portaFrac = 0;
+        voiceValues.dPortaFrac = 0;
+        return;
+    }
+    auto blocks = monoValues.twoToTheX.twoToThe(log2Time) * monoValues.sr.sampleRate / blockSize;
+
+    auto sign = 0;
+    sign = newKey > sourceKey ? -1 : 1; // we are headed towards the source so set sign properly
+
+    voiceValues.portaDiff = std::abs(sourceKey - newKey);
+
+    voiceValues.dPorta = voiceValues.portaDiff / (blocks * (1 - portaFrac));
+    voiceValues.dPortaFrac = 1.0 / blocks;
+    voiceValues.portaFrac = portaFrac;
+    voiceValues.portaSign = sign;
+}
+
 } // namespace baconpaul::six_sines
