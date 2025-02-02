@@ -155,9 +155,6 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::HORIZONTAL);
     addAndMakeVisible(*vuMeter);
 
-    // Make sure to do this last
-    setSize(edWidth, edHeight);
-
     uiToAudio.push({Synth::UIToAudioMsg::EDITOR_ATTACH_DETATCH, true});
     uiToAudio.push({Synth::UIToAudioMsg::REQUEST_REFRESH, true});
     if (flushOperator)
@@ -165,6 +162,9 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
 
     auto pzf = defaultsProvider->getUserDefaultValue(Defaults::zoomLevel, 100);
     zoomFactor = pzf * 0.01;
+    setTransform(juce::AffineTransform().scaled(zoomFactor));
+
+    setSize(edWidth, edHeight);
 #define DEBUG_FOCUS 0
 #if DEBUG_FOCUS
     focusDebugger = std::make_unique<sst::jucegui::accessibility::FocusDebugger>(*this);
@@ -995,7 +995,6 @@ void SixSinesEditor::setZoomFactor(float zf)
     // SCLOG("Setting zoom factor to " << zf);
     zoomFactor = zf;
     setTransform(juce::AffineTransform().scaled(zoomFactor));
-    setBounds(0, 0, edWidth * zf, edHeight * zf);
     defaultsProvider->updateUserDefaultValue(Defaults::zoomLevel, zoomFactor * 100);
     if (onZoomChanged)
         onZoomChanged(zoomFactor);
