@@ -74,6 +74,7 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::unique_ptr<juce::Timer> idleTimer;
 
     std::unique_ptr<jcmp::NamedPanel> singlePanel;
+    void doSinglePanelHamburger();
 
     std::unique_ptr<MainPanel> mainPanel;
     std::unique_ptr<MainSubPanel> mainSubPanel;
