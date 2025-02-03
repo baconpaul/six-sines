@@ -76,6 +76,12 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     mixerPanel = std::make_unique<MixerPanel>(*this);
     macroPanel = std::make_unique<MacroPanel>(*this);
     singlePanel = std::make_unique<jcmp::NamedPanel>("Edit");
+    singlePanel->hasHamburger = false; // true;
+    singlePanel->onHamburger = [w = juce::Component::SafePointer(this)]()
+    {
+        if (w)
+            w->doSinglePanelHamburger();
+    };
     sourcePanel = std::make_unique<SourcePanel>(*this);
     mainPanel = std::make_unique<MainPanel>(*this);
     addAndMakeVisible(*matrixPanel);
@@ -206,6 +212,14 @@ void SixSinesEditor::idle()
             patchCopy.dirty = (bool)aum->paramId;
             presetManager->setDirtyState(patchCopy.dirty);
             presetButton->repaint();
+        }
+        else if (aum->action == Synth::AudioToUIMsg::DO_PARAM_RESCAN)
+        {
+            SXSNLOG("Initiating param rescan");
+            auto p = static_cast<const clap_host_params_t *>(
+                clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
+            p->rescan(clapHost, CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
+            p->request_flush(clapHost);
         }
         else
         {
@@ -734,12 +748,13 @@ void SixSinesEditor::sendEntirePatchToAudio(const std::string &s)
     uiToAudio.push({Synth::UIToAudioMsg::STOP_AUDIO});
     for (const auto &p : patchCopy.params)
     {
-        uiToAudio.push({Synth::UIToAudioMsg::BEGIN_EDIT, p->meta.id});
-        uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM, p->meta.id, p->value});
-        uiToAudio.push({Synth::UIToAudioMsg::END_EDIT, p->meta.id});
+        uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING, p->meta.id, p->value});
     }
     uiToAudio.push({Synth::UIToAudioMsg::START_AUDIO});
     uiToAudio.push({Synth::UIToAudioMsg::SEND_PATCH_IS_CLEAN, true});
+    uiToAudio.push({Synth::UIToAudioMsg::SEND_REQUEST_RESCAN, true});
+
+    flushOperator();
 }
 
 void SixSinesEditor::sendParamSetValue(uint32_t id, float value)
@@ -998,6 +1013,15 @@ void SixSinesEditor::setZoomFactor(float zf)
     defaultsProvider->updateUserDefaultValue(Defaults::zoomLevel, zoomFactor * 100);
     if (onZoomChanged)
         onZoomChanged(zoomFactor);
+}
+
+void SixSinesEditor::doSinglePanelHamburger()
+{
+    for (auto c : singlePanel->getChildren())
+    {
+        if (c->isVisible())
+            SXSNLOG("Would do " << typeid(*c).name());
+    }
 }
 
 } // namespace baconpaul::six_sines::ui

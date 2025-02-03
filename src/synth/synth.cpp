@@ -520,31 +520,41 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             }
         }
         break;
+        case UIToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING:
         case UIToAudioMsg::SET_PARAM:
         {
+            bool notify = uiM->action == UIToAudioMsg::SET_PARAM;
+
             auto dest = patch.paramMap.at(uiM->paramId);
-            if (dest->meta.type == md_t::FLOAT)
-                lagHandler.setNewDestination(&(dest->value), uiM->value);
+            if (notify)
+            {
+                if (dest->meta.type == md_t::FLOAT)
+                    lagHandler.setNewDestination(&(dest->value), uiM->value);
+                else
+                    dest->value = uiM->value;
+
+                clap_event_param_value_t p;
+                p.header.size = sizeof(clap_event_param_value_t);
+                p.header.time = 0;
+                p.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+                p.header.type = CLAP_EVENT_PARAM_VALUE;
+                p.header.flags = 0;
+                p.param_id = uiM->paramId;
+                p.cookie = dest;
+
+                p.note_id = -1;
+                p.port_index = -1;
+                p.channel = -1;
+                p.key = -1;
+
+                p.value = uiM->value;
+
+                outq->try_push(outq, &p.header);
+            }
             else
+            {
                 dest->value = uiM->value;
-
-            clap_event_param_value_t p;
-            p.header.size = sizeof(clap_event_param_value_t);
-            p.header.time = 0;
-            p.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
-            p.header.type = CLAP_EVENT_PARAM_VALUE;
-            p.header.flags = 0;
-            p.param_id = uiM->paramId;
-            p.cookie = dest;
-
-            p.note_id = -1;
-            p.port_index = -1;
-            p.channel = -1;
-            p.key = -1;
-
-            p.value = uiM->value;
-
-            outq->try_push(outq, &p.header);
+            }
 
             /*
              * Some params have other side effects
@@ -604,6 +614,11 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
         {
             patch.dirty = false;
             audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
+        }
+        break;
+        case UIToAudioMsg::SEND_REQUEST_RESCAN:
+        {
+            audioToUi.push({AudioToUIMsg::DO_PARAM_RESCAN});
         }
         break;
         case UIToAudioMsg::EDITOR_ATTACH_DETATCH:
