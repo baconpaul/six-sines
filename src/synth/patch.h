@@ -428,7 +428,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                         .withDecimalPlaces(4)
                         .withDefault(0.0)
                         .withID(id(0, idx))
-                        .withFeature(md_t::Features::BELOW_ONE_IS_INVERSE_FRACTION)),
+                        .withFeature(md_t::Features::BELOW_ONE_IS_INVERSE_FRACTION)
+                        .withFeature(md_t::Features::ALLOW_FRACTIONAL_TYPEINS)),
               active(boolMd()
                          .withGroupName(name(idx))
                          .withName(name(idx) + " Active")
@@ -442,7 +443,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                              .withDecimalPlaces(4)
                              .withDefault(0.f)
                              .withID(id(2, idx))
-                             .withFeature(md_t::Features::BELOW_ONE_IS_INVERSE_FRACTION)),
+                             .withFeature(md_t::Features::BELOW_ONE_IS_INVERSE_FRACTION)
+                             .withFeature(md_t::Features::ALLOW_FRACTIONAL_TYPEINS)),
               lfoToRatio(floatMd()
                              .withRange(-5, 5)
                              .withATwoToTheBFormatting(1, 1, "offset")
@@ -451,7 +453,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                              .withDecimalPlaces(4)
                              .withDefault(0.f)
                              .withID(id(3, idx))
-                             .withFeature(md_t::Features::BELOW_ONE_IS_INVERSE_FRACTION)),
+                             .withFeature(md_t::Features::BELOW_ONE_IS_INVERSE_FRACTION)
+                             .withFeature(md_t::Features::ALLOW_FRACTIONAL_TYPEINS)),
               envToRatioFine(floatMd()
                                  .withRange(-200, 200)
                                  .withLinearScaleFormatting(" cents")
