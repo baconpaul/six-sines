@@ -144,7 +144,6 @@ static const clap_plugin_info_as_vst3 *clap_get_vst3_info(const clap_plugin_fact
 
 const void *get_factory(const char *factory_id)
 {
-    SXSNLOG("Asking for factory [" << factory_id << "]");
     if (strcmp(factory_id, CLAP_PLUGIN_FACTORY_ID) == 0)
     {
         static const struct clap_plugin_factory six_sines_clap_factory = {
@@ -174,7 +173,9 @@ const void *get_factory(const char *factory_id)
 bool clap_init(const char *p)
 {
     // sst::plugininfra::misc_platform::allocateConsole();
-    SXSNLOG("Initializing Six Sines");
+    SXSNLOG("Initializing Six Sines "
+            << sst::plugininfra::VersionInformation::project_version_and_hash << " / "
+            << sst::plugininfra::VersionInformation::git_implied_display_version);
     return true;
 }
 void clap_deinit() {}

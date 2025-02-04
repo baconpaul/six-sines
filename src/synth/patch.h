@@ -1082,7 +1082,51 @@ struct Patch : pats::PatchBase<Patch, Param>
 
     struct FineTuneNode : ModulationOnlyNode
     {
-        FineTuneNode() : ModulationOnlyNode("Fine Tune Mod", "Fine Tune", 0) {}
+        enum localTarget
+        {
+            COARSE = 11
+        };
+        FineTuneNode()
+            : ModulationOnlyNode("Fine Tune Mod", "Fine Tune", 0),
+              coarseTune(floatMd()
+                             .withName(name() + " Coarse Tuning")
+                             .withGroupName(name())
+                             .withRange(-24, 24)
+                             .withLinearScaleFormatting("semitones")
+                             .withID(id(0, 402))),
+              lfoCoarseDepth(floatMd()
+                                 .asPercentBipolar()
+                                 .withName(name() + " Coarse LFO Depth")
+                                 .withGroupName(name())
+                                 .withID(id(403, 0))
+                                 .withDefault(0.f)),
+              envCoarseDepth(floatMd()
+                                 .asPercentBipolar()
+                                 .withName(name() + " Env Coarse Depth")
+                                 .withGroupName(name())
+                                 .withID(id(404, 0))
+                                 .withDefault(0.f))
+        {
+            auto it = targetList.begin();
+            while (it != targetList.end() && it->first != DIRECT)
+                ++it;
+
+            targetList.insert(it + 1, {localTarget::COARSE, "Coarse Tune"});
+        }
+
+        std::vector<Param *> params()
+        {
+            auto res = ModulationOnlyNode::params();
+
+            res.push_back(&coarseTune);
+            res.push_back(&lfoCoarseDepth);
+            res.push_back(&envCoarseDepth);
+            return res;
+        }
+
+        Param coarseTune;
+
+        Param lfoCoarseDepth, envCoarseDepth;
     };
 
     struct MainPanNode : ModulationOnlyNode

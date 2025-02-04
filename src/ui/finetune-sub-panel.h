@@ -40,14 +40,29 @@ struct FineTuneSubPanel : juce::Component,
     std::unique_ptr<PatchContinuous::cubic_t> envDepthDA;
     std::unique_ptr<jcmp::Label> envDepthLL;
 
+    std::unique_ptr<jcmp::Knob> envCDepth;
+    std::unique_ptr<PatchContinuous::cubic_t> envCDepthDA;
+    std::unique_ptr<jcmp::Label> envCDepthLL;
+
+    std::unique_ptr<jcmp::RuledLabel> envTitle;
+
+    std::unique_ptr<jcmp::RuledLabel> tuneTitle;
+    std::unique_ptr<jcmp::Knob> coarse;
+    std::unique_ptr<PatchContinuous> coarseD;
+    std::unique_ptr<jcmp::Label> coarseL;
+
+    std::unique_ptr<jcmp::Knob> fine;
+    std::unique_ptr<PatchContinuous> fineD;
+    std::unique_ptr<jcmp::Label> fineL;
+
     std::unique_ptr<jcmp::Knob> lfoDep;
     std::unique_ptr<PatchContinuous::cubic_t> lfoDepDA;
     std::unique_ptr<jcmp::Label> lfoDepL;
+    std::unique_ptr<jcmp::Knob> lfoCDep;
+    std::unique_ptr<PatchContinuous::cubic_t> lfoCDepDA;
+    std::unique_ptr<jcmp::Label> lfoCDepL;
 
-    std::unique_ptr<jcmp::RuledLabel> depTitle;
-
-    std::unique_ptr<jcmp::MultiSwitch> envMul;
-    std::unique_ptr<PatchDiscrete> envMulD;
+    std::unique_ptr<jcmp::RuledLabel> lfoTitle;
 
     void setEnabledState();
 };

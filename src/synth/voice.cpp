@@ -72,7 +72,8 @@ void Voice::renderBlock()
     retuneKey += ((monoValues.pitchBend >= 0) ? out.bendUp : out.bendDown) * monoValues.pitchBend;
     retuneKey += voiceValues.portaDiff * voiceValues.portaSign + voiceValues.mpeBendInSemis +
                  voiceValues.noteExpressionTuningInSemis;
-    retuneKey += out.fineTune * 0.01 + out.ftModNode.level * 2;
+    retuneKey += out.fineTune * 0.01 + out.ftModNode.coarseTune + out.ftModNode.level * 2 +
+                 out.ftModNode.coarseLevel;
 
     if (voiceValues.portaDiff > 1e-5)
     {
