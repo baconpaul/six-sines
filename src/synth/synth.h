@@ -283,6 +283,7 @@ struct Synth
     ~Synth();
 
     bool audioRunning{true};
+    int beginEndParamGestureCount{0};
 
     double hostSampleRate{0}, engineSampleRate{0}, sampleRateRatio{0};
     void setSampleRate(double sampleRate);

@@ -190,10 +190,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
                                   return;
                               if (!w->patchPtr)
                                   return;
-                              w->patchPtr->modtarget[index].value = si;
-                              w->editor.uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM,
-                                                        w->patchPtr->modtarget[index].meta.id,
-                                                        (float)si});
+                              w->editor.setAndSendParamValue(w->patchPtr->modtarget[index], si);
                               w->resetTargetLabel(index);
                           });
             }
@@ -216,9 +213,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
                     return;
                 if (!w->patchPtr)
                     return;
-                w->patchPtr->modsource[index].value = si;
-                w->editor.uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM,
-                                          w->patchPtr->modsource[index].meta.id, (float)si});
+                w->editor.setAndSendParamValue(w->patchPtr->modsource[index], si);
                 w->resetSourceLabel(index);
             };
         };

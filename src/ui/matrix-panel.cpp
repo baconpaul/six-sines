@@ -45,10 +45,8 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         {
             if (!w)
                 return;
-            w->editor.setParamValueOnCopy(w->editor.patchCopy.selfNodes[i].active.meta.id, true,
-                                          true);
-            w->editor.setParamValueOnCopy(w->editor.patchCopy.sourceNodes[i].active.meta.id, true,
-                                          true);
+            w->editor.setAndSendParamValue(w->editor.patchCopy.selfNodes[i].active, true);
+            w->editor.setAndSendParamValue(w->editor.patchCopy.sourceNodes[i].active, true);
             w->repaint();
         };
         sst::jucegui::component_adapters::setTraversalId(Spower[i].get(), i * 50 + 47);
@@ -85,10 +83,10 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         {
             if (!w)
                 return;
-            w->editor.setParamValueOnCopy(w->editor.patchCopy.matrixNodes[i].active.meta.id, true,
-                                          true);
-            w->editor.setParamValueOnCopy(w->editor.patchCopy.sourceNodes[si].active.meta.id, true,
-                                          true);
+            w->editor.setAndSendParamValue(w->editor.patchCopy.matrixNodes[i].active.meta.id, true,
+                                           true);
+            w->editor.setAndSendParamValue(w->editor.patchCopy.sourceNodes[si].active.meta.id, true,
+                                           true);
             w->repaint();
         };
 

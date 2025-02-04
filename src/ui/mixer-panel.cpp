@@ -45,10 +45,10 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
         {
             if (!w)
                 return;
-            w->editor.setParamValueOnCopy(w->editor.patchCopy.mixerNodes[i].active.meta.id, true,
-                                          true);
-            w->editor.setParamValueOnCopy(w->editor.patchCopy.sourceNodes[i].active.meta.id, true,
-                                          true);
+            w->editor.setAndSendParamValue(w->editor.patchCopy.mixerNodes[i].active.meta.id, true,
+                                           true);
+            w->editor.setAndSendParamValue(w->editor.patchCopy.sourceNodes[i].active.meta.id, true,
+                                           true);
             w->repaint();
         };
 

@@ -297,7 +297,7 @@ void SourceSubPanel::showUnisonFeaturesMenu()
 
                   auto onoff = upart & 1;
                   auto nv = (upart & (~1)) | (onoff ? 0 : 1);
-                  w->editor.sendParamSetValue(upid, nv);
+                  w->editor.setAndSendParamValue(upid, nv);
               });
     p.addItem("Participates in Pan", true, (upart & 2),
               [upid, upart, w = juce::Component::SafePointer(this)]()
@@ -307,7 +307,7 @@ void SourceSubPanel::showUnisonFeaturesMenu()
 
                   auto onoff = upart & 2;
                   auto nv = (upart & (~2)) | (onoff ? 0 : 2);
-                  w->editor.sendParamSetValue(upid, nv);
+                  w->editor.setAndSendParamValue(upid, nv);
               });
     p.addSeparator();
     auto u2m = (int)editor.patchCopy.sourceNodes[index].unisonToMain.value;
@@ -317,25 +317,25 @@ void SourceSubPanel::showUnisonFeaturesMenu()
               [w = juce::Component::SafePointer(this), u2mid]()
               {
                   if (w)
-                      w->editor.sendParamSetValue(u2mid, 0);
+                      w->editor.setAndSendParamValue(u2mid, 0);
               });
     p.addItem("Center Voice Only to Main", canCenter, u2m == 1,
               [w = juce::Component::SafePointer(this), u2mid]()
               {
                   if (w)
-                      w->editor.sendParamSetValue(u2mid, 1);
+                      w->editor.setAndSendParamValue(u2mid, 1);
               });
     p.addItem("Side Voices Only to Main", canCenter, u2m == 2,
               [w = juce::Component::SafePointer(this), u2mid]()
               {
                   if (w)
-                      w->editor.sendParamSetValue(u2mid, 2);
+                      w->editor.setAndSendParamValue(u2mid, 2);
               });
     p.addItem("No Voices to Main", true, u2m == 3,
               [w = juce::Component::SafePointer(this), u2mid]()
               {
                   if (w)
-                      w->editor.sendParamSetValue(u2mid, 3);
+                      w->editor.setAndSendParamValue(u2mid, 3);
               });
     p.addSeparator();
     auto u2o = (int)editor.patchCopy.sourceNodes[index].unisonToOpOut.value;
@@ -344,19 +344,19 @@ void SourceSubPanel::showUnisonFeaturesMenu()
               [w = juce::Component::SafePointer(this), u2oid]()
               {
                   if (w)
-                      w->editor.sendParamSetValue(u2oid, 0);
+                      w->editor.setAndSendParamValue(u2oid, 0);
               });
     p.addItem("Center Voice Only to Op " + std::to_string(index + 1) + " Out", canCenter, u2o == 1,
               [w = juce::Component::SafePointer(this), u2oid]()
               {
                   if (w)
-                      w->editor.sendParamSetValue(u2oid, 1);
+                      w->editor.setAndSendParamValue(u2oid, 1);
               });
     p.addItem("Side Voices Only to Op " + std::to_string(index + 1) + " Out", canCenter, u2o == 2,
               [w = juce::Component::SafePointer(this), u2oid]()
               {
                   if (w)
-                      w->editor.sendParamSetValue(u2oid, 2);
+                      w->editor.setAndSendParamValue(u2oid, 2);
               });
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),

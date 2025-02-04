@@ -281,12 +281,9 @@ void PlayModeSubPanel::showTriggerButtonMenu()
         auto that = w;
         return [nv, that]()
         {
-            auto pid = that->editor.patchCopy.output.defaultTrigger.meta.id;
-            that->editor.patchCopy.paramMap.at(pid)->value = nv;
+            auto &p = that->editor.patchCopy.output.defaultTrigger;
+            that->editor.setAndSendParamValue(p, nv);
             that->setTriggerButtonLabel();
-
-            that->editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pid, (float)nv});
-            that->editor.flushOperator();
         };
     };
     auto p = juce::PopupMenu();
@@ -305,10 +302,8 @@ void PlayModeSubPanel::showTriggerButtonMenu()
               {
                   if (!w)
                       return;
-                  w->editor.patchCopy.output.rephaseOnRetrigger = !rpo;
-                  w->editor.uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM,
-                                            w->editor.patchCopy.output.rephaseOnRetrigger.meta.id,
-                                            (float)(!rpo)});
+                  w->editor.setAndSendParamValue(w->editor.patchCopy.output.rephaseOnRetrigger,
+                                                 !rpo);
               });
 
     p.addSeparator();
@@ -318,10 +313,8 @@ void PlayModeSubPanel::showTriggerButtonMenu()
               {
                   if (!w)
                       return;
-                  w->editor.patchCopy.output.attackFloorOnRetrig = !atfl;
-                  w->editor.uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM,
-                                            w->editor.patchCopy.output.attackFloorOnRetrig.meta.id,
-                                            (float)(!atfl)});
+                  w->editor.setAndSendParamValue(w->editor.patchCopy.output.attackFloorOnRetrig,
+                                                 !atfl);
               });
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&this->editor),
@@ -354,12 +347,9 @@ void PlayModeSubPanel::showPortaContinuationMenu()
         auto that = w;
         return [nv, that]()
         {
-            auto pid = that->editor.patchCopy.output.portaContinuation.meta.id;
-            that->editor.patchCopy.paramMap.at(pid)->value = nv;
+            auto &p = that->editor.patchCopy.output.portaContinuation;
+            that->editor.setAndSendParamValue(p, nv);
             that->setPortaContinuationLabel();
-
-            that->editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pid, (float)nv});
-            that->editor.flushOperator();
         };
     };
     auto p = juce::PopupMenu();
@@ -428,9 +418,7 @@ void PlayModeSubPanel::setPolyLimit(int plVal)
 {
     SXSNLOG("Setting val to " << plVal);
     auto &pl = editor.patchCopy.output.polyLimit;
-    pl.value = plVal;
-    editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pl.meta.id, (float)plVal});
-    editor.flushOperator();
+    editor.setAndSendParamValue(pl, plVal);
 
     voiceLimit->setLabelAndTitle(std::to_string(getPolyLimit()),
                                  "Voice Limit " + std::to_string(getPolyLimit()));
