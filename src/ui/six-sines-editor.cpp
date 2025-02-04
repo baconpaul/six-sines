@@ -190,7 +190,7 @@ void SixSinesEditor::idle()
     {
         if (aum->action == Synth::AudioToUIMsg::UPDATE_PARAM)
         {
-            setParamValueOnCopy(aum->paramId, aum->value, false);
+            setAndSendParamValue(aum->paramId, aum->value, false);
         }
         else if (aum->action == Synth::AudioToUIMsg::UPDATE_VU)
         {
@@ -764,14 +764,8 @@ void SixSinesEditor::sendEntirePatchToAudio(const std::string &s)
     flushOperator();
 }
 
-void SixSinesEditor::sendParamSetValue(uint32_t id, float value)
-{
-    patchCopy.paramMap.at(id)->value = value;
-    uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, id, value});
-    flushOperator();
-}
-
-void SixSinesEditor::setParamValueOnCopy(uint32_t paramId, float value, bool notifyAudio)
+void SixSinesEditor::setAndSendParamValue(uint32_t paramId, float value, bool notifyAudio,
+                                          bool sendBeginEnd)
 {
     patchCopy.paramMap[paramId]->value = value;
 
@@ -787,7 +781,12 @@ void SixSinesEditor::setParamValueOnCopy(uint32_t paramId, float value, bool not
 
     if (notifyAudio)
     {
-        uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM, paramId, value});
+        if (sendBeginEnd)
+            uiToAudio.push({Synth::UIToAudioMsg::Action::BEGIN_EDIT, paramId});
+        uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, paramId, value});
+        if (sendBeginEnd)
+            uiToAudio.push({Synth::UIToAudioMsg::Action::END_EDIT, paramId});
+        flushOperator();
     }
 }
 
@@ -1022,13 +1021,6 @@ void SixSinesEditor::setZoomFactor(float zf)
         onZoomChanged(zoomFactor);
 }
 
-void SixSinesEditor::doSinglePanelHamburger()
-{
-    for (auto c : singlePanel->getChildren())
-    {
-        if (c->isVisible())
-            SXSNLOG("Would do " << typeid(*c).name());
-    }
-}
+void SixSinesEditor::doSinglePanelHamburger() { SXSNLOG("Coming soon"); }
 
 } // namespace baconpaul::six_sines::ui

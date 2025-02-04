@@ -191,13 +191,11 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
             auto that = w;
             return [nv, that]()
             {
-                auto pid = that->patchPartPtr->triggerMode.meta.id;
-                that->editor.patchCopy.paramMap.at(pid)->value = nv;
-                that->setTriggerLabel();
+                if (!that)
+                    return;
 
-                that->editor.uiToAudio.push(
-                    {Synth::UIToAudioMsg::Action::SET_PARAM, pid, (float)nv});
-                that->editor.flushOperator();
+                that->editor.setAndSendParamValue(that->patchPartPtr->triggerMode, nv);
+                that->setTriggerLabel();
             };
         };
         auto p = juce::PopupMenu();
@@ -224,13 +222,9 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
                       if (!w)
                           return;
 
-                      auto pid = w->patchPartPtr->envIsOneShot.meta.id;
-                      w->editor.patchCopy.paramMap.at(pid)->value = !(osv);
+                      auto &p = w->patchPartPtr->envIsOneShot;
+                      w->editor.setAndSendParamValue(p, !osv);
                       w->setTriggerLabel();
-
-                      w->editor.uiToAudio.push(
-                          {Synth::UIToAudioMsg::Action::SET_PARAM, pid, (float)(!osv)});
-                      w->editor.flushOperator();
                   });
         p.addItem("Retrigger from Zero", true, tfz,
                   [tfz, w = juce::Component::SafePointer(asComp())]()
@@ -238,13 +232,9 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
                       if (!w)
                           return;
 
-                      auto pid = w->patchPartPtr->envTriggersFromZero.meta.id;
-                      w->editor.patchCopy.paramMap.at(pid)->value = !(tfz);
+                      auto &p = w->patchPartPtr->envTriggersFromZero;
+                      w->editor.setAndSendParamValue(p, !tfz);
                       w->setTriggerLabel();
-
-                      w->editor.uiToAudio.push(
-                          {Synth::UIToAudioMsg::Action::SET_PARAM, pid, (float)(!tfz)});
-                      w->editor.flushOperator();
                   });
         p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&asComp()->editor),
                         makeMenuAccessibleButtonCB(triggerButton.get()));
