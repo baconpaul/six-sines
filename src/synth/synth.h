@@ -269,7 +269,8 @@ struct Synth
             UPDATE_VU,
             UPDATE_VOICE_COUNT,
             SET_PATCH_NAME,
-            SET_PATCH_DIRTY_STATE
+            SET_PATCH_DIRTY_STATE,
+            SEND_SAMPLE_RATE
         } action;
         uint32_t paramId{0};
         float value{0}, value2{0};

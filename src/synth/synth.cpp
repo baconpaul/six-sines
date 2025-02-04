@@ -136,6 +136,8 @@ void Synth::setSampleRate(double sampleRate)
         src_set_ratio(lState, sampleRateRatio);
         src_set_ratio(rState, sampleRateRatio);
     }
+
+    audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)hostSampleRate, (float)engineSampleRate});
 }
 
 void Synth::process(const clap_output_events_t *outq)
