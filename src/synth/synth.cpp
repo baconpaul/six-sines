@@ -159,6 +159,8 @@ void Synth::setSampleRate(double sampleRate)
         p->prevLag = nullptr;
     }
     lagHead = nullptr;
+
+    audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)hostSampleRate, (float)engineSampleRate});
 }
 
 template <bool multiOut> void Synth::processInternal(const clap_output_events_t *outq)
