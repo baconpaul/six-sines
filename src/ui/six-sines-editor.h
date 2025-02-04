@@ -146,6 +146,8 @@ struct SixSinesEditor : jcmp::WindowPanel
 
     std::unordered_map<juce::Component *, std::function<void()>> panelSelectGestureFor;
 
+    float engineSR{0}, hostSR{0};
+
     const clap_host_t *clapHost{nullptr};
 };
 

@@ -221,6 +221,12 @@ void SixSinesEditor::idle()
             p->rescan(clapHost, CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
             p->request_flush(clapHost);
         }
+        else if (aum->action == Synth::AudioToUIMsg::SEND_SAMPLE_RATE)
+        {
+            engineSR = aum->value2;
+            hostSR = aum->value;
+            repaint();
+        }
         else
         {
             SXSNLOG("Ignored patch message " << aum->action);
@@ -284,6 +290,7 @@ void SixSinesEditor::paint(juce::Graphics &g)
 #endif
 
     auto bi = os + " " + sst::plugininfra::VersionInformation::git_commit_hash;
+    bi += fmt::format(" @ {:.1f}k", hostSR / 1000.0);
     g.drawText(bi, getLocalBounds().reduced(3, 3), juce::Justification::bottomRight);
 
     g.drawText(sst::plugininfra::VersionInformation::git_implied_display_version,
