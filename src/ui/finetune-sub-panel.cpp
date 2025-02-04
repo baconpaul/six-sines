@@ -15,6 +15,8 @@
 
 #include "finetune-sub-panel.h"
 
+#include "main-panel.h"
+
 namespace baconpaul::six_sines::ui
 {
 FineTuneSubPanel::FineTuneSubPanel(SixSinesEditor &e) : HasEditor(e)
@@ -28,23 +30,56 @@ FineTuneSubPanel::FineTuneSubPanel(SixSinesEditor &e) : HasEditor(e)
     auto traverse = [&travidx](auto &c)
     { sst::jucegui::component_adapters::setTraversalId(c.get(), travidx++); };
 
-    depTitle = std::make_unique<jcmp::RuledLabel>();
-    depTitle->setText("Tune");
-    addAndMakeVisible(*depTitle);
+    lfoTitle = std::make_unique<jcmp::RuledLabel>();
+    lfoTitle->setText("LFO Depth");
+    addAndMakeVisible(*lfoTitle);
+
+    envTitle = std::make_unique<jcmp::RuledLabel>();
+    envTitle->setText("Env Depth");
+    addAndMakeVisible(*envTitle);
 
     createRescaledComponent(editor, *this, on.envDepth, envDepth, envDepthDA);
     addAndMakeVisible(*envDepth);
     envDepthLL = std::make_unique<jcmp::Label>();
-    envDepthLL->setText(std::string() + "Env " + u8"\U00002192");
+    envDepthLL->setText(std::string() + "Fine");
     addAndMakeVisible(*envDepthLL);
     traverse(envDepth);
+
+    createRescaledComponent(editor, *this, on.envCoarseDepth, envCDepth, envCDepthDA);
+    addAndMakeVisible(*envCDepth);
+    envCDepthLL = std::make_unique<jcmp::Label>();
+    envCDepthLL->setText(std::string() + "Coarse");
+    addAndMakeVisible(*envCDepthLL);
+    traverse(envCDepth);
 
     createRescaledComponent(editor, *this, on.lfoDepth, lfoDep, lfoDepDA);
     addAndMakeVisible(*lfoDep);
     lfoDepL = std::make_unique<jcmp::Label>();
-    lfoDepL->setText(std::string() + "LFO " + u8"\U00002192");
+    lfoDepL->setText("Fine");
     addAndMakeVisible(*lfoDepL);
     traverse(lfoDep);
+
+    createRescaledComponent(editor, *this, on.lfoCoarseDepth, lfoCDep, lfoCDepDA);
+    addAndMakeVisible(*lfoCDep);
+    lfoCDepL = std::make_unique<jcmp::Label>();
+    lfoCDepL->setText("Coarse");
+    addAndMakeVisible(*lfoCDepL);
+    traverse(lfoCDep);
+
+    tuneTitle = std::make_unique<jcmp::RuledLabel>();
+    tuneTitle->setText("Tune");
+    addAndMakeVisible(*tuneTitle);
+    createComponent(editor, *this, on.coarseTune, coarse, coarseD);
+    coarseL = std::make_unique<jcmp::Label>();
+    coarseL->setText("Coarse");
+    addAndMakeVisible(*coarse);
+    addAndMakeVisible(*coarseL);
+
+    createComponent(editor, *this, editor.patchCopy.output.fineTune, fine, fineD);
+    fineL = std::make_unique<jcmp::Label>();
+    fineL->setText("Fine");
+    addAndMakeVisible(*fine);
+    addAndMakeVisible(*fineL);
 
     resized();
     repaint();
@@ -63,11 +98,28 @@ void FineTuneSubPanel::resized()
     namespace jlo = sst::jucegui::layouts;
     auto lo = jlo::HList().at(depx, depy).withAutoGap(uicMargin * 2);
 
-    auto el = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
-    el.add(titleLabelGaplessLayout(depTitle));
-    el.add(labelKnobLayout(envDepth, envDepthLL).centerInParent());
-    el.add(labelKnobLayout(lfoDep, lfoDepL).centerInParent());
-    lo.add(el);
+    auto cel = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
+    cel.add(titleLabelGaplessLayout(tuneTitle));
+    cel.add(labelKnobLayout(fine, fineL).centerInParent());
+    cel.add(labelKnobLayout(coarse, coarseL).centerInParent());
+    lo.add(cel);
+
+    auto kl = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin * 2).withAutoGap(uicMargin);
+    kl.add(titleLabelGaplessLayout(envTitle));
+
+    auto hl = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
+    hl.add(labelKnobLayout(envDepth, envDepthLL));
+    hl.add(labelKnobLayout(envCDepth, envCDepthLL));
+    kl.add(hl);
+
+    kl.add(titleLabelGaplessLayout(lfoTitle));
+
+    hl = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
+    hl.add(labelKnobLayout(lfoDep, lfoDepL));
+    hl.add(labelKnobLayout(lfoCDep, lfoCDepL));
+    kl.add(hl);
+
+    lo.add(kl);
 
     lo.doLayout();
 

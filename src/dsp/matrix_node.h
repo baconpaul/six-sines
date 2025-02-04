@@ -504,22 +504,21 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
     }
 };
 
-// Single point modulation
-struct ModulationOnlyNode : EnvelopeSupport<Patch::ModulationOnlyNode>,
-                            ModulationSupport<Patch::ModulationOnlyNode, ModulationOnlyNode>,
-                            LFOSupport<Patch::ModulationOnlyNode>
+struct MainPanNode : EnvelopeSupport<Patch::MainPanNode>,
+                     ModulationSupport<Patch::MainPanNode, MainPanNode>,
+                     LFOSupport<Patch::MainPanNode>
 {
     // float level alignas(16)[blockSize];
     float level{0.f};
 
-    const Patch::ModulationOnlyNode &modNode;
+    const Patch::MainPanNode &modNode;
 
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
     const float &lfoD, &envD;
 
-    ModulationOnlyNode(const Patch::ModulationOnlyNode &mn, MonoValues &mv, const VoiceValues &vv)
+    MainPanNode(const Patch::MainPanNode &mn, MonoValues &mv, const VoiceValues &vv)
         : ModulationSupport(mn, this, mv, vv), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
           modNode(mn), monoValues(mv), voiceValues(vv), lfoD(mn.lfoDepth), envD(mn.envDepth)
     {
@@ -595,7 +594,7 @@ struct ModulationOnlyNode : EnvelopeSupport<Patch::ModulationOnlyNode>,
         for (int i = 0; i < numModsPer; ++i)
         {
             if (sourcePointers[i] &&
-                (int)modNode.modtarget[i].value != Patch::ModulationOnlyNode::TargetID::NONE)
+                (int)modNode.modtarget[i].value != Patch::MainPanNode::TargetID::NONE)
             {
                 // targets: env depth atten, lfo dept atten, direct adjust, env attack, lfo rate
                 auto dp = depthPointers[i];
@@ -610,22 +609,165 @@ struct ModulationOnlyNode : EnvelopeSupport<Patch::ModulationOnlyNode>,
 
                 if (!handled)
                 {
-                    switch ((Patch::ModulationOnlyNode::TargetID)modNode.modtarget[i].value)
+                    switch ((Patch::MainPanNode::TargetID)modNode.modtarget[i].value)
                     {
-                    case Patch::ModulationOnlyNode::DIRECT:
+                    case Patch::MainPanNode::DIRECT:
                         directMod += d * *sourcePointers[i];
                         break;
-                    case Patch::ModulationOnlyNode::ENVDEP_DIR:
+                    case Patch::MainPanNode::ENVDEP_DIR:
                         edMod += d * *sourcePointers[i];
                         break;
-                    case Patch::ModulationOnlyNode::LFODEP_DIR:
+                    case Patch::MainPanNode::LFODEP_DIR:
                         ldMod += d * *sourcePointers[i];
                         break;
-                    case Patch::ModulationOnlyNode::DEPTH_ATTEN:
+                    case Patch::MainPanNode::DEPTH_ATTEN:
                         envAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
                         break;
-                    case Patch::ModulationOnlyNode::LFO_DEPTH_ATTEN:
+                    case Patch::MainPanNode::LFO_DEPTH_ATTEN:
                         lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+        }
+    }
+};
+
+struct FineTuneNode : EnvelopeSupport<Patch::FineTuneNode>,
+                      ModulationSupport<Patch::FineTuneNode, FineTuneNode>,
+                      LFOSupport<Patch::FineTuneNode>
+{
+    // float level alignas(16)[blockSize];
+    float level{0.f}, coarseLevel{0.f};
+
+    const Patch::FineTuneNode &modNode;
+
+    const MonoValues &monoValues;
+    const VoiceValues &voiceValues;
+
+    const float &lfoD, &envD, &coarseTune, &lfoCoarseD, &envCoarseD;
+
+    FineTuneNode(const Patch::FineTuneNode &mn, MonoValues &mv, const VoiceValues &vv)
+        : ModulationSupport(mn, this, mv, vv), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
+          coarseTune(mn.coarseTune), modNode(mn), monoValues(mv), voiceValues(vv),
+          lfoD(mn.lfoDepth), envD(mn.envDepth), lfoCoarseD(mn.lfoCoarseDepth),
+          envCoarseD(mn.envCoarseDepth)
+    {
+    }
+
+    bool active{0};
+    void attack()
+    {
+        bindModulation();
+
+        active = true;
+        if (std::fabs(lfoD) < 1e-8 && std::fabs(envD) < 1e-8 && std::fabs(lfoCoarseD) < 1e-8 &&
+            std::fabs(envCoarseD) < 1e-8)
+        {
+            active = false;
+            for (auto &d : sourcePointers)
+            {
+                if (d)
+                    active = true;
+            }
+        }
+
+        level = 0.f;
+        if (!active)
+        {
+            return;
+        }
+
+        calculateModulation();
+        envAttack();
+        lfoAttack();
+    }
+
+    void modProcess()
+    {
+        if (!active)
+            return;
+
+        calculateModulation();
+        envProcess(true, false);
+        lfoProcess();
+
+        auto lfoLev = lfo.outputBlock[blockSize - 1];
+
+        if (lfoIsEnveloped)
+        {
+            lfoLev = lfoLev * env.outBlock0;
+        }
+
+        level = directMod + env.outBlock0 * (envD + edMod) * envAtten +
+                lfoLev * (lfoD + ldMod) * lfoAtten;
+
+        coarseLevel = directCoarseMod + env.outBlock0 * (envCoarseD + edMod) * envAtten +
+                      lfoLev * (lfoCoarseD + ldMod) * lfoAtten;
+        coarseLevel *= 24;
+    }
+
+    float lfoAtten{0.f};
+    float directMod{0.f};
+    float directCoarseMod{0.f};
+    float envAtten{1.0};
+    float edMod{0.f};
+    float ldMod{0.f};
+
+    void calculateModulation()
+    {
+        lfoAtten = 1.f;
+        envAtten = 1.f;
+        directMod = 0.f;
+        directCoarseMod = 0.f;
+        edMod = 0.f;
+        ldMod = 0.f;
+
+        envResetMod();
+        lfoResetMod();
+
+        if (!anySources)
+            return;
+
+        for (int i = 0; i < numModsPer; ++i)
+        {
+            if (sourcePointers[i] &&
+                (int)modNode.modtarget[i].value != Patch::FineTuneNode::TargetID::NONE)
+            {
+                // targets: env depth atten, lfo dept atten, direct adjust, env attack, lfo rate
+                auto dp = depthPointers[i];
+                if (!dp)
+                    continue;
+                auto d = *dp;
+
+                auto handled =
+                    envHandleModulationValue((int)modNode.modtarget[i].value, d,
+                                             sourcePointers[i]) ||
+                    lfoHandleModulationValue((int)modNode.modtarget[i].value, d, sourcePointers[i]);
+
+                if (!handled)
+                {
+                    switch ((int32_t)modNode.modtarget[i].value)
+                    {
+                    case Patch::FineTuneNode::DIRECT:
+                        directMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::FineTuneNode::ENVDEP_DIR:
+                        edMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::FineTuneNode::LFODEP_DIR:
+                        ldMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::FineTuneNode::DEPTH_ATTEN:
+                        envAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    case Patch::FineTuneNode::LFO_DEPTH_ATTEN:
+                        lfoAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    case Patch::FineTuneNode::COARSE:
+                        directCoarseMod += d * *sourcePointers[i];
                         break;
                     default:
                         break;
@@ -652,11 +794,12 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     const float &defTrigV;
     TriggerMode defaultTrigger;
 
-    ModulationOnlyNode ftModNode, panModNode;
+    MainPanNode panModNode;
+    FineTuneNode ftModNode;
 
-    OutputNode(const Patch::OutputNode &on, const Patch::ModulationOnlyNode &panMN,
-               const Patch::ModulationOnlyNode &ftMN, std::array<MixerNode, numOps> &f,
-               MonoValues &mv, const VoiceValues &vv)
+    OutputNode(const Patch::OutputNode &on, const Patch::MainPanNode &panMN,
+               const Patch::FineTuneNode &ftMN, std::array<MixerNode, numOps> &f, MonoValues &mv,
+               const VoiceValues &vv)
         : outputNode(on), ModulationSupport(on, this, mv, vv), monoValues(mv), voiceValues(vv),
           fromArr(f), level(on.level), bendUp(on.bendUp), bendDown(on.bendDown),
           octTranspose(on.octTranspose), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),

@@ -139,7 +139,6 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     defaultsProvider = std::make_unique<defaultsProvder_t>(
         presetManager->userPath, "SixSinesUI", defaultName,
         [](auto e, auto b) { SXSNLOG("[ERROR]" << e << " " << b); });
-    SXSNLOG("Preset namager user path is " << presetManager->userPath.u8string())
     setSkinFromDefaults();
 
     {

@@ -105,8 +105,6 @@ void Synth::setSampleRate(double sampleRate)
         internalRate = 48000 * mul;
 
     engineSampleRate = internalRate;
-    if (engineSampleRate != oesr || hostSampleRate != ohsr)
-        SXSNLOG("Setting SampleRates: " << SXSNV(hostSampleRate) << SXSNV(engineSampleRate));
 
     monoValues.sr.setSampleRate(internalRate);
 

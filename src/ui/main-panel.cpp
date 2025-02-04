@@ -47,6 +47,13 @@ MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
     tunLabel->setText("Tune");
     addAndMakeVisible(*tunLabel);
 
+    tunData->onGuiSetValue = [w = juce::Component::SafePointer(this)]()
+    {
+        if (!w)
+            return;
+        w->editor.fineTuneSubPanel->repaint();
+    };
+
     voiceCount = std::make_unique<jcmp::Label>();
     addAndMakeVisible(*voiceCount);
     setVoiceCount(0);
