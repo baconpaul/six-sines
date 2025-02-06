@@ -6,7 +6,8 @@ kinda not the point.
 
 If you want to read a manual, [go here](doc/manual.md)
 
-If you want to download a release or recent version, [go here](https://github.com/baconpaul/six-sines/releases)
+If you want to download a release or recent version, [go here](https://github.com/baconpaul/six-sines/releases). We have versioned
+releases on that download page and additionally provide a [nightly](https://github.com/baconpaul/six-sines/releases/tag/Nightly) with the latest code at all times.
 
 And please read the [acknowldgements](doc/ack.md) for a list of thanks.
 
