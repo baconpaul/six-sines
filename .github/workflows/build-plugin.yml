@@ -26,9 +26,19 @@ jobs:
             name: windows-x64
             cmake_args: -DCMAKE_CXX_COMPLIER=clang++ -DCMAKE_C_COMPILER=clang -GNinja
 
+          - os: windows-latest
+            name: windows-x64-single
+            cmake_args: -DCMAKE_CXX_COMPLIER=clang++ -DCMAKE_C_COMPILER=clang -GNinja -DBUILD_SINGLE_ONLY=TRUE
+            installer_name: single-plugin-
+
           - os: macos-latest
             name: macos
             cmake_args: -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -GNinja
+
+          - os: macos-latest
+            name: macos-single
+            cmake_args: -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -GNinja -DBUILD_SINGLE_ONLY=TRUE
+            installer_name: single-plugin-
 
           - os: ubuntu-latest
             name: linux-x64
@@ -81,7 +91,7 @@ jobs:
           pushd build/six-sines_assets
           ls -al
 
-          7z a -r ..//inst/six-sines-windows-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip *
+          7z a -r ../inst/six-sines-windows-${{ matrix.installer_name }}`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip *
 
       - name: Make Mac
         if: github.event_name != 'pull_request' && runner.os == 'macOS'
@@ -96,7 +106,7 @@ jobs:
           
           mkdir build/inst
           cd build/six-sines_assets
-          ../../libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh "Six Sines" . ../resources/mac_installer ../inst `date +"%Y-%m-%d"`-`git rev-parse --short HEAD`
+          ../../libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh "Six Sines" . ../resources/mac_installer ../inst ${{ matrix.installer_name }}`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`
 
           codesign -d --entitlement - installer-tmp/APP/Six\ Sines.app
 
