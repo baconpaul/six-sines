@@ -18,6 +18,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <sst/jucegui/components/VSlider.h>
+#include <sst/jucegui/components/HSliderFilled.h>
 #include <sst/jucegui/components/Label.h>
 #include <sst/jucegui/components/MultiSwitch.h>
 #include "patch-data-bindings.h"
@@ -45,9 +46,15 @@ template <typename Comp, typename Patch> struct LFOComponents
 
         createComponent(e, *c, v.lfoDeform, deform, deformD);
         deformL = std::make_unique<jcmp::Label>();
-        deformL->setText("Deform");
+        deformL->setText("D");
         c->addAndMakeVisible(*deform);
         c->addAndMakeVisible(*deformL);
+
+        createComponent(e, *c, v.lfoStartPhase, phase, phaseD);
+        phaseL = std::make_unique<jcmp::Label>();
+        phaseL->setText(std::string() + u8"\U000003C6");
+        c->addAndMakeVisible(*phase);
+        c->addAndMakeVisible(*phaseL);
 
         createComponent(e, *c, v.lfoShape, shape, shapeD);
         c->addAndMakeVisible(*shape);
@@ -91,7 +98,7 @@ template <typename Comp, typename Patch> struct LFOComponents
         auto lo = jlo::VList()
                       .at(x, y)
                       .withHeight(asComp()->getHeight() - y)
-                      .withWidth(uicKnobSize * 2.5 + uicMargin);
+                      .withWidth(uicKnobSize * 2.75 + uicMargin);
 
         lo.add(titleLabelLayout(titleLab));
 
@@ -102,9 +109,10 @@ template <typename Comp, typename Patch> struct LFOComponents
         col1.add(jlo::Component(*tempoSync).withHeight(uicLabelHeight));
         col1.add(jlo::Component(*bipolar).withHeight(uicLabelHeight));
 
-        auto col2 = jlo::VList().withWidth(uicKnobSize).withAutoGap(uicMargin);
-        col2.add(labelKnobLayout(rate, rateL));
-        col2.add(labelKnobLayout(deform, deformL));
+        auto col2 = jlo::VList().withWidth(uicKnobSize * 1.25).withAutoGap(uicMargin);
+        col2.add(labelKnobLayout(rate, rateL).centerInParent());
+        col2.add(sideLabelSlider(deformL, deform));
+        col2.add(sideLabelSlider(phaseL, phase));
         col2.add(jlo::Component(*isEnv).withHeight(uicLabelHeight));
 
         columns.add(col1);
@@ -116,9 +124,10 @@ template <typename Comp, typename Patch> struct LFOComponents
         return usedSpace.translated(usedSpace.getWidth(), 0);
     }
 
-    std::unique_ptr<jcmp::Knob> rate, deform;
-    std::unique_ptr<PatchContinuous> rateD, deformD;
-    std::unique_ptr<jcmp::Label> rateL, deformL;
+    std::unique_ptr<jcmp::Knob> rate;
+    std::unique_ptr<jcmp::HSliderFilled> deform, phase;
+    std::unique_ptr<PatchContinuous> rateD, deformD, phaseD;
+    std::unique_ptr<jcmp::Label> rateL, deformL, phaseL;
 
     std::unique_ptr<jcmp::MultiSwitch> shape;
     std::unique_ptr<PatchDiscrete> shapeD;

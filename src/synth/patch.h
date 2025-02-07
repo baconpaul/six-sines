@@ -186,12 +186,20 @@ struct Patch : pats::PatchBase<Patch, Param>
                                  .withDefault(false)
                                  .withID(id0 + 7)
                                  .withName(name + " Is Enveloped")
-                                 .withGroupName(name))
+                                 .withGroupName(name)),
+              lfoStartPhase(floatMd()
+                                .withDefault(0)
+                                .withID(id0 + 8)
+                                .withName(name + " Start Phase")
+                                .withGroupName(name)
+                                .withRange(0., 1.)
+                                .withLinearScaleFormatting(""))
         {
             lfoRate.tempoSyncPartner = &tempoSync;
         }
 
-        Param lfoRate, lfoDeform, lfoShape, lfoActive, tempoSync, lfoBipolar, lfoIsEnveloped;
+        Param lfoRate, lfoDeform, lfoShape, lfoActive, tempoSync, lfoBipolar, lfoIsEnveloped,
+            lfoStartPhase;
 
         void appendLFOParams(std::vector<Param *> &res)
         {
@@ -201,12 +209,14 @@ struct Patch : pats::PatchBase<Patch, Param>
             res.push_back(&tempoSync);
             res.push_back(&lfoBipolar);
             res.push_back(&lfoIsEnveloped);
+            res.push_back(&lfoStartPhase);
         }
 
         enum LFOTargets
         {
             LFO_RATE = 50,
-            LFO_DEFORM = 51
+            LFO_DEFORM = 51,
+            LFO_STARTPHASE = 52
         };
 
         void appendLFOTargetName(std::vector<std::pair<int32_t, std::string>> &res)
@@ -214,6 +224,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             res.emplace_back(-1, "");
             res.emplace_back(LFOTargets::LFO_RATE, "LFO Rate");
             res.emplace_back(LFOTargets::LFO_DEFORM, "LFO Deform");
+            res.emplace_back(LFOTargets::LFO_STARTPHASE, "LFO Phase");
         }
     };
 
