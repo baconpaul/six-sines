@@ -1093,7 +1093,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                              .withGroupName(name())
                              .withRange(-24, 24)
                              .withLinearScaleFormatting("semitones")
-                             .withID(id(0, 402))),
+                             .withID(id(402, 0))),
               lfoCoarseDepth(floatMd()
                                  .asPercentBipolar()
                                  .withName(name() + " Coarse LFO Depth")
