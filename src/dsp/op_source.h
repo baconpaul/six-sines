@@ -75,6 +75,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     float one{1.f}; // to point to
     void reset()
     {
+        resetModulation();
+        envResetMod();
+        lfoResetMod();
+
         st.setSampleRate(monoValues.sr.sampleRate);
         firstTime = true;
         zeroInputs();
@@ -289,13 +293,16 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         }
     }
 
-    void calculateModulation()
+    void resetModulation()
     {
         envRatioAtten = 1.f;
         lfoRatioAtten = 1.f;
         ratioMod = 0.f;
         phaseMod = 0.f;
-
+    }
+    void calculateModulation()
+    {
+        resetModulation();
         envResetMod();
         lfoResetMod();
 

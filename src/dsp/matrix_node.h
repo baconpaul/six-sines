@@ -55,6 +55,10 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
 
     void attack()
     {
+        resetModulation();
+        envResetMod();
+        lfoResetMod();
+
         active = activeV > 0.5;
         isrm = pmrmV > 0.5;
         if (active)
@@ -145,12 +149,16 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
     float depthAtten{1.0};
     float lfoAtten{1.0};
 
-    void calculateModulation()
+    void resetModulation()
     {
         depthAtten = 1.f;
         lfoAtten = 1.f;
         applyMod = 0.f;
+    }
 
+    void calculateModulation()
+    {
+        resetModulation();
         envResetMod();
         lfoResetMod();
 
@@ -215,6 +223,10 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
 
     void attack()
     {
+        resetModulation();
+        envResetMod();
+        lfoResetMod();
+
         active = activeV > 0.5;
         if (active)
         {
@@ -270,12 +282,15 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
     float depthAtten{1.0};
     float lfoAtten{1.0};
 
-    void calculateModulation()
+    void resetModulation()
     {
         depthAtten = 1.f;
         lfoAtten = 1.f;
         fbMod = 0.f;
-
+    }
+    void calculateModulation()
+    {
+        resetModulation();
         envResetMod();
         lfoResetMod();
 
@@ -348,6 +363,10 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
 
     void attack()
     {
+        resetModulation();
+        envResetMod();
+        lfoResetMod();
+
         active = activeF > 0.5;
         memset(output, 0, sizeof(output));
         if (active)
@@ -446,14 +465,18 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
     float lfoPanAtten{1.0};
     float panMod{0.0};
 
-    void calculateModulation()
+    void resetModulation()
     {
         depthAtten = 1.f;
         lfoAtten = 1.f;
         levMod = 0.f;
         panMod = 0.f;
         lfoPanAtten = 1.f;
+    }
 
+    void calculateModulation()
+    {
+        resetModulation();
         envResetMod();
         lfoResetMod();
 
@@ -527,6 +550,10 @@ struct MainPanNode : EnvelopeSupport<Patch::MainPanNode>,
     bool active{0};
     void attack()
     {
+        resetModulation();
+        envResetMod();
+        lfoResetMod();
+
         bindModulation();
 
         active = true;
@@ -577,14 +604,17 @@ struct MainPanNode : EnvelopeSupport<Patch::MainPanNode>,
     float edMod{0.f};
     float ldMod{0.f};
 
-    void calculateModulation()
+    void resetModulation()
     {
         lfoAtten = 1.f;
         envAtten = 1.f;
         directMod = 0.f;
         edMod = 0.f;
         ldMod = 0.f;
-
+    }
+    void calculateModulation()
+    {
+        resetModulation();
         envResetMod();
         lfoResetMod();
 
@@ -660,6 +690,10 @@ struct FineTuneNode : EnvelopeSupport<Patch::FineTuneNode>,
     bool active{0};
     void attack()
     {
+        resetModulation();
+        envResetMod();
+        lfoResetMod();
+
         bindModulation();
 
         active = true;
@@ -675,6 +709,7 @@ struct FineTuneNode : EnvelopeSupport<Patch::FineTuneNode>,
         }
 
         level = 0.f;
+        coarseLevel = 0.f;
         if (!active)
         {
             return;
@@ -716,7 +751,7 @@ struct FineTuneNode : EnvelopeSupport<Patch::FineTuneNode>,
     float edMod{0.f};
     float ldMod{0.f};
 
-    void calculateModulation()
+    void resetModulation()
     {
         lfoAtten = 1.f;
         envAtten = 1.f;
@@ -724,7 +759,10 @@ struct FineTuneNode : EnvelopeSupport<Patch::FineTuneNode>,
         directCoarseMod = 0.f;
         edMod = 0.f;
         ldMod = 0.f;
-
+    }
+    void calculateModulation()
+    {
+        resetModulation();
         envResetMod();
         lfoResetMod();
 
@@ -814,6 +852,10 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
 
     void attack()
     {
+        resetModulation();
+        envResetMod();
+        lfoResetMod();
+
         memset(output, 0, sizeof(output));
         velocityLag.snapTo(voiceValues.velocity);
         velocityLag.setRateInMilliseconds(10, monoValues.sr.sampleRate, 1.0 / blockSize);
@@ -902,13 +944,16 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     float depthAtten{1.0};
     float lfoAtten{1.0};
 
-    void calculateModulation()
+    void resetModulation()
     {
         depthAtten = 1.f;
         panMod = 0.f;
         levMod = 0.f;
         lfoAtten = 1.f;
-
+    }
+    void calculateModulation()
+    {
+        resetModulation();
         envResetMod();
         lfoResetMod();
 
