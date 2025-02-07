@@ -17,6 +17,17 @@ path design approach exacerbates this problem, as does the relatively
 thin manual you are reading right now. But don't fear! You can have
 fun with the synth anyway.
 
+## I don't want to read a manual. Are there any good YT vids?
+
+Yes! As part of the [one synth challenge](https://www.kvraudio.com/forum/viewtopic.php?t=618178&start=45) in Feb 2025, 
+KVR users [Taron](http://www.taron.de) made a series of videos showing how to
+do sound design in six sines.
+
+- [Video One - Six Sines First Steps](https://youtu.be/fP4wNFigUt4?si=uKoq_MVoYYqzQkN3)
+- [Video Two - Exploring AM](https://youtu.be/JU1Yzfb5U_c?si=lyaKbKRye48EvmSz)
+
+Thanks so much for these, Taron! They are great!
+
 ## How the synthesis works, basically
 
 Its a 6 operator FM synth, more or less. 
