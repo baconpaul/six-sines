@@ -254,7 +254,7 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     const MonoValues &monoValues;
 
     const float &lfoRate, &lfoDeform, &lfoShape, &lfoActiveV, &tempoSyncV, &bipolarV,
-        &lfoIsEnvelopedV;
+        &lfoIsEnvelopedV, &lfoStartPhase;
     bool active, doSmooth{false};
     using lfo_t = sst::basic_blocks::modulators::SimpleLFO<SRProvider, blockSize>;
     lfo_t lfo;
@@ -263,11 +263,12 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     LFOSupport(const T &mn, MonoValues &mv)
         : paramBundle(mn), lfo(&mv.sr, mv.rng), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform),
           lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive), tempoSyncV(mn.tempoSync), monoValues(mv),
-          bipolarV(mn.lfoBipolar), lfoIsEnvelopedV(mn.lfoIsEnveloped)
+          bipolarV(mn.lfoBipolar), lfoIsEnvelopedV(mn.lfoIsEnveloped),
+          lfoStartPhase(mn.lfoStartPhase)
     {
     }
 
-    float lfoRateMod{0.f}, lfoDeformMod{0.f};
+    float lfoRateMod{0.f}, lfoDeformMod{0.f}, lfoStartMod{0.f};
 
     int shape;
     bool tempoSync{false};
@@ -281,6 +282,7 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
         shape = static_cast<int>(std::round(lfoShape));
 
         lfo.attack(shape);
+        lfo.applyPhaseOffset(lfoStartPhase + lfoStartMod);
         if (needsSmoothing)
         {
             auto tshape = (lfo_t::Shape)shape;
@@ -338,6 +340,7 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     {
         lfoRateMod = 0.f;
         lfoDeformMod = 0.f;
+        lfoStartMod = 0.f;
     }
 
     bool lfoHandleModulationValue(int target, const float depth, const float *source)
@@ -349,6 +352,9 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
             return true;
         case Patch::LFOMixin::LFO_DEFORM:
             lfoDeformMod = depth * *source;
+            return true;
+        case Patch::LFOMixin::LFO_STARTPHASE:
+            lfoStartMod = depth * *source;
             return true;
         }
         return false;
