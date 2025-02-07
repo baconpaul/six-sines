@@ -11,8 +11,6 @@ set(PRODUCT_NAME "Six Sines")
 
 option(USE_SANITIZER "Build and link with ASAN" FALSE)
 option(COPY_AFTER_BUILD "Will copy after build" TRUE)
-option(BUILD_SINGLE_ONLY "Only build the one plugin - no seven sines out" FALSE)
-
 include(cmake/compile-options.cmake)
 
 ## New version
@@ -61,14 +59,6 @@ target_include_directories(${PROJECT_NAME}-impl PUBLIC src)
 target_compile_definitions(${PROJECT_NAME}-impl PRIVATE
         PRODUCT_NAME="${PRODUCT_NAME}"
 )
-
-if (${BUILD_SINGLE_ONLY})
-    message(STATUS "Building single plugin version only")
-    target_compile_definitions(${PROJECT_NAME}-impl PRIVATE
-            CLAP_PLUGIN_COUNT=1
-    )
-endif()
-
 target_link_libraries(${PROJECT_NAME}-impl PUBLIC
         clap
 )
