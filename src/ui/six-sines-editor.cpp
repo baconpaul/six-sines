@@ -214,7 +214,6 @@ void SixSinesEditor::idle()
         }
         else if (aum->action == Synth::AudioToUIMsg::DO_PARAM_RESCAN)
         {
-            SXSNLOG("Initiating param rescan");
             auto p = static_cast<const clap_host_params_t *>(
                 clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
             p->rescan(clapHost, CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);

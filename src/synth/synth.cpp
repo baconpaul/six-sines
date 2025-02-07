@@ -447,8 +447,7 @@ void Synth::addToVoiceList(Voice *v)
 
 Voice *Synth::removeFromVoiceList(Voice *cvoice)
 {
-    if (patch.output.portaContinuation.value > 0.5 && voiceCount == 1 &&
-        cvoice->voiceValues.portaDiff > 1e-5)
+    if (patch.output.portaContinuation.value > 0.5 && voiceCount == 1)
     {
         portaContinuation.sourceKey =
             cvoice->voiceValues.key + cvoice->voiceValues.portaDiff * cvoice->voiceValues.portaSign;
