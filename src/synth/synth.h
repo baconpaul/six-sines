@@ -364,6 +364,8 @@ struct Synth
             cc->nextLag = nullptr;
             cc->prevLag = nullptr;
         }
+        patch.dirty = false;
+        doFullRefresh = true;
     }
 
     void pushFullUIRefresh();

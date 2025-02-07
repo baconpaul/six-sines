@@ -730,6 +730,8 @@ void Synth::pushFullUIRefresh()
     }
     audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
     audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
+    audioToUi.push(
+        {AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)hostSampleRate, (float)engineSampleRate});
 }
 
 } // namespace baconpaul::six_sines
