@@ -1222,11 +1222,11 @@ struct Patch : pats::PatchBase<Patch, Param>
               portaContinuation(intMd()
                                     .withID(id(43))
                                     .withName(name() + " Porta Continuation")
-                                    .withRange(0, 2)
+                                    .withRange(0, 1)
                                     .withDefault(0)
                                     .withGroupName(name())
                                     .withUnorderedMapFormatting(
-                                        {{0, "OnVoice"}, {1, "FreeRun"}, {2, "GateRun"}})),
+                                        {{0, "Reset On Voice"}, {1, "Restart From Last"}})),
 
               pianoModeActive(md_t()
                                   .asBool()
