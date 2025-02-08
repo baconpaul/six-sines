@@ -37,6 +37,7 @@
 #include "synth/patch.h"
 #include "mono_values.h"
 #include "mod_matrix.h"
+#include "sst/basic-blocks/dsp/LagCollection.h"
 
 namespace baconpaul::six_sines
 {
@@ -62,6 +63,7 @@ struct Synth
 
     Patch patch;
     MonoValues monoValues;
+    sst::basic_blocks::dsp::LagCollection<130> midiCCLagCollection; // 130 for 128 + pitch + chanat
 
     struct VMConfig
     {
@@ -261,15 +263,19 @@ struct Synth
 
         void setMIDIPitchBend(int16_t c, int16_t v)
         {
-            synth.monoValues.pitchBend = (v - 8192) * 1.0 / 8192;
+            auto val = (v - 8192) * 1.0 / 8192;
+            synth.midiCCLagCollection.setTarget(129, val, &synth.monoValues.pitchBend);
+
         }
         void setMIDI1CC(int16_t ch, int16_t cc, int8_t v)
         {
             synth.monoValues.midiCC[cc] = v;
-            synth.monoValues.midiCCFloat[cc] = v / 127.0;
+            // synth.monoValues.midiCCFloat[cc] = v / 127.0;
+            synth.midiCCLagCollection.setTarget(cc, v / 127.0, &synth.monoValues.midiCCFloat[cc]);
         }
         void setMIDIChannelPressure(int16_t ch, int16_t v)
         {
+            synth.midiCCLagCollection.setTarget(128, v / 127.0, &synth.monoValues.channelAT);
             synth.monoValues.channelAT = v / 127.0;
         }
     };
