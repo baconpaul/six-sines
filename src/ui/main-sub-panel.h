@@ -29,6 +29,7 @@
 #include "modulation-components.h"
 #include "lfo-components.h"
 #include "sst/jucegui/components/RuledLabel.h"
+#include "clipboard.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -36,7 +37,8 @@ struct MainSubPanel : juce::Component,
                       HasEditor,
                       DAHDSRComponents<MainSubPanel, Patch::OutputNode>,
                       LFOComponents<MainSubPanel, Patch::OutputNode>,
-                      ModulationComponents<MainSubPanel, Patch::OutputNode>
+                      ModulationComponents<MainSubPanel, Patch::OutputNode>,
+                      SupportsClipboard
 {
     MainSubPanel(SixSinesEditor &);
     ~MainSubPanel();
@@ -54,6 +56,9 @@ struct MainSubPanel : juce::Component,
     std::unique_ptr<jcmp::Label> lfoDepL;
 
     std::unique_ptr<jcmp::RuledLabel> velTitle;
+
+    HAS_CLIPBOARD_SUPPORT;
+    ;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

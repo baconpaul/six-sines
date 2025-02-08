@@ -207,7 +207,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
         auto s = juce::PopupMenu();
         auto genSet = [c = asComp(), index](int si)
         {
-            return [sCopy=si, w = juce::Component::SafePointer(c), index]()
+            return [sCopy = si, w = juce::Component::SafePointer(c), index]()
             {
                 if (!w)
                     return;

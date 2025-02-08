@@ -21,6 +21,7 @@
 #include "dahdsr-components.h"
 #include "lfo-components.h"
 #include "modulation-components.h"
+#include "clipboard.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -28,7 +29,8 @@ struct MixerSubPanel : juce::Component,
                        HasEditor,
                        DAHDSRComponents<MixerSubPanel, Patch::MixerNode>,
                        LFOComponents<MixerSubPanel, Patch::MixerNode>,
-                       ModulationComponents<MixerSubPanel, Patch::MixerNode>
+                       ModulationComponents<MixerSubPanel, Patch::MixerNode>,
+                       SupportsClipboard
 {
     MixerSubPanel(SixSinesEditor &);
     ~MixerSubPanel();
@@ -59,6 +61,8 @@ struct MixerSubPanel : juce::Component,
     std::unique_ptr<PatchDiscrete> envMulD;
 
     void setEnabledState();
+
+    HAS_CLIPBOARD_SUPPORT;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MIXER_SUB_PANE_H

@@ -121,4 +121,7 @@ void MixerSubPanel::setEnabledState()
     repaint();
 }
 
+IMPLEMENTS_CLIPBOARD_SUPPORT(MixerSubPanel, mixerNodes[index],
+                             Clipboard::ClipboardType::MIXER_FULLNODE)
+
 } // namespace baconpaul::six_sines::ui

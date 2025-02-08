@@ -125,4 +125,7 @@ void MatrixSubPanel::setEnabledState()
     envToLevL->setEnabled(en);
     repaint();
 }
+
+IMPLEMENTS_CLIPBOARD_SUPPORT(MatrixSubPanel, matrixNodes[index],
+                             Clipboard::ClipboardType::MATRIX_FULLNODE);
 } // namespace baconpaul::six_sines::ui

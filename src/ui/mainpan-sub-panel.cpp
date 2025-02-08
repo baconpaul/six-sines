@@ -76,4 +76,6 @@ void MainPanSubPanel::resized()
 
 void MainPanSubPanel::setEnabledState() {}
 
+IMPLEMENTS_CLIPBOARD_SUPPORT(MainPanSubPanel, mainPanMod, Clipboard::ClipboardType::NONE);
+
 } // namespace baconpaul::six_sines::ui
