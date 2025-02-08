@@ -127,6 +127,7 @@ void MainPanel::beginEdit(int which)
     if (which == 3)
         supressPowerOff = true;
     editor.hideAllSubPanels();
+    editor.activateHamburger(which != 3);
     supressPowerOff = false;
     if (which != 3)
     {

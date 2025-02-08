@@ -88,6 +88,7 @@ juce::Rectangle<int> SourcePanel::rectangleFor(int idx)
 void SourcePanel::beginEdit(size_t idx)
 {
     editor.hideAllSubPanels();
+    editor.activateHamburger(true);
     editor.sourceSubPanel->setVisible(true);
     editor.sourceSubPanel->setSelectedIndex(idx);
     editor.singlePanel->setName("Op " + std::to_string(idx + 1) + " Source");

@@ -125,4 +125,7 @@ void SelfSubPanel::setEnabledState()
     repaint();
 }
 
+IMPLEMENTS_CLIPBOARD_SUPPORT(SelfSubPanel, selfNodes[index],
+                             Clipboard::ClipboardType::FEEDBACK_FULLNODE);
+
 } // namespace baconpaul::six_sines::ui

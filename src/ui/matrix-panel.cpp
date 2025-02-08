@@ -216,6 +216,7 @@ juce::Rectangle<int> MatrixPanel::rectangleFor(int idx, bool self)
 void MatrixPanel::beginEdit(size_t idx, bool self)
 {
     editor.hideAllSubPanels();
+    editor.activateHamburger(true);
 
     if (self)
     {

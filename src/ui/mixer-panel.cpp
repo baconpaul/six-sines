@@ -108,6 +108,8 @@ juce::Rectangle<int> MixerPanel::rectangleFor(int idx)
 void MixerPanel::beginEdit(size_t idx)
 {
     editor.hideAllSubPanels();
+    editor.activateHamburger(true);
+
     editor.mixerSubPanel->setSelectedIndex(idx);
     editor.mixerSubPanel->setVisible(true);
 

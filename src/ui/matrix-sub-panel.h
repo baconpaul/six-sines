@@ -21,6 +21,7 @@
 #include "dahdsr-components.h"
 #include "lfo-components.h"
 #include "modulation-components.h"
+#include "clipboard.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -28,7 +29,8 @@ struct MatrixSubPanel : juce::Component,
                         HasEditor,
                         DAHDSRComponents<MatrixSubPanel, Patch::MatrixNode>,
                         LFOComponents<MatrixSubPanel, Patch::MatrixNode>,
-                        ModulationComponents<MatrixSubPanel, Patch::MatrixNode>
+                        ModulationComponents<MatrixSubPanel, Patch::MatrixNode>,
+                        SupportsClipboard
 {
     MatrixSubPanel(SixSinesEditor &);
     ~MatrixSubPanel();
@@ -57,6 +59,8 @@ struct MatrixSubPanel : juce::Component,
     std::unique_ptr<jcmp::RuledLabel> overdriveTitle;
 
     void setEnabledState();
+
+    HAS_CLIPBOARD_SUPPORT;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_SUB_PANEL_H

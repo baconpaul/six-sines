@@ -15,6 +15,7 @@
 
 #include "six-sines-editor.h"
 
+#include "dahdsr-components.h"
 #include "sst/plugininfra/version_information.h"
 #include "sst/clap_juce_shim/menu_helper.h"
 
@@ -36,6 +37,7 @@
 #include "juce-lnf.h"
 #include "preset-manager.h"
 #include "macro-panel.h"
+#include "clipboard.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -72,11 +74,12 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
             ->getFont(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont)
             .withHeight(18));
 
+    clipboard = std::make_unique<Clipboard>();
     matrixPanel = std::make_unique<MatrixPanel>(*this);
     mixerPanel = std::make_unique<MixerPanel>(*this);
     macroPanel = std::make_unique<MacroPanel>(*this);
     singlePanel = std::make_unique<jcmp::NamedPanel>("Edit");
-    singlePanel->hasHamburger = false; // true;
+    singlePanel->hasHamburger = false;
     singlePanel->onHamburger = [w = juce::Component::SafePointer(this)]()
     {
         if (w)
@@ -1019,6 +1022,136 @@ void SixSinesEditor::setZoomFactor(float zf)
         onZoomChanged(zoomFactor);
 }
 
-void SixSinesEditor::doSinglePanelHamburger() { SXSNLOG("Coming soon"); }
+void SixSinesEditor::doSinglePanelHamburger()
+{
+    juce::Component *vis;
+    for (auto c : singlePanel->getChildren())
+    {
+        if (c->isVisible())
+        {
+            vis = c;
+        }
+    }
+    if (!vis)
+        return;
+
+    if (auto sc = dynamic_cast<SupportsClipboard *>(vis))
+    {
+        auto p = juce::PopupMenu();
+        p.addSectionHeader(singlePanel->getName());
+        p.addSeparator();
+
+        if (sc->supportsFullNode())
+        {
+            p.addItem("Copy Node",
+                      [this, w = juce::Component::SafePointer(vis)]()
+                      {
+                          if (!w)
+                              return;
+                          auto s = dynamic_cast<SupportsClipboard *>(w.getComponent());
+                          s->copyFullNodeTo(*clipboard);
+                      });
+            p.addItem("Paste Node", clipboard->clipboardType == sc->getFullNodeType(), false,
+                      [this, w = juce::Component::SafePointer(vis)]()
+                      {
+                          if (!w)
+                              return;
+                          auto s = dynamic_cast<SupportsClipboard *>(w.getComponent());
+                          s->pasteFullNodeFrom(*clipboard);
+                      });
+            p.addItem("Reset Node",
+                      [this, w = juce::Component::SafePointer(vis)]()
+                      {
+                          if (!w)
+                              return;
+                          auto s = dynamic_cast<SupportsClipboard *>(w.getComponent());
+                          s->resetFullNode(*clipboard);
+                      });
+            p.addSeparator();
+        }
+        p.addItem("Copy Envelope",
+                  [this, w = juce::Component::SafePointer(vis)]()
+                  {
+                      if (!w)
+                          return;
+                      auto s = dynamic_cast<SupportsClipboard *>(w.getComponent());
+                      s->copyEnvelopeTo(*clipboard);
+                  });
+        p.addItem("Paste Envelope", clipboard->clipboardType == Clipboard::ENVELOPE, false,
+                  [this, w = juce::Component::SafePointer(vis)]()
+                  {
+                      if (!w)
+                          return;
+                      auto s = dynamic_cast<SupportsClipboard *>(w.getComponent());
+                      s->pasteEnvelopeFrom(*clipboard);
+                  });
+        p.addItem("Reset Envelope",
+                  [this, w = juce::Component::SafePointer(vis)]()
+                  {
+                      if (!w)
+                          return;
+                      auto s = dynamic_cast<SupportsClipboard *>(w.getComponent());
+                      s->resetEnvelope(*clipboard);
+                  });
+        p.addSeparator();
+        p.addItem("Copy LFO",
+                  [this, w = juce::Component::SafePointer(vis)]()
+                  {
+                      if (!w)
+                          return;
+                      auto s = dynamic_cast<SupportsClipboard *>(w.getComponent());
+                      s->copyLFOTo(*clipboard);
+                  });
+        p.addItem("Paste LFO", clipboard->clipboardType == Clipboard::LFO, false,
+                  [this, w = juce::Component::SafePointer(vis)]()
+                  {
+                      if (!w)
+                          return;
+                      auto s = dynamic_cast<SupportsClipboard *>(w.getComponent());
+                      s->pasteLFOFrom(*clipboard);
+                  });
+        p.addItem("Reset LFO",
+                  [this, w = juce::Component::SafePointer(vis)]()
+                  {
+                      if (!w)
+                          return;
+                      auto s = dynamic_cast<SupportsClipboard *>(w.getComponent());
+                      s->resetLFO(*clipboard);
+                  });
+        p.addSeparator();
+        p.addItem("Copy Modulation",
+                  [this, w = juce::Component::SafePointer(vis)]()
+                  {
+                      if (!w)
+                          return;
+                      auto s = dynamic_cast<SupportsClipboard *>(w.getComponent());
+                      s->copyModulationTo(*clipboard);
+                  });
+        p.addItem("Paste Modulation", clipboard->clipboardType == Clipboard::MODULATION, false,
+                  [this, w = juce::Component::SafePointer(vis)]()
+                  {
+                      if (!w)
+                          return;
+                      auto s = dynamic_cast<SupportsClipboard *>(w.getComponent());
+                      s->pasteModulationFrom(*clipboard);
+                  });
+        p.addItem("Reset Modulation",
+                  [this, w = juce::Component::SafePointer(vis)]()
+                  {
+                      if (!w)
+                          return;
+                      auto s = dynamic_cast<SupportsClipboard *>(w.getComponent());
+                      s->resetModulation(*clipboard);
+                  });
+
+        p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
+    }
+}
+
+void SixSinesEditor::activateHamburger(bool b)
+{
+    singlePanel->hasHamburger = b;
+    singlePanel->repaint();
+}
 
 } // namespace baconpaul::six_sines::ui

@@ -32,6 +32,7 @@ add_library(${PROJECT_NAME}-impl STATIC
 
         src/ui/six-sines-editor.cpp
 
+        src/ui/clipboard.cpp
         src/ui/main-panel.cpp
         src/ui/main-sub-panel.cpp
         src/ui/matrix-panel.cpp

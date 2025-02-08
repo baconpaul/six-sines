@@ -159,7 +159,8 @@ void Synth::setSampleRate(double sampleRate)
     lagHead = nullptr;
 
     // midi is a bit less frequent than param automation so a slightly slower smooth
-    midiCCLagCollection.setRateInMilliseconds(1000.0 * 128.0 / 48000.0, engineSampleRate, 1.0 / blockSize);
+    midiCCLagCollection.setRateInMilliseconds(1000.0 * 128.0 / 48000.0, engineSampleRate,
+                                              1.0 / blockSize);
     midiCCLagCollection.snapAllActiveToTarget();
 
     audioToUi.push(

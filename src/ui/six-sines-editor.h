@@ -54,6 +54,7 @@ struct SourcePanel;
 struct SourceSubPanel;
 struct MacroPanel;
 struct SixSinesJuceLookAndFeel;
+struct Clipboard;
 
 struct SixSinesEditor : jcmp::WindowPanel
 {
@@ -73,8 +74,11 @@ struct SixSinesEditor : jcmp::WindowPanel
     void idle();
     std::unique_ptr<juce::Timer> idleTimer;
 
+    std::unique_ptr<Clipboard> clipboard;
+
     std::unique_ptr<jcmp::NamedPanel> singlePanel;
     void doSinglePanelHamburger();
+    void activateHamburger(bool b);
 
     std::unique_ptr<MainPanel> mainPanel;
     std::unique_ptr<MainSubPanel> mainSubPanel;

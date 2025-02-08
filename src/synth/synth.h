@@ -265,7 +265,6 @@ struct Synth
         {
             auto val = (v - 8192) * 1.0 / 8192;
             synth.midiCCLagCollection.setTarget(129, val, &synth.monoValues.pitchBend);
-
         }
         void setMIDI1CC(int16_t ch, int16_t cc, int8_t v)
         {

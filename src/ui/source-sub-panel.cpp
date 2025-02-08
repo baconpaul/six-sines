@@ -363,4 +363,6 @@ void SourceSubPanel::showUnisonFeaturesMenu()
                     makeMenuAccessibleButtonCB(unisonBehaviorB.get()));
 }
 
+IMPLEMENTS_CLIPBOARD_SUPPORT(SourceSubPanel, sourceNodes[index], Clipboard::SOURCE_FULLNODE)
+
 } // namespace baconpaul::six_sines::ui

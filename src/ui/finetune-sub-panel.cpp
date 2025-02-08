@@ -128,4 +128,6 @@ void FineTuneSubPanel::resized()
 
 void FineTuneSubPanel::setEnabledState() {}
 
+IMPLEMENTS_CLIPBOARD_SUPPORT(FineTuneSubPanel, fineTuneMod, Clipboard::ClipboardType::NONE);
+
 } // namespace baconpaul::six_sines::ui

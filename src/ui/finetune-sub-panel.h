@@ -21,6 +21,7 @@
 #include "dahdsr-components.h"
 #include "lfo-components.h"
 #include "modulation-components.h"
+#include "clipboard.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -28,7 +29,8 @@ struct FineTuneSubPanel : juce::Component,
                           HasEditor,
                           DAHDSRComponents<FineTuneSubPanel, Patch::FineTuneNode>,
                           LFOComponents<FineTuneSubPanel, Patch::FineTuneNode>,
-                          ModulationComponents<FineTuneSubPanel, Patch::FineTuneNode>
+                          ModulationComponents<FineTuneSubPanel, Patch::FineTuneNode>,
+                          SupportsClipboard
 {
     FineTuneSubPanel(SixSinesEditor &e);
     ~FineTuneSubPanel() = default;
@@ -65,6 +67,8 @@ struct FineTuneSubPanel : juce::Component,
     std::unique_ptr<jcmp::RuledLabel> lfoTitle;
 
     void setEnabledState();
+
+    HAS_CLIPBOARD_SUPPORT;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MIXER_SUB_PANE_H
