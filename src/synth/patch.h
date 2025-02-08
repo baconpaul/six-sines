@@ -415,6 +415,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             SKIP = -1,
             NONE = 0,
             DIRECT = 10,
+            DIRECT_FINE = 11,
             STARTING_PHASE = 15,
             ENV_DEPTH_ATTEN = 20,
             LFO_DEPTH_ATTEN = 30,
@@ -424,9 +425,10 @@ struct Patch : pats::PatchBase<Patch, Param>
             {TargetID::NONE, "Off"},
             {TargetID::SKIP, ""},
             {TargetID::DIRECT, "Ratio"},
+            {TargetID::DIRECT_FINE, "Ratio (Fine)"},
             {TargetID::STARTING_PHASE, "Phase"},
-            {TargetID::ENV_DEPTH_ATTEN, "Env Sens"},
-            {TargetID::LFO_DEPTH_ATTEN, "LFO Sens"},
+            {TargetID::ENV_DEPTH_ATTEN, "Env Atten"},
+            {TargetID::LFO_DEPTH_ATTEN, "LFO Atten"},
 
         };
 

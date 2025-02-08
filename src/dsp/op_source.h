@@ -331,6 +331,9 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                     case Patch::SourceNode::DIRECT:
                         ratioMod += d * *sourcePointers[i] * 2;
                         break;
+                    case Patch::SourceNode::DIRECT_FINE:
+                        ratioMod += d * *sourcePointers[i] * 2.0 / 12.0;
+                        break;
                     case Patch::SourceNode::STARTING_PHASE:
                         phaseMod += d * *sourcePointers[i];
                         break;
