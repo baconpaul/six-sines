@@ -232,7 +232,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
                     s = juce::PopupMenu();
                 }
                 currCat = so.group;
-                s.addItem(so.name + " (" + std::to_string(so.id) + ")", genSet(so.id));
+                s.addItem(so.name, genSet(so.id));
             }
         }
         if (s.getNumItems() > 0)
