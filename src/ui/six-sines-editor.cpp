@@ -733,6 +733,8 @@ void SixSinesEditor::doSavePatch()
                                  w->setPatchNameTo(pn.filename().replace_extension("").u8string());
 
                                  w->presetManager->saveUserPresetDirect(w->patchCopy, pn);
+                                 w->presetDataBinding->setDirtyState(false);
+                                 w->repaint();
                              });
 }
 
