@@ -332,6 +332,41 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         engine->processUIQueue(out);
     }
 
+    bool implementsPresetLoad() const noexcept override { return true; }
+    bool presetLoadFromLocation(uint32_t location_kind, const char *location,
+                                const char *load_key) noexcept override
+    {
+        if (location_kind ==
+            clap_preset_discovery_location_kind::CLAP_PRESET_DISCOVERY_LOCATION_FILE)
+        {
+            try
+            {
+                auto p = fs::path(fs::u8path(location));
+                if (p.extension() == "sxsnp")
+                {
+                    std::ifstream t(p);
+                    if (!t.is_open())
+                        return false;
+                    std::stringstream buffer;
+                    buffer << t.rdbuf();
+
+                    Patch patchCopy;
+                    patchCopy.fromState(buffer.str());
+
+                    auto dn = p.filename().replace_extension("").u8string();
+                    presets::PresetManager::sendEntirePatchToAudio(patchCopy, engine->mainToAudio,
+                                                                   patchCopy.name, _host.host());
+                    return true;
+                }
+            }
+            catch (const fs::filesystem_error &e)
+            {
+                SXSNLOG("File System Error " << e.what() << " with " << location);
+            }
+        }
+        return false;
+    }
+
   public:
     bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }
     std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
