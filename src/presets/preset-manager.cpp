@@ -13,10 +13,10 @@
  * The source code and license are at https://github.com/baconpaul/six-sines
  */
 
+#include "preset-manager.h"
 #include <sstream>
 #include <fstream>
 #include "sst/plugininfra/paths.h"
-#include "preset-manager.h"
 
 #include "sst/plugininfra/strnatcmp.h"
 
@@ -24,89 +24,10 @@
 
 CMRC_DECLARE(sixsines_patches);
 
-namespace baconpaul::six_sines::ui
+namespace baconpaul::six_sines::presets
 {
 
-struct PresetDataBinding : sst::jucegui::data::Discrete
-{
-    PresetManager &pm;
-    PresetDataBinding(PresetManager &p) : pm(p) {}
-
-    std::string getLabel() const override { return "Presets"; }
-
-    int curr{0};
-    bool hasExtra{false};
-    std::string extraName{};
-    void setExtra(const std::string &s)
-    {
-        hasExtra = true;
-        extraName = s;
-    }
-
-    int getValue() const override { return curr; }
-    int getDefaultValue() const override { return 0; };
-    bool isDirty{false};
-
-    std::string getValueAsStringFor(int i) const override
-    {
-        if (hasExtra && i < 0)
-            return extraName;
-
-        std::string postfix = isDirty ? " *" : "";
-
-        if (i == 0)
-            return "Init" + postfix;
-        auto fp = i - 1;
-        if (fp < pm.factoryPatchVector.size())
-        {
-            fs::path p{pm.factoryPatchVector[fp].first};
-            p = p / pm.factoryPatchVector[fp].second;
-            p = p.replace_extension("");
-            return p.u8string() + postfix;
-        }
-        fp -= pm.factoryPatchVector.size();
-        if (fp < pm.userPatches.size())
-        {
-            auto pt = pm.userPatches[fp];
-            pt = pt.replace_extension("");
-            return pt.u8string() + postfix;
-        }
-        return "ERR";
-    }
-    void setValueFromGUI(const int &f) override
-    {
-        isDirty = false;
-        if (hasExtra)
-        {
-            hasExtra = false;
-        }
-        curr = f;
-        if (f == 0)
-        {
-            pm.loadInit();
-            return;
-        }
-        auto fp = f - 1;
-        if (fp < pm.factoryPatchVector.size())
-        {
-            pm.loadFactoryPreset(pm.factoryPatchVector[fp].first, pm.factoryPatchVector[fp].second);
-        }
-        fp -= pm.factoryPatchVector.size();
-        if (fp < pm.userPatches.size())
-        {
-            auto pt = pm.userPatches[fp];
-            pm.loadUserPresetDirect(pm.userPatchesPath / pt);
-        }
-    };
-    void setValueFromModel(const int &f) override { curr = f; }
-    int getMin() const override { return hasExtra ? -1 : 0; }
-    int getMax() const override
-    {
-        return 1 + pm.factoryPatchVector.size() + pm.userPatches.size() - 1 + (hasExtra ? 1 : 0);
-    } // last -1 is because inclusive
-};
-
-PresetManager::PresetManager(Patch &pp) : patch(pp)
+PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
 {
     try
     {
@@ -156,10 +77,6 @@ PresetManager::PresetManager(Patch &pp) : patch(pp)
     }
 
     rescanUserPresets();
-
-    discreteDataBinding = std::make_unique<PresetDataBinding>(*this);
-
-    setStateForDisplayName(patch.name);
 }
 
 PresetManager::~PresetManager() = default;
@@ -224,7 +141,7 @@ void PresetManager::rescanUserPresets()
     }
 }
 
-void PresetManager::saveUserPresetDirect(const fs::path &pt)
+void PresetManager::saveUserPresetDirect(Patch &patch, const fs::path &pt)
 {
     std::ofstream ofs(pt);
     if (ofs.is_open())
@@ -235,7 +152,8 @@ void PresetManager::saveUserPresetDirect(const fs::path &pt)
     rescanUserPresets();
 }
 
-void PresetManager::loadUserPresetDirect(const fs::path &p)
+void PresetManager::loadUserPresetDirect(Patch &patch, Synth::mainToAudioQueue_T &mainToAudio,
+                                         const fs::path &p)
 {
     std::ifstream t(p);
     if (!t.is_open())
@@ -246,11 +164,13 @@ void PresetManager::loadUserPresetDirect(const fs::path &p)
     patch.fromState(buffer.str());
 
     auto dn = p.filename().replace_extension("").u8string();
+    sendEntirePatchToAudio(patch, mainToAudio, dn);
     if (onPresetLoaded)
         onPresetLoaded(dn);
 }
 
-void PresetManager::loadFactoryPreset(const std::string &cat, const std::string &pat)
+void PresetManager::loadFactoryPreset(Patch &patch, Synth::mainToAudioQueue_T &mainToAudio,
+                                      const std::string &cat, const std::string &pat)
 {
     try
     {
@@ -266,19 +186,22 @@ void PresetManager::loadFactoryPreset(const std::string &cat, const std::string 
             if (factoryPatchVector[idx].first == cat && factoryPatchVector[idx].second == pat)
                 break;
         }
-        if (idx != factoryPatchVector.size())
+
+        if (idx == factoryPatchVector.size())
         {
-            discreteDataBinding->setValueFromModel(idx + 1);
+            return;
         }
+
+        auto noExt = pat;
+        auto ps = noExt.find(".sxsnp");
+        if (ps != std::string::npos)
+        {
+            noExt = noExt.substr(0, ps);
+        }
+        sendEntirePatchToAudio(patch, mainToAudio, noExt);
 
         if (onPresetLoaded)
         {
-            auto noExt = pat;
-            auto ps = noExt.find(".sxsnp");
-            if (ps != std::string::npos)
-            {
-                noExt = noExt.substr(0, ps);
-            }
             onPresetLoaded(noExt);
         }
     }
@@ -288,65 +211,60 @@ void PresetManager::loadFactoryPreset(const std::string &cat, const std::string 
     }
 }
 
-void PresetManager::loadInit()
+void PresetManager::loadInit(Patch &patch, Synth::mainToAudioQueue_T &mainToAudio)
 {
     patch.resetToInit();
+    sendEntirePatchToAudio(patch, mainToAudio, "Init");
     if (onPresetLoaded)
         onPresetLoaded("Init");
 }
 
-sst::jucegui::data::Discrete *PresetManager::getDiscreteData() { return discreteDataBinding.get(); }
-
-void PresetManager::setStateForDisplayName(const std::string &s)
+void PresetManager::sendEntirePatchToAudio(Patch &patch, Synth::mainToAudioQueue_T &mainToAudio,
+                                           const std::string &s)
 {
-    auto q = discreteDataBinding->getValueAsString();
-    auto sp = q.find("/");
-    if (sp != std::string::npos)
+    if (!clapHostParams)
     {
-        q = q.substr(sp + 1);
+        clapHostParams = static_cast<const clap_host_params_t *>(
+            clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
     }
+    sendEntirePatchToAudio(patch, mainToAudio, s, clapHost, clapHostParams);
+}
 
-    if (s == "Init")
+void PresetManager::sendEntirePatchToAudio(Patch &patch, Synth::mainToAudioQueue_T &mainToAudio,
+                                           const std::string &name, const clap_host_t *h,
+                                           const clap_host_params_t *hostPar)
+{
+    if (!h)
+        return;
+
+    if (hostPar == nullptr)
     {
-        discreteDataBinding->setValueFromModel(0);
+        hostPar = static_cast<const clap_host_params_t *>(h->get_extension(h, CLAP_EXT_PARAMS));
     }
-    else
+    static char stringBuffer[128][256];
+    static int currentString{0};
+
+    char *tmpDat = stringBuffer[currentString];
+    currentString = (currentString + 1) % 128;
+
+    memset(tmpDat, 0, 128 * sizeof(char));
+    strncpy(tmpDat, name.c_str(), 255);
+    mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_NAME, 0, 0.f, tmpDat});
+    mainToAudio.push({Synth::MainToAudioMsg::STOP_AUDIO});
+    for (const auto &p : patch.params)
     {
-        bool found{false};
-        int idx{1};
-        for (const auto &[c, pp] : factoryPatchVector)
-        {
-            auto p = pp.substr(0, pp.find(".sxsnp"));
-            if (p == s)
-            {
-                discreteDataBinding->setValueFromModel(idx);
-                found = true;
-                break;
-            }
-            idx++;
-        }
-        if (!found)
-        {
-            for (auto &p : userPatches)
-            {
-                auto pn = p.filename().replace_extension("").u8string();
-                if (s == pn)
-                {
-                    discreteDataBinding->setValueFromModel(idx);
-                    found = true;
-                    break;
-                }
-                idx++;
-            }
-        }
-        if (!found)
-        {
-            discreteDataBinding->setExtra(s);
-            discreteDataBinding->setValueFromModel(-1);
-        }
+        mainToAudio.push(
+            {Synth::MainToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING, p->meta.id, p->value});
+    }
+    mainToAudio.push({Synth::MainToAudioMsg::START_AUDIO});
+    mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_IS_CLEAN, true});
+    mainToAudio.push({Synth::MainToAudioMsg::SEND_POST_LOAD, true});
+    mainToAudio.push({Synth::MainToAudioMsg::SEND_REQUEST_RESCAN, true});
+
+    if (hostPar)
+    {
+        hostPar->request_flush(h);
     }
 }
 
-void PresetManager::setDirtyState(bool b) { discreteDataBinding->isDirty = b; }
-
-} // namespace baconpaul::six_sines::ui
+} // namespace baconpaul::six_sines::presets

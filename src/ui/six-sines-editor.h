@@ -32,7 +32,7 @@
 #include <sst/jucegui/data/Continuous.h>
 
 #include "synth/synth.h"
-#include "preset-manager.h"
+#include "presets/preset-manager.h"
 #include "ui-defaults.h"
 
 namespace jcmp = sst::jucegui::components;
@@ -55,6 +55,7 @@ struct SourceSubPanel;
 struct MacroPanel;
 struct SixSinesJuceLookAndFeel;
 struct Clipboard;
+struct PresetDataBinding;
 
 struct SixSinesEditor : jcmp::WindowPanel
 {
@@ -62,10 +63,11 @@ struct SixSinesEditor : jcmp::WindowPanel
     ModMatrixConfig modMatrixConfig;
 
     Synth::audioToUIQueue_t &audioToUI;
-    Synth::uiToAudioQueue_T &uiToAudio;
-    std::function<void()> flushOperator;
-    SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &utoa,
-                   std::function<void()> flushOperator);
+    Synth::mainToAudioQueue_T &mainToAudio;
+    const clap_host_t *clapHost{nullptr};
+
+    SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudioQueue_T &utoa,
+                   const clap_host_t *ch);
     virtual ~SixSinesEditor();
 
     void paint(juce::Graphics &g) override;
@@ -98,7 +100,8 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::unique_ptr<SourcePanel> sourcePanel;
     std::unique_ptr<SourceSubPanel> sourceSubPanel;
 
-    std::unique_ptr<PresetManager> presetManager;
+    std::unique_ptr<presets::PresetManager> presetManager;
+    std::unique_ptr<PresetDataBinding> presetDataBinding;
     std::unique_ptr<jcmp::JogUpDownButton> presetButton;
     void showPresetPopup();
     void doLoadPatch();
@@ -127,7 +130,6 @@ struct SixSinesEditor : jcmp::WindowPanel
 
     std::shared_ptr<SixSinesJuceLookAndFeel> lnf;
 
-    void sendEntirePatchToAudio(const std::string &patchName);
     void setAndSendParamValue(uint32_t id, float value, bool notifyAudio = true,
                               bool includeBeginEnd = true);
     void setAndSendParamValue(const Param &p, float value, bool notifyAudio = true,
@@ -157,7 +159,11 @@ struct SixSinesEditor : jcmp::WindowPanel
 
     float engineSR{0}, hostSR{0};
 
-    const clap_host_t *clapHost{nullptr};
+    void requestParamsFlush();
+    const clap_host_params_t *clapParamsExtension{nullptr};
+
+    // the name tells you about the intent. It just makes startup faster
+    void sneakyStartupGrabFrom(Patch &other);
 };
 
 struct HasEditor

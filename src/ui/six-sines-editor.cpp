@@ -35,9 +35,11 @@
 #include "source-sub-panel.h"
 #include "ui-constants.h"
 #include "juce-lnf.h"
-#include "preset-manager.h"
+#include "presets/preset-manager.h"
 #include "macro-panel.h"
 #include "clipboard.h"
+#include "patch-data-bindings.h"
+#include "preset-data-binding.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -55,9 +57,9 @@ namespace jstl = sst::jucegui::style;
 using sheet_t = jstl::StyleSheet;
 static constexpr sheet_t::Class PatchMenu("six-sines.patch-menu");
 
-SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQueue_T &utoa,
-                               std::function<void()> fo)
-    : jcmp::WindowPanel(true), audioToUI(atou), uiToAudio(utoa), flushOperator(fo)
+SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudioQueue_T &utoa,
+                               const clap_host_t *h)
+    : jcmp::WindowPanel(true), audioToUI(atou), mainToAudio(utoa), clapHost(h)
 {
     setTitle("Six Sines - an Audio Rate Modulation Synthesizer");
     setAccessible(true);
@@ -118,9 +120,9 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     sst::jucegui::component_adapters::setTraversalId(macroPanel.get(), 60000);
     sst::jucegui::component_adapters::setTraversalId(singlePanel.get(), 70000);
 
-    auto startMsg = Synth::UIToAudioMsg{Synth::UIToAudioMsg::REQUEST_REFRESH};
-    uiToAudio.push(startMsg);
-    flushOperator();
+    auto startMsg = Synth::MainToAudioMsg{Synth::MainToAudioMsg::REQUEST_REFRESH};
+    mainToAudio.push(startMsg);
+    requestParamsFlush();
 
     idleTimer = std::make_unique<IdleTimer>(*this);
     idleTimer->startTimer(1000. / 60.);
@@ -128,12 +130,19 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     toolTip = std::make_unique<jcmp::ToolTip>();
     addChildComponent(*toolTip);
 
-    presetManager = std::make_unique<PresetManager>(patchCopy);
-    presetManager->onPresetLoaded = [this](auto &s) { this->postPatchChange(s); };
+    presetManager = std::make_unique<presets::PresetManager>(clapHost);
+    presetManager->onPresetLoaded = [this](auto s)
+    {
+        this->postPatchChange(s);
+        repaint();
+    };
+
+    presetDataBinding = std::make_unique<PresetDataBinding>(*presetManager, patchCopy, mainToAudio);
+    presetDataBinding->setStateForDisplayName(patchCopy.name);
 
     presetButton = std::make_unique<jcmp::JogUpDownButton>();
     presetButton->setCustomClass(PatchMenu);
-    presetButton->setSource(presetManager->getDiscreteData());
+    presetButton->setSource(presetDataBinding.get());
     presetButton->onPopupMenu = [this]() { showPresetPopup(); };
     addAndMakeVisible(*presetButton);
     setPatchNameDisplay();
@@ -163,10 +172,9 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
     vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::HORIZONTAL);
     addAndMakeVisible(*vuMeter);
 
-    uiToAudio.push({Synth::UIToAudioMsg::EDITOR_ATTACH_DETATCH, true});
-    uiToAudio.push({Synth::UIToAudioMsg::REQUEST_REFRESH, true});
-    if (flushOperator)
-        flushOperator();
+    mainToAudio.push({Synth::MainToAudioMsg::EDITOR_ATTACH_DETATCH, true});
+    mainToAudio.push({Synth::MainToAudioMsg::REQUEST_REFRESH, true});
+    requestParamsFlush();
 
     auto pzf = defaultsProvider->getUserDefaultValue(Defaults::zoomLevel, 100);
     zoomFactor = pzf * 0.01;
@@ -181,7 +189,7 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::uiToAudioQu
 }
 SixSinesEditor::~SixSinesEditor()
 {
-    uiToAudio.push({Synth::UIToAudioMsg::EDITOR_ATTACH_DETATCH, false});
+    mainToAudio.push({Synth::MainToAudioMsg::EDITOR_ATTACH_DETATCH, false});
     idleTimer->stopTimer();
 }
 
@@ -206,21 +214,26 @@ void SixSinesEditor::idle()
         else if (aum->action == Synth::AudioToUIMsg::SET_PATCH_NAME)
         {
             memset(patchCopy.name, 0, sizeof(patchCopy.name));
-            strncpy(patchCopy.name, aum->hackPointer, 255);
+            strncpy(patchCopy.name, aum->patchNamePointer, 255);
             setPatchNameDisplay();
         }
         else if (aum->action == Synth::AudioToUIMsg::SET_PATCH_DIRTY_STATE)
         {
             patchCopy.dirty = (bool)aum->paramId;
-            presetManager->setDirtyState(patchCopy.dirty);
+            presetDataBinding->setDirtyState(patchCopy.dirty);
             presetButton->repaint();
         }
         else if (aum->action == Synth::AudioToUIMsg::DO_PARAM_RESCAN)
         {
-            auto p = static_cast<const clap_host_params_t *>(
-                clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
-            p->rescan(clapHost, CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
-            p->request_flush(clapHost);
+            if (!clapParamsExtension)
+                clapParamsExtension = static_cast<const clap_host_params_t *>(
+                    clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
+            if (clapParamsExtension)
+            {
+                clapParamsExtension->rescan(clapHost,
+                                            CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
+                clapParamsExtension->request_flush(clapHost);
+            }
         }
         else if (aum->action == Synth::AudioToUIMsg::SEND_SAMPLE_RATE)
         {
@@ -564,8 +577,10 @@ void SixSinesEditor::showPresetPopup()
             {
                 noExt = noExt.substr(0, ps);
             }
-            em.addItem(noExt, [cat = c, pat = e, this]()
-                       { this->presetManager->loadFactoryPreset(cat, pat); });
+            em.addItem(noExt,
+                       [cat = c, pat = e, this]() {
+                           this->presetManager->loadFactoryPreset(patchCopy, mainToAudio, cat, pat);
+                       });
         }
         f.addSubMenu(c, em);
     }
@@ -580,8 +595,10 @@ void SixSinesEditor::showPresetPopup()
         if (pp.empty())
         {
             u.addItem(dn,
-                      [this, pth = up, dn]() {
-                          presetManager->loadUserPresetDirect(presetManager->userPatchesPath / pth);
+                      [this, pth = up, dn]()
+                      {
+                          presetManager->loadUserPresetDirect(patchCopy, mainToAudio,
+                                                              presetManager->userPatchesPath / pth);
                       });
         }
         else
@@ -600,8 +617,10 @@ void SixSinesEditor::showPresetPopup()
                 cat = pp;
             }
             s.addItem(dn,
-                      [this, pth = up, dn]() {
-                          presetManager->loadUserPresetDirect(presetManager->userPatchesPath / pth);
+                      [this, pth = up, dn]()
+                      {
+                          presetManager->loadUserPresetDirect(patchCopy, mainToAudio,
+                                                              presetManager->userPatchesPath / pth);
                       });
         }
     }
@@ -713,7 +732,7 @@ void SixSinesEditor::doSavePatch()
                                  auto pn = fs::path{result[0].getFullPathName().toStdString()};
                                  w->setPatchNameTo(pn.filename().replace_extension("").u8string());
 
-                                 w->presetManager->saveUserPresetDirect(pn);
+                                 w->presetManager->saveUserPresetDirect(w->patchCopy, pn);
                              });
 }
 
@@ -721,7 +740,7 @@ void SixSinesEditor::setPatchNameTo(const std::string &s)
 {
     memset(patchCopy.name, 0, sizeof(patchCopy.name));
     strncpy(patchCopy.name, s.c_str(), 255);
-    uiToAudio.push({Synth::UIToAudioMsg::SEND_PATCH_NAME, 0, 0, patchCopy.name});
+    mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_NAME, 0, 0, patchCopy.name});
     setPatchNameDisplay();
 }
 
@@ -741,29 +760,11 @@ void SixSinesEditor::doLoadPatch()
                 return;
             }
             auto loadPath = fs::path{result[0].getFullPathName().toStdString()};
-            w->presetManager->loadUserPresetDirect(loadPath);
+            w->presetManager->loadUserPresetDirect(w->patchCopy, w->mainToAudio, loadPath);
         });
 }
 
-void SixSinesEditor::resetToDefault() { presetManager->loadInit(); }
-
-void SixSinesEditor::sendEntirePatchToAudio(const std::string &s)
-{
-    static char tmpDat[256];
-    memset(tmpDat, 0, sizeof(tmpDat));
-    strncpy(tmpDat, s.c_str(), 255);
-    uiToAudio.push({Synth::UIToAudioMsg::SEND_PATCH_NAME, 0, 0.f, tmpDat});
-    uiToAudio.push({Synth::UIToAudioMsg::STOP_AUDIO});
-    for (const auto &p : patchCopy.params)
-    {
-        uiToAudio.push({Synth::UIToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING, p->meta.id, p->value});
-    }
-    uiToAudio.push({Synth::UIToAudioMsg::START_AUDIO});
-    uiToAudio.push({Synth::UIToAudioMsg::SEND_PATCH_IS_CLEAN, true});
-    uiToAudio.push({Synth::UIToAudioMsg::SEND_REQUEST_RESCAN, true});
-
-    flushOperator();
-}
+void SixSinesEditor::resetToDefault() { presetManager->loadInit(patchCopy, mainToAudio); }
 
 void SixSinesEditor::setAndSendParamValue(uint32_t paramId, float value, bool notifyAudio,
                                           bool sendBeginEnd)
@@ -783,11 +784,11 @@ void SixSinesEditor::setAndSendParamValue(uint32_t paramId, float value, bool no
     if (notifyAudio)
     {
         if (sendBeginEnd)
-            uiToAudio.push({Synth::UIToAudioMsg::Action::BEGIN_EDIT, paramId});
-        uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, paramId, value});
+            mainToAudio.push({Synth::MainToAudioMsg::Action::BEGIN_EDIT, paramId});
+        mainToAudio.push({Synth::MainToAudioMsg::Action::SET_PARAM, paramId, value});
         if (sendBeginEnd)
-            uiToAudio.push({Synth::UIToAudioMsg::Action::END_EDIT, paramId});
-        flushOperator();
+            mainToAudio.push({Synth::MainToAudioMsg::Action::END_EDIT, paramId});
+        requestParamsFlush();
     }
 }
 
@@ -795,13 +796,13 @@ void SixSinesEditor::setPatchNameDisplay()
 {
     if (!presetButton)
         return;
-    presetManager->setStateForDisplayName(patchCopy.name);
+    presetDataBinding->setStateForDisplayName(patchCopy.name);
     presetButton->repaint();
 }
 
-void SixSinesEditor::postPatchChange(const std::string &dn)
+void SixSinesEditor::postPatchChange(const std::string &s)
 {
-    sendEntirePatchToAudio(dn);
+    presetDataBinding->setStateForDisplayName(s);
     for (auto [id, f] : componentRefreshByID)
         f();
 
@@ -1152,6 +1153,27 @@ void SixSinesEditor::activateHamburger(bool b)
 {
     singlePanel->hasHamburger = b;
     singlePanel->repaint();
+}
+
+void SixSinesEditor::requestParamsFlush()
+{
+    if (!clapParamsExtension)
+        clapParamsExtension = static_cast<const clap_host_params_t *>(
+            clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
+    if (clapParamsExtension)
+    {
+        clapParamsExtension->request_flush(clapHost);
+    }
+}
+
+void SixSinesEditor::sneakyStartupGrabFrom(Patch &other)
+{
+    for (auto &p : other.params)
+    {
+        patchCopy.paramMap.at(p->meta.id)->value = p->value;
+    }
+    strncpy(patchCopy.name, other.name, 255);
+    postPatchChange(other.name);
 }
 
 } // namespace baconpaul::six_sines::ui

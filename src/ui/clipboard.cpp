@@ -18,5 +18,5 @@
 
 namespace baconpaul::six_sines::ui
 {
-Clipboard::Clipboard() { SXSNLOG("Clipboard created"); }
+Clipboard::Clipboard() {}
 } // namespace baconpaul::six_sines::ui
