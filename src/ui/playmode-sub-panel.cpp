@@ -180,7 +180,7 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     panicButton = std::make_unique<jcmp::TextPushButton>();
     panicButton->setLabel("Sound Off");
     panicButton->setOnCallback(
-        [this]() { editor.uiToAudio.push({Synth::UIToAudioMsg::PANIC_STOP_VOICES}); });
+        [this]() { editor.mainToAudio.push({Synth::MainToAudioMsg::PANIC_STOP_VOICES}); });
     addAndMakeVisible(*panicButton);
     addAndMakeVisible(*panicTitle);
 

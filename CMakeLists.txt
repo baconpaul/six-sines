@@ -42,11 +42,12 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/ui/mixer-sub-panel.cpp
         src/ui/source-panel.cpp
         src/ui/source-sub-panel.cpp
-        src/ui/preset-manager.cpp
         src/ui/macro-panel.cpp
         src/ui/finetune-sub-panel.cpp
         src/ui/mainpan-sub-panel.cpp
         src/ui/playmode-sub-panel.cpp
+
+        src/presets/preset-manager.cpp
 
         src/dsp/sintable.cpp
 

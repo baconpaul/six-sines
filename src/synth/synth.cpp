@@ -513,12 +513,12 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
         doFullRefresh = false;
         didRefresh = true;
     }
-    auto uiM = uiToAudio.pop();
+    auto uiM = mainToAudio.pop();
     while (uiM.has_value())
     {
         switch (uiM->action)
         {
-        case UIToAudioMsg::REQUEST_REFRESH:
+        case MainToAudioMsg::REQUEST_REFRESH:
         {
             if (!didRefresh)
             {
@@ -527,10 +527,10 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             }
         }
         break;
-        case UIToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING:
-        case UIToAudioMsg::SET_PARAM:
+        case MainToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING:
+        case MainToAudioMsg::SET_PARAM:
         {
-            bool notify = uiM->action == UIToAudioMsg::SET_PARAM;
+            bool notify = uiM->action == MainToAudioMsg::SET_PARAM;
 
             auto dest = patch.paramMap.at(uiM->paramId);
             if (notify)
@@ -588,10 +588,10 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             }
         }
         break;
-        case UIToAudioMsg::BEGIN_EDIT:
-        case UIToAudioMsg::END_EDIT:
+        case MainToAudioMsg::BEGIN_EDIT:
+        case MainToAudioMsg::END_EDIT:
         {
-            if (uiM->action == UIToAudioMsg::BEGIN_EDIT)
+            if (uiM->action == MainToAudioMsg::BEGIN_EDIT)
             {
                 beginEndParamGestureCount++;
             }
@@ -603,55 +603,66 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             p.header.size = sizeof(clap_event_param_gesture_t);
             p.header.time = 0;
             p.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
-            p.header.type = uiM->action == UIToAudioMsg::BEGIN_EDIT ? CLAP_EVENT_PARAM_GESTURE_BEGIN
-                                                                    : CLAP_EVENT_PARAM_GESTURE_END;
+            p.header.type = uiM->action == MainToAudioMsg::BEGIN_EDIT
+                                ? CLAP_EVENT_PARAM_GESTURE_BEGIN
+                                : CLAP_EVENT_PARAM_GESTURE_END;
             p.header.flags = 0;
             p.param_id = uiM->paramId;
 
             outq->try_push(outq, &p.header);
         }
         break;
-        case UIToAudioMsg::STOP_AUDIO:
+        case MainToAudioMsg::STOP_AUDIO:
         {
             voiceManager->allSoundsOff();
             audioRunning = false;
         }
         break;
-        case UIToAudioMsg::START_AUDIO:
+        case MainToAudioMsg::START_AUDIO:
         {
             audioRunning = true;
         }
         break;
-        case UIToAudioMsg::SEND_PATCH_NAME:
+        case MainToAudioMsg::SEND_PATCH_NAME:
         {
             memset(patch.name, 0, sizeof(patch.name));
-            strncpy(patch.name, uiM->hackPointer, 255);
+            strncpy(patch.name, uiM->uiManagedPointer, 255);
             audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
         }
         break;
-        case UIToAudioMsg::SEND_PATCH_IS_CLEAN:
+        case MainToAudioMsg::SEND_PATCH_IS_CLEAN:
         {
             patch.dirty = false;
             audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
         }
         break;
-        case UIToAudioMsg::SEND_REQUEST_RESCAN:
+        case MainToAudioMsg::SEND_POST_LOAD:
+        {
+            postLoad();
+        }
+        break;
+        case MainToAudioMsg::SEND_PREP_FOR_STREAM:
+        {
+            prepForStream();
+        }
+        break;
+        case MainToAudioMsg::SEND_REQUEST_RESCAN:
         {
             audioToUi.push({AudioToUIMsg::DO_PARAM_RESCAN});
         }
         break;
-        case UIToAudioMsg::EDITOR_ATTACH_DETATCH:
+        case MainToAudioMsg::EDITOR_ATTACH_DETATCH:
         {
             isEditorAttached = uiM->paramId;
         }
         break;
-        case UIToAudioMsg::PANIC_STOP_VOICES:
+        case MainToAudioMsg::PANIC_STOP_VOICES:
         {
             voiceManager->allSoundsOff();
         }
         break;
         }
-        uiM = uiToAudio.pop();
+        uiM = mainToAudio.pop();
     }
 }
 

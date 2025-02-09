@@ -41,8 +41,6 @@
 
 namespace baconpaul::six_sines
 {
-struct PresetManager;
-
 struct Synth
 {
     float output alignas(16)[2 * (1 + numOps)][blockSize];
@@ -318,9 +316,9 @@ struct Synth
         } action;
         uint32_t paramId{0};
         float value{0}, value2{0};
-        const char *hackPointer{0};
+        const char *patchNamePointer{0};
     };
-    struct UIToAudioMsg
+    struct MainToAudioMsg
     {
         enum Action : uint32_t
         {
@@ -333,22 +331,25 @@ struct Synth
             START_AUDIO,
             SEND_PATCH_NAME,
             SEND_PATCH_IS_CLEAN,
+            SEND_POST_LOAD,
             SEND_REQUEST_RESCAN,
             EDITOR_ATTACH_DETATCH, // paramid is true for attach and false for detach
+            SEND_PREP_FOR_STREAM,
             PANIC_STOP_VOICES
         } action;
         uint32_t paramId{0};
         float value{0};
-        const char *hackPointer{nullptr};
+        const char *uiManagedPointer{nullptr};
     };
     using audioToUIQueue_t = sst::cpputils::SimpleRingBuffer<AudioToUIMsg, 1024 * 16>;
-    using uiToAudioQueue_T = sst::cpputils::SimpleRingBuffer<UIToAudioMsg, 1024 * 64>;
+    using mainToAudioQueue_T = sst::cpputils::SimpleRingBuffer<MainToAudioMsg, 1024 * 64>;
     audioToUIQueue_t audioToUi;
-    uiToAudioQueue_T uiToAudio;
+    mainToAudioQueue_T mainToAudio;
     std::atomic<bool> doFullRefresh{false};
     bool isEditorAttached{false};
     sst::basic_blocks::dsp::UIComponentLagHandler lagHandler;
 
+    std::atomic<bool> readyForStream{false};
     void prepForStream()
     {
         if (lagHandler.active)
@@ -371,6 +372,7 @@ struct Synth
         }
         patch.dirty = false;
         doFullRefresh = true;
+        readyForStream = true;
     }
 
     void pushFullUIRefresh();

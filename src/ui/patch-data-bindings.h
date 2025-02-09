@@ -95,8 +95,8 @@ struct PatchContinuous : jdat::Continuous
                 onPullFromDef();
         }
         p->value = f;
-        editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pid, f});
-        editor.flushOperator();
+        editor.mainToAudio.push({Synth::MainToAudioMsg::Action::SET_PARAM, pid, f});
+        editor.requestParamsFlush();
         editor.updateTooltip(this);
 
         if (onGuiSetValue)
@@ -152,8 +152,9 @@ struct PatchDiscrete : jdat::Discrete
     void setValueFromGUI(const int &f) override
     {
         p->value = f;
-        editor.uiToAudio.push({Synth::UIToAudioMsg::Action::SET_PARAM, pid, static_cast<float>(f)});
-        editor.flushOperator();
+        editor.mainToAudio.push(
+            {Synth::MainToAudioMsg::Action::SET_PARAM, pid, static_cast<float>(f)});
+        editor.requestParamsFlush();
 
         if (onGuiSetValue)
             onGuiSetValue();
@@ -186,7 +187,7 @@ void createComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique
     }
     cm->onBeginEdit = [&e, &cm, &pc, args..., id, &panel]()
     {
-        e.uiToAudio.push({Synth::UIToAudioMsg::Action::BEGIN_EDIT, id});
+        e.mainToAudio.push({Synth::MainToAudioMsg::Action::BEGIN_EDIT, id});
         if (std::is_same_v<Q, PatchContinuous>)
         {
             e.updateTooltip(pc.get());
@@ -197,7 +198,7 @@ void createComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique
     };
     cm->onEndEdit = [&e, id, &panel]()
     {
-        e.uiToAudio.push({Synth::UIToAudioMsg::Action::END_EDIT, id});
+        e.mainToAudio.push({Synth::MainToAudioMsg::Action::END_EDIT, id});
         if (std::is_same_v<Q, PatchContinuous>)
         {
             e.hideTooltip();
@@ -228,7 +229,7 @@ void createRescaledComponent(SixSinesEditor &e, P &panel, const Param &parm, std
     }
     cm->onBeginEdit = [&e, &cm, &rc, args..., id, &panel]()
     {
-        e.uiToAudio.push({Synth::UIToAudioMsg::Action::BEGIN_EDIT, id});
+        e.mainToAudio.push({Synth::MainToAudioMsg::Action::BEGIN_EDIT, id});
         e.updateTooltip(rc.get());
         e.showTooltipOn(cm.get());
 
@@ -236,7 +237,7 @@ void createRescaledComponent(SixSinesEditor &e, P &panel, const Param &parm, std
     };
     cm->onEndEdit = [&e, id, &panel]()
     {
-        e.uiToAudio.push({Synth::UIToAudioMsg::Action::END_EDIT, id});
+        e.mainToAudio.push({Synth::MainToAudioMsg::Action::END_EDIT, id});
         e.hideTooltip();
     };
     cm->setSource(rc.get());
