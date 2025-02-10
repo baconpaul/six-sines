@@ -264,7 +264,8 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     bool stateSave(const clap_ostream *ostream) noexcept override
     {
         engine->mainToAudio.push({Synth::MainToAudioMsg::SEND_PREP_FOR_STREAM});
-        _host.paramsRequestFlush();
+        if (_host.canUseParams())
+            _host.paramsRequestFlush();
 
         // best efforts on that message for now
         static constexpr int maxIts{5};
@@ -292,8 +293,11 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         presets::PresetManager::sendEntirePatchToAudio(patchCopy, engine->mainToAudio,
                                                        patchCopy.name, _host.host());
-        _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES);
-        _host.paramsRequestFlush();
+        if (_host.canUseParams())
+        {
+            _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES);
+            _host.paramsRequestFlush();
+        }
         return true;
     }
 

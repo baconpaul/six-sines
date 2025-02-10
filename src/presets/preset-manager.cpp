@@ -32,9 +32,11 @@ PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
     try
     {
         userPath = sst::plugininfra::paths::bestDocumentsFolderPathFor("SixSines");
-        fs::create_directories(userPath);
+        if (clapHost)
+            fs::create_directories(userPath);
         userPatchesPath = userPath / "Patches";
-        fs::create_directories(userPatchesPath);
+        if (clapHost)
+            fs::create_directories(userPatchesPath);
     }
     catch (fs::filesystem_error &e)
     {

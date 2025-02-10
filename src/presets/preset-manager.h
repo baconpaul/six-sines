@@ -35,6 +35,8 @@ struct PresetManager
     fs::path userPath;
     fs::path userPatchesPath;
     const clap_host_t *clapHost{nullptr};
+
+    // Call with a null host to be read-only
     PresetManager(const clap_host_t *host);
     ~PresetManager();
 
