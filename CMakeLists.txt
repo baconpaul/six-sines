@@ -29,6 +29,7 @@ add_subdirectory(libs)
 add_library(${PROJECT_NAME}-impl STATIC
         src/clap/six-sines-clap.cpp
         src/clap/six-sines-clap-entry-impl.cpp
+        src/clap/preset-discovery-impl.cpp
 
         src/ui/six-sines-editor.cpp
 
