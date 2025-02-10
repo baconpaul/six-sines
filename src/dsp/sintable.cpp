@@ -444,6 +444,64 @@ void SinTable::initializeStatics()
                   return std::make_pair(v, dv);
               });
 
+    // Thanks to https://en.wikipedia.org/wiki/Window_function for these
+    // HANN: 0.5 * (1-cos 2pix). Derivative is pi sin 2pix
+    fillTable(SinTable::WaveForm::HANN_WINDOW,
+              [](double x, int Q)
+              {
+                  auto v = 0.5 * (1.0 - cos(2.0 * M_PI * x));
+                  auto dv = M_PI * sin(2.0 * M_PI * x);
+                  return std::make_pair(v, dv);
+              });
+
+    auto cosSum = [](double x, double a0, double a1, double a2, double a3,
+                     double a4) -> std::pair<double, double>
+    {
+        auto v = a0 - a1 * cos(twoPi * x) + a2 * cos(2 * twoPi * x) - a3 * cos(3 * twoPi * x) +
+                 a4 * cos(4 * twoPi * x);
+        auto dv = -a1 * twoPi * sin(twoPi * x) + a2 * 2 * twoPi * sin(2 * twoPi * x) -
+                  a3 * 3 * twoPi * sin(3 * twoPi * x) + a4 * 4 * twoPi * sin(4 * twoPi * x);
+        ;
+        return std::make_pair(v, dv);
+    };
+    fillTable(SinTable::WaveForm::BLACKMAN_HARRIS_WINDOW, [cosSum](double x, int Q)
+              { return cosSum(x, 0.35875, 0.48829, 0.14128, 0.01168, 0.00196); });
+    fillTable(SinTable::WaveForm::HALF_BLACKMAN_HARRIS_WINDOW,
+              [cosSum](double x, int Q)
+              {
+                  if (Q == 2 || Q == 3)
+                  {
+                      return std::make_pair(0.0, 0.0);
+                  }
+                  auto res = cosSum(x * 2, 0.35875, 0.48829, 0.14128, 0.01168, 0.00196);
+                  return std::make_pair(res.first, res.second * 2);
+              });
+
+    // Tukey with alpha 0.15
+    fillTable(SinTable::WaveForm::TUKEY_WINDOW,
+              [](double x, int Q)
+              {
+                  static constexpr float alpha{0.15};
+                  auto dSign{1.0};
+                  if (Q == 2 || Q == 3)
+                  {
+                      x = 1.0 - x;
+                      dSign = -1.0;
+                  }
+                  auto v{0.0}, dv{1.0};
+                  if (x < alpha / 2)
+                  {
+                      v = 0.5 * (1 - cos(twoPi * x / alpha));
+                      dv = 0.5 * twoPi * sin(twoPi * x / alpha) / alpha;
+                  }
+                  else
+                  {
+                      v = 1.0;
+                      dv = 0.0;
+                  }
+                  return std::make_pair(v, dSign * dv);
+              });
+
     // Fill up interp buffers
     for (int i = 0; i < nPoints; ++i)
     {

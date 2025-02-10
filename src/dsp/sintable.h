@@ -50,6 +50,11 @@ struct SinTable
         SPIKY_TX6,
         SPIKY_TX8,
 
+        HANN_WINDOW,
+        BLACKMAN_HARRIS_WINDOW,
+        HALF_BLACKMAN_HARRIS_WINDOW,
+        TUKEY_WINDOW,
+
         NUM_WAVEFORMS
     };
 
