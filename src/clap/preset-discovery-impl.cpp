@@ -56,7 +56,6 @@ bool init(const struct clap_preset_discovery_provider *provider)
         pm->indexer->declare_location(pm->indexer, &fac);
     }
 
-
     // User Areas
     if (indexUser)
     {

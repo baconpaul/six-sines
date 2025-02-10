@@ -484,30 +484,36 @@ struct Patch : pats::PatchBase<Patch, Param>
                                  .withDecimalPlaces(4)
                                  .withDefault(0.f)
                                  .withID(id(11, idx))),
-              waveForm(
-                  intMd()
-                      .withName(name(idx) + " Waveform")
-                      .withGroupName(name(idx))
-                      .withID(id(5, idx))
-                      .withRange(0, SinTable::WaveForm::NUM_WAVEFORMS - 1)
-                      .withDefault(0)
-                      .withUnorderedMapFormatting({{SinTable::WaveForm::SIN, "Sin"},
-                                                   {SinTable::WaveForm::SIN_FIFTH, "Sin^5 x"},
-                                                   {SinTable::WaveForm::SQUARISH, "Squarish"},
-                                                   {SinTable::WaveForm::SAWISH, "Sawish"},
-                                                   {SinTable::WaveForm::TRIANGLE, "Triangle"},
-                                                   {SinTable::WaveForm::SIN_OF_CUBED, "Sin(x^3)"},
-                                                   {SinTable::WaveForm::TX2, "TX 2"},
-                                                   {SinTable::WaveForm::TX3, "TX 3"},
-                                                   {SinTable::WaveForm::TX4, "TX 4"},
-                                                   {SinTable::WaveForm::TX5, "TX 5"},
-                                                   {SinTable::WaveForm::TX6, "TX 6"},
-                                                   {SinTable::WaveForm::TX7, "TX 7"},
-                                                   {SinTable::WaveForm::TX8, "TX 8"},
-                                                   {SinTable::WaveForm::SPIKY_TX2, "Spiky TX 2"},
-                                                   {SinTable::WaveForm::SPIKY_TX4, "Spiky TX 4"},
-                                                   {SinTable::WaveForm::SPIKY_TX6, "Spiky TX 6"},
-                                                   {SinTable::WaveForm::SPIKY_TX8, "Spiky TX 8"}})),
+              waveForm(intMd()
+                           .withName(name(idx) + " Waveform")
+                           .withGroupName(name(idx))
+                           .withID(id(5, idx))
+                           .withRange(0, SinTable::WaveForm::NUM_WAVEFORMS - 1)
+                           .withDefault(0)
+                           .withUnorderedMapFormatting({
+                               {SinTable::WaveForm::SIN, "Sin"},
+                               {SinTable::WaveForm::SIN_FIFTH, "Sin^5 x"},
+                               {SinTable::WaveForm::SQUARISH, "Squarish"},
+                               {SinTable::WaveForm::SAWISH, "Sawish"},
+                               {SinTable::WaveForm::TRIANGLE, "Triangle"},
+                               {SinTable::WaveForm::SIN_OF_CUBED, "Sin(x^3)"},
+                               {SinTable::WaveForm::TX2, "TX 2"},
+                               {SinTable::WaveForm::TX3, "TX 3"},
+                               {SinTable::WaveForm::TX4, "TX 4"},
+                               {SinTable::WaveForm::TX5, "TX 5"},
+                               {SinTable::WaveForm::TX6, "TX 6"},
+                               {SinTable::WaveForm::TX7, "TX 7"},
+                               {SinTable::WaveForm::TX8, "TX 8"},
+                               {SinTable::WaveForm::SPIKY_TX2, "Spiky TX 2"},
+                               {SinTable::WaveForm::SPIKY_TX4, "Spiky TX 4"},
+                               {SinTable::WaveForm::SPIKY_TX6, "Spiky TX 6"},
+                               {SinTable::WaveForm::SPIKY_TX8, "Spiky TX 8"},
+                               {SinTable::WaveForm::HANN_WINDOW, "Hann"},
+                               {SinTable::WaveForm::BLACKMAN_HARRIS_WINDOW, "Blackman Harris"},
+                               {SinTable::WaveForm::HALF_BLACKMAN_HARRIS_WINDOW,
+                                std::string() + u8"\U000000BD" + " Blackman Harris"},
+                               {SinTable::WaveForm::TUKEY_WINDOW, "Tukey"},
+                           })),
 
               keyTrack(boolMd()
                            .withName(name(idx) + " Keytrack")
