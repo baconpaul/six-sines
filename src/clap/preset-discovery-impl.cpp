@@ -30,31 +30,50 @@ struct Provider
 };
 bool init(const struct clap_preset_discovery_provider *provider)
 {
+    static constexpr bool indexUser{false}, indexFacAsPlugin{false}, indexFacAsFile{true};
     SXSNLOG("Init");
 
     auto pm = static_cast<Provider *>(provider->provider_data);
 
-    struct clap_preset_discovery_filetype sxsnp
+    if (indexFacAsPlugin)
     {
-        "Six Sines Preset", "For Six Sines!", "sxsnp"
-    };
-    pm->indexer->declare_filetype(pm->indexer, &sxsnp);
+        struct clap_preset_discovery_location fac
+        {
+            CLAP_PRESET_DISCOVERY_IS_FACTORY_CONTENT, "Six Sines Factory Content",
+                CLAP_PRESET_DISCOVERY_LOCATION_PLUGIN, nullptr
+        };
+        pm->indexer->declare_location(pm->indexer, &fac);
+    }
 
-    struct clap_preset_discovery_location fac
+    if (indexFacAsFile)
     {
-        CLAP_PRESET_DISCOVERY_IS_FACTORY_CONTENT, "Six Sines Factory Content",
-            CLAP_PRESET_DISCOVERY_LOCATION_PLUGIN, nullptr
-    };
-    pm->indexer->declare_location(pm->indexer, &fac);
+        auto binLoc = sst::plugininfra::paths::sharedLibraryBinaryPath().u8string();
+        struct clap_preset_discovery_location fac
+        {
+            CLAP_PRESET_DISCOVERY_IS_FACTORY_CONTENT, "Six Sines Factory Content",
+                CLAP_PRESET_DISCOVERY_LOCATION_FILE, binLoc.c_str()
+        };
+        pm->indexer->declare_location(pm->indexer, &fac);
+    }
+
 
     // User Areas
-    auto loc = pm->pm.userPatchesPath.u8string();
-    struct clap_preset_discovery_location userLoc
+    if (indexUser)
     {
-        CLAP_PRESET_DISCOVERY_IS_USER_CONTENT, "Six Sines User Content",
-            CLAP_PRESET_DISCOVERY_LOCATION_FILE, loc.c_str()
-    };
-    pm->indexer->declare_location(pm->indexer, &userLoc);
+        struct clap_preset_discovery_filetype sxsnp
+        {
+            "Six Sines Preset", "For Six Sines!", "sxsnp"
+        };
+        pm->indexer->declare_filetype(pm->indexer, &sxsnp);
+
+        auto loc = pm->pm.userPatchesPath.u8string();
+        struct clap_preset_discovery_location userLoc
+        {
+            CLAP_PRESET_DISCOVERY_IS_USER_CONTENT, "Six Sines User Content",
+                CLAP_PRESET_DISCOVERY_LOCATION_FILE, loc.c_str()
+        };
+        pm->indexer->declare_location(pm->indexer, &userLoc);
+    }
 
     return true;
 }
