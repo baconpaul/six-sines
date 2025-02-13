@@ -145,6 +145,7 @@ struct SixSinesEditor : jcmp::WindowPanel
     void setZoomFactor(float zf);
     float zoomFactor{1.0f};
     std::function<void(float)> onZoomChanged{nullptr};
+    bool toggleDebug();
 
     static constexpr uint32_t edWidth{688}, edHeight{812};
 
