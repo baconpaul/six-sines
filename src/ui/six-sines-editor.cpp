@@ -1197,6 +1197,7 @@ bool SixSinesEditor::toggleDebug()
     else
         debugLevel = -1;
     SXSNLOG("Started debug session");
+    SXSNLOG("If you are on windows and you close this window it may end your entire session");
     return debugLevel > 0;
 }
 
