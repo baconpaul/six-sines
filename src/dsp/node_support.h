@@ -316,7 +316,7 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
         }
 
         lfo.process_block(rate + lfoRateMod, std::clamp(lfoDeform + lfoDeformMod, -1.f, 1.f), shape,
-                          false, monoValues.tempoSyncRatio);
+                          false, tempoSync ? monoValues.tempoSyncRatio : 1.0);
 
         if (doSmooth)
         {

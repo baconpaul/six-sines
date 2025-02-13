@@ -25,6 +25,8 @@ do sound design in six sines.
 
 - [Video One - Six Sines First Steps](https://youtu.be/fP4wNFigUt4?si=uKoq_MVoYYqzQkN3)
 - [Video Two - Exploring AM](https://youtu.be/JU1Yzfb5U_c?si=lyaKbKRye48EvmSz)
+- [Video Three - FM and AM](https://www.youtube.com/watch?v=X7RTZz2G2ig)
+- [Video Four - Making a simple drumpset](https://www.youtube.com/watch?v=HnpFRSw-QBc)
 
 Thanks so much for these, Taron! They are great!
 
