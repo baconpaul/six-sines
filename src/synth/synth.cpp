@@ -23,6 +23,8 @@
 namespace baconpaul::six_sines
 {
 
+int debugLevel{0};
+
 namespace mech = sst::basic_blocks::mechanics;
 namespace sdsp = sst::basic_blocks::dsp;
 

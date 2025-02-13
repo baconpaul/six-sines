@@ -18,6 +18,7 @@
 #include "dahdsr-components.h"
 #include "sst/plugininfra/version_information.h"
 #include "sst/clap_juce_shim/menu_helper.h"
+#include "sst/plugininfra/misc_platform.h"
 
 #include "finetune-sub-panel.h"
 #include "patch-data-bindings.h"
@@ -688,6 +689,13 @@ void SixSinesEditor::showPresetPopup()
                     w->defaultsProvider->updateUserDefaultValue(Defaults::useLightSkin, true);
                     w->setSkinFromDefaults();
                 });
+    uim.addSeparator();
+    uim.addItem("Activate Debug Log", true, debugLevel > 0,
+                [w = juce::Component::SafePointer(this)]()
+                {
+                    if (w)
+                        w->toggleDebug();
+                });
     p.addSubMenu("User Interface", uim);
 
     p.addSeparator();
@@ -1176,6 +1184,21 @@ void SixSinesEditor::sneakyStartupGrabFrom(Patch &other)
     }
     strncpy(patchCopy.name, other.name, 255);
     postPatchChange(other.name);
+}
+
+bool SixSinesEditor::toggleDebug()
+{
+    if (debugLevel == 0)
+    {
+        sst::plugininfra::misc_platform::allocateConsole();
+    }
+    if (debugLevel <= 0)
+        debugLevel = 1;
+    else
+        debugLevel = -1;
+    SXSNLOG("Started debug session");
+    SXSNLOG("If you are on windows and you close this window it may end your entire session");
+    return debugLevel > 0;
 }
 
 } // namespace baconpaul::six_sines::ui

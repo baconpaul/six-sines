@@ -36,6 +36,8 @@ static constexpr size_t maxVoices{64};
 
 static constexpr size_t numModsPer{3};
 
+extern int debugLevel;
+
 // These values are streamed
 enum SampleRateStrategy
 {

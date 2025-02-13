@@ -205,24 +205,39 @@ template <typename Comp, typename Patch> struct ModulationComponents
         p.addSeparator();
         std::string currCat{};
         auto s = juce::PopupMenu();
-        auto genSet = [c = asComp(), index](int si)
+        auto genSet = [c = asComp(), idx = index](int si)
         {
-            return [sCopy = si, w = juce::Component::SafePointer(c), index]()
+            if (debugLevel > 0)
+                SXSNLOG("GenSet with " << si << " at " << idx);
+            if (si == 2048)
+            {
+                SXSNLOG("ERROR: GENSET with SI=2048");
+            }
+            return [sCopy = si, w = juce::Component::SafePointer(c), lidx = idx]()
             {
                 if (!w)
                     return;
                 if (!w->patchPtr)
                     return;
-                w->editor.setAndSendParamValue(w->patchPtr->modsource[index], sCopy);
-                w->resetSourceLabel(index);
+                if (debugLevel > 0)
+                    SXSNLOG("GenSet action at " << lidx << " with " << sCopy);
+                if (sCopy == 2048)
+                    SXSNLOG("ERROR: GENSET with sCopy=2048 " << lidx);
+                w->editor.setAndSendParamValue(w->patchPtr->modsource[lidx], sCopy);
+                w->resetSourceLabel(lidx);
             };
         };
 
         for (const auto &so : asComp()->editor.modMatrixConfig.sources)
         {
+            auto dname = so.name;
+            auto id = so.id;
+            if (debugLevel > 0)
+                dname += " (" + std::to_string(id) + ")";
+
             if (so.group.empty())
             {
-                p.addItem(so.name, genSet(so.id));
+                p.addItem(dname, genSet(id));
             }
             else
             {
@@ -232,7 +247,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
                     s = juce::PopupMenu();
                 }
                 currCat = so.group;
-                s.addItem(so.name, genSet(so.id));
+                s.addItem(dname, genSet(id));
             }
         }
         if (s.getNumItems() > 0)
