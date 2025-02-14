@@ -65,10 +65,19 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         Mpower[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*Mpower[i]);
 
-        createComponent(editor, *this, mx[i].pmOrRM, Mpmrm[i], MpmrmD[i], i, false);
-        Mpmrm[i]->direction = sst::jucegui::components::MultiSwitch::HORIZONTAL;
-        Mpmrm[i]->setAbbreviatedLabelMap({{0, std::string() + u8"\U000003C6"}, {1, "A"}});
-        addAndMakeVisible(*Mpmrm[i]);
+        MmodMode[i] = std::make_unique<sst::jucegui::components::TextPushButton>();
+        MmodMode[i]->setLabel(std::to_string(i));
+        setModModeDisplay(i);
+        MmodMode[i]->setOnCallback([this, i]() { showModModeMenu(i); });
+        editor.componentRefreshByID[mx[i].modulationMode.meta.id] =
+            [i, w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+            {
+                w->setModModeDisplay(i);
+            }
+        };
+        addAndMakeVisible(*MmodMode[i]);
 
         auto si = MatrixIndex::sourceIndexAt(i);
         auto ti = MatrixIndex::targetIndexAt(i);
@@ -91,7 +100,7 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         };
 
         sst::jucegui::component_adapters::setTraversalId(Mpower[i].get(), ti * 50 + si * 5 + 1);
-        sst::jucegui::component_adapters::setTraversalId(Mpmrm[i].get(), ti * 50 + +si * 5 + 2);
+        sst::jucegui::component_adapters::setTraversalId(MmodMode[i].get(), ti * 50 + +si * 5 + 2);
         sst::jucegui::component_adapters::setTraversalId(Mknobs[i].get(), ti * 50 + si * 5 + 3);
     }
 
@@ -118,7 +127,7 @@ void MatrixPanel::resized()
         auto ti = MatrixIndex::targetIndexAt(i);
         auto y = b.getY() + ti * (uicLabeledKnobHeight + uicMargin);
         auto x = b.getX() + si * (uicPowerKnobWidth + uicMargin);
-        positionPowerKnobSwitchAndLabel(x, y, Mpower[i], Mpmrm[i], Mknobs[i], Mlabels[i]);
+        positionPowerKnobSwitchAndLabel(x, y, Mpower[i], MmodMode[i], Mknobs[i], Mlabels[i]);
     }
 }
 
@@ -239,6 +248,51 @@ void MatrixPanel::beginEdit(size_t idx, bool self)
     highlight->setVisible(true);
     highlight->setBounds(rectangleFor(idx, self));
     highlight->toBack();
+}
+
+void MatrixPanel::setModModeDisplay(int i)
+{
+    auto v = (int)std::round(editor.patchCopy.matrixNodes[i].modulationMode.value);
+    std::string label = std::string() + u8"\U000003C6";
+    switch (v)
+    {
+    case 1:
+        label = "A";
+        break;
+    case 2:
+        label = "f";
+        break;
+    case 3:
+        label = "e";
+        break;
+    }
+    MmodMode[i]->setLabel(label);
+}
+
+void MatrixPanel::showModModeMenu(int i)
+{
+    beginEdit(i, false);
+    const auto &meta = editor.patchCopy.matrixNodes[i].modulationMode.meta;
+    auto v = (int)std::round(editor.patchCopy.matrixNodes[i].modulationMode.value);
+
+    auto p = juce::PopupMenu();
+    p.addSectionHeader(meta.name);
+    p.addSeparator();
+
+    for (int el = (int)meta.minVal; el <= (int)meta.maxVal; ++el)
+    {
+        p.addItem(*(meta.valueToString(el)), true, el == v,
+                  [w = juce::Component::SafePointer(this), i, el]()
+                  {
+                      if (!w)
+                          return;
+                      w->editor.setAndSendParamValue(
+                          w->editor.patchCopy.matrixNodes[i].modulationMode.meta.id, el);
+                  });
+    }
+
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
+                    makeMenuAccessibleButtonCB(MmodMode[i].get()));
 }
 
 } // namespace baconpaul::six_sines::ui

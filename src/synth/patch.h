@@ -787,14 +787,16 @@ struct Patch : pats::PatchBase<Patch, Param>
                          .withFlags(CLAP_PARAM_IS_STEPPED)
                          .withDefault(false)
                          .withID(id(1, idx))),
-              pmOrRM(intMd()
-                         .withRange(0, 1)
-                         .withDefault(0)
-                         .withName(name(idx) + " PM or RM")
-                         .withGroupName(name(idx))
-                         .withID(id(35, idx))
-                         .withUnorderedMapFormatting(
-                             {{0, "Phase Modulation"}, {1, "Ring Modulation"}})),
+              modulationMode(intMd()
+                                 .withRange(0, 3)
+                                 .withDefault(0)
+                                 .withName(name(idx) + " modulation mode")
+                                 .withGroupName(name(idx))
+                                 .withID(id(35, idx))
+                                 .withUnorderedMapFormatting({{0, "Phase Modulation"},
+                                                              {1, "Ring Modulation"},
+                                                              {2, "Linear FM"},
+                                                              {3, "Exponential FM"}})),
               DAHDSRMixin(name(idx), id(2, idx), false, false, id(50, idx)),
               LFOMixin(name(idx), id(14, idx)),
               lfoToDepth(floatMd()
@@ -835,7 +837,7 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         Param level;
         Param active;
-        Param pmOrRM;
+        Param modulationMode;
         Param lfoToDepth;
         Param envToLevel;
         Param overdrive;
@@ -860,7 +862,7 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level,      &active,     &pmOrRM,
+            std::vector<Param *> res{&level,      &active,     &modulationMode,
                                      &lfoToDepth, &envToLevel, &overdrive};
             appendDAHDSRParams(res);
             appendLFOParams(res);
