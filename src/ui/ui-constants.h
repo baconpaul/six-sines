@@ -82,9 +82,9 @@ inline void positionPowerKnobSwitchAndLabel(uint32_t x, uint32_t y, const T &t, 
                      .withTrimmedBottom(2 * uicPowerButtonMargin)
                      .reduced(uicPowerButtonMargin, 0));
     s->setBounds(b.withWidth(uicPowerButtonSize)
-                     .withTrimmedTop(t->getHeight() + 1.5 * uicMargin)
-                     .withTrimmedBottom(uicMargin)
-                     .reduced(uicMargin / 2));
+                     .withTrimmedTop(t->getHeight() + 2 * uicMargin)
+                     .withTrimmedBottom(0)
+                     .reduced(0, 2));
 
     l->setBounds(b.translated(0, uicKnobSize + uicLabelGap).withHeight(uicLabelHeight));
 }

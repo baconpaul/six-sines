@@ -254,16 +254,17 @@ void MatrixPanel::setModModeDisplay(int i)
 {
     auto v = (int)std::round(editor.patchCopy.matrixNodes[i].modulationMode.value);
     std::string label = std::string() + u8"\U000003C6";
+    label = "PM";
     switch (v)
     {
     case 1:
-        label = "A";
+        label = "RM";
         break;
     case 2:
-        label = "f";
+        label = "LF";
         break;
     case 3:
-        label = "e";
+        label = "EF";
         break;
     }
     MmodMode[i]->setLabel(label);
