@@ -40,17 +40,18 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
     const Patch::MatrixNode &matrixNode;
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
-    const float &level, &activeV, &pmrmV, &lfoToDepth, &envToLevel, &overdriveV;
+    const float &level, &activeV, &modmodeV, &lfoToDepth, &envToLevel, &overdriveV;
     MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr, MonoValues &mv,
                    const VoiceValues &vv)
         : matrixNode(mn), monoValues(mv), voiceValues(vv), onto(on), from(fr), level(mn.level),
-          pmrmV(mn.pmOrRM), activeV(mn.active), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
-          lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel), overdriveV(mn.overdrive),
-          ModulationSupport(mn, this, mv, vv)
+          modmodeV(mn.modulationMode), activeV(mn.active), EnvelopeSupport(mn, mv, vv),
+          LFOSupport(mn, mv), lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel),
+          overdriveV(mn.overdrive), ModulationSupport(mn, this, mv, vv)
     {
     }
 
-    bool active{false}, isrm{false};
+    bool active{false};
+    int modMode{0};
     float overdriveFactor{1.0};
 
     void attack()
@@ -60,7 +61,8 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         lfoResetMod();
 
         active = activeV > 0.5;
-        isrm = pmrmV > 0.5;
+
+        modMode = (int)std::round(modmodeV);
         if (active)
         {
             bindModulation();
@@ -68,6 +70,10 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             envAttack();
             lfoAttack();
             overdriveFactor = overdriveV > 0.5 ? 10.0 : 1.0;
+            if (modMode == 3)
+            {
+                overdriveFactor = overdriveV > 0.5 ? 3.0 : 1.0;
+            }
         }
     }
 
@@ -111,7 +117,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             }
         }
 
-        if (isrm)
+        if (modMode == 1)
         {
             // we want op * ( 1 - depth ) + op * rm * depth or
             // op * ( 1 + depth ( rm - 1 ) )
@@ -134,6 +140,24 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
                 mech::copy_from_to<blockSize>(mod, onto.rmLevel);
             }
 #endif
+        }
+        else if (modMode == 2)
+        {
+            // linear FM. -1..1 with a 10x ocerdrivce
+            mech::mul_block<blockSize>(modlev, from.output, mod);
+            for (int j = 0; j < blockSize; ++j)
+            {
+                onto.fmAmount[j] += (overdriveFactor * mod[j]);
+            }
+        }
+        else if (modMode == 3)
+        {
+            // expoential fm. if mod is 0...1 the result is 2^mod - 1
+            mech::mul_block<blockSize>(modlev, from.output, mod);
+            for (int j = 0; j < blockSize; ++j)
+            {
+                onto.fmAmount[j] += monoValues.twoToTheX.twoToThe(overdriveFactor * mod[j]) - 1.0;
+            }
         }
         else
         {

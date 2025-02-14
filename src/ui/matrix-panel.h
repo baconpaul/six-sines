@@ -19,6 +19,7 @@
 #include <sst/jucegui/components/Label.h>
 #include <sst/jucegui/components/ToggleButton.h>
 #include <sst/jucegui/components/MultiSwitch.h>
+#include <sst/jucegui/components/TextPushButton.h>
 #include "six-sines-editor.h"
 #include "patch-data-bindings.h"
 
@@ -54,9 +55,12 @@ struct MatrixPanel : jcmp::NamedPanel, HasEditor
     std::array<std::unique_ptr<PatchContinuous::cubic_t>, matrixSize> MknobsData;
     std::array<std::unique_ptr<jcmp::ToggleButton>, matrixSize> Mpower;
     std::array<std::unique_ptr<PatchDiscrete>, matrixSize> MpowerData;
-    std::array<std::unique_ptr<jcmp::MultiSwitch>, matrixSize> Mpmrm;
+    std::array<std::unique_ptr<jcmp::TextPushButton>, matrixSize> MmodMode;
     std::array<std::unique_ptr<PatchDiscrete>, matrixSize> MpmrmD;
     std::array<std::unique_ptr<jcmp::Label>, matrixSize> Mlabels;
+
+    void setModModeDisplay(int);
+    void showModModeMenu(int);
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_PANEL_H

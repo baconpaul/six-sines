@@ -36,6 +36,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     int32_t phaseInput alignas(16)[blockSize];
     int32_t feedbackLevel alignas(16)[blockSize];
     float rmLevel alignas(16)[blockSize];
+    float fmAmount alignas(16)[blockSize]; // in hz
     bool rmAssigned{false};
 
     float output alignas(16)[blockSize];
@@ -55,7 +56,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     // todo waveshape
 
     uint32_t phase;
-    uint32_t dPhase;
+    int32_t dPhase;
 
     static constexpr float centsScale{1.0 / (12 * 100)};
 
@@ -157,6 +158,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             phaseInput[i] = 0;
             feedbackLevel[i] = 0;
             rmLevel[i] = 1.f;
+            fmAmount[i] = 0.f;
         }
         rmAssigned = false;
     }
@@ -271,7 +273,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     {
         for (int i = 0; i < blockSize; ++i)
         {
-            dPhase = st.dPhase(baseFrequency * rf);
+            dPhase = st.dPhase((baseFrequency * (1.0 + fmAmount[i])) * rf);
             rf += dRF;
 
             phs += dPhase;

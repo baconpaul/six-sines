@@ -92,9 +92,9 @@ struct SinTable
     }
 
     double frToPhase{0};
-    inline uint32_t dPhase(float fr) const
+    inline int32_t dPhase(float fr) const
     {
-        auto dph = (uint32_t)(fr * frToPhase);
+        auto dph = (int32_t)(fr * frToPhase);
         return dph;
     }
 
