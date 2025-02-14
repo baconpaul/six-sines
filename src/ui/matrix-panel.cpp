@@ -261,10 +261,10 @@ void MatrixPanel::setModModeDisplay(int i)
         label = "RM";
         break;
     case 2:
-        label = "LF";
+        label = "Lin";
         break;
     case 3:
-        label = "EF";
+        label = "Exp";
         break;
     }
     MmodMode[i]->setLabel(label);
