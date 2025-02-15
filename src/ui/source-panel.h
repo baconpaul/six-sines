@@ -17,6 +17,7 @@
 #define BACONPAUL_SIX_SINES_UI_SOURCE_PANEL_H
 
 #include <sst/jucegui/components/Label.h>
+#include <sst/jucegui/components/GlyphButton.h>
 #include "six-sines-editor.h"
 #include "patch-data-bindings.h"
 
@@ -44,8 +45,11 @@ struct SourcePanel : jcmp::NamedPanel, HasEditor
     std::array<std::unique_ptr<jcmp::Knob>, numOps> knobs;
     std::array<std::unique_ptr<PatchContinuous>, numOps> knobsData;
     std::array<std::unique_ptr<jcmp::ToggleButton>, numOps> power;
-    std::array<std::unique_ptr<PatchDiscrete>, numOps> powerData;
     std::array<std::unique_ptr<jcmp::Label>, numOps> labels;
+    std::array<std::unique_ptr<PatchDiscrete>, numOps> powerData;
+    std::array<std::unique_ptr<jcmp::GlyphButton>, numOps> upButton, downButton;
+
+    void adjustRatio(int idx, bool up);
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_PANEL_H
