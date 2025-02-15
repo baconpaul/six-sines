@@ -79,7 +79,11 @@ const clap_plugin_descriptor *getMultiOutDescriptor()
     return &desc;
 }
 
-uint32_t clap_get_plugin_count(const clap_plugin_factory *) { return 2; };
+#if !defined(CLAP_PLUGIN_COUNT)
+#define CLAP_PLUGIN_COUNT 2
+#endif
+
+uint32_t clap_get_plugin_count(const clap_plugin_factory *) { return CLAP_PLUGIN_COUNT; };
 const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)
 {
     if (w == 0)
