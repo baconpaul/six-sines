@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - rel_*
+      - test/*
     tags:
       - 'v**'
   pull_request:
