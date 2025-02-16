@@ -696,6 +696,21 @@ void SixSinesEditor::showPresetPopup()
                     if (w)
                         w->toggleDebug();
                 });
+
+#if JUCE_WINDOWS
+    auto swr = defaultsProvider->getUserDefaultValue(Defaults::useSoftwareRenderer, false);
+
+    uim.addItem("Use Software Renderer", true, swr,
+        [w = juce::Component::SafePointer(this), swr]()
+    {
+            if (!w)
+                return;
+            w->defaultsProvider->updateUserDefaultValue(Defaults::useSoftwareRenderer, !swr);
+            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon, "Software Renderer Change",
+                "A software renderer change is only active once you restart/reload the plugin.");
+    });
+#endif
+
     p.addSubMenu("User Interface", uim);
 
     p.addSeparator();
@@ -996,11 +1011,19 @@ void SixSinesEditor::parentHierarchyChanged()
         presetButton->grabKeyboardFocus();
     }
 
-    if (auto peer = getPeer())
+#if JUCE_WINDOWS
+    foobaz
+    auto swr = defaultsProvider->getUserDefaultValue(Defaults::useSoftwareRenderer, false);
+
+    if (swr)
     {
-        SXSNLOG("Enabling software rendering engine");
-        peer->setCurrentRenderingEngine(0); // 0 for software mode, 1 for Direct2D mode
+        if (auto peer = getPeer())
+        {
+            SXSNLOG("Enabling software rendering engine");
+            peer->setCurrentRenderingEngine(0); // 0 for software mode, 1 for Direct2D mode
+        }
     }
+#endif
 }
 
 void SixSinesEditor::setSkinFromDefaults()
