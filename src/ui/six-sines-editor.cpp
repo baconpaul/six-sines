@@ -352,6 +352,19 @@ void SixSinesEditor::resized()
         juce::Rectangle<int>(panelArea.getX(), panelArea.getY() + sourceHeight + matrixHeight,
                              matrixWidth + mainWidth, editHeight);
 
+    bool flipSourceAndMatrix =
+        defaultsProvider->getUserDefaultValue(Defaults::flipSourceAndMatrix, false);
+    if (flipSourceAndMatrix)
+    {
+        auto sy = sourceRect.getY();
+        auto mb = matrixRect.getBottom() - sourceRect.getHeight();
+        matrixRect.setY(sy);
+        macroRect.setY(sy);
+        mixerRect.setY(sy);
+        sourceRect.setY(mb);
+        mainRect.setY(mb);
+    }
+
     sourcePanel->setBounds(sourceRect.reduced(panelMargin));
     matrixPanel->setBounds(matrixRect.reduced(panelMargin));
     mainPanel->setBounds(mainRect.reduced(panelMargin));
@@ -671,6 +684,28 @@ void SixSinesEditor::showPresetPopup()
                         return;
                     w->defaultsProvider->updateUserDefaultValue(Defaults::useLightSkin, true);
                     w->setSkinFromDefaults();
+                });
+    uim.addSeparator();
+    auto fsm = defaultsProvider->getUserDefaultValue(Defaults::flipSourceAndMatrix, false);
+    uim.addItem("Sources Above Matrix", true, !fsm,
+                [w = juce::Component::SafePointer(this)]()
+                {
+                    if (!w)
+                        return;
+                    w->defaultsProvider->updateUserDefaultValue(Defaults::flipSourceAndMatrix,
+                                                                false);
+                    w->resized();
+                    w->repaint();
+                });
+    uim.addItem("Matrix Above Sources", true, fsm,
+                [w = juce::Component::SafePointer(this)]()
+                {
+                    if (!w)
+                        return;
+                    w->defaultsProvider->updateUserDefaultValue(Defaults::flipSourceAndMatrix,
+                                                                true);
+                    w->resized();
+                    w->repaint();
                 });
     uim.addSeparator();
     uim.addItem("Activate Debug Log", true, debugLevel > 0,
