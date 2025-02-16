@@ -35,7 +35,6 @@
 #include "source-panel.h"
 #include "source-sub-panel.h"
 #include "ui-constants.h"
-#include "juce-lnf.h"
 #include "presets/preset-manager.h"
 #include "macro-panel.h"
 #include "clipboard.h"
@@ -50,9 +49,6 @@ struct IdleTimer : juce::Timer
     IdleTimer(SixSinesEditor &e) : editor(e) {}
     void timerCallback() override { editor.idle(); }
 };
-
-static std::weak_ptr<SixSinesJuceLookAndFeel> sixSinesLookAndFeelWeakPointer;
-static std::mutex sixSinesLookAndFeelSetupMutex;
 
 namespace jstl = sst::jucegui::style;
 using sheet_t = jstl::StyleSheet;
@@ -154,21 +150,8 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
         [](auto e, auto b) { SXSNLOG("[ERROR]" << e << " " << b); });
     setSkinFromDefaults();
 
-    {
-        std::lock_guard<std::mutex> grd(sixSinesLookAndFeelSetupMutex);
-        if (auto sp = sixSinesLookAndFeelWeakPointer.lock())
-        {
-            lnf = sp;
-        }
-        else
-        {
-            lnf = std::make_shared<SixSinesJuceLookAndFeel>(
-                style()->getFont(jcmp::Label::Styles::styleClass, jcmp::Label::Styles::labelfont));
-            sixSinesLookAndFeelWeakPointer = lnf;
-
-            juce::LookAndFeel::setDefaultLookAndFeel(lnf.get());
-        }
-    }
+    lnf = std::make_unique<sst::jucegui::style::LookAndFeelManager>(this);
+    lnf->setStyle(style());
 
     vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::HORIZONTAL);
     addAndMakeVisible(*vuMeter);
@@ -1229,6 +1212,13 @@ bool SixSinesEditor::toggleDebug()
     SXSNLOG("Started debug session");
     SXSNLOG("If you are on windows and you close this window it may end your entire session");
     return debugLevel > 0;
+}
+
+void SixSinesEditor::onStyleChanged()
+{
+    jcmp::WindowPanel::onStyleChanged();
+    if (lnf)
+        lnf->setStyle(style());
 }
 
 } // namespace baconpaul::six_sines::ui

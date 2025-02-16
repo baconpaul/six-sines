@@ -19,6 +19,7 @@
 #include <functional>
 #include <utility>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "sst/jucegui/style/JUCELookAndFeelAdapter.h"
 
 #include <sst/jucegui/components/NamedPanel.h>
 #include <sst/jucegui/components/WindowPanel.h>
@@ -53,7 +54,6 @@ struct PlayModeSubPanel;
 struct SourcePanel;
 struct SourceSubPanel;
 struct MacroPanel;
-struct SixSinesJuceLookAndFeel;
 struct Clipboard;
 struct PresetDataBinding;
 
@@ -69,6 +69,9 @@ struct SixSinesEditor : jcmp::WindowPanel
     SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudioQueue_T &utoa,
                    const clap_host_t *ch);
     virtual ~SixSinesEditor();
+
+    std::unique_ptr<sst::jucegui::style::LookAndFeelManager> lnf;
+    void onStyleChanged() override;
 
     void paint(juce::Graphics &g) override;
     void resized() override;
@@ -127,8 +130,6 @@ struct SixSinesEditor : jcmp::WindowPanel
     void hideAllSubPanels();
     std::unordered_map<uint32_t, juce::Component::SafePointer<juce::Component>> componentByID;
     std::unordered_map<uint32_t, std::function<void()>> componentRefreshByID;
-
-    std::shared_ptr<SixSinesJuceLookAndFeel> lnf;
 
     void setAndSendParamValue(uint32_t id, float value, bool notifyAudio = true,
                               bool includeBeginEnd = true);
