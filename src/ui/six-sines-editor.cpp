@@ -700,15 +700,17 @@ void SixSinesEditor::showPresetPopup()
 #if JUCE_WINDOWS
     auto swr = defaultsProvider->getUserDefaultValue(Defaults::useSoftwareRenderer, false);
 
-    uim.addItem("Use Software Renderer", true, swr,
+    uim.addItem(
+        "Use Software Renderer", true, swr,
         [w = juce::Component::SafePointer(this), swr]()
-    {
+        {
             if (!w)
                 return;
             w->defaultsProvider->updateUserDefaultValue(Defaults::useSoftwareRenderer, !swr);
-            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon, "Software Renderer Change",
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::AlertWindow::WarningIcon, "Software Renderer Change",
                 "A software renderer change is only active once you restart/reload the plugin.");
-    });
+        });
 #endif
 
     p.addSubMenu("User Interface", uim);
@@ -1012,7 +1014,6 @@ void SixSinesEditor::parentHierarchyChanged()
     }
 
 #if JUCE_WINDOWS
-    foobaz
     auto swr = defaultsProvider->getUserDefaultValue(Defaults::useSoftwareRenderer, false);
 
     if (swr)
