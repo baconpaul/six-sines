@@ -74,11 +74,22 @@ struct PatchContinuous : jdat::Continuous
     }
     void setValueAsString(const std::string &s) override
     {
-        std::string em;
-        auto v = p->meta.valueFromString(s, em);
-        if (v.has_value())
+        if (tsPowerPartner && tsPowerPartner->getValue())
         {
-            setValueFromGUI(*v);
+            auto f = p->meta.valueFromTemposyncNotation(s);
+            if (f.has_value())
+            {
+                setValueFromGUI(*f);
+            }
+        }
+        else
+        {
+            std::string em;
+            auto v = p->meta.valueFromString(s, em);
+            if (v.has_value())
+            {
+                setValueFromGUI(*v);
+            }
         }
     }
     void setValueFromGUI(const float &f) override
