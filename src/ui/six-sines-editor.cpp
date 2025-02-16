@@ -995,6 +995,12 @@ void SixSinesEditor::parentHierarchyChanged()
         presetButton->setWantsKeyboardFocus(true);
         presetButton->grabKeyboardFocus();
     }
+
+    if (auto peer = getPeer())
+    {
+        SXSNLOG("Enabling software rendering engine");
+        peer->setCurrentRenderingEngine(0); // 0 for software mode, 1 for Direct2D mode
+    }
 }
 
 void SixSinesEditor::setSkinFromDefaults()
