@@ -46,6 +46,7 @@ struct Synth
     float output alignas(16)[2 * (1 + numOps)][blockSize];
 
     bool isMultiOut{false};
+    bool isTableInitialized{MatrixIndex::initialize()}; // this forces this init before other ctors
 
     SampleRateStrategy sampleRateStrategy{SampleRateStrategy::SR_110120};
     ResamplerEngine resamplerEngine{ResamplerEngine::SRC_FAST};
