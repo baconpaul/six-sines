@@ -154,6 +154,14 @@ template <typename T> struct EnvelopeSupport
         if (!active || constantEnv)
             return;
 
+        if (env.stage > env_t::s_release || (env.stage == env_t::s_sustain && sustain == 0.f))
+        {
+            memset(env.outputCache, 0, sizeof(env.outputCache));
+            env.output = 0;
+            env.outBlock0 = 0;
+            return;
+        }
+
         if (triggerMode == ON_RELEASE)
         {
             if (voiceValues.gated && !releaseEnvStarted)
