@@ -175,6 +175,7 @@ SixSinesEditor::~SixSinesEditor()
 {
     mainToAudio.push({Synth::MainToAudioMsg::EDITOR_ATTACH_DETATCH, false});
     idleTimer->stopTimer();
+    setLookAndFeel(nullptr);
 }
 
 void SixSinesEditor::idle()

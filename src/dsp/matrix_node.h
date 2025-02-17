@@ -126,20 +126,6 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             {
                 onto.rmLevel[i] += modlev[i] * (from.output[i] - 1.0);
             }
-#if OLD_WAY
-            mech::mul_block<blockSize>(modlev, from.output, mod);
-
-            if (onto.rmAssigned)
-            {
-                mech::accumulate_from_to<blockSize>(mod, onto.rmLevel);
-            }
-            else
-            {
-                onto.rmAssigned = true;
-
-                mech::copy_from_to<blockSize>(mod, onto.rmLevel);
-            }
-#endif
         }
         else if (modMode == 2)
         {

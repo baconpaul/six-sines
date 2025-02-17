@@ -92,6 +92,7 @@ struct Patch : pats::PatchBase<Patch, Param>
           macroNodes(scpu::make_array_bind_first_index<MacroNode, numMacros>()), fineTuneMod(),
           mainPanMod()
     {
+        MatrixIndex::initialize();
         auto pushParams = [this](auto &from) { this->pushMultipleParams(from.params()); };
 
         pushParams(output);
