@@ -39,17 +39,9 @@ struct MatrixIndex
             {
                 for (int s = 0; s < t; ++s)
                 {
-                    sourceTable[idx++] = s;
-                }
-            }
-        }
-        {
-            int idx{0};
-            for (int t = 1; t < numOps; ++t)
-            {
-                for (int s = 0; s < t; ++s)
-                {
-                    targetTable[idx++] = t;
+                    sourceTable[idx] = s;
+                    targetTable[idx] = t;
+                    idx++;
                 }
             }
         }
@@ -66,7 +58,6 @@ struct MatrixIndex
             auto s = sourceTable[i];
             auto t = targetTable[i];
             positionMatrix[s][t] = i;
-            SXSNLOG("At " << i << " source " << s << " target " << t);
         }
         return tablesInitialized;
     }
