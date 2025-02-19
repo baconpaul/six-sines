@@ -30,7 +30,7 @@
 namespace baconpaul::six_sines
 {
 struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
-                              LFOSupport<Patch::SourceNode, false>,
+                              LFOSupport<OpSource, Patch::SourceNode, false>,
                               ModulationSupport<Patch::SourceNode, OpSource>
 {
     int32_t phaseInput alignas(16)[blockSize];
@@ -74,6 +74,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     float *lfoFacP{nullptr};
     float one{1.f}; // to point to
+
     void reset()
     {
         resetModulation();
@@ -138,6 +139,15 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                 operatorOutputsToOp = !(voiceValues.hasCenterVoice) || !voiceValues.isCenterVoice;
             }
         }
+    }
+
+    bool checkLfoUsed()
+    {
+        auto used = lfoUsedAsModulationSource;
+        used = used || (lfoToRatio != 0);
+        used = used || (lfoToRatioFine != 0);
+
+        return used;
     }
 
     void resetPhaseOnly()

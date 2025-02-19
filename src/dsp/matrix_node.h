@@ -32,7 +32,7 @@ namespace baconpaul::six_sines
 namespace mech = sst::basic_blocks::mechanics;
 
 struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
-                        public LFOSupport<Patch::MatrixNode>,
+                        public LFOSupport<MatrixNodeFrom, Patch::MatrixNode>,
                         public ModulationSupport<Patch::MatrixNode, MatrixNodeFrom>
 {
     OpSource &onto, &from;
@@ -166,6 +166,8 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         applyMod = 0.f;
     }
 
+    bool checkLfoUsed() { return lfoToDepth != 0 || lfoUsedAsModulationSource; }
+
     void calculateModulation()
     {
         resetModulation();
@@ -214,7 +216,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
 };
 
 struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
-                        LFOSupport<Patch::SelfNode>,
+                        LFOSupport<MatrixNodeSelf, Patch::SelfNode>,
                         ModulationSupport<Patch::SelfNode, MatrixNodeSelf>
 {
     OpSource &onto;
@@ -343,10 +345,12 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
             }
         }
     }
+
+    bool checkLfoUsed() { return lfoToFB != 0 || lfoUsedAsModulationSource; }
 };
 
 struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
-                   LFOSupport<Patch::MixerNode>,
+                   LFOSupport<MixerNode, Patch::MixerNode>,
                    ModulationSupport<Patch::MixerNode, MixerNode>
 {
     float output alignas(16)[2][blockSize];
@@ -385,6 +389,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
             calculateModulation();
             envAttack();
             lfoAttack();
+
             dcBlocker.reset();
             memset(output, 0, sizeof(output));
 
@@ -397,6 +402,15 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         }
     }
 
+    bool checkLfoUsed()
+    {
+        auto used = lfoUsedAsModulationSource;
+        used = used || (lfoToLevel != 0);
+        used = used || (lfoToPan != 0);
+
+        return used;
+    }
+
     void renderBlock()
     {
         if (!active)
@@ -407,6 +421,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
 
         calculateModulation();
         envProcess();
+
         lfoProcess();
 
         float dcValues alignas(16)[blockSize];
@@ -539,7 +554,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
 
 struct MainPanNode : EnvelopeSupport<Patch::MainPanNode>,
                      ModulationSupport<Patch::MainPanNode, MainPanNode>,
-                     LFOSupport<Patch::MainPanNode>
+                     LFOSupport<MainPanNode, Patch::MainPanNode>
 {
     // float level alignas(16)[blockSize];
     float level{0.f};
@@ -673,11 +688,13 @@ struct MainPanNode : EnvelopeSupport<Patch::MainPanNode>,
             }
         }
     }
+
+    bool checkLfoUsed() { return lfoD != 0 || lfoUsedAsModulationSource; }
 };
 
 struct FineTuneNode : EnvelopeSupport<Patch::FineTuneNode>,
                       ModulationSupport<Patch::FineTuneNode, FineTuneNode>,
-                      LFOSupport<Patch::FineTuneNode>
+                      LFOSupport<FineTuneNode, Patch::FineTuneNode>
 {
     // float level alignas(16)[blockSize];
     float level{0.f}, coarseLevel{0.f};
@@ -824,11 +841,13 @@ struct FineTuneNode : EnvelopeSupport<Patch::FineTuneNode>,
             }
         }
     }
+
+    bool checkLfoUsed() { return lfoD != 0 || lfoCoarseD != 0 || lfoUsedAsModulationSource; }
 };
 
 struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
                     ModulationSupport<Patch::OutputNode, OutputNode>,
-                    LFOSupport<Patch::OutputNode>
+                    LFOSupport<OutputNode, Patch::OutputNode>
 {
     float output alignas(16)[2][blockSize];
     std::array<MixerNode, numOps> &fromArr;
@@ -1009,6 +1028,8 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
             }
         }
     }
+
+    bool checkLfoUsed() { return lfoDepth != 0 || lfoUsedAsModulationSource; }
 };
 } // namespace baconpaul::six_sines
 

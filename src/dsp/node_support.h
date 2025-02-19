@@ -257,7 +257,7 @@ template <typename T> struct EnvelopeSupport
     }
 };
 
-template <typename T, bool needsSmoothing = true> struct LFOSupport
+template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSupport
 {
     const T &paramBundle;
     const MonoValues &monoValues;
@@ -283,8 +283,15 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     bool tempoSync{false};
     bool bipolar{true};
     bool lfoIsEnveloped{false};
+
+    bool runLfo{false};
+    int32_t runLfoCheck{0};
+
     void lfoAttack()
     {
+        runLfo = static_cast<Parent *>(this)->checkLfoUsed();
+        runLfoCheck = 0;
+
         tempoSync = tempoSyncV > 0.5;
         bipolar = bipolarV > 0.5;
         lfoIsEnveloped = lfoIsEnvelopedV > 0.5;
@@ -317,6 +324,17 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
     }
     void lfoProcess()
     {
+        if (!runLfo)
+        {
+            if (runLfoCheck++ == 64)
+            {
+                runLfoCheck = 0;
+                runLfo = static_cast<Parent *>(this)->checkLfoUsed();
+            }
+
+            return;
+        }
+
         auto rate = lfoRate;
 
         if (tempoSync)
@@ -327,13 +345,16 @@ template <typename T, bool needsSmoothing = true> struct LFOSupport
         lfo.process_block(rate + lfoRateMod, std::clamp(lfoDeform + lfoDeformMod, -1.f, 1.f), shape,
                           false, tempoSync ? monoValues.tempoSyncRatio : 1.0);
 
-        if (doSmooth)
+        if constexpr (needsSmoothing)
         {
-            for (int j = 0; j < blockSize; ++j)
+            if (doSmooth)
             {
-                lag.setTarget(lfo.outputBlock[j]);
-                lag.process();
-                lfo.outputBlock[j] = lag.v;
+                for (int j = 0; j < blockSize; ++j)
+                {
+                    lag.setTarget(lfo.outputBlock[j]);
+                    lag.process();
+                    lfo.outputBlock[j] = lag.v;
+                }
             }
         }
         if (!bipolar)
@@ -394,8 +415,12 @@ template <typename Bundle, typename Node> struct ModulationSupport
         std::fill(priorModulation.begin(), priorModulation.end(), 0.f);
     }
 
+    bool lfoUsedAsModulationSource{false};
+
     void bindModulation()
     {
+        lfoUsedAsModulationSource = isLfoBoundToModulation();
+
         bool changed{false};
         for (int i = 0; i < numModsPer; ++i)
         {
@@ -516,6 +541,19 @@ template <typename Bundle, typename Node> struct ModulationSupport
             SXSNLOG("Fell Through on Mod Assignment " << which << " " << sv);
             break;
         }
+    }
+
+    bool isLfoBoundToModulation()
+    {
+        auto res{false};
+
+        for (int i = 0; i < numModsPer; ++i)
+        {
+            auto sv = (int)std::round(paramBundle.modsource[i].value);
+            res = res || sv == ModMatrixConfig::Source::INTERNAL_LFO;
+        }
+
+        return res;
     }
 };
 } // namespace baconpaul::six_sines
