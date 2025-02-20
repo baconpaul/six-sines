@@ -14,6 +14,14 @@ resamplers intact for your listening pleasure. And
 many other folks tried and gave great feedback on
 0.9... versions
 
+## Post beta test towards 1.1
+
+The One Synth Challenge team in February 2025 was super
+helpful with loads of ideas and suggestions. Especially
+user taron gave us the amazing videos in the manual and
+a bug report so good I added this paragraph when I merged
+the fix to say thanks!
+
 ## Factory Patches
 
 The Factory Patch bank was a result of contributions
