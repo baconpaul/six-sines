@@ -8,10 +8,10 @@ add_clap_juce_shim(JUCE_PATH "${JUCE_PATH}")
 
 add_library(simde INTERFACE)
 target_include_directories(simde INTERFACE simde)
+add_subdirectory(sst/sst-cpputils)
 add_subdirectory(sst/sst-basic-blocks)
 add_subdirectory(sst/sst-jucegui)
 add_subdirectory(sst/sst-voicemanager)
-add_subdirectory(sst/sst-cpputils)
 
 set(SST_PLUGININFRA_PROVIDE_TINYXML ON CACHE BOOL "yesxml")
 set(SST_PLUGININFRA_PROVIDE_PATCHBASE ON CACHE BOOL "patchbase pls")
