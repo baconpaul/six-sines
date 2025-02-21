@@ -47,7 +47,11 @@ struct PresetManager
     void loadFactoryPreset(Patch &, Synth::mainToAudioQueue_T &, const std::string &cat,
                            const std::string &pat);
 
+#if USE_WCHAR_PRESET
+    void saveUserPresetDirect(Patch &, const wchar_t *utf8path);
+#else
     void saveUserPresetDirect(Patch &, const fs::path &p);
+#endif
 
     std::function<void(const std::string &)> onPresetLoaded{nullptr};
 

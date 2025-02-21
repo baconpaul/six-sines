@@ -773,10 +773,16 @@ void SixSinesEditor::doSavePatch()
                                  {
                                      return;
                                  }
-                                 auto pn = fs::path{result[0].getFullPathName().toStdString()};
+                                 auto pn =
+                                     fs::path{result[0].getFullPathName().toStdString()};
                                  w->setPatchNameTo(pn.filename().replace_extension("").u8string());
 
+#if USE_WCHAR_PRESET
+                                 w->presetManager->saveUserPresetDirect(w->patchCopy, result[0].getFullPathName().toUTF16());
+#else
                                  w->presetManager->saveUserPresetDirect(w->patchCopy, pn);
+#endif
+
                                  w->presetDataBinding->setDirtyState(false);
                                  w->repaint();
                              });

@@ -72,6 +72,11 @@ if (${BUILD_SINGLE_ONLY})
     )
 endif()
 
+if (WIN32)
+    message(STATUS "Activating wchar presets")
+    target_compile_definitions(${PROJECT_NAME}-impl PUBLIC USE_WCHAR_PRESET=1)
+endif()
+
 target_link_libraries(${PROJECT_NAME}-impl PUBLIC
         clap
 )

@@ -143,9 +143,12 @@ void PresetManager::rescanUserPresets()
     }
 }
 
-void PresetManager::saveUserPresetDirect(Patch &patch, const fs::path &pt)
+
+#if USE_WCHAR_PRESET
+void PresetManager::saveUserPresetDirect(Patch &patch, const wchar_t *fname)
 {
-    std::ofstream ofs(pt);
+    std::ofstream ofs(fname);
+
     if (ofs.is_open())
     {
         ofs << patch.toState();
@@ -153,6 +156,19 @@ void PresetManager::saveUserPresetDirect(Patch &patch, const fs::path &pt)
     ofs.close();
     rescanUserPresets();
 }
+#else
+void PresetManager::saveUserPresetDirect(Patch &patch, const fs::path &pt)
+{
+    std::ofstream ofs(pt);
+
+    if (ofs.is_open())
+    {
+        ofs << patch.toState();
+    }
+    ofs.close();
+    rescanUserPresets();
+}
+#endif
 
 void PresetManager::loadUserPresetDirect(Patch &patch, Synth::mainToAudioQueue_T &mainToAudio,
                                          const fs::path &p)
