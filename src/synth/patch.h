@@ -23,6 +23,7 @@
 #include <clap/clap.h>
 #include "configuration.h"
 #include "sst/cpputils/constructors.h"
+#include "sst/cpputils/active_set_overlay.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
 #include "sst/basic-blocks/dsp/Lag.h"
 #include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
@@ -35,7 +36,7 @@ namespace baconpaul::six_sines
 namespace scpu = sst::cpputils;
 namespace pats = sst::plugininfra::patch_support;
 using md_t = sst::basic_blocks::params::ParamMetaData;
-struct Param : pats::ParamBase
+struct Param : pats::ParamBase, sst::cpputils::active_set_overlay<Param>::participant
 {
     Param(const md_t &m) : pats::ParamBase(m) {}
 
@@ -64,7 +65,6 @@ struct Param : pats::ParamBase
     Param *tempoSyncPartner{nullptr};
 
     sst::basic_blocks::dsp::LinearLag<float, false> lag;
-    Param *nextLag{nullptr}, *prevLag{nullptr};
 };
 
 struct Patch : pats::PatchBase<Patch, Param>
