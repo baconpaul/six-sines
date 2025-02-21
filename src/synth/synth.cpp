@@ -155,10 +155,8 @@ void Synth::setSampleRate(double sampleRate)
     {
         p->lag.setRateInMilliseconds(1000.0 * 64.0 / 48000.0, engineSampleRate, 1.0 / blockSize);
         p->lag.snapTo(p->value);
-        p->nextLag = nullptr;
-        p->prevLag = nullptr;
     }
-    lagHead = nullptr;
+    paramLagSet.removeAll();
 
     // midi is a bit less frequent than param automation so a slightly slower smooth
     midiCCLagCollection.setRateInMilliseconds(1000.0 * 128.0 / 48000.0, engineSampleRate,
@@ -182,32 +180,17 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
         return;
     }
 
-    auto curr = lagHead;
-    while (curr)
+    for (auto it = paramLagSet.begin(); it != paramLagSet.end();)
     {
-        curr->lag.process();
-        curr->value = curr->lag.v;
-        if (!curr->lag.isActive())
+        it->lag.process();
+        it->value = it->lag.v;
+        if (!it->lag.isActive())
         {
-            if (lagHead == curr)
-                lagHead = curr->nextLag;
-
-            auto nl = curr->nextLag;
-            if (curr->prevLag)
-            {
-                curr->prevLag->nextLag = curr->nextLag;
-            }
-            if (curr->nextLag)
-            {
-                curr->nextLag->prevLag = curr->prevLag;
-            }
-            curr->prevLag = nullptr;
-            curr->nextLag = nullptr;
-            curr = nl;
+            it = paramLagSet.erase(it);
         }
         else
         {
-            curr = curr->nextLag;
+            ++it;
         }
     }
 
@@ -727,16 +710,8 @@ void Synth::handleParamValue(Param *p, uint32_t pid, float value)
 
     // p->value = value;
     p->lag.setTarget(value);
-    if (lagHead == nullptr)
-    {
-        lagHead = p;
-    }
-    else if (p != lagHead && p->nextLag == nullptr && p->prevLag == nullptr)
-    {
-        p->nextLag = lagHead;
-        lagHead->prevLag = p;
-        lagHead = p;
-    }
+    paramLagSet.addToActive(p);
+
     AudioToUIMsg au = {AudioToUIMsg::UPDATE_PARAM, pid, value};
     audioToUi.push(au);
 }
