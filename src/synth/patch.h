@@ -143,7 +143,7 @@ struct Patch : pats::PatchBase<Patch, Param>
     {
         LFOMixin(const std::string name, int id0)
             : lfoRate(floatMd()
-                          .asLfoRate()
+                          .asLfoRate(-7, 11)
                           .withName(name + " LFO Rate")
                           .withGroupName(name)
                           .withDefault(0)

@@ -215,6 +215,14 @@ void createComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique
             e.hideTooltip();
         }
     };
+
+    cm->onIdleHover = [&e, &cm, &pc]()
+    {
+        e.updateTooltip(pc.get());
+        e.showTooltipOn(cm.get());
+    };
+    cm->onIdleHoverEnd = [&e]() { e.hideTooltip(); };
+
     cm->setSource(pc.get());
     sst::jucegui::component_adapters::setClapParamId(cm.get(), id);
     e.componentByID[id] = juce::Component::SafePointer<juce::Component>(cm.get());
@@ -251,6 +259,12 @@ void createRescaledComponent(SixSinesEditor &e, P &panel, const Param &parm, std
         e.mainToAudio.push({Synth::MainToAudioMsg::Action::END_EDIT, id});
         e.hideTooltip();
     };
+    cm->onIdleHover = [&e, &cm, &rc]()
+    {
+        e.updateTooltip(rc.get());
+        e.showTooltipOn(cm.get());
+    };
+    cm->onIdleHoverEnd = [&e]() { e.hideTooltip(); };
     cm->setSource(rc.get());
     sst::jucegui::component_adapters::setClapParamId(cm.get(), id);
 
