@@ -356,7 +356,7 @@ struct Synth
         if (lagHandler.active)
             lagHandler.instantlySnap();
 
-        for (auto &p: paramLagSet)
+        for (auto &p : paramLagSet)
         {
             p.lag.snapToTarget();
             p.value = p.lag.v;

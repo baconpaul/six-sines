@@ -143,7 +143,6 @@ void PresetManager::rescanUserPresets()
     }
 }
 
-
 #if USE_WCHAR_PRESET
 void PresetManager::saveUserPresetDirect(Patch &patch, const wchar_t *fname)
 {
