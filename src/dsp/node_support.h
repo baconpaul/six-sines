@@ -342,8 +342,10 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
             rate = -paramBundle.lfoRate.meta.snapToTemposync(-rate);
         }
 
-        lfo.process_block(rate + lfoRateMod, std::clamp(lfoDeform + lfoDeformMod, -1.f, 1.f), shape,
-                          false, tempoSync ? monoValues.tempoSyncRatio : 1.0);
+        lfo.process_block(std::clamp(rate + lfoRateMod, paramBundle.lfoRate.meta.minVal,
+                                     paramBundle.lfoRate.meta.maxVal),
+                          std::clamp(lfoDeform + lfoDeformMod, -1.f, 1.f), shape, false,
+                          tempoSync ? monoValues.tempoSyncRatio : 1.0);
 
         if constexpr (needsSmoothing)
         {
