@@ -486,7 +486,7 @@ template <typename Bundle, typename Node> struct ModulationSupport
             break;
 
         case ModMatrixConfig::Source::VELOCITY:
-            sourcePointers[which] = &voiceValues.velocity;
+            sourcePointers[which] = &voiceValues.velocityLag.v;
             break;
         case ModMatrixConfig::Source::RELEASE_VELOCITY:
             sourcePointers[which] = &voiceValues.releaseVelocity;

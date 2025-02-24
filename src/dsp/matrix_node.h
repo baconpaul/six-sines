@@ -21,7 +21,6 @@
 #include "sst/basic-blocks/mechanics/block-ops.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
 #include "sst/basic-blocks/dsp/DCBlocker.h"
-#include "sst/basic-blocks/dsp/Lag.h"
 #include "dsp/op_source.h"
 #include "dsp/node_support.h"
 #include "synth/patch.h"
@@ -877,8 +876,6 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
         allowVoiceTrigger = false;
     }
 
-    sst::basic_blocks::dsp::OnePoleLag<float, false> velocityLag;
-
     void attack()
     {
         resetModulation();
@@ -886,8 +883,6 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
         lfoResetMod();
 
         memset(output, 0, sizeof(output));
-        velocityLag.snapTo(voiceValues.velocity);
-        velocityLag.setRateInMilliseconds(10, monoValues.sr.sampleRate, 1.0 / blockSize);
 
         defaultTrigger = (TriggerMode)std::round(defTrigV);
         bindModulation();
@@ -929,10 +924,8 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
         mech::accumulate_from_to<blockSize>(lfo.outputBlock, finalEnvLevel);
 
         // push this into final env level so we dont traverse output twice then clients can use it
-        velocityLag.setTarget(voiceValues.velocity);
-        velocityLag.process();
         auto lv = std::clamp(level + levMod, 0.f, 1.f);
-        auto v = 1.f - velSen * (1.f - velocityLag.v);
+        auto v = 1.f - velSen * (1.f - voiceValues.velocityLag.v);
         lv = 0.15 * std::clamp(v * lv * lv * lv, 0.f, 1.f);
         mech::scale_by<blockSize>(lv, finalEnvLevel);
 
