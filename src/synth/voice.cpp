@@ -48,6 +48,9 @@ Voice::Voice(const Patch &p, MonoValues &mv)
 
 void Voice::attack()
 {
+    voiceValues.velocityLag.snapTo(voiceValues.velocity);
+    voiceValues.velocityLag.setRateInMilliseconds(10, monoValues.sr.sampleRate, 1.0 / blockSize);
+
     out.attack();
     for (auto &n : mixerNode)
         n.attack();
@@ -90,6 +93,9 @@ void Voice::renderBlock()
     static constexpr float octFac[7] = {1.0 / 8.0, 1.0 / 4.0, 1.0 / 2.0, 1.0, 2.0, 4.0, 8.0};
 
     auto baseFreq = monoValues.tuningProvider.note_to_pitch(retuneKey - 69) * 440.0;
+
+    voiceValues.velocityLag.setTarget(voiceValues.velocity);
+    voiceValues.velocityLag.process();
 
     for (int i = 0; i < numOps; ++i)
     {

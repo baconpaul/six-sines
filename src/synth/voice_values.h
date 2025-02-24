@@ -18,6 +18,7 @@
 
 #include <sst/basic-blocks/tables/EqualTuningProvider.h>
 #include <sst/basic-blocks/tables/TwoToTheXProvider.h>
+#include "sst/basic-blocks/dsp/Lag.h"
 
 struct MTSClient;
 
@@ -61,6 +62,8 @@ struct VoiceValues
     float uniPMScale{0.f}; // -1 to 1 for unison field
     bool hasCenterVoice{false}, isCenterVoice{false};
     bool phaseRandom{false}, rephaseOnRetrigger{false};
+
+    sst::basic_blocks::dsp::OnePoleLag<float, false> velocityLag;
 
   private:
     bool gatedV{false};
