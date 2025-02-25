@@ -37,6 +37,10 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
         power[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*power[i]);
 
+        createComponent(editor, *this, mn[i].solo, solo[i], soloData[i], i);
+        solo[i]->setLabel("S");
+        addAndMakeVisible(*solo[i]);
+
         labels[i] = std::make_unique<jcmp::Label>();
         labels[i]->setText("Op " + std::to_string(i + 1) + " Level");
         addAndMakeVisible(*labels[i]);
@@ -59,8 +63,9 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
         addAndMakeVisible(*panLabels[i]);
 
         sst::jucegui::component_adapters::setTraversalId(power[i].get(), i * 12 + 50);
-        sst::jucegui::component_adapters::setTraversalId(knobs[i].get(), i * 12 + 51);
-        sst::jucegui::component_adapters::setTraversalId(panKnobs[i].get(), i * 12 + 52);
+        sst::jucegui::component_adapters::setTraversalId(solo[i].get(), i * 12 + 51);
+        sst::jucegui::component_adapters::setTraversalId(knobs[i].get(), i * 12 + 52);
+        sst::jucegui::component_adapters::setTraversalId(panKnobs[i].get(), i * 12 + 53);
     }
 
     highlight = std::make_unique<KnobHighlight>(editor);
@@ -75,7 +80,8 @@ void MixerPanel::resized()
     auto y = b.getY();
     for (auto i = 0U; i < numOps; ++i)
     {
-        positionPowerKnobAndLabel(x, y, power[i], knobs[i], labels[i]);
+        positionPowerKnobSwitchAndLabel(x, y, power[i], solo[i], knobs[i], labels[i]);
+        solo[i]->setBounds(solo[i]->getBounds().reduced(4, 0).translated(0, -1));
         positionKnobAndLabel(x + uicPowerKnobWidth + uicMargin, y, panKnobs[i], panLabels[i]);
         y += uicLabeledKnobHeight + uicMargin;
     }

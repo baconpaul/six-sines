@@ -44,6 +44,7 @@ Synth::Synth(bool mo)
     std::fill(rState.begin(), rState.end(), nullptr);
 
     reapplyControlSettings();
+    resetSoloState();
 }
 
 Synth::~Synth()
@@ -565,6 +566,11 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
                 reapplyControlSettings();
             }
 
+            if (dest->adhocFeatures & Param::AdHocFeatureValues::SOLO)
+            {
+                resetSoloState();
+            }
+
             auto d = patch.dirty;
             if (!d)
             {
@@ -727,6 +733,20 @@ void Synth::pushFullUIRefresh()
     audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
     audioToUi.push(
         {AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)hostSampleRate, (float)engineSampleRate});
+}
+
+void Synth::resetSoloState()
+{
+    bool anySolo = false;
+    for (auto &mn : patch.mixerNodes)
+    {
+        anySolo = anySolo || (mn.solo.value > 0.5);
+    }
+
+    for (auto &mn : patch.mixerNodes)
+    {
+        mn.isMutedDueToSoloAway = anySolo && !(mn.solo.value > 0.5);
+    }
 }
 
 } // namespace baconpaul::six_sines

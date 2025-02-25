@@ -416,6 +416,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         {
             return;
         }
+
         float vSum alignas(16)[blockSize];
 
         calculateModulation();
@@ -480,6 +481,13 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         {
             mech::copy_from_to<blockSize>(vSum, output[0]);
             mech::copy_from_to<blockSize>(vSum, output[1]);
+        }
+
+        // If I put this *here* then we get solo on running voices working
+        if (mixerNode.isMutedDueToSoloAway)
+        {
+            memset(output, 0, sizeof(output));
+            return;
         }
     }
 

@@ -50,7 +50,9 @@ struct MixerPanel : jcmp::NamedPanel, HasEditor
     std::array<std::unique_ptr<jcmp::Knob>, numOps> knobs;
     std::array<std::unique_ptr<PatchContinuous>, numOps> knobsData;
     std::array<std::unique_ptr<jcmp::ToggleButton>, numOps> power;
+    std::array<std::unique_ptr<jcmp::ToggleButton>, numOps> solo;
     std::array<std::unique_ptr<PatchDiscrete>, numOps> powerData;
+    std::array<std::unique_ptr<PatchDiscrete>, numOps> soloData;
     std::array<std::unique_ptr<jcmp::Label>, numOps> labels;
 
     std::array<std::unique_ptr<jcmp::Knob>, numOps> panKnobs;
