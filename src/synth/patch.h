@@ -52,6 +52,7 @@ struct Param : pats::ParamBase, sst::cpputils::active_set_overlay<Param>::partic
         ENVTIME = 1 << 0,     // tag for ADSR envs we changed version 2-3
         TRIGGERMODE = 1 << 1, // trigger mode for when we nuked voice
         WAVEFORM = 1 << 2,
+        SOLO = 1 << 3
     };
 
     bool isTemposynced() const
@@ -942,6 +943,11 @@ struct Patch : pats::PatchBase<Patch, Param>
                              .withGroupName(name(idx))
                              .withID(id(42, idx))
                              .withDefault(1.f)),
+              solo(boolMd()
+                       .withName(name(idx) + " Solo")
+                       .withGroupName(name(idx))
+                       .withID(id(43, idx))
+                       .withDefault(false)),
               ModulationMixin(name(idx), id(50, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
@@ -958,6 +964,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             index = idx;
             appendLFOTargetName(targetList);
             appendDAHDSRTargetName(targetList);
+            solo.adhocFeatures = Param::AdHocFeatureValues::SOLO;
         }
 
         std::string name(int idx) const { return "Op " + std::to_string(idx + 1) + " Mixer"; }
@@ -971,13 +978,15 @@ struct Patch : pats::PatchBase<Patch, Param>
             return name(index);
         }
 
-        Param level, pan, lfoToLevel, lfoToPan, envToLevel;
+        Param level, pan, lfoToLevel, lfoToPan, envToLevel, solo;
         Param active;
         std::array<Param, numModsPer> modtarget;
+        bool isMutedDueToSoloAway{false};
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &active, &pan, &lfoToLevel, &lfoToPan, &envToLevel};
+            std::vector<Param *> res{&level,    &active,     &pan, &lfoToLevel,
+                                     &lfoToPan, &envToLevel, &solo};
             appendDAHDSRParams(res);
             appendLFOParams(res);
 

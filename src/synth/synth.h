@@ -373,6 +373,7 @@ struct Synth
     {
         doFullRefresh = true;
         reapplyControlSettings();
+        resetSoloState();
 
         for (auto &[i, p] : patch.paramMap)
         {
@@ -381,6 +382,7 @@ struct Synth
     }
 
     void reapplyControlSettings();
+    void resetSoloState();
 
     sst::cpputils::active_set_overlay<Param> paramLagSet;
 
