@@ -605,6 +605,8 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
         break;
         case MainToAudioMsg::STOP_AUDIO:
         {
+            if (lagHandler.active)
+                lagHandler.instantlySnap();
             voiceManager->allSoundsOff();
             audioRunning = false;
         }
