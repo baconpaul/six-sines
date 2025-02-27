@@ -215,6 +215,13 @@ void createComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique
             e.hideTooltip();
         }
     };
+    cm->onWheelEditOccurred = [&cm]()
+    {
+        if (std::is_same_v<Q, PatchContinuous>)
+        {
+            cm->immediatelyInitiateIdleAction(2000);
+        }
+    };
 
     cm->onIdleHover = [&e, &cm, &pc]()
     {
