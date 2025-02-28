@@ -381,6 +381,9 @@ struct Synth
         }
     }
 
+    std::atomic<bool> onMainRescanParams{false};
+    void onMainThread();
+
     void reapplyControlSettings();
     void resetSoloState();
 

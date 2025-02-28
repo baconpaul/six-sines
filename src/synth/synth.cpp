@@ -641,7 +641,9 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
         break;
         case MainToAudioMsg::SEND_REQUEST_RESCAN:
         {
+            onMainRescanParams = true;
             audioToUi.push({AudioToUIMsg::DO_PARAM_RESCAN});
+            clapHost->request_callback(clapHost);
         }
         break;
         case MainToAudioMsg::EDITOR_ATTACH_DETATCH:
@@ -748,6 +750,19 @@ void Synth::resetSoloState()
     for (auto &mn : patch.mixerNodes)
     {
         mn.isMutedDueToSoloAway = anySolo && !(mn.solo.value > 0.5);
+    }
+}
+
+void Synth::onMainThread()
+{
+    bool ex{true}, re{false};
+    if (onMainRescanParams.compare_exchange_strong(ex, re))
+    {
+        auto pe = static_cast<const clap_host_params_t *>(clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
+        if (pe)
+        {
+            pe->rescan(clapHost, CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
+        }
     }
 }
 
