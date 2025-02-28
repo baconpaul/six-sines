@@ -74,7 +74,10 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         return true;
     }
 
-    void onMainThread() noexcept override {}
+    void onMainThread() noexcept override
+    {
+        engine->onMainThread();
+    }
 
     bool implementsAudioPorts() const noexcept override { return true; }
     uint32_t audioPortsCount(bool isInput) const noexcept override
