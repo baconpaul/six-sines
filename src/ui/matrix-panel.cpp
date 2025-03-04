@@ -292,6 +292,22 @@ void MatrixPanel::showModModeMenu(int i)
                   });
     }
 
+    auto rmOptions = v == 1;
+    p.addSeparator();
+    const auto &metaO = editor.patchCopy.matrixNodes[i].modulationScale.meta;
+    auto vO = (int)std::round(editor.patchCopy.matrixNodes[i].modulationScale.value);
+    for (int el = (int)metaO.minVal; el <= (int)metaO.maxVal; ++el)
+    {
+        p.addItem("RM by " + *(metaO.valueToString(el)), rmOptions, rmOptions && (el == vO),
+                  [w = juce::Component::SafePointer(this), i, el]()
+                  {
+                      if (!w)
+                          return;
+                      w->editor.setAndSendParamValue(
+                          w->editor.patchCopy.matrixNodes[i].modulationScale.meta.id, el);
+                  });
+    }
+
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
                     makeMenuAccessibleButtonCB(MmodMode[i].get()));
 }

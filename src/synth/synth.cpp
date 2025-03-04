@@ -758,7 +758,8 @@ void Synth::onMainThread()
     bool ex{true}, re{false};
     if (onMainRescanParams.compare_exchange_strong(ex, re))
     {
-        auto pe = static_cast<const clap_host_params_t *>(clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
+        auto pe = static_cast<const clap_host_params_t *>(
+            clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
         if (pe)
         {
             pe->rescan(clapHost, CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);

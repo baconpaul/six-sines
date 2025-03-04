@@ -799,6 +799,14 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                               {1, "Ring Modulation"},
                                                               {2, "Linear FM"},
                                                               {3, "Exponential FM"}})),
+              modulationScale(intMd()
+                                  .withRange(0, 2)
+                                  .withDefault(0)
+                                  .withName(name(idx) + " RM Rescaling")
+                                  .withGroupName(name(idx))
+                                  .withID(id(36, idx))
+                                  .withUnorderedMapFormatting(
+                                      {{0, "Signal"}, {1, "abs(Signal)"}, {2, "(1+Signal)/2"}})),
               DAHDSRMixin(name(idx), id(2, idx), false, false, id(50, idx)),
               LFOMixin(name(idx), id(14, idx)),
               lfoToDepth(floatMd()
@@ -839,7 +847,7 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         Param level;
         Param active;
-        Param modulationMode;
+        Param modulationMode, modulationScale;
         Param lfoToDepth;
         Param envToLevel;
         Param overdrive;
@@ -864,7 +872,7 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level,      &active,     &modulationMode,
+            std::vector<Param *> res{&level,      &active,     &modulationMode, &modulationScale,
                                      &lfoToDepth, &envToLevel, &overdrive};
             appendDAHDSRParams(res);
             appendLFOParams(res);

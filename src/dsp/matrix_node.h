@@ -39,18 +39,20 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
     const Patch::MatrixNode &matrixNode;
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
-    const float &level, &activeV, &modmodeV, &lfoToDepth, &envToLevel, &overdriveV;
+    const float &level, &activeV, &modmodeV, &rmScaleV, &lfoToDepth, &envToLevel, &overdriveV;
     MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr, MonoValues &mv,
                    const VoiceValues &vv)
         : matrixNode(mn), monoValues(mv), voiceValues(vv), onto(on), from(fr), level(mn.level),
           modmodeV(mn.modulationMode), activeV(mn.active), EnvelopeSupport(mn, mv, vv),
           LFOSupport(mn, mv), lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel),
-          overdriveV(mn.overdrive), ModulationSupport(mn, this, mv, vv)
+          overdriveV(mn.overdrive), ModulationSupport(mn, this, mv, vv),
+          rmScaleV(mn.modulationScale)
     {
     }
 
     bool active{false};
     int modMode{0};
+    int rmScale{0};
     float overdriveFactor{1.0};
 
     void attack()
@@ -62,6 +64,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         active = activeV > 0.5;
 
         modMode = (int)std::round(modmodeV);
+        rmScale = (int)std::round(rmScaleV);
         if (active)
         {
             bindModulation();
@@ -121,9 +124,26 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             // we want op * ( 1 - depth ) + op * rm * depth or
             // op * ( 1 + depth ( rm - 1 ) )
             // since the multiplier of depth is rmLevel and it starts at one that means
-            for (int i = 0; i < blockSize; ++i)
+            if (rmScale == 2)
             {
-                onto.rmLevel[i] += modlev[i] * (from.output[i] - 1.0);
+                for (int i = 0; i < blockSize; ++i)
+                {
+                    onto.rmLevel[i] += modlev[i] * (0.5 * (from.output[i] + 1) - 1.0);
+                }
+            }
+            else if (rmScale == 1)
+            {
+                for (int i = 0; i < blockSize; ++i)
+                {
+                    onto.rmLevel[i] += modlev[i] * (std::fabs(from.output[i]) - 1.0);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < blockSize; ++i)
+                {
+                    onto.rmLevel[i] += modlev[i] * (from.output[i] - 1.0);
+                }
             }
         }
         else if (modMode == 2)
