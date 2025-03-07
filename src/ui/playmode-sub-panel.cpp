@@ -354,7 +354,6 @@ void PlayModeSubPanel::showPortaContinuationMenu()
     };
     auto p = juce::PopupMenu();
     p.addSectionHeader("Portamento Continuation");
-    p.addSectionHeader("Experimental; May change before 1.1");
     p.addSeparator();
     p.addItem("Reset after Release", true, tmv == 0, genSet(0));
     p.addItem("Pause after Release", true, tmv == 1, genSet(1));
