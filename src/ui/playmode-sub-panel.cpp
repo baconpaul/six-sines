@@ -64,7 +64,7 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
         });
     setPortaContinuationLabel();
 
-    editor.componentRefreshByID[on.portaContinuation.meta.id] =
+    editor.componentRefreshByID[on.portaContMode.meta.id] =
         [w = juce::Component::SafePointer(this)]()
     {
         if (w)
@@ -323,38 +323,41 @@ void PlayModeSubPanel::showTriggerButtonMenu()
 
 void PlayModeSubPanel::setPortaContinuationLabel()
 {
-    auto v = (int)std::round(editor.patchCopy.output.portaContinuation.value);
+    auto v = (int)std::round(editor.patchCopy.output.portaContMode.value);
     switch (v)
     {
     case 0:
-        portaContinuationButton->setLabel("OnVoice");
+        portaContinuationButton->setLabel("Reset");
         break;
     case 1:
-        portaContinuationButton->setLabel("FromLast");
+        portaContinuationButton->setLabel("Pause");
+        break;
+    case 2:
+        portaContinuationButton->setLabel("Continue");
         break;
     }
 }
 
 void PlayModeSubPanel::showPortaContinuationMenu()
 {
-    auto tmv = (int)std::round(editor.patchCopy.output.portaContinuation.value);
+    auto tmv = (int)std::round(editor.patchCopy.output.portaContMode.value);
 
     auto genSet = [w = juce::Component::SafePointer(this)](int nv)
     {
         auto that = w;
         return [nv, that]()
         {
-            auto &p = that->editor.patchCopy.output.portaContinuation;
+            auto &p = that->editor.patchCopy.output.portaContMode;
             that->editor.setAndSendParamValue(p, nv);
             that->setPortaContinuationLabel();
         };
     };
     auto p = juce::PopupMenu();
     p.addSectionHeader("Portamento Continuation");
-    p.addSectionHeader("Experimental; May change before 1.1");
     p.addSeparator();
-    p.addItem("Reset Porta on New Voice", true, tmv == 0, genSet(0));
-    p.addItem("Start Porta from Last Release", true, tmv == 1, genSet(1));
+    p.addItem("Reset after Release", true, tmv == 0, genSet(0));
+    p.addItem("Pause after Release", true, tmv == 1, genSet(1));
+    p.addItem("Continue after Release", true, tmv == 2, genSet(2));
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&this->editor),
                     makeMenuAccessibleButtonCB(portaContinuationButton.get()));

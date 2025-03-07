@@ -440,7 +440,7 @@ void Synth::addToVoiceList(Voice *v)
 
 Voice *Synth::removeFromVoiceList(Voice *cvoice)
 {
-    if (patch.output.portaContinuation.value > 0.5 && voiceCount == 1)
+    if (patch.output.portaContMode.value > 0.5 && voiceCount == 1)
     {
         portaContinuation.sourceKey =
             cvoice->voiceValues.key + cvoice->voiceValues.portaDiff * cvoice->voiceValues.portaSign;
@@ -449,8 +449,7 @@ Voice *Synth::removeFromVoiceList(Voice *cvoice)
         portaContinuation.dKey = -cvoice->voiceValues.dPorta * cvoice->voiceValues.portaSign;
 
         portaContinuation.active = true;
-        portaContinuation.updateEveryBlock =
-            (int)std::round(patch.output.portaContinuation.value) == 1;
+        portaContinuation.updateEveryBlock = (int)std::round(patch.output.portaContMode.value) == 2;
     }
     else
     {
