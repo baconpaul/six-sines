@@ -1258,14 +1258,14 @@ struct Patch : pats::PatchBase<Patch, Param>
                             .withLog2SecondsFormatting()
                             .withMilisecondsBelowOneSecond()
                             .withCustomMinDisplay("Off")),
-              portaContinuation(intMd()
-                                    .withID(id(43))
-                                    .withName(name() + " Porta Continuation")
-                                    .withRange(0, 1)
-                                    .withDefault(0)
-                                    .withGroupName(name())
-                                    .withUnorderedMapFormatting(
-                                        {{0, "Reset On Voice"}, {1, "Restart From Last"}})),
+              portaContMode(
+                  intMd()
+                      .withID(id(43))
+                      .withName(name() + " Porta Continuation")
+                      .withRange(0, 1)
+                      .withDefault(0)
+                      .withGroupName(name())
+                      .withUnorderedMapFormatting({{0, "Reset"}, {1, "Pause"}, {1, "Continue"}})),
 
               pianoModeActive(md_t()
                                   .asBool()
@@ -1395,7 +1395,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         uint32_t id(int f) const { return idBase + f; }
 
         Param level, velSensitivity, playMode;
-        Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, portaContinuation,
+        Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, portaContMode,
             pianoModeActive;
         Param unisonCount, unisonSpread, uniPhaseRand, unisonPan;
         Param mpeActive, mpeBendRange;
@@ -1415,7 +1415,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &polyLimit,
                                      &defaultTrigger,
                                      &portaTime,
-                                     &portaContinuation,
+                                     &portaContMode,
                                      &pianoModeActive,
                                      &unisonCount,
                                      &unisonSpread,
