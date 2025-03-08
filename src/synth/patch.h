@@ -377,7 +377,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                   {
                       return md_t()
                           .asInt()
-                          .withRange(0, 2048)
+                          .withRange(0, 8192)
                           .withID(id0 + 2 * i)
                           .withName(name + " Mod Source " + std::to_string(i))
                           .withGroupName(name)
