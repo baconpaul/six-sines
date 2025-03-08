@@ -45,6 +45,28 @@ Synth::Synth(bool mo)
 
     reapplyControlSettings();
     resetSoloState();
+
+    /*
+     * Internal consistency checks
+     */
+    bool anyWarn{false};
+    for (auto &s : monoValues.modMatrixConfig.sources)
+    {
+        if (s.id >= patch.output.modsource[0].meta.maxVal ||
+            s.id < patch.output.modsource[0].meta.minVal)
+        {
+            SXSNLOG("WARNING: Source " << s.group << "/" << s.name << " with id " << s.id
+                                       << " is outside of param range "
+                                       << patch.output.modsource[0].meta.minVal << " to "
+                                       << patch.output.modsource[0].meta.maxVal);
+            anyWarn = true;
+        }
+    }
+    if (anyWarn)
+    {
+        SXSNLOG("Six Sines will termiante");
+        std::terminate();
+    }
 }
 
 Synth::~Synth()
