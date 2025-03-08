@@ -1262,10 +1262,10 @@ struct Patch : pats::PatchBase<Patch, Param>
                   intMd()
                       .withID(id(43))
                       .withName(name() + " Porta Continuation")
-                      .withRange(0, 1)
+                      .withRange(0, 2)
                       .withDefault(0)
                       .withGroupName(name())
-                      .withUnorderedMapFormatting({{0, "Reset"}, {1, "Pause"}, {1, "Continue"}})),
+                      .withUnorderedMapFormatting({{0, "Reset"}, {1, "Pause"}, {2, "Continue"}})),
 
               pianoModeActive(md_t()
                                   .asBool()
