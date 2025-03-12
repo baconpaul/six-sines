@@ -399,7 +399,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             e->setZoomFactor(e->zoomFactor);
             return true;
         };
-        res->sneakyStartupGrabFrom(engine->patch);
+        // res->sneakyStartupGrabFrom(engine->patch);
         res->repaint();
 
         return res;
