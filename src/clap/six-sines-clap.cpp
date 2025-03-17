@@ -388,7 +388,10 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         {
             if (_host.canUseGui() && clapJuceShim->isEditorAttached())
             {
+                // SXSNLOG("onZoomChanged " << f);
                 auto s = f * clapJuceShim->getGuiScale();
+                guiSetSize(baconpaul::six_sines::ui::SixSinesEditor::edWidth * s,
+                           baconpaul::six_sines::ui::SixSinesEditor::edHeight * s);
                 _host.guiRequestResize(baconpaul::six_sines::ui::SixSinesEditor::edWidth * s,
                                        baconpaul::six_sines::ui::SixSinesEditor::edHeight * s);
             }
@@ -396,6 +399,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         onShow = [e = res.get()]()
         {
+            // SXSNLOG("onShow with zoom factor " << e->zoomFactor);
             e->setZoomFactor(e->zoomFactor);
             return true;
         };
