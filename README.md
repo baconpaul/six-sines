@@ -9,6 +9,8 @@ If you want to read a manual, [go here](doc/manual.md)
 If you want to download a release or recent version, [go here](https://github.com/baconpaul/six-sines/releases). We have versioned
 releases on that download page and additionally provide a [nightly](https://github.com/baconpaul/six-sines/releases/tag/Nightly) with the latest code at all times.
 
+In March 2025, we released version 1.1. You can read the changelog [here](doc/changelog.md)
+
 And please read the [acknowldgements](doc/ack.md) for a list of thanks.
 
 ## Hey are there any demos of this?
@@ -19,11 +21,11 @@ working on a more 2020s inspired version, and that's pretty exciting!
 
 [Listen to Kinsey's track, 'Retrocade Nights'](https://soundcloud.com/kinseydulcet/retrocade-nights-six-sines-demo)
 
-baconpaul also made a test track before 1.0 to make sure everything worked.
-The track is less exciting, but shows some of the feedback-drum-features
-we added after Kinsey made her track
+The [One Synth Challenge](https://www.kvraudio.com/forum/viewtopic.php?t=618178) community used Six Sines as we were developing
+1.1 to host OSC 192, and the results are amazing. You can hear all the entries
+here, made entirely with Six Sines and built in DAW effects.
 
-[Listen tp Paul's 'Six Sines Test Track'](https://soundcloud.com/baconpaul/six-sines-test-track)
+[Listen to the One Synth Challenge Playlist](https://soundcloud.com/kvrosc/sets/one-synth-challenge-192-six)
 
 ## Background
 

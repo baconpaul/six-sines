@@ -20,7 +20,7 @@ The One Synth Challenge team in February 2025 was super
 helpful with loads of ideas and suggestions. Especially
 user taron gave us the amazing videos in the manual and
 a bug report so good I added this paragraph when I merged
-the fix to say thanks!
+the fix to say thanks! 
 
 ## Factory Patches
 
@@ -37,6 +37,8 @@ Once we stabilized also had substantial patch contributions from
 - Metamyther
 - Trinitou
 - dj.tuBIG/MaliceX
+- videco
+- SiL3NC3
 
 Thanks to everyone who contributed patches to highlight the synth!
 
