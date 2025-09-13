@@ -45,6 +45,8 @@ a 6 op full matrix pure FM synth". So my response was 1. implement one, 2. give 
 
 ## How to build this software
 
+your system needs cmake and a c++20 compatible compiler.
+
 We provide pre-build windows, linux, and macOS binaries at the [release page](https://github.com/baconpaul/six-sines/releases) but especially on 
 Linux, you may want to build it yourself, since we use ubuntu 24 machines and linux doesn't really exist.
 
