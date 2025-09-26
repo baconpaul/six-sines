@@ -74,7 +74,7 @@ function(add_clapfirst_installer)
             endif()
         endforeach()
 
-        add_dependencies(${TGT} ${TGT}_wincollect innosetup::compiler)
+        add_dependencies(${TGT} ${TGT}_wincollect)
 
         add_custom_command(
             TARGET ${TGT}
@@ -88,6 +88,8 @@ function(add_clapfirst_installer)
 
         if (TARGET innosetup::compiler)
             message(STATUS "Ejecting innosetup installer rules")
+            add_dependencies(${TGT} innosetup::compiler)
+
             add_custom_command(
                     TARGET ${TGT}
                     POST_BUILD
