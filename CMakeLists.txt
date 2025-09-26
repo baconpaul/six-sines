@@ -120,8 +120,23 @@ make_clapfirst_plugins(
         STANDALONE_CONFIGURATIONS
             standalone "${PRODUCT_NAME}" "org.baconpaul.six-sines"
 
-        STANDALONE_MACOS_ICON "${CMAKE_SOURCE_DIR}/resources/mac_installer/Icon.icns"
+        STANDALONE_MACOS_ICON "${CMAKE_SOURCE_DIR}/resources/installer_mac/Icon.icns"
 )
+
+
+include(cmake/basic_installer_clapfirst.cmake)
+add_clapfirst_installer(
+        INSTALLER_TARGET ${PROJECT_NAME}-installer
+        ASSET_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_assets
+        INSTALLER_PREFIX "six-sines"
+        PRODUCT_NAME "${PRODUCT_NAME}"
+        TARGETS
+        ${PROJECT_NAME}_clap
+        ${PROJECT_NAME}_vst3
+        ${PROJECT_NAME}_auv2
+        ${PROJECT_NAME}_standalone
+)
+
 
 
 
