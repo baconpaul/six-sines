@@ -40,3 +40,6 @@
 [submodule "libs/libsamplerate"]
 	path = libs/libsamplerate
 	url = https://github.com/libsndfile/libsamplerate.git
+[submodule "libs/sst/sst-cmake"]
+	path = libs/sst/sst-cmake
+	url = https://github.com/surge-synthesizer/sst-cmake

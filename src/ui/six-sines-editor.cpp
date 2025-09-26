@@ -180,6 +180,11 @@ SixSinesEditor::~SixSinesEditor()
 
 void SixSinesEditor::idle()
 {
+    if (getHeight() / getWidth() > edHeight/edWidth * 3)
+    {
+        SXSNLOG("Seems I have hit that renoise too-much-height bug");
+        setZoomFactor(zoomFactor);
+    }
     auto aum = audioToUI.pop();
     while (aum.has_value())
     {

@@ -11,6 +11,8 @@ on:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  TARGET_NAME: six-sines
+  PLUGIN_NAME: "Six Sines"
 
 defaults:
   run:
@@ -56,46 +58,27 @@ jobs:
         with:
           os: ${{ runner.os }}
 
+      - name: Install Inno Setup
+        if: runner.os == 'Windows'
+        uses: surge-synthesizer/sst-githubactions/install-innosetup@main
+        with:
+          version: 6.5.4
+
       - uses: apple-actions/import-codesign-certs@v3
         if: runner.os == 'macOS' && github.event_name != 'pull_request'
         with:
           p12-file-base64: ${{ secrets.MAC_CERTS_P12 }}
           p12-password: ${{ secrets.CERT_PWD }}
 
-      - name: Build release version
-        if: github.event_name != 'pull_request'
-        run: |
-          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release -DCOPY_AFTER_BUILD=FALSE -DGITHUB_ACTIONS_BUILD=TRUE
-          cmake --build ./build --config Release --target six-sines_all --parallel 3
-
-      - name: Configure pull request version
-        if: github.event_name == 'pull_request'
-        run: |
-          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Debug -DCOPY_AFTER_BUILD=FALSE  -DGITHUB_ACTIONS_BUILD=TRUE 
 
       - name: Build pull request version
         if: github.event_name == 'pull_request'
         run: |
-          cmake --build ./build --config Debug --target six-sines_all --parallel 3
+          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Debug -DCOPY_AFTER_BUILD=FALSE  -DGITHUB_ACTIONS_BUILD=TRUE    
+          cmake --build ./build --config Debug --target ${TARGET_NAME}-installer --parallel 3
 
-      - name: Find all the six sines
-        run: |
-          find build -name "Six Sines*" -print
-
-      - name: Make windows zip
-        if: github.event_name != 'pull_request' && runner.os == 'Windows'
-        run: |
-          mkdir build/inst
-          
-          cp resources/mac_installer/License.txt build/six-sines_assets
-          cp resources/ReadmeZip.txt build/six-sines_assets
-          pushd build/six-sines_assets
-          ls -al
-
-          7z a -r ../inst/six-sines-windows-${{ matrix.installer_name }}`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.zip *
-
-      - name: Make Mac
-        if: github.event_name != 'pull_request' && runner.os == 'macOS'
+      - name: Build release version
+        if: github.event_name != 'pull_request'
         run: |
           export MAC_SIGNING_CERT="${{ secrets.MAC_SIGNING_CERT_NAME }}"
           export MAC_INSTALLING_CERT="${{ secrets.MAC_INSTALLING_CERT_NAME }}"
@@ -103,19 +86,19 @@ jobs:
           export MAC_SIGNING_ID="${{ secrets.MAC_SIGNING_ID }}"
           export MAC_SIGNING_1UPW="${{ secrets.MAC_SIGNING_1UPW }}"
           export MAC_SIGNING_TEAM="${{ secrets.MAC_SIGNING_TEAM }}"
-          
-          
-          mkdir build/inst
-          cd build/six-sines_assets
-          ../../libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh "Six Sines" . ../resources/mac_installer ../inst ${{ matrix.installer_name }}`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`
 
-          codesign -d --entitlement - installer-tmp/APP/Six\ Sines.app
+          cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release -DCOPY_AFTER_BUILD=FALSE  -DGITHUB_ACTIONS_BUILD=TRUE
+          cmake --build ./build --config Release --target ${TARGET_NAME}-installer --parallel 3
+
+      - name: Show Installer Directory
+        run: |
+          ls -l build/installer
 
       - name: Upload artifact
         if: github.event_name != 'pull_request' && runner.os != 'Linux'  # We get this through docker
         uses: actions/upload-artifact@v4
         with:
-          path: build/inst
+          path: build/installer
           name: dawplugin-${{ matrix.name }}
 
 
@@ -136,30 +119,17 @@ jobs:
           username: ${{ github.actor }}
           token: ${{ secrets.GITHUB_TOKEN }}
           cmakeArgs: -DCMAKE_BUILD_TYPE=Release -GNinja  -DCOPY_AFTER_BUILD=FALSE  -DGITHUB_ACTIONS_BUILD=TRUE
-          target: six-sines_all
-
-
-      - name: Make linux tgz
-        run: |
-          find build -name "Six Sines*" -print
-
-          mkdir build/inst
-          cp resources/mac_installer/License.txt build/six-sines_assets
-          cp resources/ReadmeZip.txt build/six-sines_assets
-          pushd build/six-sines_assets
-          ls -al
-
-          tar cvzf ../inst/six-sines-linux-`date +"%Y-%m-%d"`-`git rev-parse --short HEAD`.tgz .
+          target: six-sines-installer
 
       - name: Show Installer Directory
         run: |
-          ls -l ./build/inst
+          ls -l ./build/installer
 
       - name: Upload artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          path: build/inst
+          path: build/installer
           name: build-docker-linux
 
   publish-plugin-nightly:
