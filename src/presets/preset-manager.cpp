@@ -57,8 +57,7 @@ PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
                     ents.push_back(p.filename());
                 }
 
-                std::sort(ents.begin(), ents.end(),
-                          [](const auto &a, const auto &b)
+                std::sort(ents.begin(), ents.end(), [](const auto &a, const auto &b)
                           { return strnatcasecmp(a.c_str(), b.c_str()) < 0; });
                 factoryPatchNames[d.filename()] = ents;
             }

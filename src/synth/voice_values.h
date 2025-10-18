@@ -69,5 +69,5 @@ struct VoiceValues
     bool gatedV{false};
     int keyV{0};
 };
-};     // namespace baconpaul::six_sines
+}; // namespace baconpaul::six_sines
 #endif // MONO_VALUES_H
