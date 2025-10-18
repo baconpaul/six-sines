@@ -424,6 +424,21 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         return true;
     }
 
+    bool registerOrUnregisterPosixFd(int fd, clap_posix_fd_flags_t flags, bool reg) override
+    {
+        if (!_host.canUsePosixFdSupport())
+            return false;
+        if (reg)
+        {
+            _host.posixFdSupportRegister(fd, flags);
+        }
+        else
+        {
+            _host.posixFdSupportUnregister(fd);
+        }
+        return true;
+    }
+
     static uint32_t vst3_getNumMIDIChannels(const clap_plugin *plugin, uint32_t note_port)
     {
         return 16;

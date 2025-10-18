@@ -77,5 +77,5 @@ struct MonoValues
 
     SRProvider sr;
 };
-};     // namespace baconpaul::six_sines
+}; // namespace baconpaul::six_sines
 #endif // MONO_VALUES_H
