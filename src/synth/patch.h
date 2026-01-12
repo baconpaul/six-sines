@@ -532,7 +532,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                 .withGroupName(name(idx))
                                 .withDefault(0)
                                 .withRange(-70, 70)
-                                .withSemitoneZeroAt400Formatting()
+                                .withSemitoneZeroAt440Formatting()
                                 .withID(id(7, idx))),
               keyTrackLowFrequencyValue(
                   floatMd()
