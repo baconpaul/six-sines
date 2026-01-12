@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.28)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14 CACHE STRING "Build for 10.14")
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "Build for 10.14")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 
-project(six-sines VERSION 1.1.0.0 LANGUAGES C CXX)
+project(six-sines VERSION 1.2.0.0 LANGUAGES C CXX)
 set(PRODUCT_NAME "Six Sines")
 
 
