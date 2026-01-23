@@ -178,7 +178,7 @@ const void *get_factory(const char *factory_id)
 
     {
         // Uncomment this to try the preset discovery
-        // return sixSinesPresetDiscoveryFactory();
+        return sixSinesPresetDiscoveryFactory();
     }
     return nullptr;
 }

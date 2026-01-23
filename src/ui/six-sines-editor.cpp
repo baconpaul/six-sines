@@ -580,10 +580,9 @@ void SixSinesEditor::showPresetPopup()
             {
                 noExt = noExt.substr(0, ps);
             }
-            em.addItem(noExt,
-                       [cat = c, pat = e, this]() {
-                           this->presetManager->loadFactoryPreset(patchCopy, mainToAudio, cat, pat);
-                       });
+            em.addItem(
+                noExt, [cat = c, pat = e, this]()
+                { this->presetManager->loadFactoryPreset(patchCopy, mainToAudio, cat, pat); });
         }
         f.addSubMenu(c, em);
     }

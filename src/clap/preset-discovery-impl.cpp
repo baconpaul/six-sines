@@ -30,57 +30,28 @@ struct Provider
 };
 bool init(const struct clap_preset_discovery_provider *provider)
 {
-    static constexpr bool indexUser{false}, indexFacAsPlugin{false}, indexFacAsFile{true};
-    SXSNLOG("Init");
-
     auto pm = static_cast<Provider *>(provider->provider_data);
 
-    if (indexFacAsPlugin)
-    {
-        struct clap_preset_discovery_location fac
-        {
-            CLAP_PRESET_DISCOVERY_IS_FACTORY_CONTENT, "Six Sines Factory Content",
-                CLAP_PRESET_DISCOVERY_LOCATION_PLUGIN, nullptr
-        };
-        pm->indexer->declare_location(pm->indexer, &fac);
-    }
-
-    if (indexFacAsFile)
-    {
-        auto binLoc = sst::plugininfra::paths::sharedLibraryBinaryPath().u8string();
-        struct clap_preset_discovery_location fac
-        {
-            CLAP_PRESET_DISCOVERY_IS_FACTORY_CONTENT, "Six Sines Factory Content",
-                CLAP_PRESET_DISCOVERY_LOCATION_FILE, binLoc.c_str()
-        };
-        pm->indexer->declare_location(pm->indexer, &fac);
-    }
+    struct clap_preset_discovery_location fac{CLAP_PRESET_DISCOVERY_IS_FACTORY_CONTENT,
+                                              "Six Sines Factory Content",
+                                              CLAP_PRESET_DISCOVERY_LOCATION_PLUGIN, nullptr};
+    pm->indexer->declare_location(pm->indexer, &fac);
 
     // User Areas
-    if (indexUser)
-    {
-        struct clap_preset_discovery_filetype sxsnp
-        {
-            "Six Sines Preset", "For Six Sines!", "sxsnp"
-        };
-        pm->indexer->declare_filetype(pm->indexer, &sxsnp);
+    struct clap_preset_discovery_filetype sxsnp{"Six Sines Preset", "For Six Sines!", "sxsnp"};
+    pm->indexer->declare_filetype(pm->indexer, &sxsnp);
 
-        auto loc = pm->pm.userPatchesPath.u8string();
-        struct clap_preset_discovery_location userLoc
-        {
-            CLAP_PRESET_DISCOVERY_IS_USER_CONTENT, "Six Sines User Content",
-                CLAP_PRESET_DISCOVERY_LOCATION_FILE, loc.c_str()
-        };
-        pm->indexer->declare_location(pm->indexer, &userLoc);
-    }
-
+    auto loc = pm->pm.userPatchesPath.u8string();
+    struct clap_preset_discovery_location userLoc{CLAP_PRESET_DISCOVERY_IS_USER_CONTENT,
+                                                  "Six Sines User Content",
+                                                  CLAP_PRESET_DISCOVERY_LOCATION_FILE, loc.c_str()};
+    pm->indexer->declare_location(pm->indexer, &userLoc);
     return true;
 }
 
 // Destroys the preset provider
 void destroy(const struct clap_preset_discovery_provider *provider)
 {
-    SXSNLOG("Destroy");
     auto pm = static_cast<Provider *>(provider->provider_data);
     delete pm;
 }
@@ -90,16 +61,25 @@ void destroy(const struct clap_preset_discovery_provider *provider)
 bool get_metadata(const struct clap_preset_discovery_provider *provider, uint32_t location_kind,
                   const char *location, const clap_preset_discovery_metadata_receiver_t *mdr)
 {
-    SXSNLOG("Get Metadata " << location_kind);
     auto pm = static_cast<Provider *>(provider->provider_data);
 
     if (location_kind == CLAP_PRESET_DISCOVERY_LOCATION_PLUGIN)
     {
         // factory content
+        int idx{0};
         for (auto &fac : pm->pm.factoryPatchVector)
         {
-            SXSNLOG("Begin Preset " << fac.second.c_str());
-            if (!mdr->begin_preset(mdr, fac.second.c_str(), fac.first.c_str()))
+            auto dName = fac.first + "/" + fac.second;
+            auto sps = dName.find(".sxsnp");
+            if (sps != std::string::npos)
+                dName = dName.substr(0, sps);
+
+            auto locKey = std::to_string(idx++) + " :: " + fac.first + " :: " + fac.second;
+
+            // SXSNLOG("Begin Preset (Plugin)  name='" << dName << "' location_key = '" << locKey <<
+            // "'");
+
+            if (!mdr->begin_preset(mdr, dName.c_str(), locKey.c_str()))
             {
                 SXSNLOG("Begin Preset failed");
                 return false;
@@ -108,7 +88,6 @@ bool get_metadata(const struct clap_preset_discovery_provider *provider, uint32_
                 std::string() + "A Six Sines '" + fac.first.c_str() + "' Factory Preset";
             clap_universal_plugin_id_t clp{"clap", "org.baconpaul.six-sines"};
             mdr->add_plugin_id(mdr, &clp);
-
             mdr->set_description(mdr, desc.c_str());
         }
 
@@ -119,7 +98,7 @@ bool get_metadata(const struct clap_preset_discovery_provider *provider, uint32_
     p = p.replace_extension("");
     p = p.filename();
 
-    SXSNLOG("Begin Preset " << p.u8string());
+    // SXSNLOG("Begin Preset (File) " << p.u8string());
     if (!mdr->begin_preset(mdr, p.u8string().c_str(), ""))
     {
         SXSNLOG("Begin Preset failed");
@@ -162,7 +141,6 @@ const clap_preset_discovery_provider_t *create(const clap_preset_discovery_facto
     {
         static auto pm = new prov::Provider{};
         pm->indexer = indexer;
-        SXSNLOG("Create " << pm->pm.userPatchesPath.u8string());
         static struct clap_preset_discovery_provider provider = {
             get_descriptor(nullptr, 0), pm, prov::init, prov::destroy, prov::get_metadata,
             prov::get_extension};
@@ -174,7 +152,6 @@ const clap_preset_discovery_provider_t *create(const clap_preset_discovery_facto
 } // namespace fac
 const clap_preset_discovery_factory_t *sixSinesPresetDiscoveryFactory()
 {
-    SXSNLOG("Factory Create");
     static clap_preset_discovery_factory_t factory = {fac::count, fac::get_descriptor, fac::create};
     return &factory;
 }

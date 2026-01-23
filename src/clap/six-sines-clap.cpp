@@ -39,6 +39,7 @@ namespace baconpaul::six_sines
 {
 
 extern const clap_plugin_descriptor *getDescriptor();
+extern const clap_plugin_descriptor *getMultiOutDescriptor();
 
 namespace clapimpl
 {
@@ -52,7 +53,8 @@ using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
 template <bool multiOut>
 struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 {
-    SixSinesClap(const clap_host *h) : plugHelper_t(getDescriptor(), h)
+    SixSinesClap(const clap_host *h)
+        : plugHelper_t(multiOut ? getMultiOutDescriptor() : getDescriptor(), h)
     {
         engine = std::make_unique<Synth>(multiOut);
 
@@ -61,7 +63,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
         clapJuceShim->setResizable(true);
     }
-    virtual ~SixSinesClap(){};
+    virtual ~SixSinesClap() {};
 
     std::unique_ptr<Synth> engine;
     size_t blockPos{0};
@@ -348,8 +350,9 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         {
             try
             {
+                SXSNLOG("Loading preset from file '" << location << "'");
                 auto p = fs::path(fs::u8path(location));
-                if (p.extension() == "sxsnp")
+                if (p.extension() == ".sxsnp")
                 {
                     std::ifstream t(p);
                     if (!t.is_open())
@@ -365,11 +368,31 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                                                                    patchCopy.name, _host.host());
                     return true;
                 }
+                else
+                {
+                    SXSNLOG("File extension is not .sxsnp '" << p.extension().u8string() << "'");
+                }
             }
             catch (const fs::filesystem_error &e)
             {
                 SXSNLOG("File System Error " << e.what() << " with " << location);
             }
+        }
+        else if (location_kind ==
+                 clap_preset_discovery_location_kind::CLAP_PRESET_DISCOVERY_LOCATION_PLUGIN)
+        {
+            auto idx = std::atoi(load_key);
+            // This is a bit of a pattern problem. The preset manager should be on the engine.
+            auto pm = presets::PresetManager(_host.host());
+            if (idx < 0 || idx >= pm.factoryPatchVector.size())
+                return false;
+
+            auto &p = pm.factoryPatchVector[idx];
+
+            // TODO : Assert the keys match here
+            Patch patchCopy;
+            pm.loadFactoryPreset(patchCopy, engine->mainToAudio, p.first, p.second);
+            return true;
         }
         return false;
     }

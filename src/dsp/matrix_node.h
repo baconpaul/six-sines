@@ -248,7 +248,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
     MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, MonoValues &mv, const VoiceValues &vv)
         : selfNode(sn), monoValues(mv), voiceValues(vv), onto(on), fbBase(sn.fbLevel),
           lfoToFB(sn.lfoToFB), activeV(sn.active), envToFB(sn.envToFB), overdriveV(sn.overdrive),
-          EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv), ModulationSupport(sn, this, mv, vv){};
+          EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv), ModulationSupport(sn, this, mv, vv) {};
     bool active{true}, lfoMul{false};
     float overdriveFactor{1.0};
 
