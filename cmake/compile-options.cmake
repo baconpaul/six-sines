@@ -31,7 +31,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
             $<$<BOOL:${USE_SANITIZER}>:-fsanitize=undefined>
     )
     if (NOT APPLE)
-        add_compile_options(-march=nehalem)
+        add_compile_options($<IF:$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},aarch64>,-march=armv8-a,-march=nehalem>)
     endif()
 endif()
 
