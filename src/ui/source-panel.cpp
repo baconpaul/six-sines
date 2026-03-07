@@ -151,10 +151,10 @@ void SourcePanel::adjustRatio(int idx, bool up)
         rat *= sideSign;
 
         double ttr{0.};
-        if (up)
-            ttr = std::floor(pow(2.0, rat) + 0.001);
+        if ((up && sideSign > 0) || (!up && sideSign < 0))
+            ttr = std::floor(pow(2.0, rat) + 0.00001);
         else
-            ttr = std::ceil(pow(2.0, rat) - 0.001);
+            ttr = std::ceil(pow(2.0, rat) - 0.00001);
 
         if (up)
         {
@@ -163,7 +163,7 @@ void SourcePanel::adjustRatio(int idx, bool up)
         else
         {
             if (ttr == 1)
-                ttr = 0.5;
+                ttr = sideSign < 0 ? 2 : 0.5;
             else
                 ttr -= sideSign * 1;
         }
