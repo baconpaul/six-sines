@@ -14,7 +14,7 @@ target_link_libraries(six-sines-test
 
 if (WIN32)
 	if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-		target_link_libraries(scxt-test DbgHelp.lib)
+		target_link_libraries(six-sines-test DbgHelp.lib)
 	endif()
 endif()
 
