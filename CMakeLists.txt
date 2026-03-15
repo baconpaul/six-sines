@@ -80,7 +80,7 @@ endif()
 target_link_libraries(${PROJECT_NAME}-impl PUBLIC
         clap
 )
-target_link_libraries(${PROJECT_NAME}-impl PRIVATE
+target_link_libraries(${PROJECT_NAME}-impl PUBLIC  # PW change to public since we now have tests
         simde
         clap-helpers clap-wrapper-extensions
         mts-esp-client
@@ -138,6 +138,8 @@ add_clapfirst_installer(
         ${PROJECT_NAME}_auv2
         ${PROJECT_NAME}_standalone
 )
+
+add_subdirectory(tests EXCLUDE_FROM_ALL)
 
 
 

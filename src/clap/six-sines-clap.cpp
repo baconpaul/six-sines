@@ -34,6 +34,9 @@
 #include "ui/six-sines-editor.h"
 
 #include <clapwrapper/vst3.h>
+#include <clapwrapper/auv2.h>
+#include <numeric>
+#include <algorithm>
 
 namespace baconpaul::six_sines
 {
@@ -472,12 +475,38 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                clap_supported_note_expressions::AS_VST3_NOTE_EXPRESSION_PAN;
     }
 
+    static bool CLAP_ABI auv2_get_param_order(const clap_plugin_t *plugin, size_t *order,
+                                              size_t param_count) noexcept
+    {
+        auto *self = static_cast<SixSinesClap *>(plugin->plugin_data);
+        auto &params = self->engine->patch.params;
+        if (param_count != params.size())
+            return false;
+
+        std::iota(order, order + param_count, (size_t)0);
+        std::sort(order, order + param_count,
+                  [&params](size_t a, size_t b)
+                  {
+                      auto aBack = params[a]->meta.version;
+                      auto bBack = params[b]->meta.version;
+                      if (aBack != bBack)
+                          return aBack < bBack;
+                      return params[a]->meta.id < params[b]->meta.id;
+                  });
+        return true;
+    }
+
     const void *extension(const char *id) noexcept override
     {
         if (strcmp(id, CLAP_PLUGIN_AS_VST3) == 0)
         {
             static clap_plugin_as_vst3 v3p{vst3_getNumMIDIChannels, vst3_supportedNoteExpressions};
             return &v3p;
+        }
+        if (strcmp(id, CLAP_PLUGIN_AUV2_PARAM_ORDERING) == 0)
+        {
+            static clap_plugin_auv2_param_ordering_t auv2po{auv2_get_param_order};
+            return &auv2po;
         }
 
         return nullptr;
@@ -498,6 +527,13 @@ const clap_plugin *makePlugin(const clap_host *h, bool multiOut)
         auto res = new baconpaul::six_sines::clapimpl::SixSinesClap<false>(h);
         return res->clapPlugin();
     }
+}
+
+// Used for testing only
+const Patch *getPatchFromPlugin(const clap_plugin_t *plugin)
+{
+    auto *self = static_cast<clapimpl::SixSinesClap<false> *>(plugin->plugin_data);
+    return &self->engine->patch;
 }
 } // namespace baconpaul::six_sines
 
