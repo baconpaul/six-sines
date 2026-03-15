@@ -1,5 +1,8 @@
 add_subdirectory(sst/sst-cmake)
 
+add_library(catch2 INTERFACE)
+target_include_directories(catch2 INTERFACE catch2/include)
+
 add_subdirectory(clap-libs/clap EXCLUDE_FROM_ALL)
 add_subdirectory(clap-libs/clap-helpers EXCLUDE_FROM_ALL)
 add_subdirectory(fmt EXCLUDE_FROM_ALL)

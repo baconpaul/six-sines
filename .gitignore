@@ -6,3 +6,4 @@ cmake-*/
 ignore/
 minst*.sh
 BUILD_VERSION
+CLAUDE.md

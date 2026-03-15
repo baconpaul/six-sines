@@ -76,13 +76,25 @@ struct Patch : pats::PatchBase<Patch, Param>
     static constexpr uint32_t floatFlags{CLAP_PARAM_IS_AUTOMATABLE};
     static constexpr uint32_t boolFlags{CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED};
 
-    static md_t floatMd() { return md_t().asFloat().withFlags(floatFlags); }
-    static md_t floatEnvRateMd()
+    static constexpr uint64_t version_110 = 0x010100;
+    static constexpr uint64_t version_120 = 0x010201;
+    static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
+    static md_t floatMd(uint64_t version = version_110)
     {
-        return md_t().asFloat().withFlags(floatFlags).as25SecondExpTime();
+        return baseMd(version).asFloat().withFlags(floatFlags);
     }
-    static md_t boolMd() { return md_t().asBool().withFlags(boolFlags); }
-    static md_t intMd() { return md_t().asInt().withFlags(boolFlags); }
+    static md_t floatEnvRateMd(uint64_t version = version_110)
+    {
+        return baseMd(version).asFloat().withFlags(floatFlags).as25SecondExpTime();
+    }
+    static md_t boolMd(uint64_t version = version_110)
+    {
+        return baseMd(version).asBool().withFlags(boolFlags);
+    }
+    static md_t intMd(uint64_t version = version_110)
+    {
+        return baseMd(version).asInt().withFlags(boolFlags);
+    }
 
     Patch()
         : pats::PatchBase<Patch, Param>(),
@@ -173,7 +185,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                             .withID(id0 + 4)
                             .withName(name + " LFO Active")
                             .withGroupName(name)),
-              tempoSync(md_t() // non-automatable
+              tempoSync(baseMd() // non-automatable
                             .asBool()
                             .withID(id0 + 5)
                             .withName(name + " Temposync")
@@ -375,7 +387,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             : modsource(scpu::make_array_lambda<Param, numModsPer>(
                   [id0, name](int i)
                   {
-                      return md_t()
+                      return baseMd()
                           .asInt()
                           .withRange(0, 8192)
                           .withID(id0 + 2 * i)
@@ -589,7 +601,7 @@ struct Patch : pats::PatchBase<Patch, Param>
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
                   {
-                      return md_t()
+                      return baseMd()
                           .withName(name(idx) + " Mod Target " + std::to_string(i))
                           .withGroupName(name(idx))
                           .withRange(0, 2000)
@@ -712,7 +724,7 @@ struct Patch : pats::PatchBase<Patch, Param>
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
                   {
-                      return md_t()
+                      return baseMd()
                           .withName(name(idx) + " Mod Target " + std::to_string(i))
                           .withGroupName(name(idx))
                           .withRange(0, 2000)
@@ -831,7 +843,7 @@ struct Patch : pats::PatchBase<Patch, Param>
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
                   {
-                      return md_t()
+                      return baseMd()
                           .withName(name(idx) + " Mod Target " + std::to_string(i))
                           .withGroupName(name(idx))
                           .withRange(0, 2000)
@@ -960,7 +972,7 @@ struct Patch : pats::PatchBase<Patch, Param>
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
                   {
-                      return md_t()
+                      return baseMd()
                           .withName(name(idx) + " Mod Target " + std::to_string(i))
                           .withGroupName(name(idx))
                           .withRange(0, 2000)
@@ -1065,7 +1077,7 @@ struct Patch : pats::PatchBase<Patch, Param>
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, opName, idx](int i)
                   {
-                      return md_t()
+                      return baseMd()
                           .withName(opName + " Mod Target " + std::to_string(i))
                           .withGroupName(opName)
                           .withRange(0, 2000)
@@ -1209,7 +1221,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                  .withGroupName(name())
                                  .withDefault(0.2)
                                  .withID(id(22))),
-              playMode(md_t()
+              playMode(baseMd()
                            .asInt()
                            .withRange(0, 1)
                            .withName(name() + " Play Mode")
@@ -1231,7 +1243,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                            .withDefault(2)
                            .withID(id(25))
                            .withLinearScaleFormatting("")),
-              polyLimit(md_t()
+              polyLimit(baseMd()
                             .asInt()
                             .withRange(1, maxVoices)
                             .withName(name() + " PolyLimit")
@@ -1240,7 +1252,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                             .withID(id(26))
                             .withLinearScaleFormatting("")),
               defaultTrigger(
-                  md_t()
+                  baseMd()
                       .asInt()
                       .withRange(0, 1)
                       .withName(name() + " Default Env Mode")
@@ -1267,7 +1279,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                       .withGroupName(name())
                       .withUnorderedMapFormatting({{0, "Reset"}, {1, "Pause"}, {2, "Continue"}})),
 
-              pianoModeActive(md_t()
+              pianoModeActive(baseMd()
                                   .asBool()
                                   .withName(name() + " Piano Mode Active")
                                   .withGroupName(name())
@@ -1372,7 +1384,7 @@ struct Patch : pats::PatchBase<Patch, Param>
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this](int i)
                   {
-                      return md_t()
+                      return baseMd()
                           .withName(name() + " Mod Target " + std::to_string(i))
                           .withGroupName(name())
                           .withRange(0, 2000)
