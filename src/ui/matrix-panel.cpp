@@ -36,6 +36,11 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         Spower[i]->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
         Spower[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*Spower[i]);
+        SpowerData[i]->onGuiSetValue = [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->optionalAllSoundsOffOnToggle();
+        };
 
         Slabels[i] = std::make_unique<jcmp::Label>();
         Slabels[i]->setText("Op " + std::to_string(i + 1) + " " + u8"\U000021A9");
@@ -47,6 +52,7 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
                 return;
             w->editor.setAndSendParamValue(w->editor.patchCopy.selfNodes[i].active, true);
             w->editor.setAndSendParamValue(w->editor.patchCopy.sourceNodes[i].active, true);
+            w->optionalAllSoundsOffOnToggle();
             w->repaint();
         };
         sst::jucegui::component_adapters::setTraversalId(Spower[i].get(), i * 50 + 47);
@@ -64,6 +70,11 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         Mpower[i]->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
         Mpower[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*Mpower[i]);
+        MpowerData[i]->onGuiSetValue = [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->optionalAllSoundsOffOnToggle();
+        };
 
         MmodMode[i] = std::make_unique<sst::jucegui::components::TextPushButton>();
         MmodMode[i]->setLabel(std::to_string(i));
@@ -96,6 +107,7 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
                                            true);
             w->editor.setAndSendParamValue(w->editor.patchCopy.sourceNodes[si].active.meta.id, true,
                                            true);
+            w->optionalAllSoundsOffOnToggle();
             w->repaint();
         };
 

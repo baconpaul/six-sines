@@ -27,6 +27,8 @@ enum Defaults
     zoomLevel,
     useSoftwareRenderer, // only used on windows
     flipSourceAndMatrix,
+    designModeRunAllNodes,
+    designModeAllSoundsOffOnToggle,
     numDefaults
 };
 
@@ -42,6 +44,10 @@ inline std::string defaultName(Defaults d)
         return "useSoftwareRenderer";
     case flipSourceAndMatrix:
         return "flipSourceAndMatrix";
+    case designModeRunAllNodes:
+        return "designModeRunAllNodes";
+    case designModeAllSoundsOffOnToggle:
+        return "designModeAllSoundsOffOnToggle";
     case numDefaults:
     {
         SXSNLOG("Software Error - defaults found");

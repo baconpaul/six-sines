@@ -175,7 +175,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     void clearOutputs() { memset(output, 0, sizeof(output)); }
 
-    void snapActive() { active = activeV > 0.5; }
+    void snapActive() { active = activeV > 0.5 || monoValues.designModeRunAll; }
 
     float baseFrequency{0};
     void setBaseFrequency(float freq, float octFac)

@@ -63,6 +63,7 @@ struct MonoValues
     float channelAT{0.f};
 
     bool attackFloorOnRetrig{true};
+    bool designModeRunAll{false};
 
     std::array<float *, numMacros> macroPtr;
 
