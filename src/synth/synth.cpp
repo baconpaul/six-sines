@@ -677,6 +677,12 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             voiceManager->allSoundsOff();
         }
         break;
+        case MainToAudioMsg::SET_DESIGN_MODE_RUN_ALL:
+        {
+            monoValues.designModeRunAll = uiM->value > 0.5;
+            voiceManager->allSoundsOff();
+        }
+        break;
         }
         uiM = mainToAudio.pop();
     }

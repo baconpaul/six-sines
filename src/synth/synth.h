@@ -338,7 +338,8 @@ struct Synth
             SEND_REQUEST_RESCAN,
             EDITOR_ATTACH_DETATCH, // paramid is true for attach and false for detach
             SEND_PREP_FOR_STREAM,
-            PANIC_STOP_VOICES
+            PANIC_STOP_VOICES,
+            SET_DESIGN_MODE_RUN_ALL
         } action;
         uint32_t paramId{0};
         float value{0};

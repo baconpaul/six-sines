@@ -61,7 +61,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         envResetMod();
         lfoResetMod();
 
-        active = activeV > 0.5;
+        active = activeV > 0.5 || monoValues.designModeRunAll;
 
         modMode = (int)std::round(modmodeV);
         rmScale = (int)std::round(rmScaleV);
@@ -258,7 +258,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
         envResetMod();
         lfoResetMod();
 
-        active = activeV > 0.5;
+        active = activeV > 0.5 || monoValues.designModeRunAll;
         if (active)
         {
             bindModulation();
@@ -400,7 +400,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         envResetMod();
         lfoResetMod();
 
-        active = activeF > 0.5;
+        active = activeF > 0.5 || monoValues.designModeRunAll;
         memset(output, 0, sizeof(output));
         if (active)
         {

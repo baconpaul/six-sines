@@ -156,7 +156,13 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::HORIZONTAL);
     addAndMakeVisible(*vuMeter);
 
+    if (defaultsProvider->getUserDefaultValue(Defaults::designModeRunAllNodes, false))
+        sessionRunAllNodes = true;
+    if (defaultsProvider->getUserDefaultValue(Defaults::designModeAllSoundsOffOnToggle, false))
+        sessionAllSoundsOffOnToggle = true;
+
     mainToAudio.push({Synth::MainToAudioMsg::EDITOR_ATTACH_DETATCH, true});
+    sendDesignModeToAudio();
     mainToAudio.push({Synth::MainToAudioMsg::REQUEST_REFRESH, true});
     requestParamsFlush();
 
@@ -173,6 +179,8 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
 }
 SixSinesEditor::~SixSinesEditor()
 {
+    sessionRunAllNodes = false;
+    mainToAudio.push({Synth::MainToAudioMsg::SET_DESIGN_MODE_RUN_ALL, 0, 0.f});
     mainToAudio.push({Synth::MainToAudioMsg::EDITOR_ATTACH_DETATCH, false});
     idleTimer->stopTimer();
     setLookAndFeel(nullptr);
@@ -738,6 +746,51 @@ void SixSinesEditor::showPresetPopup()
 
     p.addSubMenu("User Interface", uim);
 
+    auto dm = juce::PopupMenu();
+    auto runAll = isRunAllNodes();
+    auto asoToggle = isAllSoundsOffOnToggle();
+    dm.addItem("Run all nodes independent of power", true, sessionRunAllNodes,
+               [w = juce::Component::SafePointer(this)]()
+               {
+                   if (!w)
+                       return;
+                   w->sessionRunAllNodes = !w->sessionRunAllNodes;
+                   w->sendDesignModeToAudio();
+               });
+    dm.addItem("All sounds off on power toggle", true, sessionAllSoundsOffOnToggle,
+               [w = juce::Component::SafePointer(this)]()
+               {
+                   if (!w)
+                       return;
+                   w->sessionAllSoundsOffOnToggle = !w->sessionAllSoundsOffOnToggle;
+               });
+    dm.addSeparator();
+    auto prefRunAll = defaultsProvider->getUserDefaultValue(Defaults::designModeRunAllNodes, false);
+    dm.addItem("Always run all nodes when UI is open", true, prefRunAll,
+               [w = juce::Component::SafePointer(this), prefRunAll]()
+               {
+                   if (!w)
+                       return;
+                   w->defaultsProvider->updateUserDefaultValue(Defaults::designModeRunAllNodes,
+                                                               !prefRunAll);
+                   if (!prefRunAll)
+                       w->sessionRunAllNodes = true;
+                   w->sendDesignModeToAudio();
+               });
+    auto prefASO =
+        defaultsProvider->getUserDefaultValue(Defaults::designModeAllSoundsOffOnToggle, false);
+    dm.addItem("Always send all sounds off on toggle when UI is open", true, prefASO,
+               [w = juce::Component::SafePointer(this), prefASO]()
+               {
+                   if (!w)
+                       return;
+                   w->defaultsProvider->updateUserDefaultValue(
+                       Defaults::designModeAllSoundsOffOnToggle, !prefASO);
+                   if (!prefASO)
+                       w->sessionAllSoundsOffOnToggle = true;
+               });
+    p.addSubMenu("Design Mode", dm);
+
     p.addSeparator();
     p.addItem("Read the Manual",
               []()
@@ -1243,6 +1296,16 @@ void SixSinesEditor::sneakyStartupGrabFrom(Patch &other)
     }
     strncpy(patchCopy.name, other.name, 255);
     postPatchChange(other.name);
+}
+
+bool SixSinesEditor::isRunAllNodes() const { return sessionRunAllNodes; }
+
+bool SixSinesEditor::isAllSoundsOffOnToggle() const { return sessionAllSoundsOffOnToggle; }
+
+void SixSinesEditor::sendDesignModeToAudio()
+{
+    mainToAudio.push(
+        {Synth::MainToAudioMsg::SET_DESIGN_MODE_RUN_ALL, 0, isRunAllNodes() ? 1.f : 0.f});
 }
 
 bool SixSinesEditor::toggleDebug()

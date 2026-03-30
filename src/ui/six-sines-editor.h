@@ -161,6 +161,12 @@ struct SixSinesEditor : jcmp::WindowPanel
 
     float engineSR{0}, hostSR{0};
 
+    bool sessionRunAllNodes{false};
+    bool sessionAllSoundsOffOnToggle{false};
+    bool isRunAllNodes() const;
+    bool isAllSoundsOffOnToggle() const;
+    void sendDesignModeToAudio();
+
     void requestParamsFlush();
     const clap_host_params_t *clapParamsExtension{nullptr};
 
@@ -172,6 +178,12 @@ struct HasEditor
 {
     SixSinesEditor &editor;
     HasEditor(SixSinesEditor &e) : editor(e) {}
+
+    void optionalAllSoundsOffOnToggle()
+    {
+        if (editor.isAllSoundsOffOnToggle())
+            editor.mainToAudio.push({Synth::MainToAudioMsg::PANIC_STOP_VOICES});
+    }
 };
 } // namespace baconpaul::six_sines::ui
 #endif

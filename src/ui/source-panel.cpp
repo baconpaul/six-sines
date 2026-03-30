@@ -37,6 +37,11 @@ SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEdi
         power[i]->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
         power[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*power[i]);
+        powerData[i]->onGuiSetValue = [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->optionalAllSoundsOffOnToggle();
+        };
 
         labels[i] = std::make_unique<jcmp::Label>();
         labels[i]->setText("Op " + std::to_string(i + 1) + " Ratio");

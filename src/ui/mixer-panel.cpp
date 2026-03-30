@@ -36,6 +36,11 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
         power[i]->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
         power[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*power[i]);
+        powerData[i]->onGuiSetValue = [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->optionalAllSoundsOffOnToggle();
+        };
 
         createComponent(editor, *this, mn[i].solo, solo[i], soloData[i], i);
         solo[i]->setLabel("S");
@@ -53,6 +58,7 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
                                            true);
             w->editor.setAndSendParamValue(w->editor.patchCopy.sourceNodes[i].active.meta.id, true,
                                            true);
+            w->optionalAllSoundsOffOnToggle();
             w->repaint();
         };
 
