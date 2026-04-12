@@ -60,6 +60,15 @@ struct Synth
     std::array<std::unique_ptr<resampler_t>, 1 + numOps> resampler;
     std::array<SRC_STATE *, 1 + numOps> lState{}, rState{};
 
+    // Audio input upsampling: host rate -> engine rate
+    using audioInResampler_t = sst::basic_blocks::dsp::LanczosResampler<blockSize>;
+    std::unique_ptr<audioInResampler_t> audioInResampler;
+    void pushAudioIn(float L, float R)
+    {
+        if (audioInResampler)
+            audioInResampler->push(L, R);
+    }
+
     Patch patch;
     MonoValues monoValues;
     sst::basic_blocks::dsp::LagCollection<130> midiCCLagCollection; // 130 for 128 + pitch + chanat

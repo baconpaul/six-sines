@@ -44,6 +44,8 @@ Voice::Voice(const Patch &p, MonoValues &mv)
 {
     std::fill(isKeytrack.begin(), isKeytrack.end(), true);
     std::fill(cmRatio.begin(), cmRatio.end(), 1.f);
+    for (int i = 0; i < numOps; ++i)
+        src[i].opIndex = i;
 }
 
 void Voice::attack()
@@ -113,7 +115,8 @@ void Voice::renderBlock()
             auto pos = MatrixIndex::positionForSourceTarget(j, i);
             matrixNode[pos].applyBlock();
         }
-        selfNode[i].applyBlock();
+        if ((int)std::round(src[i].waveForm) != SinTable::AUDIO_IN)
+            selfNode[i].applyBlock();
         src[i].renderBlock();
         mixerNode[i].renderBlock();
     }

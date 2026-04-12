@@ -77,6 +77,8 @@ struct MonoValues
     ModMatrixConfig modMatrixConfig;
 
     SRProvider sr;
+
+    float audioInBlock alignas(16)[blockSize]{}; // engine-rate audio in, mono mix
 };
 }; // namespace baconpaul::six_sines
 #endif // MONO_VALUES_H

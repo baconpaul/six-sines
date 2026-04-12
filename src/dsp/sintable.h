@@ -55,6 +55,20 @@ struct SinTable
         HALF_BLACKMAN_HARRIS_WINDOW,
         TUKEY_WINDOW,
 
+        // AUDIO_IN must stay last among the WaveForm values (just before NUM_WAVEFORMS).
+        // New synthesized waveforms should be inserted BEFORE this line, not after.
+        //
+        // Streaming convention: waveForm params stream as integer values, so adding a
+        // new waveform N at position N shifts nothing as long as existing values are
+        // unchanged. When you add new waveforms:
+        //   1. Insert them here before AUDIO_IN (they will get values 21, 22, ...)
+        //   2. AUDIO_IN's integer value will increase by however many you add
+        //   3. Bump the streaming version of SourceNode in patch.h and write a version
+        //      handler that maps the old AUDIO_IN value to the new one
+        //   4. Update waveformMenuBase in waveform-display.h with the new entries
+        //      (the static_assert there will catch this at compile time)
+        AUDIO_IN, // no table entry; bypassed in OpSource::renderBlock
+
         NUM_WAVEFORMS
     };
 

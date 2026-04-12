@@ -15,6 +15,7 @@
 
 #include "self-sub-panel.h"
 #include "patch-data-bindings.h"
+#include "dsp/sintable.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -119,10 +120,37 @@ void SelfSubPanel::resized()
 
 void SelfSubPanel::setEnabledState()
 {
+    // When op1 (index 0) is in AUDIO_IN mode, feedback is skipped — grey everything out
+    auto isAudioIn =
+        (index == 0) &&
+        ((int)std::round(editor.patchCopy.sourceNodes[0].waveForm.value) == SinTable::AUDIO_IN);
+
     auto en = envMulD->getValue() < 0.5;
-    envToLev->setEnabled(en);
-    envToLevL->setEnabled(en);
+    envToLev->setEnabled(en && !isAudioIn);
+    envToLevL->setEnabled(en && !isAudioIn);
+    lfoToFb->setEnabled(!isAudioIn);
+    lfoToFbL->setEnabled(!isAudioIn);
+    overdrive->setEnabled(!isAudioIn);
+    envMul->setEnabled(!isAudioIn);
+
+    // DAHDSR envelope controls
+    for (int i = 0; i < DAHDSRComponents::nels; ++i)
+        slider[i]->setEnabled(!isAudioIn);
+    for (int i = 0; i < DAHDSRComponents::nShape; ++i)
+        shapes[i]->setEnabled(!isAudioIn);
+    triggerButton->setEnabled(!isAudioIn);
+
+    // LFO controls
+    rate->setEnabled(!isAudioIn);
+    deform->setEnabled(!isAudioIn);
+    phase->setEnabled(!isAudioIn);
+    shape->setEnabled(!isAudioIn);
+    tempoSync->setEnabled(!isAudioIn);
+    bipolar->setEnabled(!isAudioIn);
+    isEnv->setEnabled(!isAudioIn);
+
     repaint();
+    editor.repaint();
 }
 
 IMPLEMENTS_CLIPBOARD_SUPPORT(SelfSubPanel, selfNodes[index],

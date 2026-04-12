@@ -14,6 +14,9 @@
  */
 
 #include "source-sub-panel.h"
+#include "source-panel.h"
+#include "matrix-panel.h"
+#include "self-sub-panel.h"
 #include <sst/jucegui/layouts/ListLayout.h>
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
@@ -32,7 +35,21 @@ struct WavPainter : juce::Component
 
     void paint(juce::Graphics &g)
     {
-        st.setWaveForm((SinTable::WaveForm)std::round(wf.value));
+        auto wfVal = (SinTable::WaveForm)std::round(wf.value);
+        if (wfVal == SinTable::AUDIO_IN)
+        {
+            // Draw a simple "audio in" indicator — two horizontal lines suggesting a signal
+            g.setColour(juce::Colours::white.withAlpha(0.5f));
+            auto h = getHeight();
+            auto w = getWidth();
+            auto cy = h / 2;
+            g.drawLine(0, cy, w, cy, 1.f);
+            g.setColour(juce::Colours::white);
+            g.setFont(juce::Font(juce::FontOptions{}.withHeight(10.f)));
+            g.drawFittedText("Audio In", getLocalBounds(), juce::Justification::centred, 1);
+            return;
+        }
+        st.setWaveForm(wfVal);
         uint32_t phase{0};
         phase += (1 << 26) * ph.value;
         int nPixels{getWidth()};
@@ -114,11 +131,18 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     addAndMakeVisible(*wavPainter);
 
     createComponent(editor, *this, sn.waveForm, wavButton, wavButtonD);
+    wavButtonD->includeAudioIn = (idx == 0);
     addAndMakeVisible(*wavButton);
     wavButtonD->onGuiSetValue = [this]()
     {
         wavPainter->repaint();
         wavButton->repaint();
+        setEnabledState();
+    };
+    wavButton->onPopupMenu = [w = juce::Component::SafePointer(this)]()
+    {
+        if (w)
+            w->showWaveformPopup();
     };
     traverse(wavButton);
 
@@ -263,19 +287,102 @@ void SourceSubPanel::resized()
 void SourceSubPanel::setEnabledState()
 {
     auto &sn = editor.patchCopy.sourceNodes[index];
+    auto isAudioIn = ((int)std::round(sn.waveForm.value) == SinTable::AUDIO_IN);
+
     auto ekt = sn.keyTrack.value < 0.5;
     auto ktl = sn.keyTrackValueIsLow > 0.5;
-    keyTrackValue->setEnabled(ekt && !ktl);
+    keyTrackValue->setEnabled(ekt && !ktl && !isAudioIn);
     keyTrackValue->setVisible(!ktl);
 
-    keyTrackLowValue->setEnabled(ekt && ktl);
+    keyTrackLowValue->setEnabled(ekt && ktl && !isAudioIn);
     keyTrackLowValue->setVisible(ktl);
 
-    keyTrackLow->setEnabled(ekt);
-    tsposeButton->setEnabled(!ekt);
+    keyTrackLow->setEnabled(ekt && !isAudioIn);
+    tsposeButton->setEnabled(!ekt && !isAudioIn);
+
+    // When AUDIO_IN: env/LFO depth knobs and ratio sliders are inactive
+    envToRatio->setEnabled(!isAudioIn);
+    envToRatioFine->setEnabled(!isAudioIn);
+    lfoToRatio->setEnabled(!isAudioIn);
+    lfoToRatioFine->setEnabled(!isAudioIn);
+    startingPhase->setEnabled(!isAudioIn);
+
+    // DAHDSR envelope controls
+    for (int i = 0; i < DAHDSRComponents::nels; ++i)
+        slider[i]->setEnabled(!isAudioIn);
+    for (int i = 0; i < DAHDSRComponents::nShape; ++i)
+        shapes[i]->setEnabled(!isAudioIn);
+    triggerButton->setEnabled(!isAudioIn);
+
+    // LFO controls
+    rate->setEnabled(!isAudioIn);
+    deform->setEnabled(!isAudioIn);
+    phase->setEnabled(!isAudioIn);
+    shape->setEnabled(!isAudioIn);
+    tempoSync->setEnabled(!isAudioIn);
+    bipolar->setEnabled(!isAudioIn);
+    isEnv->setEnabled(!isAudioIn);
+
+    // Modulation slots
+    for (int i = 0; i < numModsPer; ++i)
+    {
+        depthSlider[i]->setEnabled(!isAudioIn);
+        sourceMenu[i]->setEnabled(!isAudioIn);
+        targetMenu[i]->setEnabled(!isAudioIn);
+    }
+
+    // Notify source/matrix panels to grey out ratio knob and feedback knob
+    editor.sourcePanel->updateOpEnabledState(index);
+    editor.matrixPanel->updateSelfKnobState(index);
+
+    // If op1's feedback sub-panel is currently open, update its enabled state too
+    if (index == 0 && editor.selfSubPanel->isVisible())
+        editor.selfSubPanel->setEnabledState();
 
     unisonBehaviorB->setEnabled(editor.patchCopy.output.unisonCount > 1);
     repaint();
+    editor.repaint();
+}
+
+void SourceSubPanel::showWaveformPopup()
+{
+    auto &sn = editor.patchCopy.sourceNodes[index];
+    auto wfid = sn.waveForm.meta.id;
+    auto currentVal = (int)std::round(sn.waveForm.value);
+
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("Op " + std::to_string(index + 1) + " Waveform");
+    p.addSeparator();
+
+    auto addEntry = [&](const WaveformMenuEntry &entry)
+    {
+        if (entry.isSeparator)
+        {
+            p.addSeparator();
+        }
+        else
+        {
+            auto val = entry.waveformValue;
+            p.addItem(entry.label, true, currentVal == val,
+                      [val, wfid, w = juce::Component::SafePointer(this)]()
+                      {
+                          if (!w)
+                              return;
+                          w->editor.setAndSendParamValue(wfid, val);
+                          w->wavButtonD->onGuiSetValue();
+                      });
+        }
+    };
+
+    for (int i = 0; i < waveformMenuBaseCount; ++i)
+        addEntry(waveformMenuBase[i]);
+
+    if (wavButtonD->includeAudioIn)
+        for (int i = 0; i < waveformMenuAudioInCount; ++i)
+            addEntry(waveformMenuAudioIn[i]);
+
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
+                    makeMenuAccessibleButtonCB(wavButton.get()));
 }
 
 void SourceSubPanel::showUnisonFeaturesMenu()

@@ -25,6 +25,7 @@
 #include "modulation-components.h"
 #include "sst/jucegui/components/RuledLabel.h"
 #include "clipboard.h"
+#include "waveform-display.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -60,7 +61,7 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::Label> lfoToRatioFineL;
 
     std::unique_ptr<jcmp::JogUpDownButton> wavButton;
-    std::unique_ptr<PatchDiscrete> wavButtonD;
+    std::unique_ptr<WaveformPatchDiscrete> wavButtonD;
 
     std::unique_ptr<jcmp::RuledLabel> modTitle, lfoModTitle, wavTitle, keyTrackTitle;
 
@@ -89,6 +90,7 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::Label> tsposeButtonL;
 
     void setEnabledState();
+    void showWaveformPopup();
     void showUnisonFeaturesMenu();
 
     HAS_CLIPBOARD_SUPPORT;

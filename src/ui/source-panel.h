@@ -50,6 +50,7 @@ struct SourcePanel : jcmp::NamedPanel, HasEditor
     std::array<std::unique_ptr<jcmp::GlyphButton>, numOps> upButton, downButton;
 
     void adjustRatio(int idx, bool up);
+    void updateOpEnabledState(int idx);
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_PANEL_H

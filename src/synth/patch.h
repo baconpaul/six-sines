@@ -527,6 +527,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                {SinTable::WaveForm::HALF_BLACKMAN_HARRIS_WINDOW,
                                 std::string() + u8"\U000000BD" + " Blackman Harris"},
                                {SinTable::WaveForm::TUKEY_WINDOW, "Tukey"},
+                               {SinTable::WaveForm::AUDIO_IN, "Audio In"},
                            })),
 
               keyTrack(boolMd()
