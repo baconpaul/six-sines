@@ -121,13 +121,14 @@ float Patch::migrateParamValueFromVersion(Param *p, float value, uint32_t versio
         if (value > 3)
             value = value + 1;
 
-        if (value == SinTable::TX2)
+        auto ivalue = (int)std::round(value);
+        if (ivalue == SinTable::TX2)
             value = SinTable::SPIKY_TX2;
-        if (value == SinTable::TX4)
+        if (ivalue == SinTable::TX4)
             value = SinTable::SPIKY_TX4;
-        if (value == SinTable::TX6)
+        if (ivalue == SinTable::TX6)
             value = SinTable::SPIKY_TX6;
-        if (value == SinTable::TX8)
+        if (ivalue == SinTable::TX8)
             value = SinTable::SPIKY_TX8;
     }
     return value;
