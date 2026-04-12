@@ -84,13 +84,24 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     bool implementsAudioPorts() const noexcept override { return true; }
     uint32_t audioPortsCount(bool isInput) const noexcept override
     {
-        return isInput ? 0 : (multiOut ? 7 : 1);
+        return isInput ? 1 : (multiOut ? 7 : 1);
     }
     bool audioPortsInfo(uint32_t index, bool isInput,
                         clap_audio_port_info *info) const noexcept override
     {
-        assert(!isInput);
-        if (isInput || index > (multiOut ? 6 : 0))
+        if (isInput)
+        {
+            if (index != 0)
+                return false;
+            info->id = 82649;
+            info->in_place_pair = CLAP_INVALID_ID;
+            strncpy(info->name, "Audio In", sizeof(info->name));
+            info->flags = 0;
+            info->channel_count = 2;
+            info->port_type = CLAP_PORT_STEREO;
+            return true;
+        }
+        if (index > (multiOut ? 6 : 0))
             return false;
         info->id = 75241 + index;
         info->in_place_pair = CLAP_INVALID_ID;
@@ -166,8 +177,17 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             out[2 * i + 1] = lo[1];
         }
 
+        const float *audioInL{nullptr}, *audioInR{nullptr};
+        if (process->audio_inputs_count > 0 && process->audio_inputs[0].data32)
+        {
+            audioInL = process->audio_inputs[0].data32[0];
+            audioInR = process->audio_inputs[0].data32[1];
+        }
+
         for (auto s = 0U; s < process->frames_count; ++s)
         {
+            engine->pushAudioIn(audioInL ? audioInL[s] : 0.f, audioInR ? audioInR[s] : 0.f);
+
             if (blockPos == 0)
             {
                 // Only realy need to run events when we do the block process

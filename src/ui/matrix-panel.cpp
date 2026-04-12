@@ -18,6 +18,7 @@
 #include "self-sub-panel.h"
 #include "ui-constants.h"
 #include "knob-highlight.h"
+#include "dsp/sintable.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -322,6 +323,16 @@ void MatrixPanel::showModModeMenu(int i)
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
                     makeMenuAccessibleButtonCB(MmodMode[i].get()));
+}
+
+void MatrixPanel::updateSelfKnobState(int idx)
+{
+    if (idx < 0 || idx >= (int)numOps)
+        return;
+    auto &sn = editor.patchCopy.sourceNodes[idx];
+    auto isAudioIn = ((int)std::round(sn.waveForm.value) == SinTable::WaveForm::AUDIO_IN);
+    Sknobs[idx]->setEnabled(!isAudioIn);
+    Spower[idx]->setEnabled(!isAudioIn);
 }
 
 } // namespace baconpaul::six_sines::ui

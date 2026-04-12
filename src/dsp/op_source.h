@@ -38,6 +38,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     float rmLevel alignas(16)[blockSize];
     float fmAmount alignas(16)[blockSize]; // in hz
     bool rmAssigned{false};
+    int opIndex{0}; // set by Voice constructor; 0 = op1 which can use AUDIO_IN
 
     float output alignas(16)[blockSize];
 
@@ -212,6 +213,21 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             memset(output, 0, sizeof(output));
             fbVal[0] = 0.f;
             fbVal[1] = 0.f;
+            return;
+        }
+
+        if ((int)std::round(waveForm) == SinTable::AUDIO_IN)
+        {
+            if (opIndex == 0)
+            {
+                for (int i = 0; i < blockSize; ++i)
+                    output[i] = monoValues.audioInBlock[i];
+            }
+            else
+            {
+                memset(output, 0, sizeof(output));
+            }
+            fbVal[0] = fbVal[1] = 0.f;
             return;
         }
 

@@ -17,6 +17,7 @@
 #include "source-panel.h"
 #include "source-sub-panel.h"
 #include "ui-constants.h"
+#include "dsp/sintable.h"
 #include "sst/jucegui/accessibility/KeyboardTraverser.h"
 #include "knob-highlight.h"
 #include <cmath>
@@ -180,6 +181,17 @@ void SourcePanel::adjustRatio(int idx, bool up)
     knobsData[idx]->setValueFromGUI(newValue);
     knobs[idx]->onEndEdit();
     repaint();
+}
+
+void SourcePanel::updateOpEnabledState(int idx)
+{
+    if (idx < 0 || idx >= (int)numOps)
+        return;
+    auto &sn = editor.patchCopy.sourceNodes[idx];
+    auto isAudioIn = ((int)std::round(sn.waveForm.value) == SinTable::WaveForm::AUDIO_IN);
+    knobs[idx]->setEnabled(!isAudioIn);
+    upButton[idx]->setEnabled(!isAudioIn);
+    downButton[idx]->setEnabled(!isAudioIn);
 }
 
 } // namespace baconpaul::six_sines::ui

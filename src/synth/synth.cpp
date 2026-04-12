@@ -174,6 +174,12 @@ void Synth::setSampleRate(double sampleRate)
         }
     }
 
+    // (Re)construct the audio-in resampler whenever the sample rate changes.
+    // LanczosResampler constructor zeroes its internal ring buffers, so this
+    // also acts as the "clear on rate change" requirement.
+    audioInResampler =
+        std::make_unique<audioInResampler_t>((float)hostSampleRate, (float)engineSampleRate);
+
     for (auto &[i, p] : patch.paramMap)
     {
         p->lag.setRateInMilliseconds(1000.0 * 64.0 / 48000.0, engineSampleRate, 1.0 / blockSize);
@@ -240,6 +246,20 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
     {
         loops++;
         lagHandler.process();
+
+        auto op1IsAudioIn =
+            ((int)std::round(patch.sourceNodes[0].waveForm.value) == SinTable::AUDIO_IN);
+        if (audioInResampler && op1IsAudioIn)
+        {
+            float aiL[blockSize]{}, aiR[blockSize]{};
+            auto got = (int)audioInResampler->populateNext(aiL, aiR, blockSize);
+            for (int i = 0; i < blockSize; ++i)
+                monoValues.audioInBlock[i] = (i < got) ? (aiL[i] + aiR[i]) * 0.5f : 0.f;
+        }
+        else
+        {
+            memset(monoValues.audioInBlock, 0, sizeof(monoValues.audioInBlock));
+        }
 
         if (portaContinuation.updateEveryBlock && portaContinuation.active)
         {

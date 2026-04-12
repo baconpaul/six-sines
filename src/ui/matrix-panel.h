@@ -61,6 +61,7 @@ struct MatrixPanel : jcmp::NamedPanel, HasEditor
 
     void setModModeDisplay(int);
     void showModModeMenu(int);
+    void updateSelfKnobState(int idx);
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_PANEL_H
