@@ -252,9 +252,10 @@ void SixSinesEditor::paint(juce::Graphics &g)
     jcmp::WindowPanel::paint(g);
     auto ft = style()->getFont(jcmp::Label::Styles::styleClass, jcmp::Label::Styles::labelfont);
 
-    bool isLight = defaultsProvider->getUserDefaultValue(Defaults::useLightSkin, false);
+    auto labelCol = style()->getColour(jcmp::base_styles::BaseLabel::styleClass,
+                                       jcmp::base_styles::BaseLabel::labelcolor);
 
-    g.setColour(juce::Colours::white.withAlpha(0.9f));
+    g.setColour(labelCol.withAlpha(0.9f));
     auto q = ft.withHeight(30);
     g.setFont(q);
     // g.drawText("Six", getLocalBounds().reduced(3,1), juce::Justification::topLeft);
@@ -274,17 +275,11 @@ void SixSinesEditor::paint(juce::Graphics &g)
             else
                 p.lineTo(xp + i, 0.45 * (-sx + 1) * ht + 4);
         }
-        if (isLight)
-            g.setColour(juce::Colours::navy.withAlpha(0.9f - sqrt((fr - 1) / 7.0f)));
-        else
-            g.setColour(juce::Colours::white.withAlpha(0.9f - sqrt((fr - 1) / 7.0f)));
+        g.setColour(labelCol.withAlpha(0.9f - sqrt((fr - 1) / 7.0f)));
         g.strokePath(p, juce::PathStrokeType(1));
     }
 
-    if (isLight)
-        g.setColour(juce::Colours::navy);
-    else
-        g.setColour(juce::Colours::white.withAlpha(0.5f));
+    g.setColour(labelCol.withAlpha(0.5f));
     q = ft.withHeight(12);
     g.setFont(q);
     g.drawText("https://github.com/baconpaul/six-sines", getLocalBounds().reduced(3, 3),
@@ -483,16 +478,24 @@ struct MenuValueTypein : HasEditor, juce::PopupMenu::CustomComponent, juce::Text
                 {
                     textEditor->setText(getInitialText(),
                                         juce::NotificationType::dontSendNotification);
-                    auto valCol = juce::Colour(0xFF, 0x90, 0x00);
+                    auto valCol =
+                        editor.style()->getColour(jcmp::base_styles::ValueBearing::styleClass,
+                                                  jcmp::base_styles::ValueBearing::value);
                     textEditor->setColour(juce::TextEditor::ColourIds::backgroundColourId,
                                           valCol.withAlpha(0.1f));
                     textEditor->setColour(juce::TextEditor::ColourIds::highlightColourId,
                                           valCol.withAlpha(0.15f));
                     textEditor->setJustification(juce::Justification::centredLeft);
                     textEditor->setColour(juce::TextEditor::ColourIds::outlineColourId,
-                                          juce::Colours::black.withAlpha(0.f));
+                                          juce::Colour());
                     textEditor->setColour(juce::TextEditor::ColourIds::focusedOutlineColourId,
-                                          juce::Colours::black.withAlpha(0.f));
+                                          juce::Colour());
+                    auto labelCol =
+                        editor.style()->getColour(jcmp::base_styles::BaseLabel::styleClass,
+                                                  jcmp::base_styles::BaseLabel::labelcolor);
+                    textEditor->setColour(juce::TextEditor::ColourIds::textColourId, labelCol);
+                    textEditor->setColour(juce::TextEditor::ColourIds::highlightedTextColourId,
+                                          labelCol);
                     textEditor->setBorder(juce::BorderSize<int>(3));
                     textEditor->applyColourToAllText(valCol, true);
                     textEditor->grabKeyboardFocus();

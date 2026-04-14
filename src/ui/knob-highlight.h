@@ -30,24 +30,13 @@ struct KnobHighlight : public juce::Component, HasEditor
     }
     void paint(juce::Graphics &g) override
     {
-        auto isLight = editor.defaultsProvider->getUserDefaultValue(Defaults::useLightSkin, false);
+        auto valCol = editor.style()->getColour(jcmp::base_styles::ValueBearing::styleClass,
+                                                jcmp::base_styles::ValueBearing::value);
+        g.setColour(valCol.withAlpha(0.3f));
+        g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(0.5), 4);
 
-        if (isLight)
-        {
-            g.setColour(juce::Colours::lightblue.withAlpha(0.3f));
-            g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(0.5), 4);
-
-            g.setColour(juce::Colours::navy);
-            g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5), 4, 1);
-        }
-        else
-        {
-            g.setColour(juce::Colour(0xFF * 0.3, 0x90 * 0.3, 00));
-            g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(0.5), 4);
-
-            g.setColour(juce::Colour(0xFF * 0.5, 0x90 * 0.5, 80));
-            g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5), 4, 1);
-        }
+        g.setColour(valCol);
+        g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5), 4, 1);
     }
 };
 } // namespace baconpaul::six_sines::ui

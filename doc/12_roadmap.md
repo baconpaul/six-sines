@@ -2,7 +2,7 @@
 
 I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatible. But expanded. Here's my rough list
 
-## Audio Input
+## Audio Input **DONE**
 
 - Add an audio input and allow operator 1 to take the audio input
 - Tricky part: have to upsample from audio input rate to six sines rate, so there will be some input latency. 
@@ -36,7 +36,7 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 
 ## UI Color Editor
 
-- Make sure everything is themed
+- Make sure everything is themed **DONE**
 - Write a jucegui theme editor which allows constaints to used subset I guess
 
 ## UI Ratio editor Upgrade

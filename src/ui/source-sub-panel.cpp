@@ -30,21 +30,24 @@ SourceSubPanel::~SourceSubPanel() {}
 struct WavPainter : juce::Component
 {
     const Param &wf, &ph;
+    SixSinesEditor &editor;
     SinTable st;
-    WavPainter(const Param &w, const Param &p) : wf(w), ph(p) {}
+    WavPainter(const Param &w, const Param &p, SixSinesEditor &e) : wf(w), ph(p), editor(e) {}
 
     void paint(juce::Graphics &g)
     {
+        auto labelCol = editor.style()->getColour(jcmp::base_styles::BaseLabel::styleClass,
+                                                  jcmp::base_styles::BaseLabel::labelcolor);
         auto wfVal = (SinTable::WaveForm)std::round(wf.value);
         if (wfVal == SinTable::AUDIO_IN)
         {
             // Draw a simple "audio in" indicator — two horizontal lines suggesting a signal
-            g.setColour(juce::Colours::white.withAlpha(0.5f));
+            g.setColour(labelCol.withAlpha(0.5f));
             auto h = getHeight();
             auto w = getWidth();
             auto cy = h / 2;
             g.drawLine(0, cy, w, cy, 1.f);
-            g.setColour(juce::Colours::white);
+            g.setColour(labelCol);
             g.setFont(juce::Font(juce::FontOptions{}.withHeight(10.f)));
             g.drawFittedText("Audio In", getLocalBounds(), juce::Justification::centred, 1);
             return;
@@ -68,7 +71,7 @@ struct WavPainter : juce::Component
                 p.lineTo(x, y);
             phase += dPhase;
         }
-        g.setColour(juce::Colours::white);
+        g.setColour(labelCol);
         g.strokePath(p, juce::PathStrokeType(1));
     }
 };
@@ -127,7 +130,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     wavTitle->setText("Wave");
     addAndMakeVisible(*wavTitle);
 
-    wavPainter = std::make_unique<WavPainter>(sn.waveForm, sn.startingPhase);
+    wavPainter = std::make_unique<WavPainter>(sn.waveForm, sn.startingPhase, editor);
     addAndMakeVisible(*wavPainter);
 
     createComponent(editor, *this, sn.waveForm, wavButton, wavButtonD);
