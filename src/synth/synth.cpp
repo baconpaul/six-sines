@@ -18,6 +18,8 @@
 #include "sst/basic-blocks/mechanics/block-ops.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
 
+#include "tinyxml/tinyxml.h"
+
 #include "libMTSClient.h"
 
 namespace baconpaul::six_sines
@@ -39,6 +41,9 @@ Synth::Synth(bool mo)
     {
         monoValues.macroPtr[i] = &patch.macroNodes[i].level.value;
     }
+
+    patch.dawExtraStateTo = [this](TiXmlElement &e) { toDawExtraState(e); };
+    patch.dawExtraStateFrom = [this](TiXmlElement &e) { fromDawExtraState(e); };
 
     std::fill(lState.begin(), lState.end(), nullptr);
     std::fill(rState.begin(), rState.end(), nullptr);
@@ -82,6 +87,33 @@ Synth::~Synth()
     for (auto rs : rState)
         if (rs)
             src_delete(rs);
+}
+
+void Synth::toDawExtraState(TiXmlElement &e) const
+{
+    TiXmlElement cm("colorMap");
+    if (!dawExtraState.colorMapXml.empty())
+    {
+        TiXmlText t(dawExtraState.colorMapXml);
+        t.SetCDATA(true);
+        cm.InsertEndChild(t);
+    }
+    e.InsertEndChild(cm);
+}
+
+void Synth::fromDawExtraState(TiXmlElement &e, DawExtraState &out)
+{
+    out = DawExtraState{};
+    auto *cm = e.FirstChildElement("colorMap");
+    if (!cm)
+        return;
+    auto *n = cm->FirstChild();
+    if (n)
+    {
+        auto *txt = n->ToText();
+        if (txt && txt->Value())
+            out.colorMapXml = txt->Value();
+    }
 }
 
 void Synth::setSampleRate(double sampleRate)
@@ -703,6 +735,18 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             voiceManager->allSoundsOff();
         }
         break;
+        case MainToAudioMsg::SET_DAW_EXTRA_STATE:
+        {
+            auto *p = static_cast<const DawExtraState *>(uiM->dawExtraStatePointer);
+            if (p)
+            {
+                dawExtraState = *p;
+                AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
+                au.dawExtraStatePointer = &dawExtraState;
+                audioToUi.push(au);
+            }
+        }
+        break;
         }
         uiM = mainToAudio.pop();
     }
@@ -784,6 +828,10 @@ void Synth::pushFullUIRefresh()
     audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
     audioToUi.push(
         {AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)hostSampleRate, (float)engineSampleRate});
+
+    AudioToUIMsg des{AudioToUIMsg::SET_DAW_EXTRA_STATE};
+    des.dawExtraStatePointer = &dawExtraState;
+    audioToUi.push(des);
 }
 
 void Synth::resetSoloState()

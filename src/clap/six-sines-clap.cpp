@@ -71,6 +71,10 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     std::unique_ptr<Synth> engine;
     size_t blockPos{0};
 
+    // Stable buffer so SET_DAW_EXTRA_STATE messages pushed from stateLoad remain valid
+    // for the audio thread to pick up after stateLoad returns.
+    Synth::DawExtraState loadedDawExtraState;
+
   protected:
     bool activate(double sampleRate, uint32_t minFrameCount,
                   uint32_t maxFrameCount) noexcept override
@@ -309,18 +313,27 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             engine->prepForStream();
         }
 
-        auto res = sst::plugininfra::patch_support::patchToOutStream(engine->patch, ostream);
+        auto res = sst::plugininfra::patch_support::patchToOutStream(engine->patch, ostream, true);
         engine->readyForStream = false;
         return res;
     }
     bool stateLoad(const clap_istream *istream) noexcept override
     {
         Patch patchCopy;
+        loadedDawExtraState = Synth::DawExtraState{};
+        patchCopy.dawExtraStateFrom = [this](TiXmlElement &e)
+        { Synth::fromDawExtraState(e, loadedDawExtraState); };
+
         if (!sst::plugininfra::patch_support::inStreamToPatch(istream, patchCopy))
             return false;
 
         presets::PresetManager::sendEntirePatchToAudio(patchCopy, engine->mainToAudio,
                                                        patchCopy.name, _host.host());
+
+        Synth::MainToAudioMsg des{Synth::MainToAudioMsg::SET_DAW_EXTRA_STATE};
+        des.dawExtraStatePointer = &loadedDawExtraState;
+        engine->mainToAudio.push(des);
+
         if (_host.canUseParams())
         {
             _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES);

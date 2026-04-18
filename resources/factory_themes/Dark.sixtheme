@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<SixSinesSkin version="1">
+  <Color name="Background" rgba="FF252528"/>
+  <Color name="Window Background" rgba="FF2A2B2E"/>
+  <Color name="Border" rgba="FF505050"/>
+  <Color name="Label" rgba="FFDCDCDC"/>
+  <Color name="Value" rgba="FFFF9000"/>
+  <Color name="Gutter" rgba="FF050500"/>
+  <Color name="Handle" rgba="FFD0D0D0"/>
+  <Color name="Menu Fill" rgba="FF252528"/>
+  <Color name="Button Fill" rgba="FF303033"/>
+  <Color name="VU Grad Start" rgba="FFC8C864"/>
+  <Color name="VU Grad End" rgba="FF6464DC"/>
+  <Color name="VU Overload" rgba="FFC83232"/>
+  <Color name="Patch Selector Background" rgba="FF151515"/>
+  <Color name="Patch Selector Text" rgba="FFEEEEEE"/>
+  <Color name="Matrix Grid Overlay" rgba="FF29292C"/>
+  <Color name="Knob Body" rgba="FF525252"/>
+</SixSinesSkin>
