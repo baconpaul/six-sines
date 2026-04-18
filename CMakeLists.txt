@@ -25,6 +25,9 @@ include(cmake/CmakeRC.cmake)
 file(GLOB_RECURSE PATCHES  "resources/factory_patches/*.sxsnp")
 cmrc_add_resource_library(${PROJECT_NAME}-patches NAMESPACE sixsines_patches ${PATCHES})
 
+file(GLOB THEMES "resources/factory_themes/*.sixtheme")
+cmrc_add_resource_library(${PROJECT_NAME}-themes NAMESPACE sixsines_themes ${THEMES})
+
 set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
 add_subdirectory(libs)
 
@@ -51,6 +54,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/ui/playmode-sub-panel.cpp
 
         src/presets/preset-manager.cpp
+        src/presets/ui-theme-manager.cpp
 
         src/dsp/sintable.cpp
 
@@ -94,6 +98,7 @@ target_link_libraries(${PROJECT_NAME}-impl PUBLIC  # PW change to public since w
         sst-plugininfra::version_information
         sst::clap_juce_shim sst::clap_juce_shim_headers
         ${PROJECT_NAME}-patches
+        ${PROJECT_NAME}-themes
         samplerate
 )
 

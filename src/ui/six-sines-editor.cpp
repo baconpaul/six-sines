@@ -50,6 +50,17 @@ struct IdleTimer : juce::Timer
     void timerCallback() override { editor.idle(); }
 };
 
+struct DesPushTimer : juce::Timer
+{
+    SixSinesEditor &editor;
+    DesPushTimer(SixSinesEditor &e) : editor(e) {}
+    void timerCallback() override
+    {
+        stopTimer();
+        editor.pushDawExtraStateToAudio();
+    }
+};
+
 namespace jstl = sst::jucegui::style;
 using sheet_t = jstl::StyleSheet;
 static constexpr sheet_t::Class PatchMenu("six-sines.patch-menu");
@@ -124,10 +135,13 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     idleTimer = std::make_unique<IdleTimer>(*this);
     idleTimer->startTimer(1000. / 60.);
 
+    dawExtraStatePushTimer = std::make_unique<DesPushTimer>(*this);
+
     toolTip = std::make_unique<jcmp::ToolTip>();
     addChildComponent(*toolTip);
 
     presetManager = std::make_unique<presets::PresetManager>(clapHost);
+    uiThemeManager = std::make_unique<presets::UIThemeManager>();
     presetManager->onPresetLoaded = [this](auto s)
     {
         this->postPatchChange(s);
@@ -148,10 +162,19 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     defaultsProvider = std::make_unique<defaultsProvder_t>(
         presetManager->userPath, "SixSinesUI", defaultName,
         [](auto e, auto b) { SXSNLOG("[ERROR]" << e << " " << b); });
-    setSkinFromDefaults();
+    // initializeBaseSkin() calls applyToStylesheet and guards lnf->setStyle with
+    // "if (lnf)" — lnf is null at this point so that guard is a no-op.  lnf is
+    // created immediately after and explicitly calls setStyle, which is correct.
+    // Do NOT move lnf construction before initializeBaseSkin(): LookAndFeelManager
+    // attaches to 'this' via JUCE's LNF mechanism and must see the fully-built
+    // component tree (all child panels are added above this line).
+    initializeBaseSkin();
 
     lnf = std::make_unique<sst::jucegui::style::LookAndFeelManager>(this);
     lnf->setStyle(style());
+
+    // Override the dark-default startup skin with the user's saved theme preference.
+    setThemeFromPreference();
 
     vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::HORIZONTAL);
     addAndMakeVisible(*vuMeter);
@@ -238,6 +261,15 @@ void SixSinesEditor::idle()
             engineSR = aum->value2;
             hostSR = aum->value;
             repaint();
+        }
+        else if (aum->action == Synth::AudioToUIMsg::SET_DAW_EXTRA_STATE)
+        {
+            if (aum->dawExtraStatePointer)
+            {
+                editorDawExtraState =
+                    *static_cast<const Synth::DawExtraState *>(aum->dawExtraStatePointer);
+                applyDawExtraStateFromAudio();
+            }
         }
         else
         {
@@ -669,7 +701,6 @@ void SixSinesEditor::showPresetPopup()
     p.addSeparator();
 
     auto uim = juce::PopupMenu();
-    auto isLight = defaultsProvider->getUserDefaultValue(Defaults::useLightSkin, 0);
 
     for (auto scale : {75, 90, 100, 110, 125, 150})
     {
@@ -684,22 +715,56 @@ void SixSinesEditor::showPresetPopup()
     }
 
     uim.addSeparator();
-    uim.addItem("Dark Mode", true, !isLight,
-                [w = juce::Component::SafePointer(this)]()
-                {
-                    if (!w)
-                        return;
-                    w->defaultsProvider->updateUserDefaultValue(Defaults::useLightSkin, false);
-                    w->setSkinFromDefaults();
-                });
+    // Factory theme shortcuts — apply without opening the color editor.  The current
+    // selection is read from the stored themePath default and shown as a checkmark.
+    if (uiThemeManager)
+    {
+        auto storedTheme =
+            defaultsProvider->getUserDefaultValue(Defaults::themePath, std::string("factory:Dark"));
+        for (auto &ft : uiThemeManager->factoryThemes)
+        {
+            auto isCurrent = (storedTheme == std::string(factoryThemeSentinel) + ft.name);
+            uim.addItem(ft.name, true, isCurrent,
+                        [w = juce::Component::SafePointer(this), skin = ft.skin, name = ft.name]()
+                        {
+                            if (!w)
+                                return;
+                            w->applyTheme(skin, std::string(factoryThemeSentinel) + name);
+                        });
+        }
 
-    uim.addItem("Light Mode", true, isLight,
+        // User themes submenu (only shown if there are any on disk)
+        uiThemeManager->rescanUserThemes();
+        if (!uiThemeManager->userThemes.empty())
+        {
+            auto userMenu = juce::PopupMenu();
+            for (auto &path : uiThemeManager->userThemes)
+            {
+                auto name = path.stem().u8string();
+                auto isCurrent = (storedTheme == path.u8string());
+                userMenu.addItem(name, true, isCurrent,
+                                 [w = juce::Component::SafePointer(this), path]()
+                                 {
+                                     if (!w || !w->uiThemeManager)
+                                         return;
+                                     w->applyTheme(w->uiThemeManager->loadThemeFromPath(path),
+                                                   path.u8string());
+                                 });
+            }
+            uim.addSubMenu("User Themes", userMenu);
+        }
+    }
+    uim.addItem("Color Editor...",
                 [w = juce::Component::SafePointer(this)]()
                 {
                     if (!w)
                         return;
-                    w->defaultsProvider->updateUserDefaultValue(Defaults::useLightSkin, true);
-                    w->setSkinFromDefaults();
+                    if (w->colorEditorWindow && w->colorEditorWindow->isVisible())
+                    {
+                        w->colorEditorWindow->toFront(true);
+                        return;
+                    }
+                    w->openColorEditor();
                 });
     uim.addSeparator();
     auto fsm = defaultsProvider->getUserDefaultValue(Defaults::flipSourceAndMatrix, false);
@@ -1112,24 +1177,14 @@ void SixSinesEditor::parentHierarchyChanged()
 #endif
 }
 
-void SixSinesEditor::setSkinFromDefaults()
+void SixSinesEditor::initializeBaseSkin()
 {
-    auto b = defaultsProvider->getUserDefaultValue(Defaults::useLightSkin, 0);
-    if (b)
-    {
-        setStyle(sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
-            sst::jucegui::style::StyleSheet::LIGHT));
-        style()->setColour(PatchMenu, jcmp::MenuButton::Styles::fill,
-                           style()
-                               ->getColour(jcmp::base_styles::Base::styleClass,
-                                           jcmp::base_styles::Base::background)
-                               .darker(0.3f));
-    }
-    else
-    {
-        setStyle(sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
-            sst::jucegui::style::StyleSheet::DARK));
-    }
+    setStyle(sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
+        sst::jucegui::style::StyleSheet::DARK));
+    currentSkin = SixSinesSkin::darkDefault();
+    currentSkin.applyToStylesheet(style());
+    if (lnf)
+        lnf->setStyle(style());
 
     style()->setFont(
         PatchMenu, jcmp::MenuButton::Styles::labelfont,
@@ -1331,6 +1386,348 @@ void SixSinesEditor::onStyleChanged()
     jcmp::WindowPanel::onStyleChanged();
     if (lnf)
         lnf->setStyle(style());
+    // Propagate to the colour editor window: it is a separate top-level DocumentWindow,
+    // not a child of this component, so it does not receive onStyleChanged automatically.
+    if (colorEditorContent)
+        colorEditorContent->setStyle(style());
+}
+
+void SixSinesEditor::scheduleDawExtraStatePush()
+{
+    // Debounce: restart the countdown on every call; the latest state is pushed
+    // once the user pauses editing (see DesPushTimer::timerCallback).
+    if (dawExtraStatePushTimer)
+    {
+        dawExtraStatePushTimer->stopTimer();
+        dawExtraStatePushTimer->startTimer(300);
+    }
+}
+
+void SixSinesEditor::pushDawExtraStateToAudio()
+{
+    editorDawExtraState.colorMapXml = currentSkin.toXmlString();
+    Synth::MainToAudioMsg msg{Synth::MainToAudioMsg::SET_DAW_EXTRA_STATE};
+    msg.dawExtraStatePointer = &editorDawExtraState;
+    mainToAudio.push(msg);
+}
+
+void SixSinesEditor::applyDawExtraStateFromAudio()
+{
+    if (editorDawExtraState.colorMapXml.empty())
+        return;
+    // Apply without writing to the themePath user default: the session's colour map
+    // takes precedence over the user's per-installation preference only within this
+    // session.
+    auto skin = SixSinesSkin::fromXmlString(editorDawExtraState.colorMapXml);
+    applyTheme(skin);
+}
+
+void SixSinesEditor::applyTheme(const SixSinesSkin &skin, const std::string &preference)
+{
+    if (!preference.empty())
+    {
+        defaultsProvider->updateUserDefaultValue(Defaults::themePath, preference);
+        // A non-empty preference implies user action (theme picker or saved-theme load).
+        // Persist the resulting colour map into the session DawExtraState.
+        scheduleDawExtraStatePush();
+    }
+    currentSkin = skin;
+    currentSkin.applyToStylesheet(style());
+    // applyToStylesheet mutates the stylesheet in-place and does not fire
+    // onStyleChanged, so we explicitly notify the LookAndFeel and the colour editor
+    // window (further below) to keep popup menu colours and floating window styles in sync.
+    if (lnf)
+        lnf->setStyle(style());
+    repaint();
+    // Propagate the refreshed stylesheet to the colour editor if open.
+    if (colorEditorContent)
+        colorEditorContent->setStyle(style());
+}
+
+void SixSinesEditor::setThemeFromPreference()
+{
+    if (!uiThemeManager)
+    {
+        // Defensive: should always be non-null after construction, but if theme manager
+        // failed to initialise we still want to land on a usable dark skin.
+        applyTheme(SixSinesSkin::darkDefault());
+        return;
+    }
+
+    auto stored =
+        defaultsProvider->getUserDefaultValue(Defaults::themePath, std::string("factory:Dark"));
+
+    if (stored.rfind(factoryThemeSentinel, 0) == 0)
+    {
+        // Factory theme: look up by name in the theme manager.
+        auto name = stored.substr(strlen(factoryThemeSentinel));
+        for (auto &ft : uiThemeManager->factoryThemes)
+        {
+            if (ft.name == name)
+            {
+                applyTheme(ft.skin); // no preference write — we're reading the preference
+                return;
+            }
+        }
+    }
+    else
+    {
+        // User theme file: apply if it still exists on disk.
+        fs::path path(stored);
+        if (fs::exists(path))
+        {
+            applyTheme(uiThemeManager->loadThemeFromPath(path)); // no preference write
+            return;
+        }
+    }
+
+    // Fallback: dark theme (factory name not found or file deleted).
+    applyTheme(
+        SixSinesSkin::darkDefault()); // no preference write — don't overwrite the stored name
+}
+
+void SixSinesEditor::openColorEditor()
+{
+    namespace jscr = sst::jucegui::screens;
+
+    // Build entries from the current skin's logical colours.
+    // ButtonText is skipped — it shares BaseLabel::labelcolor with Label.
+    auto buildEntries = [](const SixSinesSkin &skin)
+    {
+        std::vector<jscr::ColorEditor::ColorEntry> ents;
+        for (size_t i = 0; i < SixSinesSkin::numColors; i++)
+        {
+            auto lc = static_cast<SixSinesSkin::LogicalColor>(i);
+            if (!SixSinesSkin::isEditable(lc))
+                continue;
+            ents.push_back({SixSinesSkin::nameFor(lc), skin.get(lc)});
+        }
+        return ents;
+    };
+
+    // When any colour changes: update the logical skin and re-project everything.
+    // Note: this is a single-colour edit (not a full theme swap) so we mutate currentSkin
+    // in-place and call applyToStylesheet directly rather than applyTheme(). The colour
+    // editor's entries are already updated by ColorEditor::updateEntry before this fires.
+    jscr::ColorEditor::ColorChangedFn cb =
+        [w = juce::Component::SafePointer(this)](const std::string &tag, juce::Colour c)
+    {
+        if (!w)
+            return;
+        for (size_t i = 0; i < SixSinesSkin::numColors; i++)
+        {
+            auto lc = static_cast<SixSinesSkin::LogicalColor>(i);
+            if (std::string(SixSinesSkin::nameFor(lc)) == tag)
+            {
+                w->currentSkin.set(lc, c);
+                w->currentSkin.applyToStylesheet(w->style());
+                if (w->lnf)
+                    w->lnf->setStyle(w->style());
+                // Re-propagate the updated stylesheet to the colour editor window so
+                // that label and hex-field colours in RowComponents stay in sync.
+                if (w->colorEditorContent)
+                    w->colorEditorContent->setStyle(w->style());
+                w->scheduleDawExtraStatePush();
+                break;
+            }
+        }
+    };
+
+    auto ce = std::make_unique<jscr::ColorEditor>(buildEntries(currentSkin), std::move(cb), false);
+
+    // Capture a safe pointer to the ColorEditor *before* moving it into the window content.
+    // onAnyColorChanged fires after every colour change; we need to repaint both the main
+    // editor (theme colours changed) and the colour editor itself (swatches updated).
+    auto cePtr = juce::Component::SafePointer<jscr::ColorEditor>(ce.get());
+    ce->onAnyColorChanged = [w = juce::Component::SafePointer(this), cePtr]()
+    {
+        if (w)
+            w->repaint();
+        if (cePtr)
+        {
+            // Repaint the whole window so swatches, buttons, and title bar all update.
+            if (auto *top = cePtr->getTopLevelComponent())
+                top->repaint();
+        }
+    };
+
+    // ---- Build the three action buttons ----
+    // Styles are applied later via ColorEditorContent::setStyle which propagates to all children.
+    auto wp = juce::Component::SafePointer(this);
+
+    auto makeBtn = [](const std::string &label) -> std::unique_ptr<jcmp::TextPushButton>
+    {
+        auto btn = std::make_unique<jcmp::TextPushButton>();
+        btn->setLabel(label);
+        return btn;
+    };
+
+    auto saveBtn = makeBtn("Save Theme...");
+    saveBtn->setOnCallback(
+        [w = wp]()
+        {
+            if (!w)
+                return;
+            w->colorThemeFileChooser = std::make_unique<juce::FileChooser>(
+                "Save Color Theme", juce::File(w->uiThemeManager->userThemesPath.u8string()),
+                "*.sixtheme");
+            w->colorThemeFileChooser->launchAsync(
+                juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+                [w](const juce::FileChooser &fc)
+                {
+                    if (!w)
+                        return;
+                    auto f = fc.getResult();
+                    if (f.getFullPathName().isEmpty())
+                        return;
+                    w->uiThemeManager->saveThemeToPath(w->currentSkin,
+                                                       fs::path(f.getFullPathName().toStdString()));
+                    w->uiThemeManager->rescanUserThemes();
+                });
+        });
+
+    auto loadBtn = makeBtn("Load Theme...");
+    loadBtn->setOnCallback(
+        [w = wp]()
+        {
+            if (!w)
+                return;
+            w->colorThemeFileChooser = std::make_unique<juce::FileChooser>(
+                "Load Color Theme", juce::File(w->uiThemeManager->userThemesPath.u8string()),
+                "*.sixtheme");
+            w->colorThemeFileChooser->launchAsync(
+                juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+                [w](const juce::FileChooser &fc)
+                {
+                    if (!w)
+                        return;
+                    auto f = fc.getResult();
+                    if (f.getFullPathName().isEmpty())
+                        return;
+                    auto themeFSPath = fs::path(f.getFullPathName().toStdString());
+                    w->applyTheme(w->uiThemeManager->loadThemeFromPath(themeFSPath),
+                                  themeFSPath.u8string());
+                    w->colorEditorWindow.reset();
+                    w->openColorEditor();
+                });
+        });
+
+    auto factoryBtn = makeBtn("Saved Themes");
+    // Capture a raw pointer to the button before unique_ptr ownership moves into
+    // ColorEditorContent.  Used as the popup target so the menu attaches to the
+    // colour editor's top-level window (not the host plugin window), and pops up
+    // beneath the button itself.
+    auto factoryBtnRaw = juce::Component::SafePointer<juce::Component>(factoryBtn.get());
+    // Lifetime note for the menu-item lambdas below: each lambda captures only `w`
+    // (a SafePointer to the SixSinesEditor) plus a copied skin/path.  When invoked
+    // from showMenuAsync, the lambda is owned by the JUCE PopupMenu data structure,
+    // not by factoryBtn — so calling colorEditorWindow.reset() (which destroys
+    // factoryBtn) inside the lambda is safe: the lambda's captures and storage
+    // outlive the deleted button.
+    factoryBtn->setOnCallback(
+        [w = wp, btn = factoryBtnRaw]()
+        {
+            if (!w || !w->uiThemeManager)
+                return;
+            auto menu = juce::PopupMenu();
+            menu.addSectionHeader("Factory");
+            for (auto &ft : w->uiThemeManager->factoryThemes)
+            {
+                menu.addItem(ft.name,
+                             [w, skin = ft.skin, name = ft.name]()
+                             {
+                                 if (!w)
+                                     return;
+                                 w->applyTheme(skin, std::string(factoryThemeSentinel) + name);
+                                 w->colorEditorWindow.reset();
+                                 w->openColorEditor();
+                             });
+            }
+            if (!w->uiThemeManager->userThemes.empty())
+            {
+                menu.addSectionHeader("User");
+                for (auto &path : w->uiThemeManager->userThemes)
+                {
+                    auto name = path.stem().u8string();
+                    menu.addItem(name,
+                                 [w, path]()
+                                 {
+                                     if (!w)
+                                         return;
+                                     w->applyTheme(w->uiThemeManager->loadThemeFromPath(path),
+                                                   path.u8string());
+                                     w->colorEditorWindow.reset();
+                                     w->openColorEditor();
+                                 });
+                }
+            }
+            auto opts = juce::PopupMenu::Options();
+            if (btn)
+                opts = opts.withTargetComponent(btn.getComponent());
+            menu.showMenuAsync(opts);
+        });
+
+    // ---- Composite content: ColorEditor above, button strip below ----
+    // Inherits WindowPanel so it paints a themed gradient background and participates
+    // in style propagation. A single setStyle(ss) call in the constructor reaches every
+    // StyleConsumer child — colorEditor, buttons, and (via parentHierarchyChanged) the
+    // hex-field TextEditors inside each lazily-created ListView row.
+    struct ColorEditorContent : jcmp::WindowPanel
+    {
+        std::unique_ptr<jscr::ColorEditor> colorEditor;
+        std::unique_ptr<jcmp::TextPushButton> saveBtn, loadBtn, factoryBtn;
+
+        ColorEditorContent(std::unique_ptr<jscr::ColorEditor> ce,
+                           std::unique_ptr<jcmp::TextPushButton> sb,
+                           std::unique_ptr<jcmp::TextPushButton> lb,
+                           std::unique_ptr<jcmp::TextPushButton> fb,
+                           sst::jucegui::style::StyleSheet::ptr_t ss)
+            : jcmp::WindowPanel(), colorEditor(std::move(ce)), saveBtn(std::move(sb)),
+              loadBtn(std::move(lb)), factoryBtn(std::move(fb))
+        {
+            addAndMakeVisible(*colorEditor);
+            addAndMakeVisible(*saveBtn);
+            addAndMakeVisible(*loadBtn);
+            addAndMakeVisible(*factoryBtn);
+            // setStyle propagates recursively to all StyleConsumer children.
+            setStyle(ss);
+        }
+
+        void resized() override
+        {
+            auto b = getLocalBounds();
+            auto strip = b.removeFromBottom(34);
+            colorEditor->setBounds(b);
+            strip = strip.reduced(6, 3);
+            saveBtn->setBounds(strip.removeFromLeft(120));
+            strip.removeFromLeft(6);
+            loadBtn->setBounds(strip.removeFromLeft(120));
+            strip.removeFromLeft(6);
+            factoryBtn->setBounds(strip.removeFromLeft(120));
+        }
+    };
+
+    struct CEWindow : juce::DocumentWindow
+    {
+        CEWindow(std::unique_ptr<ColorEditorContent> content)
+            : juce::DocumentWindow("Six Sines Color Editor", juce::Colours::darkgrey,
+                                   juce::DocumentWindow::closeButton)
+        {
+            setUsingNativeTitleBar(true);
+            setResizable(true, false);
+            setContentOwned(content.release(), true);
+            setSize(420, 560);
+        }
+        void closeButtonPressed() override { setVisible(false); }
+    };
+
+    auto content = std::make_unique<ColorEditorContent>(
+        std::move(ce), std::move(saveBtn), std::move(loadBtn), std::move(factoryBtn), style());
+    // Store a safe pointer to the content so onStyleChanged() can propagate style
+    // updates to this separate top-level window.
+    colorEditorContent = content.get();
+    colorEditorWindow = std::make_unique<CEWindow>(std::move(content));
+    colorEditorWindow->setVisible(true);
 }
 
 } // namespace baconpaul::six_sines::ui

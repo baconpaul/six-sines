@@ -34,6 +34,11 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 - LFOs and Envelopes per voice with power siwtch
 - In-use display
 
+## Granular FM
+
+- that crazy idea kisney and i chatted about
+- more t/k
+
 ## UI Color Editor
 
 - Make sure everything is themed **DONE**

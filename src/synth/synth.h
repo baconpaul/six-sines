@@ -18,9 +18,12 @@
 
 #include <memory>
 #include <array>
+#include <string>
 
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
 #include "samplerate.h"
+
+class TiXmlElement;
 
 #include <clap/clap.h>
 #include "sst/basic-blocks/dsp/Lag.h"
@@ -313,6 +316,18 @@ struct Synth
     static_assert(sst::voicemanager::constraints::ConstraintsChecker<VMConfig, VMResponder,
                                                                      VMMonoResponder>::satisfies());
 
+    // Daw-session-only state. Streamed into host state (clap state) but NOT into patches.
+    // Holds non-parameter state that is specific to a session and editable only via the editor.
+    struct DawExtraState
+    {
+        std::string colorMapXml;
+    };
+    DawExtraState dawExtraState;
+
+    void toDawExtraState(TiXmlElement &e) const;
+    static void fromDawExtraState(TiXmlElement &e, DawExtraState &out);
+    void fromDawExtraState(TiXmlElement &e) { fromDawExtraState(e, dawExtraState); }
+
     // UI Communication
     struct AudioToUIMsg
     {
@@ -324,11 +339,13 @@ struct Synth
             SET_PATCH_NAME,
             SET_PATCH_DIRTY_STATE,
             DO_PARAM_RESCAN,
-            SEND_SAMPLE_RATE
+            SEND_SAMPLE_RATE,
+            SET_DAW_EXTRA_STATE
         } action;
         uint32_t paramId{0};
         float value{0}, value2{0};
         const char *patchNamePointer{0};
+        const void *dawExtraStatePointer{nullptr};
     };
     struct MainToAudioMsg
     {
@@ -348,11 +365,13 @@ struct Synth
             EDITOR_ATTACH_DETATCH, // paramid is true for attach and false for detach
             SEND_PREP_FOR_STREAM,
             PANIC_STOP_VOICES,
-            SET_DESIGN_MODE_RUN_ALL
+            SET_DESIGN_MODE_RUN_ALL,
+            SET_DAW_EXTRA_STATE
         } action;
         uint32_t paramId{0};
         float value{0};
         const char *uiManagedPointer{nullptr};
+        const void *dawExtraStatePointer{nullptr};
     };
     using audioToUIQueue_t = sst::cpputils::SimpleRingBuffer<AudioToUIMsg, 1024 * 16>;
     using mainToAudioQueue_T = sst::cpputils::SimpleRingBuffer<MainToAudioMsg, 1024 * 64>;

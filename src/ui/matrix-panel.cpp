@@ -150,15 +150,9 @@ void MatrixPanel::paint(juce::Graphics &g)
     auto b = getContentArea().reduced(0, 0);
     auto x = b.getX();
     auto y = b.getY();
-    auto fillCol = getColour(Styles::background).brighter(0.1).withAlpha(0.35f);
-    auto strokeCol = getColour(Styles::background).brighter(0.2);
-
-    auto isLight = editor.defaultsProvider->getUserDefaultValue(Defaults::useLightSkin, false);
-    if (isLight)
-    {
-        fillCol = getColour(Styles::background).darker(0.15).withAlpha(0.6f);
-        strokeCol = getColour(Styles::background).darker(0.3);
-    }
+    auto gridBase = editor.currentSkin.get(SixSinesSkin::LogicalColor::MatrixGridOverlay);
+    auto fillCol = gridBase.withAlpha(0.35f);
+    auto strokeCol = gridBase.brighter(0.1f);
     auto r = juce::Rectangle<int>(x + uicMargin, y, numOps * (uicPowerKnobWidth + uicMargin),
                                   uicLabeledKnobHeight)
                  .reduced(1);

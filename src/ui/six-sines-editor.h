@@ -31,10 +31,13 @@
 #include <sst/jucegui/components/VUMeter.h>
 #include <sst/jucegui/accessibility/FocusDebugger.h>
 #include <sst/jucegui/data/Continuous.h>
+#include <sst/jucegui/screens/ColorEditor.h>
 
 #include "synth/synth.h"
 #include "presets/preset-manager.h"
+#include "presets/ui-theme-manager.h"
 #include "ui-defaults.h"
+#include "six-sines-skin.h"
 
 namespace jcmp = sst::jucegui::components;
 namespace jdat = sst::jucegui::data;
@@ -104,6 +107,7 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::unique_ptr<SourceSubPanel> sourceSubPanel;
 
     std::unique_ptr<presets::PresetManager> presetManager;
+    std::unique_ptr<presets::UIThemeManager> uiThemeManager;
     std::unique_ptr<PresetDataBinding> presetDataBinding;
     std::unique_ptr<jcmp::JogUpDownButton> presetButton;
     void showPresetPopup();
@@ -114,10 +118,48 @@ struct SixSinesEditor : jcmp::WindowPanel
     void setPatchNameDisplay();
     void setPatchNameTo(const std::string &);
     std::unique_ptr<juce::FileChooser> fileChooser;
+    std::unique_ptr<juce::DocumentWindow> colorEditorWindow;
+    std::unique_ptr<juce::FileChooser> colorThemeFileChooser;
 
     std::unique_ptr<defaultsProvder_t> defaultsProvider;
 
-    void setSkinFromDefaults();
+    SixSinesSkin currentSkin;
+
+    // Editor-side mirror of the synth's DawExtraState. Kept in sync via
+    // SET_DAW_EXTRA_STATE messages (audio->UI on load/attach, UI->audio on color edits).
+    // Stable address so messages UI->audio can safely pass &editorDawExtraState.
+    Synth::DawExtraState editorDawExtraState;
+    // Debounce timer: restarted on every color edit; when it fires, the latest
+    // editorDawExtraState is pushed to the audio thread.
+    std::unique_ptr<juce::Timer> dawExtraStatePushTimer;
+    void scheduleDawExtraStatePush();
+    void pushDawExtraStateToAudio();
+    // Apply a newly-received DES (from the audio thread) to the editor: if it carries a
+    // colour map, parse it and applyTheme().
+    void applyDawExtraStateFromAudio();
+    // Install the dark base stylesheet + dark skin.  Called once during construction
+    // before lnf exists; setThemeFromPreference() then overlays the user's saved theme.
+    void initializeBaseSkin();
+    // Sentinel prefix used when storing a factory theme name in the themePath user default.
+    // A stored value of e.g. "factory:Dark" means use uiThemeManager->factoryThemes["Dark"].
+    static constexpr const char *factoryThemeSentinel{"factory:"};
+
+    // Apply a complete skin: updates currentSkin, projects onto the stylesheet, notifies
+    // the LookAndFeel, repaints the main editor, and propagates the style update to the
+    // colour editor window if it is open.
+    // If preference is non-empty it is written to the themePath user default so the choice
+    // persists across sessions.  Pass "" (the default) when applying a theme internally
+    // (e.g. from setThemeFromPreference) to avoid overwriting the stored preference.
+    void applyTheme(const SixSinesSkin &skin, const std::string &preference = "");
+
+    // Read the themePath user default and apply the corresponding theme.  Falls back to
+    // darkDefault() if the factory name is not found or the file path no longer exists.
+    void setThemeFromPreference();
+
+    void openColorEditor();
+    // Safe pointer to the ColorEditorContent (a WindowPanel subclass) so that
+    // onStyleChanged() can propagate style changes to the floating colour editor window.
+    juce::Component::SafePointer<jcmp::WindowPanel> colorEditorContent;
 
     std::unique_ptr<jcmp::ToolTip> toolTip;
     void showTooltipOn(juce::Component *c);

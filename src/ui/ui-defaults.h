@@ -23,7 +23,8 @@ namespace baconpaul::six_sines::ui
 {
 enum Defaults
 {
-    useLightSkin,
+    themePath, // stored as "factory:<Name>" for factory themes, or a filesystem path for user
+               // themes
     zoomLevel,
     useSoftwareRenderer, // only used on windows
     flipSourceAndMatrix,
@@ -36,8 +37,8 @@ inline std::string defaultName(Defaults d)
 {
     switch (d)
     {
-    case useLightSkin:
-        return "useLightSkin";
+    case themePath:
+        return "themePath";
     case zoomLevel:
         return "zoomLevel";
     case useSoftwareRenderer:
