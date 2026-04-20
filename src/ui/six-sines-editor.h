@@ -57,6 +57,7 @@ struct PlayModeSubPanel;
 struct SourcePanel;
 struct SourceSubPanel;
 struct MacroPanel;
+struct SettingsPanel;
 struct Clipboard;
 struct PresetDataBinding;
 
@@ -102,6 +103,7 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::unique_ptr<MixerSubPanel> mixerSubPanel;
 
     std::unique_ptr<MacroPanel> macroPanel;
+    std::unique_ptr<SettingsPanel> settingsPanel;
 
     std::unique_ptr<SourcePanel> sourcePanel;
     std::unique_ptr<SourceSubPanel> sourceSubPanel;
@@ -190,7 +192,7 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::function<void(float)> onZoomChanged{nullptr};
     bool toggleDebug();
 
-    static constexpr uint32_t edWidth{688}, edHeight{812};
+    static constexpr uint32_t edWidth{1048}, edHeight{690};
 
     std::unique_ptr<jcmp::VUMeter> vuMeter;
 

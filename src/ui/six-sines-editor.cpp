@@ -28,6 +28,7 @@
 #include "matrix-sub-panel.h"
 #include "finetune-sub-panel.h"
 #include "playmode-sub-panel.h"
+#include "settings-panel.h"
 #include "mainpan-sub-panel.h"
 #include "self-sub-panel.h"
 #include "mixer-panel.h"
@@ -103,6 +104,8 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     addAndMakeVisible(*sourcePanel);
     addAndMakeVisible(*mainPanel);
     addAndMakeVisible(*macroPanel);
+    settingsPanel = std::make_unique<SettingsPanel>(*this);
+    addAndMakeVisible(*settingsPanel);
 
     mainSubPanel = std::make_unique<MainSubPanel>(*this);
     singlePanel->addChildComponent(*mainSubPanel);
@@ -189,7 +192,14 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     mainToAudio.push({Synth::MainToAudioMsg::REQUEST_REFRESH, true});
     requestParamsFlush();
 
-    auto pzf = defaultsProvider->getUserDefaultValue(Defaults::zoomLevel, 100);
+    auto defaultZoomPct = 100;
+    if (auto *d = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
+    {
+        auto sz = d->totalArea;
+        if (sz.getWidth() <= 1366 && sz.getHeight() <= 768)
+            defaultZoomPct = 90;
+    }
+    auto pzf = defaultsProvider->getUserDefaultValue(Defaults::zoomLevel, defaultZoomPct);
     zoomFactor = pzf * 0.01;
     setTransform(juce::AffineTransform().scaled(zoomFactor));
 
@@ -229,8 +239,8 @@ void SixSinesEditor::idle()
         }
         else if (aum->action == Synth::AudioToUIMsg::UPDATE_VOICE_COUNT)
         {
-            mainPanel->setVoiceCount(aum->paramId);
-            mainPanel->repaint();
+            settingsPanel->setVoiceCount(aum->paramId);
+            settingsPanel->repaint();
         }
         else if (aum->action == Synth::AudioToUIMsg::SET_PATCH_NAME)
         {
@@ -356,42 +366,57 @@ void SixSinesEditor::resized()
 
     auto lb = getLocalBounds();
     auto presetArea = lb.withHeight(presetHeight);
-    auto panelArea = lb.withTrimmedTop(presetHeight).withTrimmedBottom(footerHeight);
 
     auto panelPadX{2 * uicMargin + 11}, panelPadY{34U};
     auto sourceHeight = uicLabeledKnobHeight + panelPadY;
+    auto macroStripHeight = sourceHeight;
+
+    auto panelArea =
+        lb.withTrimmedTop(presetHeight).withTrimmedBottom(footerHeight + macroStripHeight);
 
     auto matrixWidth = numOps * (uicPowerKnobWidth) + (numOps - 1) * uicMargin + panelPadX;
     auto matrixHeight = numOps * uicLabeledKnobHeight + (numOps - 1) * uicMargin + panelPadY;
-    auto mixerWidth = uicKnobSize + uicPowerKnobWidth + uicMargin + panelPadX;
-    auto macroWidth = uicKnobSize + panelPadX + 6;
-    auto mainWidth = mixerWidth + macroWidth;
-
-    auto editHeight = 220;
+    // Right column (main above mixer). Sized to fit the mixer row:
+    //   power+level (uicPowerKnobWidth) + gap + pan knob + gap + small vertical VU.
+    // This is wider than the 3-knob main panel so main just has some slack.
+    auto mixerVuWidth = 22U;
+    auto rightColWidth =
+        uicPowerKnobWidth + uicMargin + uicKnobSize + uicMargin + mixerVuWidth + panelPadX;
 
     auto panelMargin{1};
 
-    // Preset button
-    auto but = presetArea.reduced(110, 0).withTrimmedTop(uicMargin);
-    presetButton->setBounds(but);
-    but = but.withLeft(presetButton->getRight() + uicMargin).withRight(getWidth() - uicMargin);
+    // Top bar: [ preset | vu ]
+    auto topInner = presetArea.withTrimmedTop(uicMargin);
+    int vuWidth = 150;
 
-    vuMeter->setBounds(but);
+    auto vuRect = juce::Rectangle<int>(getWidth() - uicMargin - vuWidth, topInner.getY(), vuWidth,
+                                       topInner.getHeight());
+    vuMeter->setBounds(vuRect);
+
+    int presetLeft = 110;
+    auto presetRect = juce::Rectangle<int>(
+        presetLeft, topInner.getY(), vuRect.getX() - uicMargin - presetLeft, topInner.getHeight());
+    presetButton->setBounds(presetRect);
 
     auto sourceRect =
         juce::Rectangle<int>(panelArea.getX(), panelArea.getY(), matrixWidth, sourceHeight);
     auto matrixRect = juce::Rectangle<int>(panelArea.getX(), panelArea.getY() + sourceHeight,
                                            matrixWidth, matrixHeight);
     auto mainRect = juce::Rectangle<int>(panelArea.getX() + matrixWidth, panelArea.getY(),
-                                         mainWidth, sourceHeight);
-    auto mixerRect = juce::Rectangle<int>(
-        panelArea.getX() + matrixWidth, panelArea.getY() + sourceHeight, mixerWidth, matrixHeight);
+                                         rightColWidth, sourceHeight);
+    auto mixerRect =
+        juce::Rectangle<int>(panelArea.getX() + matrixWidth, panelArea.getY() + sourceHeight,
+                             rightColWidth, matrixHeight);
+    auto editX = panelArea.getX() + matrixWidth + rightColWidth;
+    auto editRect = juce::Rectangle<int>(editX, panelArea.getY(), panelArea.getRight() - editX,
+                                         sourceHeight + matrixHeight + macroStripHeight);
+
+    // Macro strip sits under the matrix, sized to match it. The Settings sub-panel
+    // takes the remaining width (under the mixer column). Edit panel is to the right.
     auto macroRect =
-        juce::Rectangle<int>(panelArea.getX() + matrixWidth + mixerWidth,
-                             panelArea.getY() + sourceHeight, macroWidth, matrixHeight);
-    auto editRect =
-        juce::Rectangle<int>(panelArea.getX(), panelArea.getY() + sourceHeight + matrixHeight,
-                             matrixWidth + mainWidth, editHeight);
+        juce::Rectangle<int>(lb.getX(), panelArea.getBottom(), matrixWidth, macroStripHeight);
+    auto settingsPanelRect = juce::Rectangle<int>(lb.getX() + matrixWidth, panelArea.getBottom(),
+                                                  rightColWidth, macroStripHeight);
 
     bool flipSourceAndMatrix =
         defaultsProvider->getUserDefaultValue(Defaults::flipSourceAndMatrix, false);
@@ -400,7 +425,6 @@ void SixSinesEditor::resized()
         auto sy = sourceRect.getY();
         auto mb = matrixRect.getBottom() - sourceRect.getHeight();
         matrixRect.setY(sy);
-        macroRect.setY(sy);
         mixerRect.setY(sy);
         sourceRect.setY(mb);
         mainRect.setY(mb);
@@ -411,6 +435,7 @@ void SixSinesEditor::resized()
     mainPanel->setBounds(mainRect.reduced(panelMargin));
     mixerPanel->setBounds(mixerRect.reduced(panelMargin));
     macroPanel->setBounds(macroRect.reduced(panelMargin));
+    settingsPanel->setBounds(settingsPanelRect.reduced(panelMargin));
     singlePanel->setBounds(editRect.reduced(panelMargin));
 
     mainSubPanel->setBounds(singlePanel->getContentArea());
@@ -433,6 +458,7 @@ void SixSinesEditor::hideAllSubPanels()
     sourcePanel->clearHighlight();
     matrixPanel->clearHighlight();
     mixerPanel->clearHighlight();
+    settingsPanel->clearHighlight();
 }
 
 void SixSinesEditor::showTooltipOn(juce::Component *c)

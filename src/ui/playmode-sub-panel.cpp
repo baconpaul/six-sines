@@ -198,25 +198,34 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
 void PlayModeSubPanel::resized()
 {
     namespace jlo = sst::jucegui::layouts;
-    auto lo = jlo::HList().at(uicMargin, 0).withAutoGap(2 * uicMargin);
-
-    // Voice Bend and Octave
     auto skinny = uicKnobSize + 30;
-    auto vbol = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
+    auto playRowHeight =
+        uicTitleLabelInnerBox + 2 * uicLabelHeight + uicMargin + 5 * uicLabelHeight + 6 * uicMargin;
 
-    vbol.add(titleLabelGaplessLayout(voiceLimitL));
-    vbol.add(jlo::Component(*voiceLimit).withHeight(uicLabelHeight));
-    vbol.add(titleLabelGaplessLayout(bendTitle));
+    auto outer = jlo::HList().at(uicMargin, 0).withAutoGap(2 * uicMargin);
 
-    vbol.add(sideLabel(bUpL, bUp));
-    vbol.add(sideLabel(bDnL, bDn));
+    // Column 1: voices / bend / octave / mpe / panic
+    auto col1 = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
+    col1.add(titleLabelGaplessLayout(voiceLimitL));
+    col1.add(jlo::Component(*voiceLimit).withHeight(uicLabelHeight));
+    col1.add(titleLabelGaplessLayout(bendTitle));
+    col1.add(sideLabel(bUpL, bUp));
+    col1.add(sideLabel(bDnL, bDn));
+    col1.add(titleLabelGaplessLayout(tsposeTitle));
+    col1.add(jlo::Component(*tsposeButton).withHeight(uicLabelHeight));
+    col1.add(titleLabelGaplessLayout(mpeTitle));
+    col1.add(jlo::Component(*mpeActiveButton).withHeight(uicLabelHeight));
+    col1.add(jlo::Component(*mpeRange).withHeight(uicLabelHeight));
+    col1.add(jlo::Component(*mpeRangeL).withHeight(uicLabelHeight));
+    col1.add(titleLabelGaplessLayout(panicTitle));
+    col1.add(jlo::Component(*panicButton).withHeight(uicLabelHeight));
+    outer.add(col1);
 
-    vbol.add(titleLabelGaplessLayout(tsposeTitle));
-    vbol.add(jlo::Component(*tsposeButton).withHeight(uicLabelHeight));
+    // Column 2: play + unison on top, oversampling below
+    auto col2 = jlo::VList().withWidth(2 * skinny + 2 * uicMargin).withAutoGap(2 * uicMargin);
 
-    lo.add(vbol);
+    auto topRow = jlo::HList().withHeight(playRowHeight).withAutoGap(2 * uicMargin);
 
-    // Play mode
     auto pml = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
     pml.add(titleLabelGaplessLayout(playTitle));
     pml.add(jlo::Component(*playMode).withHeight(2 * uicLabelHeight + uicMargin));
@@ -225,9 +234,8 @@ void PlayModeSubPanel::resized()
     pml.add(jlo::Component(*portaL).withHeight(uicLabelHeight));
     pml.add(jlo::Component(*portaTime).withHeight(uicLabelHeight).insetBy(0, 2));
     pml.add(jlo::Component(*portaContinuationButton).withHeight(uicLabelHeight));
-    lo.add(pml);
+    topRow.add(pml);
 
-    // Unison Controls
     auto uml = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
     uml.add(titleLabelGaplessLayout(uniTitle));
     uml.add(jlo::Component(*uniCt).withHeight(uicLabelHeight));
@@ -235,26 +243,19 @@ void PlayModeSubPanel::resized()
     uml.add(jlo::Component(*uniRPhase).withHeight(uicLabelHeight));
     uml.add(sideLabelSlider(uniSpreadG, uniSpread));
     uml.add(sideLabelSlider(uniPanG, uniPan));
+    topRow.add(uml);
 
-    lo.add(uml);
+    col2.add(topRow);
 
-    auto mpl = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
-    mpl.add(titleLabelGaplessLayout(mpeTitle));
-    mpl.add(jlo::Component(*mpeActiveButton).withHeight(uicLabelHeight));
-    mpl.add(jlo::Component(*mpeRange).withHeight(uicLabelHeight));
-    mpl.add(jlo::Component(*mpeRangeL).withHeight(uicLabelHeight));
-
-    mpl.add(titleLabelGaplessLayout(panicTitle));
-    mpl.add(jlo::Component(*panicButton).withHeight(uicLabelHeight));
-    lo.add(mpl);
-
-    auto rsl = jlo::VList().withWidth(2 * skinny).withAutoGap(uicMargin);
+    auto rsl = jlo::VList().withAutoGap(uicMargin);
     rsl.add(titleLabelGaplessLayout(srStratLab));
     rsl.add(jlo::Component(*srStrat).withHeight(uicLabelHeight));
     rsl.add(jlo::Component(*rsEng).withHeight(uicLabelHeight));
-    lo.add(rsl);
+    col2.add(rsl);
 
-    lo.doLayout();
+    outer.add(col2);
+
+    outer.doLayout();
 }
 
 void PlayModeSubPanel::setTriggerButtonLabel()

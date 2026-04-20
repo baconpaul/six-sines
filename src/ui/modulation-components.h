@@ -39,7 +39,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
         patchPtr = &v;
         auto c = asComp();
         modTitleLab = std::make_unique<jcmp::RuledLabel>();
-        modTitleLab->setText("Modulation");
+        modTitleLab->setText("Other Modulation");
         asComp()->addAndMakeVisible(*modTitleLab);
 
         for (int i = 0; i < numModsPer; ++i)
@@ -135,33 +135,29 @@ template <typename Comp, typename Patch> struct ModulationComponents
 
     void layoutModulation(const juce::Rectangle<int> &r)
     {
-        auto modW{uicModulationWidth};
-
         namespace jlo = sst::jucegui::layouts;
 
+        auto rowHeight = static_cast<int>(uicLabelHeight) + 4;
+        auto nMods = static_cast<int>(numModsPer);
+        auto totalHeight = static_cast<int>(uicTitleLabelHeight) + nMods * rowHeight +
+                           (nMods - 1) * static_cast<int>(uicMargin);
+
         auto lo = jlo::VList()
-                      .at(r.getRight() - uicModulationWidth, r.getY())
-                      .withHeight(asComp()->getHeight() - r.getY())
-                      .withWidth(uicModulationWidth);
+                      .at(r.getX(), r.getBottom() - totalHeight)
+                      .withWidth(r.getWidth())
+                      .withHeight(totalHeight);
 
         lo.add(titleLabelLayout(modTitleLab));
 
         for (int i = 0; i < numModsPer; ++i)
         {
-            auto hl = jlo::HList()
-                          .withWidth(uicModulationWidth)
-                          .withHeight(uicKnobSize)
-                          .withAutoGap(uicMargin);
-
-            auto vl = jlo::VList().expandToFill().withAutoGap(uicLabelGap);
-            vl.add(jlo::Component(*sourceMenu[i]).expandToFill());
-            vl.add(jlo::Component(*targetMenu[i]).expandToFill());
-
-            hl.add(vl);
-            hl.add(jlo::Component(*depthSlider[i]).withWidth(uicKnobSize));
-
+            auto hl = jlo::HList().withHeight(rowHeight).withAutoGap(uicMargin);
+            hl.add(jlo::Component(*sourceMenu[i]).expandToFill());
+            hl.add(jlo::Component(*targetMenu[i]).expandToFill());
+            hl.add(jlo::Component(*depthSlider[i]).expandToFill().insetBy(0, uicMargin));
             lo.add(hl);
-            lo.addGap(uicMargin * 2);
+            if (i < numModsPer - 1)
+                lo.addGap(uicMargin);
         }
 
         lo.doLayout();
@@ -262,7 +258,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
 
     std::array<std::unique_ptr<jcmp::MenuButton>, numModsPer> sourceMenu;
     std::array<std::unique_ptr<jcmp::MenuButton>, numModsPer> targetMenu;
-    std::array<std::unique_ptr<jcmp::Knob>, numModsPer> depthSlider;
+    std::array<std::unique_ptr<jcmp::HSliderFilled>, numModsPer> depthSlider;
     std::array<std::unique_ptr<PatchContinuous>, numModsPer> depthSliderD;
 };
 } // namespace baconpaul::six_sines::ui

@@ -19,6 +19,7 @@
 #include <sst/jucegui/components/Knob.h>
 #include <sst/jucegui/components/Label.h>
 #include <sst/jucegui/components/ToggleButton.h>
+#include <sst/jucegui/components/VUMeter.h>
 #include <sst/jucegui/data/Continuous.h>
 #include "six-sines-editor.h"
 #include "patch-data-bindings.h"
@@ -58,6 +59,9 @@ struct MixerPanel : jcmp::NamedPanel, HasEditor
     std::array<std::unique_ptr<jcmp::Knob>, numOps> panKnobs;
     std::array<std::unique_ptr<PatchContinuous>, numOps> panKnobsData;
     std::array<std::unique_ptr<jcmp::Label>, numOps> panLabels;
+
+    // Small per-op vertical VU meters — not yet hooked up to a signal source.
+    std::array<std::unique_ptr<jcmp::VUMeter>, numOps> vuMeters;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MIXER_PANE_H

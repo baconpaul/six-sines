@@ -223,32 +223,46 @@ void SourceSubPanel::resized()
 {
     auto p = getLocalBounds().reduced(uicMargin, 0);
     auto pn = layoutDAHDSRAt(p.getX(), p.getY());
-    auto gh = (pn.getHeight() - 2 * uicPowerButtonSize) / 2;
     pn = pn.translated(uicMargin, 0);
     auto r = layoutLFOAt(pn.getX(), p.getY());
 
+    auto depx = p.getX();
+    auto depy = std::min(pn.getBottom(), r.getBottom()) + uicMargin;
+
     namespace jlo = sst::jucegui::layouts;
-    auto lo = jlo::HList().at(r.getX() + uicMargin, r.getY()).withAutoGap(uicMargin * 2);
 
-    auto kl = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin * 2).withAutoGap(uicMargin);
-    kl.add(titleLabelGaplessLayout(modTitle));
+    auto row1Height = uicTitleLabelInnerBox + uicMargin + uicLabeledKnobHeight;
+    auto row2Height = uicTitleLabelInnerBox + 3 * uicLabelHeight +
+                      static_cast<int>(uicLabelHeight * 1.8) + 3 * uicMargin;
 
-    auto hl = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
-    hl.add(labelKnobLayout(envToRatio, envToRatioL));
-    hl.add(labelKnobLayout(envToRatioFine, envToRatioFineL));
-    kl.add(hl);
+    auto lo = jlo::VList().at(depx, depy).withAutoGap(uicMargin * 2);
 
-    kl.add(titleLabelGaplessLayout(lfoModTitle));
+    // Row 1: Env Depth | LFO Depth
+    auto row1 = jlo::HList().withHeight(row1Height).withAutoGap(uicMargin * 2);
 
-    hl = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
-    hl.add(labelKnobLayout(lfoToRatio, lfoToRatioL));
-    hl.add(labelKnobLayout(lfoToRatioFine, lfoToRatioFineL));
-    kl.add(hl);
+    auto envCol = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin).withAutoGap(uicMargin);
+    envCol.add(titleLabelGaplessLayout(modTitle));
+    auto ehl = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
+    ehl.add(labelKnobLayout(envToRatio, envToRatioL));
+    ehl.add(labelKnobLayout(envToRatioFine, envToRatioFineL));
+    envCol.add(ehl);
+    row1.add(envCol);
 
-    lo.add(kl);
+    auto lfoCol = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin).withAutoGap(uicMargin);
+    lfoCol.add(titleLabelGaplessLayout(lfoModTitle));
+    auto lhl = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
+    lhl.add(labelKnobLayout(lfoToRatio, lfoToRatioL));
+    lhl.add(labelKnobLayout(lfoToRatioFine, lfoToRatioFineL));
+    lfoCol.add(lhl);
+    row1.add(lfoCol);
 
-    auto ktl = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin + 36).withAutoGap(uicMargin);
-    ktl.add(titleLabelGaplessLayout(keyTrackTitle));
+    lo.add(row1);
+
+    // Row 2: Pitch | Wave
+    auto row2 = jlo::HList().withHeight(row2Height).withAutoGap(uicMargin * 2);
+
+    auto pitchCol = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin + 36).withAutoGap(uicMargin);
+    pitchCol.add(titleLabelGaplessLayout(keyTrackTitle));
 
     auto sktcol = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
 
@@ -261,8 +275,6 @@ void SourceSubPanel::resized()
     auto c2 = jlo::VList().withWidth(uicKnobSize + 18).withAutoGap(uicMargin);
     c2.add(jlo::Component(*keyTrack).withHeight(uicLabelHeight));
 
-    // We have to get a bit crunched to get this in
-    namespace jlo = sst::jucegui::layouts;
     auto ul = jlo::HList().withHeight(uicLabelHeight);
     ul.add(jlo::Component(*keyTrackLow).withWidth(20));
     ul.addGap(1);
@@ -270,14 +282,17 @@ void SourceSubPanel::resized()
     c2.add(ul);
     sktcol.add(c2);
 
-    ktl.add(sktcol);
+    pitchCol.add(sktcol);
+    row2.add(pitchCol);
 
-    ktl.add(titleLabelGaplessLayout(wavTitle));
-    ktl.add(jlo::Component(*wavButton).withHeight(uicLabelHeight));
-    ktl.add(sideLabelSlider(startingPhaseL, startingPhase));
-    ktl.add(jlo::Component(*wavPainter).withHeight(uicLabelHeight * 1.8));
+    auto waveCol = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin + 36).withAutoGap(uicMargin);
+    waveCol.add(titleLabelGaplessLayout(wavTitle));
+    waveCol.add(jlo::Component(*wavButton).withHeight(uicLabelHeight));
+    waveCol.add(sideLabelSlider(startingPhaseL, startingPhase));
+    waveCol.add(jlo::Component(*wavPainter).withHeight(uicLabelHeight * 1.8));
+    row2.add(waveCol);
 
-    lo.add(ktl);
+    lo.add(row2);
 
     lo.doLayout();
 

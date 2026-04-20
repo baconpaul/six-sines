@@ -68,6 +68,9 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
         panLabels[i]->setText("Pan");
         addAndMakeVisible(*panLabels[i]);
 
+        vuMeters[i] = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::VERTICAL);
+        addAndMakeVisible(*vuMeters[i]);
+
         sst::jucegui::component_adapters::setTraversalId(power[i].get(), i * 12 + 50);
         sst::jucegui::component_adapters::setTraversalId(solo[i].get(), i * 12 + 51);
         sst::jucegui::component_adapters::setTraversalId(knobs[i].get(), i * 12 + 52);
@@ -89,6 +92,8 @@ void MixerPanel::resized()
         positionPowerKnobSwitchAndLabel(x, y, power[i], solo[i], knobs[i], labels[i]);
         solo[i]->setBounds(solo[i]->getBounds().reduced(4, 0).translated(0, -1));
         positionKnobAndLabel(x + uicPowerKnobWidth + uicMargin, y, panKnobs[i], panLabels[i]);
+        auto vuX = x + uicPowerKnobWidth + uicMargin + uicKnobSize + 2 * uicMargin;
+        vuMeters[i]->setBounds(vuX, y, 13, uicKnobSize);
         y += uicLabeledKnobHeight + uicMargin;
     }
 }

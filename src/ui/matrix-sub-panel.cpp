@@ -91,8 +91,8 @@ void MatrixSubPanel::resized()
     pn = pn.translated(uicMargin, 0);
     auto r = layoutLFOAt(pn.getX(), p.getY());
 
-    auto depx = r.getX() + uicMargin;
-    auto depy = r.getY();
+    auto depx = p.getX();
+    auto depy = std::min(pn.getBottom(), r.getBottom()) + uicMargin;
 
     namespace jlo = sst::jucegui::layouts;
     auto lo = jlo::HList().at(depx, depy).withAutoGap(uicMargin * 2);
