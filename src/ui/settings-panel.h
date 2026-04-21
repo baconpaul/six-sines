@@ -20,6 +20,7 @@
 #include <sst/jucegui/components/NamedPanel.h>
 #include <sst/jucegui/components/ToggleButton.h>
 #include <sst/jucegui/component-adapters/DiscreteToReference.h>
+#include <fmt/core.h>
 #include "six-sines-editor.h"
 
 namespace baconpaul::six_sines::ui
@@ -34,9 +35,19 @@ struct SettingsPanel : jcmp::NamedPanel, HasEditor
     void clearHighlight();
 
     void setVoiceCount(int vc) { voiceCount->setText("Voices: " + std::to_string(vc)); }
+    void setCpuUsage(double cpu)
+    {
+        if (std::round(cpu) != std::round(lastCpu))
+        {
+            cpuLabel->setText(fmt::format("CPU: {} %", std::round(cpu)));
+            repaint();
+            lastCpu = cpu;
+        }
+    }
 
     std::unique_ptr<jcmp::Label> voiceCount;
     std::unique_ptr<jcmp::Label> cpuLabel;
+    double lastCpu{-2000};
 
     bool isPlayScreenShowing{false};
     bool suppressPowerOff{false};
