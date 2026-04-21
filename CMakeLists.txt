@@ -52,6 +52,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/ui/finetune-sub-panel.cpp
         src/ui/mainpan-sub-panel.cpp
         src/ui/playmode-sub-panel.cpp
+        src/ui/settings-panel.cpp
 
         src/presets/preset-manager.cpp
         src/presets/ui-theme-manager.cpp

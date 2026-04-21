@@ -56,18 +56,20 @@ void MainSubPanel::resized()
 {
     auto p = getLocalBounds().reduced(uicMargin, 0);
     auto r = layoutDAHDSRAt(p.getX(), p.getY());
-    r = layoutLFOAt(r.getX() + uicMargin, p.getY());
+    auto r2 = layoutLFOAt(r.getX() + uicMargin, p.getY());
 
-    auto depx = r.getX() + uicMargin;
-    auto depy = r.getY();
+    auto depx = p.getX();
+    auto depy = std::min(r.getBottom(), r2.getBottom()) + uicMargin;
 
     namespace jlo = sst::jucegui::layouts;
     auto lo = jlo::HList().at(depx, depy).withAutoGap(uicMargin * 2);
 
-    auto el = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
+    auto el = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin).withAutoGap(uicMargin);
     el.add(titleLabelGaplessLayout(velTitle));
-    el.add(labelKnobLayout(velSen, velSenL).centerInParent());
-    el.add(labelKnobLayout(lfoDep, lfoDepL).centerInParent());
+    auto kl = jlo::HList().withHeight(uicLabeledKnobHeight).withAutoGap(uicMargin);
+    kl.add(labelKnobLayout(velSen, velSenL).centerInParent());
+    kl.add(labelKnobLayout(lfoDep, lfoDepL).centerInParent());
+    el.add(kl);
     lo.add(el);
 
     lo.doLayout();

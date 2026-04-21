@@ -19,6 +19,7 @@
 #include <sst/jucegui/components/Knob.h>
 #include <sst/jucegui/components/Label.h>
 #include <sst/jucegui/components/ToggleButton.h>
+#include <sst/jucegui/component-adapters/DiscreteToReference.h>
 #include <sst/jucegui/data/Continuous.h>
 #include "six-sines-editor.h"
 #include "patch-data-bindings.h"
@@ -37,9 +38,17 @@ struct MacroPanel : jcmp::NamedPanel, HasEditor
 
     void beginEdit(size_t idx);
 
-    std::array<std::unique_ptr<jcmp::Knob>, numOps> knobs;
-    std::array<std::unique_ptr<PatchContinuous>, numOps> knobsData;
-    std::array<std::unique_ptr<jcmp::Label>, numOps> labels;
+    std::array<std::unique_ptr<jcmp::Knob>, numMacros> knobs;
+    std::array<std::unique_ptr<PatchContinuous>, numMacros> knobsData;
+    std::array<std::unique_ptr<jcmp::Label>, numMacros> labels;
+
+    // Placeholder power toggles — not yet wired to any patch data.
+    std::array<bool, numMacros> powerOnState{};
+    std::array<std::unique_ptr<sst::jucegui::component_adapters::DiscreteToValueReference<
+                   jcmp::ToggleButton, bool>>,
+               numMacros>
+        powerD;
+    std::array<jcmp::ToggleButton *, numOps> power{};
 };
 } // namespace baconpaul::six_sines::ui
 #endif // Macro_PANE_H

@@ -23,7 +23,7 @@ namespace baconpaul::six_sines::ui
 MacroPanel::MacroPanel(SixSinesEditor &e) : jcmp::NamedPanel("Macros"), HasEditor(e)
 {
     auto &mn = editor.patchCopy.macroNodes;
-    for (auto i = 0U; i < numOps; ++i)
+    for (auto i = 0U; i < numMacros; ++i)
     {
         createComponent(editor, *this, mn[i].level, knobs[i], knobsData[i], i);
         knobs[i]->setDrawLabel(false);
@@ -34,6 +34,15 @@ MacroPanel::MacroPanel(SixSinesEditor &e) : jcmp::NamedPanel("Macros"), HasEdito
         labels[i] = std::make_unique<jcmp::Label>();
         labels[i]->setText("Macro " + std::to_string(i + 1));
         addAndMakeVisible(*labels[i]);
+
+        powerOnState[i] = true;
+        powerD[i] = std::make_unique<
+            sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::ToggleButton, bool>>(
+            powerOnState[i]);
+        power[i] = powerD[i]->widget.get();
+        power[i]->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
+        power[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
+        addAndMakeVisible(*power[i]);
     }
 }
 MacroPanel::~MacroPanel() = default;
@@ -41,12 +50,12 @@ MacroPanel::~MacroPanel() = default;
 void MacroPanel::resized()
 {
     auto b = getContentArea().reduced(uicMargin, 0);
-    auto x = b.getX() + (b.getWidth() - uicKnobSize) / 2;
+    auto x = b.getX();
     auto y = b.getY();
-    for (auto i = 0U; i < numOps; ++i)
+    for (auto i = 0U; i < numMacros; ++i)
     {
-        positionKnobAndLabel(x, y, knobs[i], labels[i]);
-        y += uicLabeledKnobHeight + uicMargin;
+        positionPowerKnobAndLabel(x, y, power[i], knobs[i], labels[i], true);
+        x += uicPowerKnobWidth + uicMargin;
     }
 }
 

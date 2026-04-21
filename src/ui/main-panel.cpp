@@ -54,26 +54,6 @@ MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
         w->editor.fineTuneSubPanel->repaint();
     };
 
-    voiceCount = std::make_unique<jcmp::Label>();
-    addAndMakeVisible(*voiceCount);
-    setVoiceCount(0);
-
-    playScreenD = std::make_unique<
-        sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::ToggleButton, bool>>(
-        isPlayScreenShowing);
-    playScreen = playScreenD->widget.get();
-    playScreen->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH_WITH_BG);
-    playScreen->setGlyph(sst::jucegui::components::GlyphPainter::SETTINGS);
-    addAndMakeVisible(*playScreen);
-    playScreenD->onValueChanged = [this](bool b)
-    {
-        if (b)
-        {
-            beginEdit(3);
-        }
-    };
-    sst::jucegui::component_adapters::setTraversalId(playScreen, 4);
-
     highlight = std::make_unique<KnobHighlight>(editor);
     addChildComponent(*highlight);
 }
@@ -89,14 +69,6 @@ void MainPanel::resized()
 
     b = b.withTrimmedLeft(uicKnobSize + uicMargin);
     positionKnobAndLabel(b.getX(), b.getY(), tun, tunLabel);
-    b = b.withTrimmedLeft(uicKnobSize + uicMargin);
-
-    positionKnobAndLabel(b.getX(), b.getY(), playScreenD->widget, voiceCount);
-
-    // vb = vb.translated(0, uicLabelHeight + uicMargin);
-    // voiceCount->setBounds(vb);
-    // vb = vb.translated(0, uicLabelHeight + uicMargin);
-    // voiceLimit->setBounds(vb);
 }
 
 void MainPanel::mouseDown(const juce::MouseEvent &e)
@@ -124,15 +96,8 @@ juce::Rectangle<int> MainPanel::rectangleFor(int idx)
 
 void MainPanel::beginEdit(int which)
 {
-    if (which == 3)
-        supressPowerOff = true;
     editor.hideAllSubPanels();
-    editor.activateHamburger(which != 3);
-    supressPowerOff = false;
-    if (which != 3)
-    {
-        playScreenD->setValueFromModel(false);
-    }
+    editor.activateHamburger(true);
     if (which == 0)
     {
         editor.mainSubPanel->setVisible(true);
@@ -154,14 +119,6 @@ void MainPanel::beginEdit(int which)
         editor.singlePanel->setName("Main Tuning");
         auto b = getContentArea().reduced(uicMargin, 0);
         highlight->setBounds(b.getX() + 2 * uicKnobSize + 1.5 * uicMargin, b.getY(),
-                             uicKnobSize + uicMargin, uicLabeledKnobHeight);
-    }
-    else if (which == 3)
-    {
-        editor.playModeSubPanel->setVisible(true);
-        editor.singlePanel->setName("Settings");
-        auto b = getContentArea().reduced(uicMargin, 0);
-        highlight->setBounds(b.getX() + 3 * uicKnobSize + 2.5 * uicMargin, b.getY(),
                              uicKnobSize + uicMargin, uicLabeledKnobHeight);
     }
     highlight->setVisible(true);
