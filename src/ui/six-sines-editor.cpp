@@ -287,6 +287,10 @@ void SixSinesEditor::idle()
                 applyDawExtraStateFromAudio();
             }
         }
+        else if (aum->action == Synth::AudioToUIMsg::UPDATE_CPU_USAGE)
+        {
+            settingsPanel->setCpuUsage(aum->value);
+        }
         else
         {
             SXSNLOG("Ignored patch message " << aum->action);

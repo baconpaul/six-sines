@@ -336,6 +336,7 @@ struct Synth
             UPDATE_PARAM,
             UPDATE_VU,
             UPDATE_VOICE_COUNT,
+            UPDATE_CPU_USAGE,
             SET_PATCH_NAME,
             SET_PATCH_DIRTY_STATE,
             DO_PARAM_RESCAN,
@@ -422,6 +423,7 @@ struct Synth
 
     sst::basic_blocks::dsp::VUPeak vuPeak;
     std::array<sst::basic_blocks::dsp::VUPeak, numOps> opVuPeak;
+    double cpuUsage{0};
     int32_t updateVuEvery{(int32_t)(48000 * 2.5 / 60 / blockSize)}; // approx
     int32_t lastVuUpdate{updateVuEvery};
 

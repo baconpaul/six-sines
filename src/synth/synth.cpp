@@ -234,6 +234,7 @@ void Synth::setSampleRate(double sampleRate)
 
 template <bool multiOut> void Synth::processInternal(const clap_output_events_t *outq)
 {
+    auto start = std::chrono::high_resolution_clock::now();
     if (!SinTable::staticsInitialized)
         SinTable::initializeStatics();
 
@@ -465,6 +466,10 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
 
                 AudioToUIMsg msg2{AudioToUIMsg::UPDATE_VOICE_COUNT, (uint32_t)voiceCount};
                 audioToUi.push(msg2);
+
+                AudioToUIMsg msg3{AudioToUIMsg::UPDATE_CPU_USAGE, 0, (float)(cpuUsage * 100)};
+                audioToUi.push(msg3);
+
                 lastVuUpdate = 0;
             }
             else
@@ -521,6 +526,18 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
             resampler[0]->populateNextBlockSizeLin(output[0], output[1]);
             resampler[0]->renormalizePhases();
         }
+    }
+
+    // Finish CPU calculation
+    if (isEditorAttached)
+    {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+        auto micros = duration.count();
+        auto availmicrosinv = hostSampleRate * 1e-9 / blockSize;
+        auto pct = micros * availmicrosinv;
+        auto cpuFac = 0.995;
+        cpuUsage = cpuUsage * cpuFac + pct * (1 - cpuFac);
     }
 }
 
