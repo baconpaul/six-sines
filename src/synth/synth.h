@@ -421,6 +421,7 @@ struct Synth
     sst::cpputils::active_set_overlay<Param> paramLagSet;
 
     sst::basic_blocks::dsp::VUPeak vuPeak;
+    std::array<sst::basic_blocks::dsp::VUPeak, numOps> opVuPeak;
     int32_t updateVuEvery{(int32_t)(48000 * 2.5 / 60 / blockSize)}; // approx
     int32_t lastVuUpdate{updateVuEvery};
 

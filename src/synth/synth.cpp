@@ -167,6 +167,10 @@ void Synth::setSampleRate(double sampleRate)
 
     lagHandler.setRate(60, blockSize, monoValues.sr.sampleRate);
     vuPeak.setSampleRate(monoValues.sr.sampleRate);
+    for (int i = 0; i < numOps; ++i)
+    {
+        opVuPeak[i].setSampleRate(monoValues.sr.sampleRate);
+    }
     sampleRateRatio = hostSampleRate / engineSampleRate;
 
     if (usesLanczos())
@@ -421,15 +425,43 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
 
         if (isEditorAttached)
         {
+            float stp[numOps][2][blockSize];
+            memset(stp, 0, sizeof(stp));
+            auto cvoice = head;
+            while (cvoice)
+            {
+                for (int i = 0; i < numOps; ++i)
+                {
+                    if (!cvoice->mixerNode[i].active)
+                    {
+                        continue;
+                    }
+                    mech::mul_block<blockSize>(cvoice->out.finalEnvLevel,
+                                               cvoice->mixerNode[i].output[0], stp[i][0]);
+                    mech::mul_block<blockSize>(cvoice->out.finalEnvLevel,
+                                               cvoice->mixerNode[i].output[1], stp[i][1]);
+                }
+                cvoice = cvoice->next;
+            }
             for (int i = 0; i < blockSize; ++i)
             {
                 vuPeak.process(lOutput[0][i], lOutput[1][i]);
+                for (int j = 0; j < numOps; ++j)
+                {
+                    opVuPeak[j].process(stp[j][0][i], stp[j][1][i]);
+                }
             }
 
             if (lastVuUpdate >= updateVuEvery)
             {
                 AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
                 audioToUi.push(msg);
+                for (uint32_t j = 0; j < numOps; ++j)
+                {
+                    AudioToUIMsg smsg{AudioToUIMsg::UPDATE_VU, j + 1, opVuPeak[j].vu_peak[0],
+                                      opVuPeak[j].vu_peak[1]};
+                    audioToUi.push(smsg);
+                }
 
                 AudioToUIMsg msg2{AudioToUIMsg::UPDATE_VOICE_COUNT, (uint32_t)voiceCount};
                 audioToUi.push(msg2);
