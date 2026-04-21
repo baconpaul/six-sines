@@ -235,7 +235,13 @@ void SixSinesEditor::idle()
         }
         else if (aum->action == Synth::AudioToUIMsg::UPDATE_VU)
         {
-            vuMeter->setLevels(aum->value, aum->value2);
+            assert(aum->paramId < numOps + 1);
+            if (aum->paramId == 0)
+                vuMeter->setLevels(aum->value, aum->value2);
+            else
+            {
+                mixerPanel->vuMeters[aum->paramId - 1]->setLevels(aum->value, aum->value2);
+            }
         }
         else if (aum->action == Synth::AudioToUIMsg::UPDATE_VOICE_COUNT)
         {
