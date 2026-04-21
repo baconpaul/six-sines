@@ -21,6 +21,7 @@
 #include <sst/jucegui/components/HSliderFilled.h>
 #include <sst/jucegui/components/Label.h>
 #include <sst/jucegui/components/MultiSwitch.h>
+#include <sst/jucegui/components/JogUpDownButton.h>
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
 #include "sst/jucegui/components/RuledLabel.h"
@@ -78,6 +79,28 @@ template <typename Comp, typename Patch> struct LFOComponents
         isEnv->setLabel("* Env");
         c->addAndMakeVisible(*isEnv);
 
+        for (size_t i = 0; i < numSeqSteps; ++i)
+        {
+            createComponent(e, *c, v.lfoSeqSteps[i], stepSlider[i], stepSliderD[i]);
+            c->addAndMakeVisible(*stepSlider[i]);
+            sst::jucegui::component_adapters::setTraversalId(stepSlider[i].get(), 220 + (int)i);
+        }
+        createComponent(e, *c, v.lfoStepCount, stepCount, stepCountD);
+        c->addAndMakeVisible(*stepCount);
+        sst::jucegui::component_adapters::setTraversalId(stepCount.get(), 240);
+
+        createComponent(e, *c, v.lfoCycleMode, cycleMode, cycleModeD);
+        cycleMode->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
+        cycleMode->setLabel("cyc");
+        c->addAndMakeVisible(*cycleMode);
+        sst::jucegui::component_adapters::setTraversalId(cycleMode.get(), 241);
+
+        auto updateStep = [this]() { lfoSetEnabledState(shape->isEnabled()); };
+        shapeD->onGuiSetValue = updateStep;
+        stepCountD->onGuiSetValue = updateStep;
+        e.componentRefreshByID[v.lfoShape.meta.id] = updateStep;
+        e.componentRefreshByID[v.lfoStepCount.meta.id] = updateStep;
+
         rateD->setTemposyncPowerPartner(tempoSyncD.get());
 
         sst::jucegui::component_adapters::setTraversalId(shape.get(), 200);
@@ -86,37 +109,72 @@ template <typename Comp, typename Patch> struct LFOComponents
         sst::jucegui::component_adapters::setTraversalId(rate.get(), 203);
         sst::jucegui::component_adapters::setTraversalId(deform.get(), 205);
         sst::jucegui::component_adapters::setTraversalId(isEnv.get(), 211);
+
+        lfoSetEnabledState(true);
     }
 
-    juce::Rectangle<int> layoutLFOAt(int x, int y, int extraWidth = 0)
+    void lfoSetEnabledState(bool globallyEnabled)
+    {
+        if (!shape)
+            return;
+        auto isStep = ((int)std::round(shapeD->getValue()) == 7);
+        auto count = (int)std::round(stepCountD->getValue());
+
+        rate->setEnabled(globallyEnabled);
+        deform->setEnabled(globallyEnabled);
+        phase->setEnabled(globallyEnabled);
+        shape->setEnabled(globallyEnabled);
+        tempoSync->setEnabled(globallyEnabled);
+        bipolar->setEnabled(globallyEnabled && !isStep);
+        isEnv->setEnabled(globallyEnabled);
+        stepCount->setEnabled(globallyEnabled && isStep);
+        cycleMode->setEnabled(globallyEnabled && isStep);
+        for (size_t i = 0; i < numSeqSteps; ++i)
+            stepSlider[i]->setEnabled(globallyEnabled && isStep && (int)i < count);
+
+        asComp()->repaint();
+    }
+
+    juce::Rectangle<int> layoutLFOAt(int x, int y, int width = -1)
     {
         if (!titleLab)
             return {};
 
         namespace jlo = sst::jucegui::layouts;
 
-        auto lo = jlo::VList()
-                      .at(x, y)
-                      .withHeight(asComp()->getHeight() - y)
-                      .withWidth(uicKnobSize * 2.75 + uicMargin);
+        auto w = (width > 0) ? width : (asComp()->getWidth() - x - uicMargin);
+        auto h = 180;
+
+        auto lo = jlo::VList().at(x, y).withHeight(h).withWidth(w);
 
         lo.add(titleLabelLayout(titleLab));
 
         auto columns = jlo::HList().expandToFill().withAutoGap(uicMargin);
 
         auto col1 = jlo::VList().withWidth(uicKnobSize * 1.5).withAutoGap(uicMargin);
-        col1.add(jlo::Component(*shape).withHeight(2 * uicLabeledKnobHeight - uicLabelHeight));
-        col1.add(jlo::Component(*tempoSync).withHeight(uicLabelHeight));
+        col1.add(jlo::Component(*shape).withHeight(uicLabeledKnobHeight + 3 * uicMargin +
+                                                   3 * uicLabelHeight));
         col1.add(jlo::Component(*bipolar).withHeight(uicLabelHeight));
 
         auto col2 = jlo::VList().withWidth(uicKnobSize * 1.25).withAutoGap(uicMargin);
         col2.add(labelKnobLayout(rate, rateL).centerInParent());
+        col2.add(jlo::Component(*tempoSync).withHeight(uicLabelHeight));
         col2.add(sideLabelSlider(deformL, deform));
         col2.add(sideLabelSlider(phaseL, phase));
         col2.add(jlo::Component(*isEnv).withHeight(uicLabelHeight));
 
+        auto col3 = jlo::VList().expandToFill().withAutoGap(0);
+        for (size_t i = 0; i < numSeqSteps; ++i)
+            col3.add(jlo::Component(*stepSlider[i]).expandToFill());
+        col3.addGap(uicMargin);
+        auto bottomRow = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
+        bottomRow.add(jlo::Component(*stepCount).withWidth(70));
+        bottomRow.add(jlo::Component(*cycleMode).expandToFill());
+        col3.add(bottomRow);
+
         columns.add(col1);
         columns.add(col2);
+        columns.add(col3);
 
         lo.add(columns);
 
@@ -141,6 +199,15 @@ template <typename Comp, typename Patch> struct LFOComponents
 
     std::unique_ptr<jcmp::ToggleButton> isEnv;
     std::unique_ptr<PatchDiscrete> isEnvD;
+
+    std::array<std::unique_ptr<jcmp::HSliderFilled>, numSeqSteps> stepSlider;
+    std::array<std::unique_ptr<PatchContinuous>, numSeqSteps> stepSliderD;
+
+    std::unique_ptr<jcmp::JogUpDownButton> stepCount;
+    std::unique_ptr<PatchDiscrete> stepCountD;
+
+    std::unique_ptr<jcmp::ToggleButton> cycleMode;
+    std::unique_ptr<PatchDiscrete> cycleModeD;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // LFO_COMPONENTS_H

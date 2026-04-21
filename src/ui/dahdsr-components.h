@@ -101,7 +101,8 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
 
         namespace jlo = sst::jucegui::layouts;
 
-        auto lo = jlo::VList().at(x, y).withHeight(180).withWidth(nels * uicSliderWidth);
+        auto lo =
+            jlo::VList().at(x, y).withHeight(180 - uicMargin).withWidth(nels * uicSliderWidth);
 
         lo.add(titleLabelLayout(titleLab));
         auto sliders = jlo::HList().expandToFill();

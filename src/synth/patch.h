@@ -77,7 +77,7 @@ struct Patch : pats::PatchBase<Patch, Param>
     static constexpr uint32_t boolFlags{CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED};
 
     static constexpr uint64_t version_110 = 0x010100;
-    static constexpr uint64_t version_120 = 0x010201;
+    static constexpr uint64_t version_120a = 0x010201; // first chunk of 1.2.0; step sequencer
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
     static md_t floatMd(uint64_t version = version_110)
     {
@@ -154,7 +154,19 @@ struct Patch : pats::PatchBase<Patch, Param>
 
     struct LFOMixin
     {
-        LFOMixin(const std::string name, int id0)
+        enum Shape
+        {
+            Sine = 0,
+            Ramp,
+            Saw,
+            Triangle,
+            Pulse,
+            Noise,
+            SandH,
+            Step
+        };
+
+        LFOMixin(const std::string name, int id0, int stepid0 = -1)
             : lfoRate(floatMd()
                           .asLfoRate(-7, 11)
                           .withName(name + " LFO Rate")
@@ -170,7 +182,7 @@ struct Patch : pats::PatchBase<Patch, Param>
               lfoShape(intMd()
                            .withName(name + " LFO Shape")
                            .withGroupName(name)
-                           .withRange(0, 6)
+                           .withRange(0, 7)
                            .withDefault(0)
                            .withID(id0 + 3)
                            .withUnorderedMapFormatting({{0, "Sine"},
@@ -179,7 +191,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                         {3, "Triangle"},
                                                         {4, "Pulse"},
                                                         {5, "Noise"},
-                                                        {6, "S and H"}})),
+                                                        {6, "S and H"},
+                                                        {7, "Step"}})),
               lfoActive(boolMd()
                             .withDefault(true)
                             .withID(id0 + 4)
@@ -207,13 +220,38 @@ struct Patch : pats::PatchBase<Patch, Param>
                                 .withName(name + " Start Phase")
                                 .withGroupName(name)
                                 .withRange(0., 1.)
-                                .withLinearScaleFormatting(""))
+                                .withLinearScaleFormatting("")),
+              lfoSeqSteps(scpu::make_array_lambda<Param, numSeqSteps>(
+                  [this, id0, stepid0, name](auto sid)
+                  {
+                      auto idv = (stepid0 > 0 ? (stepid0) : (id0 + 9)) + sid;
+                      return floatMd(version_120a)
+                          .withDefault(0)
+                          .withID(idv)
+                          .withName(name + " Seq Step " + std::to_string(sid))
+                          .withGroupName(name)
+                          .asPercentBipolar();
+                  })),
+              lfoStepCount(floatMd(version_120a)
+                               .withID((stepid0 > 0 ? (stepid0) : (id0 + 9)) + 16)
+                               .withName(name + " Step Count")
+                               .withGroupName(name)
+                               .asInt()
+                               .withRange(1, numSeqSteps)
+                               .withDefault(numSeqSteps)
+                               .withLinearScaleFormatting("steps")),
+              lfoCycleMode(boolMd(version_120a)
+                               .withName(name + " Cycle")
+                               .withDefault(0)
+                               .withGroupName(name)
+                               .withID(((stepid0 > 0 ? (stepid0) : (id0 + 9)) + 17)))
         {
             lfoRate.tempoSyncPartner = &tempoSync;
         }
 
         Param lfoRate, lfoDeform, lfoShape, lfoActive, tempoSync, lfoBipolar, lfoIsEnveloped,
-            lfoStartPhase;
+            lfoStartPhase, lfoStepCount, lfoCycleMode;
+        std::array<Param, numSeqSteps> lfoSeqSteps;
 
         void appendLFOParams(std::vector<Param *> &res)
         {
@@ -224,6 +262,12 @@ struct Patch : pats::PatchBase<Patch, Param>
             res.push_back(&lfoBipolar);
             res.push_back(&lfoIsEnveloped);
             res.push_back(&lfoStartPhase);
+            for (size_t sid = 0; sid < numSeqSteps; ++sid)
+            {
+                res.push_back(&lfoSeqSteps[sid]);
+            }
+            res.push_back(&lfoStepCount);
+            res.push_back(&lfoCycleMode);
         }
 
         enum LFOTargets
@@ -703,7 +747,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                          .withGroupName(name(idx))
                          .withDefault(false)
                          .withID(id(1, idx))),
-              DAHDSRMixin(name(idx), id(2, idx), false), LFOMixin(name(idx), id(15, idx)),
+              DAHDSRMixin(name(idx), id(2, idx), false),
+              LFOMixin(name(idx), id(15, idx), id(60, idx)),
               lfoToFB(floatMd()
                           .asPercentBipolar()
                           .withName(name(idx) + " LFO to FB Amplitude")
@@ -821,7 +866,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                   .withUnorderedMapFormatting(
                                       {{0, "Signal"}, {1, "abs(Signal)"}, {2, "(1+Signal)/2"}})),
               DAHDSRMixin(name(idx), id(2, idx), false, false, id(50, idx)),
-              LFOMixin(name(idx), id(14, idx)),
+              LFOMixin(name(idx), id(14, idx), id(90, idx)),
               lfoToDepth(floatMd()
                              .asPercentBipolar()
                              .withName(name(idx) + " LFO to Depth")
@@ -945,7 +990,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                       .withGroupName(name(idx))
                       .withDefault(0.f)
                       .withID(id(15, idx))),
-              LFOMixin(name(idx), id(30, idx)),
+              LFOMixin(name(idx), id(30, idx), id(65, idx)),
               lfoToLevel(floatMd()
                              .asPercentBipolar()
                              .withName(name(idx) + " LFO to Level")
@@ -1392,12 +1437,12 @@ struct Patch : pats::PatchBase<Patch, Param>
                           .withDefault(TargetID::NONE)
                           .withID(id(150 + i));
                   })),
-              LFOMixin(name(), id(200)), lfoDepth(floatMd()
-                                                      .asPercentBipolar()
-                                                      .withName(name() + " LFO Depth")
-                                                      .withGroupName(name())
-                                                      .withDefault(0)
-                                                      .withID(id(220)))
+              LFOMixin(name(), id(200), id(230)), lfoDepth(floatMd()
+                                                               .asPercentBipolar()
+                                                               .withName(name() + " LFO Depth")
+                                                               .withGroupName(name())
+                                                               .withDefault(0)
+                                                               .withID(id(220)))
         {
             defaultTrigger.adhocFeatures = Param::AdHocFeatureValues::TRIGGERMODE;
             appendLFOTargetName(targetList);

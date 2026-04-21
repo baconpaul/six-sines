@@ -35,6 +35,7 @@ static constexpr size_t numMacros{6};
 static constexpr size_t maxVoices{64};
 
 static constexpr size_t numModsPer{3};
+static constexpr size_t numSeqSteps{16};
 
 extern int debugLevel;
 

@@ -333,13 +333,7 @@ void SourceSubPanel::setEnabledState()
     triggerButton->setEnabled(!isAudioIn);
 
     // LFO controls
-    rate->setEnabled(!isAudioIn);
-    deform->setEnabled(!isAudioIn);
-    phase->setEnabled(!isAudioIn);
-    shape->setEnabled(!isAudioIn);
-    tempoSync->setEnabled(!isAudioIn);
-    bipolar->setEnabled(!isAudioIn);
-    isEnv->setEnabled(!isAudioIn);
+    lfoSetEnabledState(!isAudioIn);
 
     // Modulation slots
     for (int i = 0; i < numModsPer; ++i)

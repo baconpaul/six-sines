@@ -22,6 +22,8 @@
 #include "sst/cpputils/constructors.h"
 #include "sst/basic-blocks/modulators/AHDSRShapedSC.h"
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
+#include "sst/basic-blocks/modulators/StepLFO.h"
+#include "sst/basic-blocks/modulators/Transport.h"
 #include "sst/basic-blocks/dsp/Lag.h"
 
 #include "synth/mono_values.h"
@@ -260,7 +262,7 @@ template <typename T> struct EnvelopeSupport
 template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSupport
 {
     const T &paramBundle;
-    const MonoValues &monoValues;
+    MonoValues &monoValues; // non-const so we can read the RNG
 
     const float &lfoRate, &lfoDeform, &lfoShape, &lfoActiveV, &tempoSyncV, &bipolarV,
         &lfoIsEnvelopedV, &lfoStartPhase;
@@ -269,12 +271,36 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
     lfo_t lfo;
     sst::basic_blocks::dsp::OnePoleLag<float, false> lag;
 
+    using stepLfo_t = sst::basic_blocks::modulators::StepLFO<blockSize>;
+    stepLfo_t stepLFO;
+    typename stepLfo_t::Storage stepStorage;
+    sst::basic_blocks::modulators::Transport stepTransport;
+    std::array<const float *, numSeqSteps> stepValues;
+    const float *stepCountValue{nullptr};
+    const float *stepCycleModeValue{nullptr};
+
     LFOSupport(const T &mn, MonoValues &mv)
-        : paramBundle(mn), lfo(&mv.sr, mv.rng), lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform),
-          lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive), tempoSyncV(mn.tempoSync), monoValues(mv),
-          bipolarV(mn.lfoBipolar), lfoIsEnvelopedV(mn.lfoIsEnveloped),
-          lfoStartPhase(mn.lfoStartPhase)
+        : paramBundle(mn), lfo(&mv.sr, mv.rng), stepLFO(mv.tuningProvider), lfoRate(mn.lfoRate),
+          lfoDeform(mn.lfoDeform), lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive),
+          tempoSyncV(mn.tempoSync), monoValues(mv), bipolarV(mn.lfoBipolar),
+          lfoIsEnvelopedV(mn.lfoIsEnveloped), lfoStartPhase(mn.lfoStartPhase),
+          stepValues(sst::cpputils::make_array_lambda<const float *, numSeqSteps>(
+              [&mn](int i) { return &mn.lfoSeqSteps[i].value; })),
+          stepCountValue(&mn.lfoStepCount.value), stepCycleModeValue(&mn.lfoCycleMode.value)
     {
+    }
+
+    void snapStepStorageFromParams()
+    {
+        for (size_t i = 0; i < numSeqSteps; ++i)
+            stepStorage.data[i] = *stepValues[i];
+        for (size_t i = numSeqSteps; i < stepLfo_t::Storage::stepLfoSteps; ++i)
+            stepStorage.data[i] = 0.f;
+        auto count = (int)std::round(*stepCountValue);
+        stepStorage.repeat = (int16_t)std::clamp(count, 1, (int)numSeqSteps);
+        auto cycleOn = stepCycleModeValue && *stepCycleModeValue > 0.5f;
+        stepStorage.rateIsForSingleStep = !cycleOn;
+        stepStorage.smooth = std::clamp(lfoDeform + lfoDeformMod, -1.f, 1.f);
     }
 
     float lfoRateMod{0.f}, lfoDeformMod{0.f}, lfoStartMod{0.f};
@@ -297,17 +323,39 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
         lfoIsEnveloped = lfoIsEnvelopedV > 0.5;
         shape = static_cast<int>(std::round(lfoShape));
 
-        lfo.attack(shape);
-        lfo.applyPhaseOffset(lfoStartPhase + lfoStartMod);
+        // Shape is latched at attack time; lfoProcess assumes the matching
+        // oscillator was initialized here. If shape is ever allowed to change
+        // between attack and process, both branches must be reconciled.
+        if (shape == Patch::LFOMixin::Shape::Step)
+        {
+            snapStepStorageFromParams();
+            stepLFO.setSampleRate(monoValues.sr.sampleRate, monoValues.sr.sampleRateInv);
+            stepTransport.tempo = monoValues.tempoSyncRatio * 120.0;
+            auto useRate = std::clamp(lfoRate + lfoRateMod, paramBundle.lfoRate.meta.minVal,
+                                      paramBundle.lfoRate.meta.maxVal);
+            stepLFO.assign(&stepStorage, useRate, &stepTransport, monoValues.rng, tempoSync);
+
+            double phase0 =
+                std::clamp(lfoStartPhase + lfoStartMod, 0.f, 0.999f) * stepStorage.repeat;
+            double phaseFr = phase0 - std::floor(phase0);
+            stepLFO.setPhaseTo((int)std::floor(phase0), (float)phaseFr);
+        }
+        else
+        {
+            lfo.attack(shape);
+            lfo.applyPhaseOffset(lfoStartPhase + lfoStartMod);
+        }
         if (needsSmoothing)
         {
-            auto tshape = (lfo_t::Shape)shape;
+            using shp = Patch::LFOMixin::Shape;
+            auto tshape = (shp)shape;
             switch (tshape)
             {
-            case lfo_t::RAMP:
-            case lfo_t::DOWN_RAMP:
-            case lfo_t::PULSE:
-            case lfo_t::SH_NOISE:
+            case shp::Ramp:
+            case shp::Saw:
+            case shp::Pulse:
+            case shp::SandH:
+            case shp::Step:
                 doSmooth = true;
                 lag.setRateInMilliseconds(10, monoValues.sr.samplerate, 1.0);
                 lag.snapTo(0.f);
@@ -342,10 +390,23 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
             rate = -paramBundle.lfoRate.meta.snapToTemposync(-rate);
         }
 
-        lfo.process_block(std::clamp(rate + lfoRateMod, paramBundle.lfoRate.meta.minVal,
-                                     paramBundle.lfoRate.meta.maxVal),
-                          std::clamp(lfoDeform + lfoDeformMod, -1.f, 1.f), shape, false,
-                          tempoSync ? monoValues.tempoSyncRatio : 1.0);
+        if (shape == Patch::LFOMixin::Shape::Step)
+        {
+            snapStepStorageFromParams();
+            stepTransport.tempo = monoValues.tempoSyncRatio * 120.0;
+            auto useRate = std::clamp(rate + lfoRateMod, paramBundle.lfoRate.meta.minVal,
+                                      paramBundle.lfoRate.meta.maxVal);
+            stepLFO.process(useRate, 0, tempoSync, false, blockSize);
+            for (int j = 0; j < blockSize; ++j)
+                lfo.outputBlock[j] = stepLFO.output;
+        }
+        else
+        {
+            lfo.process_block(std::clamp(rate + lfoRateMod, paramBundle.lfoRate.meta.minVal,
+                                         paramBundle.lfoRate.meta.maxVal),
+                              std::clamp(lfoDeform + lfoDeformMod, -1.f, 1.f), shape, false,
+                              tempoSync ? monoValues.tempoSyncRatio : 1.0);
+        }
 
         if constexpr (needsSmoothing)
         {
@@ -359,7 +420,7 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
                 }
             }
         }
-        if (!bipolar)
+        if (!bipolar && shape != Patch::LFOMixin::Shape::Step)
         {
             for (int j = 0; j < blockSize; ++j)
             {
