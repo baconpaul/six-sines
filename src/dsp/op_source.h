@@ -56,8 +56,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     // todo waveshape
 
-    uint32_t phase;
-    int32_t dPhase;
+    uint32_t phase{0};
+    int32_t dPhase{0};
 
     static constexpr float centsScale{1.0 / (12 * 100)};
 
@@ -285,8 +285,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     static constexpr int softPhaseCount{16};
     static constexpr float dSoftPhase{1.f / (blockSize * softPhaseCount)};
     int softResetPhaseCount{-1};
-    uint32_t softPhase;
-    float softFb[2];
+    uint32_t softPhase{0};
+    float softFb[2]{0.f, 0.f};
     void softResetPhase()
     {
         softPhase = 4 << 27;

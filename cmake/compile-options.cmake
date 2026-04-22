@@ -22,6 +22,12 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     add_compile_options(
             $<$<BOOL:${USE_SANITIZER}>:-fsanitize=address>
             $<$<BOOL:${USE_SANITIZER}>:-fsanitize=undefined>
+            $<$<BOOL:${USE_SANITIZER}>:-fno-sanitize-recover=undefined>
+            $<$<BOOL:${USE_SANITIZER}>:-fsanitize-address-use-after-scope>
+            # Fill stack/heap uninitialized locals with a repeating pattern so
+            # uninit reads surface deterministically on macOS/Linux rather than
+            # happening to read as zero
+            $<$<BOOL:${USE_SANITIZER}>:-ftrivial-auto-var-init=pattern>
 
             $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-fno-char8_t>
     )
@@ -29,6 +35,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     add_link_options(
             $<$<BOOL:${USE_SANITIZER}>:-fsanitize=address>
             $<$<BOOL:${USE_SANITIZER}>:-fsanitize=undefined>
+            $<$<BOOL:${USE_SANITIZER}>:-fno-sanitize-recover=undefined>
     )
     if (NOT APPLE)
         add_compile_options($<IF:$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},aarch64>,-march=armv8-a,-march=nehalem>)
