@@ -232,11 +232,10 @@ struct Patch : pats::PatchBase<Patch, Param>
                           .withGroupName(name)
                           .asPercentBipolar();
                   })),
-              lfoStepCount(floatMd(version_120a)
+              lfoStepCount(intMd(version_120a)
                                .withID((stepid0 > 0 ? (stepid0) : (id0 + 9)) + 16)
                                .withName(name + " Step Count")
                                .withGroupName(name)
-                               .asInt()
                                .withRange(1, numSeqSteps)
                                .withDefault(numSeqSteps)
                                .withLinearScaleFormatting("steps")),

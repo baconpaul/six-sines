@@ -16,6 +16,7 @@
 #ifndef BACONPAUL_SIX_SINES_UI_SIX_SINES_EDITOR_H
 #define BACONPAUL_SIX_SINES_UI_SIX_SINES_EDITOR_H
 
+#include <concepts>
 #include <functional>
 #include <utility>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -44,6 +45,14 @@ namespace jdat = sst::jucegui::data;
 
 namespace baconpaul::six_sines::ui
 {
+template <typename T>
+concept HasContinuous = std::derived_from<T, juce::Component> && requires(T &t) {
+    { t.continuous() } -> std::same_as<sst::jucegui::data::Continuous *>;
+    t.onBeginEdit();
+    t.onEndEdit();
+    t.notifyAccessibleChange();
+};
+
 struct MainPanel;
 struct MainSubPanel;
 struct MatrixPanel;
@@ -169,7 +178,9 @@ struct SixSinesEditor : jcmp::WindowPanel
     void updateTooltip(jdat::Discrete *d);
     void hideTooltip();
 
-    void popupMenuForContinuous(jcmp::ContinuousParamEditor *e);
+    template <typename T>
+        requires HasContinuous<T>
+    void popupMenuForContinuous(T *e);
 
     void hideAllSubPanels();
     std::unordered_map<uint32_t, juce::Component::SafePointer<juce::Component>> componentByID;
