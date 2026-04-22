@@ -29,7 +29,7 @@ struct VoiceValues
     VoiceValues() : gated(gatedV), key(keyV) {}
 
     const bool &gated;
-    float gatedFloat, ungatedFloat;
+    float gatedFloat{0.f}, ungatedFloat{1.f};
     void setGated(bool g)
     {
         gatedV = g;
@@ -42,7 +42,7 @@ struct VoiceValues
         keytrackFrom60 = (k - 60) / 12.0;
     }
     const int &key;
-    float keytrackFrom60;
+    float keytrackFrom60{0.f};
     int channel{0};
     float velocity{0}, releaseVelocity{0};
 

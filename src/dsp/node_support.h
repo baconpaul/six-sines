@@ -305,7 +305,7 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
 
     float lfoRateMod{0.f}, lfoDeformMod{0.f}, lfoStartMod{0.f};
 
-    int shape;
+    int shape{0};
     bool tempoSync{false};
     bool bipolar{true};
     bool lfoIsEnveloped{false};
@@ -467,7 +467,7 @@ template <typename Bundle, typename Node> struct ModulationSupport
     std::array<const float *, numModsPer> depthPointers;
     std::array<float, numModsPer> priorModulation;
 
-    float modr01, modrpm1, modrnorm, modrhalfnorm;
+    float modr01{0.f}, modrpm1{0.f}, modrnorm{0.f}, modrhalfnorm{0.f};
 
     ModulationSupport(const Bundle &mn, Node *p, MonoValues &mv, const VoiceValues &vv)
         : paramBundle(mn), enclosingNode(p), monoValues(mv), voiceValues(vv),
