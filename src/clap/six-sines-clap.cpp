@@ -319,16 +319,16 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     }
     bool stateLoad(const clap_istream *istream) noexcept override
     {
-        Patch patchCopy;
+        auto patchCopy = std::make_unique<Patch>();
         loadedDawExtraState = Synth::DawExtraState{};
-        patchCopy.dawExtraStateFrom = [this](TiXmlElement &e)
+        patchCopy->dawExtraStateFrom = [this](TiXmlElement &e)
         { Synth::fromDawExtraState(e, loadedDawExtraState); };
 
-        if (!sst::plugininfra::patch_support::inStreamToPatch(istream, patchCopy))
+        if (!sst::plugininfra::patch_support::inStreamToPatch(istream, *patchCopy))
             return false;
 
-        presets::PresetManager::sendEntirePatchToAudio(patchCopy, engine->mainToAudio,
-                                                       patchCopy.name, _host.host());
+        presets::PresetManager::sendEntirePatchToAudio(*patchCopy, engine->mainToAudio,
+                                                       patchCopy->name, _host.host());
 
         Synth::MainToAudioMsg des{Synth::MainToAudioMsg::SET_DAW_EXTRA_STATE};
         des.dawExtraStatePointer = &loadedDawExtraState;
@@ -396,12 +396,12 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                     std::stringstream buffer;
                     buffer << t.rdbuf();
 
-                    Patch patchCopy;
-                    patchCopy.fromState(buffer.str());
+                    auto patchCopy = std::make_unique<Patch>();
+                    patchCopy->fromState(buffer.str());
 
                     auto dn = p.filename().replace_extension("").u8string();
-                    presets::PresetManager::sendEntirePatchToAudio(patchCopy, engine->mainToAudio,
-                                                                   patchCopy.name, _host.host());
+                    presets::PresetManager::sendEntirePatchToAudio(*patchCopy, engine->mainToAudio,
+                                                                   patchCopy->name, _host.host());
                     return true;
                 }
                 else
@@ -426,8 +426,8 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             auto &p = pm.factoryPatchVector[idx];
 
             // TODO : Assert the keys match here
-            Patch patchCopy;
-            pm.loadFactoryPreset(patchCopy, engine->mainToAudio, p.first, p.second);
+            auto patchCopy = std::make_unique<Patch>();
+            pm.loadFactoryPreset(*patchCopy, engine->mainToAudio, p.first, p.second);
             return true;
         }
         return false;
