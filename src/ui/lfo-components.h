@@ -74,12 +74,18 @@ template <typename Comp, typename Patch> struct LFOComponents
         {
             auto bg = editor.style()->getColour(jcmp::base_styles::PushButton::styleClass,
                                                 jcmp::base_styles::PushButton::fill);
-            g.fillAll(bg);
-
             auto handleCol = editor.style()->getColour(jcmp::HSliderFilled::Styles::styleClass,
                                                        jcmp::HSliderFilled::Styles::handle);
             auto val = editor.style()->getColour(jcmp::HSliderFilled::Styles::styleClass,
                                                  jcmp::HSliderFilled::Styles::value);
+
+            if (!isEnabled())
+            {
+                val = val.withAlpha(0.2f);
+                handleCol = handleCol.withAlpha(0.2f);
+            }
+
+            g.fillAll(bg);
 
             auto n = stepCount();
             if (n == 0)
@@ -123,6 +129,9 @@ template <typename Comp, typename Patch> struct LFOComponents
         float rowHeight() const { return getLocalBounds().getHeight() / (float)stepCount(); }
         void mouseDown(const juce::MouseEvent &event) override
         {
+            if (!isEnabled())
+                return;
+
             auto n = stepCount();
             if (n == 0)
                 return;
@@ -155,6 +164,9 @@ template <typename Comp, typename Patch> struct LFOComponents
 
         void mouseDrag(const juce::MouseEvent &event) override
         {
+            if (!isEnabled())
+                return;
+
             auto n = stepCount();
             if (n == 0)
                 return;
@@ -182,6 +194,9 @@ template <typename Comp, typename Patch> struct LFOComponents
 
         void mouseUp(const juce::MouseEvent &event) override
         {
+            if (!isEnabled())
+                return;
+
             if (!event.mods.isPopupMenu())
             {
                 editGuard(draggedRow, false);

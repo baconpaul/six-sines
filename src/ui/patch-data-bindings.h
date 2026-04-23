@@ -200,17 +200,14 @@ void createComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique
     cm->onBeginEdit = [&e, &cm, &pc, args..., id, &panel]()
     {
         e.mainToAudio.push({Synth::MainToAudioMsg::Action::BEGIN_EDIT, id});
-        if (std::is_same_v<Q, PatchContinuous>)
-        {
-            e.updateTooltip(pc.get());
-            e.showTooltipOn(cm.get());
-        }
+        e.updateTooltip(pc.get());
+        e.showTooltipOn(cm.get());
 
         panel.beginEdit(args...);
     };
-    cm->onEndEdit = [&e, id, &panel]()
+    cm->onEndEdit = [&e, id, &pc]()
     {
-        e.mainToAudio.push({Synth::MainToAudioMsg::Action::END_EDIT, id});
+        e.updateTooltip(pc.get());
         if (std::is_same_v<Q, PatchContinuous>)
         {
             e.hideTooltip();
