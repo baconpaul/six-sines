@@ -89,7 +89,7 @@ struct Patch : pats::PatchBase<Patch, Param>
     }
     static md_t boolMd(uint64_t version = version_110)
     {
-        return baseMd(version).asBool().withFlags(boolFlags);
+        return baseMd(version).asBool().withOnOffFormatting().withFlags(boolFlags);
     }
     static md_t intMd(uint64_t version = version_110)
     {
