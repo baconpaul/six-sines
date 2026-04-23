@@ -34,10 +34,175 @@ template <typename Comp, typename Patch> struct LFOComponents
 {
     Comp *asComp() { return static_cast<Comp *>(this); }
     LFOComponents() {}
+
+    struct StepEditor : juce::Component
+    {
+        SixSinesEditor &editor;
+        const Patch &patch;
+        std::array<std::unique_ptr<PatchContinuous>, numSeqSteps> stepD;
+        StepEditor(SixSinesEditor &e, const Patch &p) : editor(e), patch(p)
+        {
+            for (size_t i = 0; i < numSeqSteps; ++i)
+                stepD[i] = std::make_unique<PatchContinuous>(e, p.lfoSeqSteps[i].meta.id);
+
+            // These are JUST for the menu callback. The other begin/end we do internally
+            onBeginEdit = [this]()
+            {
+                if (menuContinuousIndex >= 0)
+                    editGuard(menuContinuousIndex, true);
+            };
+            onEndEdit = [this]()
+            {
+                if (menuContinuousIndex >= 0)
+                    editGuard(menuContinuousIndex, false);
+            };
+        }
+
+        // HasContinuous concept surface
+        sst::jucegui::data::Continuous *continuous()
+        {
+            if (menuContinuousIndex < 0 || menuContinuousIndex >= (int)numSeqSteps)
+                return nullptr;
+            return stepD[menuContinuousIndex].get();
+        }
+        std::function<void()> onBeginEdit{[]() {}};
+        std::function<void()> onEndEdit{[]() {}};
+        // Stub: the menu typein calls this after a value change; the StepEditor
+        // doesn't expose per-row accessibility events yet, so nothing to announce.
+        void notifyAccessibleChange() {}
+        void paint(juce::Graphics &g) override
+        {
+            auto bg = editor.style()->getColour(jcmp::base_styles::PushButton::styleClass,
+                                                jcmp::base_styles::PushButton::fill);
+            g.fillAll(bg);
+
+            auto handleCol = editor.style()->getColour(jcmp::HSliderFilled::Styles::styleClass,
+                                                       jcmp::HSliderFilled::Styles::handle);
+            auto val = editor.style()->getColour(jcmp::HSliderFilled::Styles::styleClass,
+                                                 jcmp::HSliderFilled::Styles::value);
+
+            auto n = stepCount();
+            if (n == 0)
+                return;
+
+            auto bounds = getLocalBounds().toFloat();
+            auto rowH = bounds.getHeight() / (float)n;
+            auto midX = bounds.getCentreX();
+            auto halfW = bounds.getWidth() * 0.5f;
+
+            for (size_t i = 0; i < n; ++i)
+            {
+                float y = bounds.getY() + i * rowH;
+                float v = std::clamp((float)stepD[i]->getValue(), -1.f, 1.f);
+                float valX = midX + v * halfW;
+                float left = std::min(valX, midX);
+                float right = std::max(valX, midX);
+
+                g.setColour(val);
+                g.fillRect(juce::Rectangle<float>(left, y, right - left, rowH));
+
+                constexpr float handleThickness = 2.0f;
+                g.setColour(handleCol);
+                g.fillRect(juce::Rectangle<float>(valX - handleThickness * 0.5f, y, handleThickness,
+                                                  rowH));
+            }
+
+            g.setColour(handleCol.withAlpha(0.3f));
+            for (size_t i = 1; i < n; ++i)
+            {
+                float y = bounds.getY() + i * rowH;
+                g.drawHorizontalLine((int)y, bounds.getX(), bounds.getRight());
+            }
+        }
+
+        size_t stepCount() const { return (int)std::round(patch.lfoStepCount.value); }
+
+        int draggedRow{-1};
+        int menuContinuousIndex{-1};
+
+        float rowHeight() const { return getLocalBounds().getHeight() / (float)stepCount(); }
+        void mouseDown(const juce::MouseEvent &event) override
+        {
+            auto n = stepCount();
+            if (n == 0)
+                return;
+
+            auto rowH = rowHeight();
+            auto rowIdx = (int)std::floor((event.position.y) / rowH);
+            if (rowIdx < 0 || rowIdx >= (int)n)
+                return;
+
+            if (event.mods.isPopupMenu())
+            {
+                draggedRow = rowIdx;
+                menuContinuousIndex = rowIdx;
+                sst::jucegui::component_adapters::setClapParamId(this,
+                                                                 patch.lfoSeqSteps[rowIdx].meta.id);
+                editor.popupMenuForContinuous(this);
+                return;
+            }
+
+            auto x01 = std::clamp((event.position.x) / getWidth(), 0.f, 1.f);
+
+            editGuard(rowIdx, true);
+            stepD[rowIdx]->setValueFromGUI(x01 * 2.f - 1.f);
+            draggedRow = rowIdx;
+
+            editor.updateTooltip(stepD[rowIdx].get());
+            editor.showTooltipOn(this);
+            repaint();
+        }
+
+        void mouseDrag(const juce::MouseEvent &event) override
+        {
+            auto n = stepCount();
+            if (n == 0)
+                return;
+
+            auto rowH = rowHeight();
+            auto rowIdx = (int)std::floor((event.position.y) / rowH);
+            if (rowIdx >= 0 && rowIdx < (int)n)
+            {
+                if (rowIdx != draggedRow)
+                {
+                    if (draggedRow >= 0)
+                    {
+                        editGuard(draggedRow, false);
+                    }
+                    editGuard(rowIdx, true);
+                    draggedRow = rowIdx;
+                }
+                auto x01 = std::clamp((event.position.x) / getWidth(), 0.f, 1.f);
+
+                stepD[draggedRow]->setValueFromGUI(x01 * 2.f - 1.f);
+                editor.updateTooltip(stepD[draggedRow].get());
+                repaint();
+            }
+        }
+
+        void mouseUp(const juce::MouseEvent &event) override
+        {
+            if (!event.mods.isPopupMenu())
+            {
+                editGuard(draggedRow, false);
+                draggedRow = -1;
+            }
+
+            editor.hideTooltip();
+        }
+
+        void editGuard(int row, bool se)
+        {
+            auto id = patch.lfoSeqSteps[row].meta.id;
+            if (se)
+                editor.mainToAudio.push({Synth::MainToAudioMsg::Action::BEGIN_EDIT, id});
+            else
+                editor.mainToAudio.push({Synth::MainToAudioMsg::Action::END_EDIT, id});
+        }
+    };
+
     void setupLFO(SixSinesEditor &e, const Patch &v)
     {
-        using kt_t = sst::jucegui::accessibility::KeyboardTraverser;
-
         auto c = asComp();
         createComponent(e, *c, v.lfoRate, rate, rateD);
         rateL = std::make_unique<jcmp::Label>();
@@ -79,12 +244,14 @@ template <typename Comp, typename Patch> struct LFOComponents
         isEnv->setLabel("* Env");
         c->addAndMakeVisible(*isEnv);
 
+        stepEditor = std::make_unique<StepEditor>(e, v);
+        c->addAndMakeVisible(*stepEditor);
         for (size_t i = 0; i < numSeqSteps; ++i)
         {
-            createComponent(e, *c, v.lfoSeqSteps[i], stepSlider[i], stepSliderD[i]);
-            c->addAndMakeVisible(*stepSlider[i]);
-            sst::jucegui::component_adapters::setTraversalId(stepSlider[i].get(), 220 + (int)i);
+            e.componentByID[v.lfoSeqSteps[i].meta.id] =
+                juce::Component::SafePointer<juce::Component>(stepEditor.get());
         }
+
         createComponent(e, *c, v.lfoStepCount, stepCount, stepCountD);
         c->addAndMakeVisible(*stepCount);
         sst::jucegui::component_adapters::setTraversalId(stepCount.get(), 240);
@@ -118,7 +285,6 @@ template <typename Comp, typename Patch> struct LFOComponents
         if (!shape)
             return;
         auto isStep = ((int)std::round(shapeD->getValue()) == 7);
-        auto count = (int)std::round(stepCountD->getValue());
 
         rate->setEnabled(globallyEnabled);
         deform->setEnabled(globallyEnabled);
@@ -129,9 +295,7 @@ template <typename Comp, typename Patch> struct LFOComponents
         isEnv->setEnabled(globallyEnabled);
         stepCount->setEnabled(globallyEnabled && isStep);
         cycleMode->setEnabled(globallyEnabled && isStep);
-        for (size_t i = 0; i < numSeqSteps; ++i)
-            stepSlider[i]->setEnabled(globallyEnabled && isStep && (int)i < count);
-
+        stepEditor->setEnabled(globallyEnabled && isStep);
         asComp()->repaint();
     }
 
@@ -164,13 +328,13 @@ template <typename Comp, typename Patch> struct LFOComponents
         col2.add(jlo::Component(*isEnv).withHeight(uicLabelHeight));
 
         auto col3 = jlo::VList().expandToFill().withAutoGap(0);
-        for (size_t i = 0; i < numSeqSteps; ++i)
-            col3.add(jlo::Component(*stepSlider[i]).expandToFill());
+        col3.add(jlo::Component(*stepEditor).expandToFill());
         col3.addGap(uicMargin);
         auto bottomRow = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
         bottomRow.add(jlo::Component(*stepCount).withWidth(70));
         bottomRow.add(jlo::Component(*cycleMode).expandToFill());
         col3.add(bottomRow);
+        col3.addGap(uicMargin);
 
         columns.add(col1);
         columns.add(col2);
@@ -200,8 +364,7 @@ template <typename Comp, typename Patch> struct LFOComponents
     std::unique_ptr<jcmp::ToggleButton> isEnv;
     std::unique_ptr<PatchDiscrete> isEnvD;
 
-    std::array<std::unique_ptr<jcmp::HSliderFilled>, numSeqSteps> stepSlider;
-    std::array<std::unique_ptr<PatchContinuous>, numSeqSteps> stepSliderD;
+    std::unique_ptr<StepEditor> stepEditor;
 
     std::unique_ptr<jcmp::JogUpDownButton> stepCount;
     std::unique_ptr<PatchDiscrete> stepCountD;
@@ -210,4 +373,4 @@ template <typename Comp, typename Patch> struct LFOComponents
     std::unique_ptr<PatchDiscrete> cycleModeD;
 };
 } // namespace baconpaul::six_sines::ui
-#endif // LFO_COMPONENTS_H
+#endif // BACONPAUL_SIX_SINES_UI_LFO_COMPONENTS_H

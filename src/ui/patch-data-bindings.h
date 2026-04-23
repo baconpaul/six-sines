@@ -26,6 +26,7 @@
 #include "sst/jucegui/components/DraggableTextEditableValue.h"
 
 #include "six-sines-editor.h"
+#include "six-sines-editor-impl.h"
 
 namespace baconpaul::six_sines::ui
 {

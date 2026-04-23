@@ -103,6 +103,8 @@ target_link_libraries(${PROJECT_NAME}-impl PUBLIC  # PW change to public since w
         samplerate
 )
 
+target_compile_definitions(clap-wrapper-compile-options-public INTERFACE CLAP_WRAPPER_LOGLEVEL=0)
+
 make_clapfirst_plugins(
         TARGET_NAME ${PROJECT_NAME}
         IMPL_TARGET ${PROJECT_NAME}-impl
