@@ -38,20 +38,27 @@ struct WavPainter : juce::Component
     {
         auto labelCol = editor.style()->getColour(jcmp::base_styles::BaseLabel::styleClass,
                                                   jcmp::base_styles::BaseLabel::labelcolor);
+        auto gridCol = labelCol.withAlpha(0.3f);
+        auto wavCol = editor.style()->getColour(jcmp::base_styles::ValueBearing::styleClass,
+                                                jcmp::base_styles::ValueBearing::value);
+        auto bg = editor.style()->getColour(jcmp::base_styles::PushButton::styleClass,
+                                            jcmp::base_styles::PushButton::fill);
+        g.fillAll(bg);
+        g.setColour(gridCol);
+        g.drawRect(getLocalBounds(), 1.f);
+
         auto wfVal = (SinTable::WaveForm)std::round(wf.value);
         if (wfVal == SinTable::AUDIO_IN)
         {
             // Draw a simple "audio in" indicator — two horizontal lines suggesting a signal
-            g.setColour(labelCol.withAlpha(0.5f));
-            auto h = getHeight();
-            auto w = getWidth();
-            auto cy = h / 2;
-            g.drawLine(0, cy, w, cy, 1.f);
             g.setColour(labelCol);
-            g.setFont(juce::Font(juce::FontOptions{}.withHeight(10.f)));
+            g.setFont(juce::Font(juce::FontOptions{}.withHeight(20.f)));
             g.drawFittedText("Audio In", getLocalBounds(), juce::Justification::centred, 1);
             return;
         }
+        g.setColour(gridCol);
+        g.drawHorizontalLine(getHeight() / 2, 0, getWidth());
+
         st.setWaveForm(wfVal);
         uint32_t phase{0};
         phase += (1 << 26) * ph.value;
@@ -62,7 +69,7 @@ struct WavPainter : juce::Component
         auto ho = 1;
         for (int i = 0; i < nPixels; ++i)
         {
-            auto sv = st.at(phase);
+            auto sv = st.at(phase) * 0.98;
             auto x = i;
             auto y = (1 - (sv + 1) * 0.5) * h + ho;
             if (i == 0)
@@ -71,8 +78,8 @@ struct WavPainter : juce::Component
                 p.lineTo(x, y);
             phase += dPhase;
         }
-        g.setColour(labelCol);
-        g.strokePath(p, juce::PathStrokeType(1));
+        g.setColour(wavCol);
+        g.strokePath(p, juce::PathStrokeType(1.5));
     }
 };
 
@@ -119,11 +126,11 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     traverse(lfoToRatioFine);
 
     modTitle = std::make_unique<jcmp::RuledLabel>();
-    modTitle->setText("Env Depth");
+    modTitle->setText(std::string() + "Env" + u8"\U00002192");
     addAndMakeVisible(*modTitle);
 
     lfoModTitle = std::make_unique<jcmp::RuledLabel>();
-    lfoModTitle->setText("LFO Depth");
+    lfoModTitle->setText(std::string() + "LFO" + u8"\U00002192");
     addAndMakeVisible(*lfoModTitle);
 
     wavTitle = std::make_unique<jcmp::RuledLabel>();
@@ -200,7 +207,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     traverse(tsposeButton);
 
     tsposeButtonL = std::make_unique<jcmp::Label>();
-    tsposeButtonL->setText("Octave");
+    tsposeButtonL->setText("Oct");
     addAndMakeVisible(*tsposeButtonL);
 
     unisonBehaviorB = std::make_unique<jcmp::TextPushButton>();
@@ -231,68 +238,64 @@ void SourceSubPanel::resized()
 
     namespace jlo = sst::jucegui::layouts;
 
-    auto row1Height = uicTitleLabelInnerBox + uicMargin + uicLabeledKnobHeight;
-    auto row2Height = uicTitleLabelInnerBox + 3 * uicLabelHeight +
-                      static_cast<int>(uicLabelHeight * 1.8) + 3 * uicMargin;
+    // Top level: [Env] | [LFO] | [Pitch] | [Wave]
+    auto lo = jlo::HList().at(depx, depy).withAutoGap(uicMargin * 2);
 
-    auto lo = jlo::VList().at(depx, depy).withAutoGap(uicMargin * 2);
-
-    // Row 1: Env Depth | LFO Depth
-    auto row1 = jlo::HList().withHeight(row1Height).withAutoGap(uicMargin * 2);
-
-    auto envCol = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin).withAutoGap(uicMargin);
+    // Env depth column: title + coarse knob + fine knob stacked
+    auto envCol = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
     envCol.add(titleLabelGaplessLayout(modTitle));
-    auto ehl = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
-    ehl.add(labelKnobLayout(envToRatio, envToRatioL));
-    ehl.add(labelKnobLayout(envToRatioFine, envToRatioFineL));
-    envCol.add(ehl);
-    row1.add(envCol);
+    envCol.add(labelKnobLayout(envToRatio, envToRatioL).centerInParent());
+    envCol.add(labelKnobLayout(envToRatioFine, envToRatioFineL).centerInParent());
+    lo.add(envCol);
 
-    auto lfoCol = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin).withAutoGap(uicMargin);
+    // LFO depth column: title + coarse knob + fine knob stacked
+    auto lfoCol = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
     lfoCol.add(titleLabelGaplessLayout(lfoModTitle));
-    auto lhl = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
-    lhl.add(labelKnobLayout(lfoToRatio, lfoToRatioL));
-    lhl.add(labelKnobLayout(lfoToRatioFine, lfoToRatioFineL));
-    lfoCol.add(lhl);
-    row1.add(lfoCol);
+    lfoCol.add(labelKnobLayout(lfoToRatio, lfoToRatioL).centerInParent());
+    lfoCol.add(labelKnobLayout(lfoToRatioFine, lfoToRatioFineL).centerInParent());
+    lo.add(lfoCol);
 
-    lo.add(row1);
-
-    // Row 2: Pitch | Wave
-    auto row2 = jlo::HList().withHeight(row2Height).withAutoGap(uicMargin * 2);
-
-    auto pitchCol = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin + 36).withAutoGap(uicMargin);
+    // Pitch column — a bit wider, 3 vertical rows
+    constexpr int pitchColW{(int)(uicSubPanelColumnWidth * 1.2)};
+    constexpr int pitchRowH{uicLabelHeight};
+    auto pitchCol = jlo::VList().withWidth(pitchColW).withAutoGap(uicMargin);
     pitchCol.add(titleLabelGaplessLayout(keyTrackTitle));
 
-    auto sktcol = jlo::HList().withAutoGap(uicMargin).withHeight(uicLabeledKnobHeight);
+    // Row 1: [Octave label] [tspose jog]
+    auto pRow1 = jlo::HList().withHeight(pitchRowH).withAutoGap(uicMargin);
+    pRow1.add(jlo::Component(*tsposeButtonL).withWidth(20));
+    pRow1.add(jlo::Component(*tsposeButton).expandToFill());
+    pitchCol.add(pRow1);
 
-    auto c1 = jlo::VList().withWidth(uicKnobSize + 18).withAutoGap(uicMargin);
-    c1.add(jlo::Component(*tsposeButton).withHeight(uicLabelHeight));
-    c1.add(jlo::Component(*tsposeButtonL).withHeight(uicLabelHeight));
-    c1.add(jlo::Component(*unisonBehaviorB).withHeight(uicLabelHeight));
-    sktcol.add(c1);
+    // Row 2: full-width KeyTrak toggle
+    pitchCol.add(jlo::Component(*keyTrack).withHeight(pitchRowH));
 
-    auto c2 = jlo::VList().withWidth(uicKnobSize + 18).withAutoGap(uicMargin);
-    c2.add(jlo::Component(*keyTrack).withHeight(uicLabelHeight));
+    // Row 3: [Lo toggle] [keytrack value slider]
+    auto pRow3 = jlo::HList().withHeight(pitchRowH);
+    pRow3.add(jlo::Component(*keyTrackLow).withWidth(20));
+    pRow3.addGap(1);
+    pRow3.add(jlo::Component(*keyTrackValue).insetBy(0, 2).expandToFill());
+    pitchCol.add(pRow3);
 
-    auto ul = jlo::HList().withHeight(uicLabelHeight);
-    ul.add(jlo::Component(*keyTrackLow).withWidth(20));
-    ul.addGap(1);
-    ul.add(jlo::Component(*keyTrackValue).insetBy(0, 2).expandToFill());
-    c2.add(ul);
-    sktcol.add(c2);
+    // Row 4: full-width Unison button
+    pitchCol.add(jlo::Component(*unisonBehaviorB).withHeight(pitchRowH));
 
-    pitchCol.add(sktcol);
-    row2.add(pitchCol);
+    lo.add(pitchCol);
 
-    auto waveCol = jlo::VList().withWidth(uicKnobSize * 2 + uicMargin + 36).withAutoGap(uicMargin);
+    // Wave column — fills the remaining horizontal space
+    int waveColW = p.getRight() - depx - 3 * uicSubPanelColumnWidth - 9 * uicMargin;
+    auto waveCol = jlo::VList().withWidth(waveColW).withAutoGap(uicMargin);
     waveCol.add(titleLabelGaplessLayout(wavTitle));
+    // Painter fills the remaining height so it lines up with the Env/LFO column bottoms
+    constexpr int depthColTotal{uicTitleLabelInnerBox + uicMargin + uicLabeledKnobHeight +
+                                uicMargin + uicLabeledKnobHeight};
+    constexpr int waveUsedAbove{uicTitleLabelInnerBox + uicMargin + uicLabelHeight + uicMargin +
+                                uicLabelHeight + uicMargin};
+    constexpr int painterH{depthColTotal - waveUsedAbove - uicMargin * 2};
+    waveCol.add(jlo::Component(*wavPainter).withHeight(painterH));
     waveCol.add(jlo::Component(*wavButton).withHeight(uicLabelHeight));
     waveCol.add(sideLabelSlider(startingPhaseL, startingPhase));
-    waveCol.add(jlo::Component(*wavPainter).withHeight(uicLabelHeight * 1.8));
-    row2.add(waveCol);
-
-    lo.add(row2);
+    lo.add(waveCol);
 
     lo.doLayout();
 
