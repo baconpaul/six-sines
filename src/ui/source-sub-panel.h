@@ -19,11 +19,14 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "sst/jucegui/components/JogUpDownButton.h"
 #include "sst/jucegui/components/HSliderFilled.h"
+#include "sst/jucegui/components/MultiSwitch.h"
+#include "sst/jucegui/components/Knob.h"
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
 #include "lfo-components.h"
 #include "modulation-components.h"
 #include "sst/jucegui/components/RuledLabel.h"
+#include "sst/jucegui/components/LineSegment.h"
 #include "clipboard.h"
 #include "waveform-display.h"
 
@@ -74,6 +77,22 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<PatchDiscrete> keyTrackLowD;
 
     std::unique_ptr<jcmp::TextPushButton> unisonBehaviorB;
+
+    std::unique_ptr<jcmp::LineSegment> extModeRuleLeft, extModeRuleRight;
+    std::unique_ptr<jcmp::Label> extModeLabel;
+    std::unique_ptr<jcmp::JogUpDownButton> extModeButton;
+    std::unique_ptr<PatchDiscrete> extModeButtonD;
+
+    // Extended-mode body components (visibility driven by extModeButton's value)
+    std::unique_ptr<jcmp::Label> comingSoonLabel;
+    std::unique_ptr<jcmp::MultiSwitch> phaseMapShape;
+    std::unique_ptr<PatchDiscrete> phaseMapShapeD;
+    std::unique_ptr<jcmp::Knob> extM, envToExtM, lfoToExtM;
+    std::unique_ptr<PatchContinuous> extMD, envToExtMD, lfoToExtMD;
+    std::unique_ptr<jcmp::Label> extML, envToExtML, lfoToExtML;
+    std::unique_ptr<juce::Component> pdWavPainter;
+
+    void setExtendedModeVisibility();
 
     std::unique_ptr<jcmp::HSliderFilled> keyTrackValue;
     std::unique_ptr<PatchContinuous> keyTrackValueD;

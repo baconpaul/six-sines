@@ -78,6 +78,9 @@ struct Patch : pats::PatchBase<Patch, Param>
 
     static constexpr uint64_t version_110 = 0x010100;
     static constexpr uint64_t version_120a = 0x010201; // first chunk of 1.2.0; step sequencer
+    static constexpr uint64_t version_120b =
+        0x010202; // second chunk of 1.2.0; extended mode for source
+
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
     static md_t floatMd(uint64_t version = version_110)
     {
@@ -476,6 +479,8 @@ struct Patch : pats::PatchBase<Patch, Param>
             STARTING_PHASE = 15,
             ENV_DEPTH_ATTEN = 20,
             LFO_DEPTH_ATTEN = 30,
+            EXTEND_M = 18,
+            EXTEND_N = 19,
         };
 
         std::vector<std::pair<int32_t, std::string>> targetList{
@@ -486,7 +491,27 @@ struct Patch : pats::PatchBase<Patch, Param>
             {TargetID::STARTING_PHASE, "Phase"},
             {TargetID::ENV_DEPTH_ATTEN, "Env Atten"},
             {TargetID::LFO_DEPTH_ATTEN, "LFO Atten"},
+            {TargetID::SKIP, ""},
+            {TargetID::EXTEND_M, "Extended Mode M"},
+            {TargetID::EXTEND_N, "Extended Mode N"},
+        };
 
+        enum struct ExtendedMode : uint32_t
+        {
+            NONE = 0,           // these value stream
+            PHASE_REMAP = 1,    // CZ-style wave 1-4 wav(phase) -> wav(map(phase))
+            RESONANT_SWEEP = 2, // CZ-style resonant sweep (5-9)
+            REDACTED_1 = 3      // t-k
+        };
+
+        enum struct PhaseMapShape : uint32_t
+        {
+            SAW = 0,
+            SQUARE = 1,
+            PULSE = 2,
+            DOUBLE = 3,
+            SIN_TO_SQUARE = 4,
+            DOUBLE_SAW = 5
         };
 
         SourceNode(size_t idx)
@@ -651,7 +676,71 @@ struct Patch : pats::PatchBase<Patch, Param>
                           .withRange(0, 2000)
                           .withDefault(TargetID::NONE)
                           .withID(id(160 + i, idx));
-                  }))
+                  })),
+
+              // extended mode params start at 175
+              extendedModeMode(intMd(version_120b)
+                                   .withRange(0, 3)
+                                   .withDefault(0)
+                                   .withID(id(175, idx))
+                                   .withName(name(idx) + " Extended Mode")
+                                   .withGroupName(name(idx))
+                                   .withUnorderedMapFormatting({
+                                       {(int)ExtendedMode::NONE, "None"},
+                                       {(int)ExtendedMode::PHASE_REMAP, "Phase Map"},
+                                       {(int)ExtendedMode::RESONANT_SWEEP, "Resonant Sweep"},
+                                       {(int)ExtendedMode::REDACTED_1, "Redacted-1"},
+                                   })),
+              extendedModeM(floatMd(version_120b)
+                                .asPercent()
+                                .withName(name(idx) + " Extended Mode M")
+                                .withGroupName(name(idx))
+                                .withDefault(0.5f)
+                                .withID(id(176, idx))),
+              extendedModeN(floatMd(version_120b)
+                                .asPercent()
+                                .withName(name(idx) + " Extended Mode N")
+                                .withGroupName(name(idx))
+                                .withDefault(0.5f)
+                                .withID(id(177, idx))),
+              envToExtendedModeM(floatMd(version_120b)
+                                     .asPercentBipolar()
+                                     .withName(name(idx) + " Env to Extended Mode M")
+                                     .withGroupName(name(idx))
+                                     .withDefault(0.f)
+                                     .withID(id(178, idx))),
+              envToExtendedModeN(floatMd(version_120b)
+                                     .asPercentBipolar()
+                                     .withName(name(idx) + " Env to Extended Mode N")
+                                     .withGroupName(name(idx))
+                                     .withDefault(0.f)
+                                     .withID(id(179, idx))),
+              lfoToExtendedModeM(floatMd(version_120b)
+                                     .asPercentBipolar()
+                                     .withName(name(idx) + " LFO to Extended Mode M")
+                                     .withGroupName(name(idx))
+                                     .withDefault(0.f)
+                                     .withID(id(180, idx))),
+              lfoToExtendedModeN(floatMd(version_120b)
+                                     .asPercentBipolar()
+                                     .withName(name(idx) + " LFO to Extended Mode N")
+                                     .withGroupName(name(idx))
+                                     .withDefault(0.f)
+                                     .withID(id(181, idx))),
+              phaseMapModeShape(intMd(version_120b)
+                                    .withRange(0, 5)
+                                    .withDefault(0)
+                                    .withID(id(182, idx))
+                                    .withName(name(idx) + " Phase Map Shape")
+                                    .withGroupName(name(idx))
+                                    .withUnorderedMapFormatting({
+                                        {(int)PhaseMapShape::SAW, "Saw (CZ1)"},
+                                        {(int)PhaseMapShape::SQUARE, "Square (CZ2)"},
+                                        {(int)PhaseMapShape::PULSE, "Pulse (CZ3)"},
+                                        {(int)PhaseMapShape::DOUBLE, "Double (CZ4)"},
+                                        {(int)PhaseMapShape::SIN_TO_SQUARE, "Sin to Square"},
+                                        {(int)PhaseMapShape::DOUBLE_SAW, "Sin to Saw"},
+                                    }))
 
         {
             index = idx;
@@ -685,6 +774,14 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         Param unisonParticipation, unisonToMain, unisonToOpOut;
 
+        // extended mode params
+        Param extendedModeMode;
+        Param extendedModeM, extendedModeN;
+        Param envToExtendedModeM, envToExtendedModeN;
+        Param lfoToExtendedModeM, lfoToExtendedModeN;
+
+        Param phaseMapModeShape;
+
         std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
@@ -704,7 +801,15 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &lfoToRatioFine,
                                      &unisonParticipation,
                                      &unisonToMain,
-                                     &unisonToOpOut};
+                                     &unisonToOpOut,
+                                     &extendedModeMode,
+                                     &extendedModeM,
+                                     &extendedModeN,
+                                     &envToExtendedModeM,
+                                     &envToExtendedModeN,
+                                     &lfoToExtendedModeM,
+                                     &lfoToExtendedModeN,
+                                     &phaseMapModeShape};
             for (int i = 0; i < numModsPer; ++i)
                 res.push_back(&modtarget[i]);
             appendDAHDSRParams(res);

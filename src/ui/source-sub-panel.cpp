@@ -21,6 +21,7 @@
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
 #include "dsp/sintable.h" // for drawing
+#include "dsp/remap_functions.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -83,6 +84,144 @@ struct WavPainter : juce::Component
     }
 };
 
+/*
+ * PDWavPainter shows two side-by-side plots: the active phase-remap function on the left,
+ * and the current waveform read through that remap on the right. The right plot shares the
+ * look-and-feel of WavPainter; the left plot is sized small and visually separated.
+ */
+struct PDWavPainter : juce::Component
+{
+    const Param &wf, &ph, &mp, &shp;
+    SixSinesEditor &editor;
+    SinTable st;
+
+    PDWavPainter(const Param &w, const Param &p, const Param &mParam, const Param &sParam,
+                 SixSinesEditor &e)
+        : wf(w), ph(p), mp(mParam), shp(sParam), editor(e)
+    {
+    }
+
+    // Default width devoted to the remap plot on the left. The wave plot takes the rest unless
+    // innerWaveWidth is set explicitly (>0), in which case the wave region is fixed and the remap
+    // plot fills the remainder.
+    static constexpr int remapPlotW{60};
+    static constexpr int gapW{6};
+    int innerWaveWidth{-1};
+
+    uint32_t doRemap(uint32_t inPhase) const
+    {
+        using PM = Patch::SourceNode::PhaseMapShape;
+        auto pm = static_cast<PM>(static_cast<uint32_t>(std::round(shp.value)));
+        auto mv = mp.value;
+        auto masked = inPhase & phase::phaseMask;
+        switch (pm)
+        {
+        case PM::SAW:
+            return remap::remapSaw(masked, mv);
+        case PM::SQUARE:
+            return remap::remapSquare(masked, mv);
+        case PM::PULSE:
+            return remap::remapPulse(masked, mv);
+        case PM::DOUBLE:
+            return remap::remapDoubleSine(masked, mv);
+        case PM::SIN_TO_SQUARE:
+            return remap::remapSinToSquare(masked, mv);
+        case PM::DOUBLE_SAW:
+            return remap::remapDoubleSaw(masked, mv);
+        }
+        return masked;
+    }
+
+    void paint(juce::Graphics &g) override
+    {
+        auto labelCol = editor.style()->getColour(jcmp::base_styles::BaseLabel::styleClass,
+                                                  jcmp::base_styles::BaseLabel::labelcolor);
+        auto gridCol = labelCol.withAlpha(0.3f);
+        auto wavCol = editor.style()->getColour(jcmp::base_styles::ValueBearing::styleClass,
+                                                jcmp::base_styles::ValueBearing::value);
+        auto bg = editor.style()->getColour(jcmp::base_styles::PushButton::styleClass,
+                                            jcmp::base_styles::PushButton::fill);
+        g.fillAll(bg);
+
+        // If innerWaveWidth is set, the wave region is fixed to that width (matched to the upper
+        // wave painter) and the remap plot fills whatever's left on the left.
+        int waveW = (innerWaveWidth > 0) ? innerWaveWidth : (getWidth() - remapPlotW - gapW);
+        int remapW = std::max(0, getWidth() - waveW - gapW);
+        auto remapBox = juce::Rectangle<int>(0, 0, remapW, getHeight());
+        auto waveBox = juce::Rectangle<int>(remapW + gapW, 0, waveW, getHeight());
+
+        // ===== Left: phase-remap function =====
+        g.setColour(gridCol);
+        g.drawRect(remapBox, 1);
+        // identity reference (diagonal, low-emphasis)
+        g.setColour(gridCol.withAlpha(gridCol.getFloatAlpha() * 0.6f));
+        g.drawLine(static_cast<float>(remapBox.getX()),
+                   static_cast<float>(remapBox.getBottom() - 1),
+                   static_cast<float>(remapBox.getRight() - 1),
+                   static_cast<float>(remapBox.getY() + 1), 1.f);
+
+        // remap curve y = remap(x, m)
+        {
+            auto p = juce::Path();
+            int nPx = remapBox.getWidth();
+            auto innerH = remapBox.getHeight() - 2;
+            for (int i = 0; i < nPx - 1; ++i)
+            {
+                auto inPhase =
+                    static_cast<uint32_t>(static_cast<float>(i) / (nPx - 1) * phase::phaseMaxF);
+                auto outPhase = doRemap(inPhase);
+                float yNorm = static_cast<float>(outPhase) / phase::phaseMaxF;
+                auto x = static_cast<float>(remapBox.getX() + i);
+                auto y = static_cast<float>(remapBox.getBottom() - 1) - yNorm * innerH;
+                if (i == 0)
+                    p.startNewSubPath(x, y);
+                else
+                    p.lineTo(x, y);
+            }
+            g.setColour(wavCol);
+            g.strokePath(p, juce::PathStrokeType(1.5));
+        }
+
+        // ===== Right: waveform read through the remap =====
+        g.setColour(gridCol);
+        g.drawRect(waveBox, 1);
+
+        auto wfVal = (SinTable::WaveForm)std::round(wf.value);
+        if (wfVal == SinTable::AUDIO_IN)
+        {
+            g.setColour(labelCol);
+            g.setFont(juce::Font(juce::FontOptions{}.withHeight(20.f)));
+            g.drawFittedText("Audio In", waveBox, juce::Justification::centred, 1);
+            return;
+        }
+        g.setColour(gridCol);
+        g.drawHorizontalLine(waveBox.getY() + waveBox.getHeight() / 2, waveBox.getX(),
+                             waveBox.getRight());
+
+        st.setWaveForm(wfVal);
+        uint32_t phs{0};
+        phs += (1 << 26) * ph.value;
+        int nPixels = waveBox.getWidth();
+        auto dPhase = (1 << 26) / (nPixels - 1);
+        auto h = waveBox.getHeight() - 2;
+        auto ho = waveBox.getY() + 1;
+        auto p = juce::Path();
+        for (int i = 0; i < nPixels; ++i)
+        {
+            auto sv = st.at(doRemap(phs)) * 0.98;
+            auto x = waveBox.getX() + i;
+            auto y = (1 - (sv + 1) * 0.5) * h + ho;
+            if (i == 0)
+                p.startNewSubPath(x, y);
+            else
+                p.lineTo(x, y);
+            phs += dPhase;
+        }
+        g.setColour(wavCol);
+        g.strokePath(p, juce::PathStrokeType(1.5));
+    }
+};
+
 void SourceSubPanel::setSelectedIndex(size_t idx)
 {
     index = idx;
@@ -94,6 +233,21 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     setupDAHDSR(editor, sn);
     setupLFO(editor, sn);
     setupModulation(editor, sn);
+
+    isTargetAvailable = [w = juce::Component::SafePointer(this)](Patch::SourceNode::TargetID tid)
+    {
+        if (!w)
+            return true;
+        using EM = Patch::SourceNode::ExtendedMode;
+        using TID = Patch::SourceNode::TargetID;
+        auto em = static_cast<EM>(static_cast<int>(
+            std::round(w->editor.patchCopy.sourceNodes[w->index].extendedModeMode.value)));
+        if (tid == TID::EXTEND_M)
+            return em == EM::PHASE_REMAP;
+        if (tid == TID::EXTEND_N)
+            return false;
+        return true;
+    };
 
     auto travidx{400};
     auto traverse = [&travidx](auto &c)
@@ -146,6 +300,8 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     wavButtonD->onGuiSetValue = [this]()
     {
         wavPainter->repaint();
+        if (pdWavPainter)
+            pdWavPainter->repaint();
         wavButton->repaint();
         setEnabledState();
     };
@@ -164,6 +320,8 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
         if (!w)
             return;
         w->wavPainter->repaint();
+        if (w->pdWavPainter)
+            w->pdWavPainter->repaint();
     };
 
     startingPhaseL = std::make_unique<jcmp::Label>();
@@ -220,6 +378,76 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
         });
     addAndMakeVisible(*unisonBehaviorB);
     traverse(unisonBehaviorB);
+
+    extModeRuleLeft = std::make_unique<jcmp::LineSegment>();
+    extModeRuleRight = std::make_unique<jcmp::LineSegment>();
+    addAndMakeVisible(*extModeRuleLeft);
+    addAndMakeVisible(*extModeRuleRight);
+
+    extModeLabel = std::make_unique<jcmp::Label>();
+    extModeLabel->setText("Extended Mode");
+    addAndMakeVisible(*extModeLabel);
+
+    createComponent(editor, *this, sn.extendedModeMode, extModeButton, extModeButtonD);
+    addAndMakeVisible(*extModeButton);
+    traverse(extModeButton);
+    auto extModeRefresh = [w = juce::Component::SafePointer(this)]()
+    {
+        if (!w)
+            return;
+        w->setExtendedModeVisibility();
+        w->resized();
+        w->repaint();
+    };
+    extModeButtonD->onGuiSetValue = extModeRefresh;
+    // Also fire on programmatic param changes (e.g. clipboard paste of a full source node)
+    editor.componentRefreshByID[sn.extendedModeMode.meta.id] = extModeRefresh;
+
+    comingSoonLabel = std::make_unique<jcmp::Label>();
+    comingSoonLabel->setText("Coming Soon");
+    addChildComponent(*comingSoonLabel);
+
+    createComponent(editor, *this, sn.phaseMapModeShape, phaseMapShape, phaseMapShapeD);
+    addChildComponent(*phaseMapShape);
+    traverse(phaseMapShape);
+
+    createComponent(editor, *this, sn.extendedModeM, extM, extMD);
+    addChildComponent(*extM);
+    traverse(extM);
+    extML = std::make_unique<jcmp::Label>();
+    extML->setText("M");
+    addChildComponent(*extML);
+
+    createComponent(editor, *this, sn.envToExtendedModeM, envToExtM, envToExtMD);
+    addChildComponent(*envToExtM);
+    traverse(envToExtM);
+    envToExtML = std::make_unique<jcmp::Label>();
+    envToExtML->setText(std::string() + "Env" + u8"\U00002192" + "M");
+    addChildComponent(*envToExtML);
+
+    createComponent(editor, *this, sn.lfoToExtendedModeM, lfoToExtM, lfoToExtMD);
+    addChildComponent(*lfoToExtM);
+    traverse(lfoToExtM);
+    lfoToExtML = std::make_unique<jcmp::Label>();
+    lfoToExtML->setText(std::string() + "LFO" + u8"\U00002192" + "M");
+    addChildComponent(*lfoToExtML);
+
+    pdWavPainter = std::make_unique<PDWavPainter>(sn.waveForm, sn.startingPhase, sn.extendedModeM,
+                                                  sn.phaseMapModeShape, editor);
+    addChildComponent(*pdWavPainter);
+
+    // Live-repaint the PD painter when any input it draws from changes.
+    auto repaintPD = [w = juce::Component::SafePointer(this)]()
+    {
+        if (w && w->pdWavPainter)
+            w->pdWavPainter->repaint();
+    };
+    extMD->onGuiSetValue = repaintPD;
+    phaseMapShapeD->onGuiSetValue = repaintPD;
+    editor.componentRefreshByID[sn.extendedModeM.meta.id] = repaintPD;
+    editor.componentRefreshByID[sn.phaseMapModeShape.meta.id] = repaintPD;
+
+    setExtendedModeVisibility();
 
     setEnabledState();
 
@@ -302,7 +530,110 @@ void SourceSubPanel::resized()
     // The keytrack low can sub in for the keytrack
     keyTrackLowValue->setBounds(keyTrackValue->getBounds());
 
+    // Extended Mode row — spans full width below the 4-column block
+    auto extRowY = depy + depthColTotal + uicMargin * 2;
+    auto extRow = jlo::HList().at(depx, extRowY).withWidth(p.getWidth()).withHeight(uicLabelHeight);
+    extRow.add(jlo::Component(*extModeRuleLeft).expandToFill());
+    extRow.addGap(uicMargin);
+    extRow.add(jlo::Component(*extModeLabel).withWidth(90));
+    extRow.add(jlo::Component(*extModeButton).withWidth(130));
+    extRow.addGap(uicMargin);
+    extRow.add(jlo::Component(*extModeRuleRight).expandToFill());
+    extRow.doLayout();
+
+    // LineSegment needs endpoints set explicitly after its bounds are placed
+    auto setRule = [](auto &seg)
+    {
+        auto b = seg->getBounds();
+        seg->setEndpointsAndBounds(b.getX(), b.getCentreY(), b.getRight(), b.getCentreY());
+    };
+    setRule(extModeRuleLeft);
+    setRule(extModeRuleRight);
+
+    // Extended-mode body row — sits between the Extended Mode row and the modulation footer.
+    // For PHASE_REMAP we use a two-row block so the PD wave painter can span both rows
+    // beside a 2x2 control grid. Other modes still use a single-row block.
+    auto bodyY = extRowY + uicLabelHeight + uicMargin * 2;
+
+    using EM = Patch::SourceNode::ExtendedMode;
+    auto em = static_cast<EM>(static_cast<int>(std::round(extModeButtonD->getValue())));
+    if (em == EM::PHASE_REMAP)
+    {
+        // Layout:
+        //   [ multi ] [ pd wav painter spans                      ]
+        //   [ multi ] [ M ] [ Env->M ] [ LFO->M ]
+        // Multi switch occupies a single column on the left and spans the full body height.
+        // The right side has the PD painter on top (matching the upper painter height) and a
+        // row of three knob cells below.
+        constexpr int pdPainterHeight = painterH - 15;
+        constexpr int cellW = uicKnobSize;
+        constexpr int row2H = uicLabeledKnobHeight;
+        constexpr int bodyH = pdPainterHeight + uicMargin + row2H;
+        auto bodyRect = juce::Rectangle<int>(depx, bodyY, p.getWidth(), bodyH);
+
+        auto knobCell = [](auto &k, auto &l)
+        {
+            auto cell = jlo::VList().withWidth(cellW);
+            cell.add(labelKnobLayout(k, l).centerInParent());
+            return cell;
+        };
+
+        auto bodyLo = jlo::HList()
+                          .at(bodyRect.getX(), bodyRect.getY())
+                          .withWidth(bodyRect.getWidth())
+                          .withHeight(bodyRect.getHeight())
+                          .withAutoGap(uicMargin * 2);
+
+        // Left: multiswitch spans the full body height
+        auto leftCol = jlo::VList().withWidth(2 * cellW);
+        leftCol.add(jlo::Component(*phaseMapShape).withHeight(bodyH));
+        bodyLo.add(leftCol);
+
+        // Right: PD painter on top, knob row beneath
+        auto rightCol = jlo::VList().withAutoGap(uicMargin);
+        // PD painter inner-wave width is fixed to waveColW (matches the upper painter); any
+        // horizontal compression comes off the remap plot, not the wave.
+        if (auto *pd = dynamic_cast<PDWavPainter *>(pdWavPainter.get()))
+            pd->innerWaveWidth = waveColW;
+        rightCol.add(jlo::Component(*pdWavPainter).withHeight(pdPainterHeight));
+
+        auto knobRow = jlo::HList().withHeight(row2H).withAutoGap(uicMargin);
+        knobRow.add(knobCell(extM, extML));
+        knobRow.add(knobCell(envToExtM, envToExtML));
+        knobRow.add(knobCell(lfoToExtM, lfoToExtML));
+        rightCol.addGap(uicMargin);
+        rightCol.add(knobRow);
+
+        bodyLo.add(rightCol.expandToFill());
+        bodyLo.doLayout();
+    }
+    else if (em == EM::RESONANT_SWEEP || em == EM::REDACTED_1)
+    {
+        auto bodyRect = juce::Rectangle<int>(depx, bodyY, p.getWidth(), uicLabeledKnobHeight);
+        comingSoonLabel->setBounds(bodyRect);
+    }
+
     layoutModulation(p);
+}
+
+void SourceSubPanel::setExtendedModeVisibility()
+{
+    using EM = Patch::SourceNode::ExtendedMode;
+    auto em = static_cast<EM>(static_cast<int>(std::round(extModeButtonD->getValue())));
+
+    auto isPhaseRemap = (em == EM::PHASE_REMAP);
+    auto isComing = (em == EM::RESONANT_SWEEP || em == EM::REDACTED_1);
+
+    comingSoonLabel->setVisible(isComing);
+    phaseMapShape->setVisible(isPhaseRemap);
+    extM->setVisible(isPhaseRemap);
+    extML->setVisible(isPhaseRemap);
+    envToExtM->setVisible(isPhaseRemap);
+    envToExtML->setVisible(isPhaseRemap);
+    lfoToExtM->setVisible(isPhaseRemap);
+    lfoToExtML->setVisible(isPhaseRemap);
+    if (pdWavPainter)
+        pdWavPainter->setVisible(isPhaseRemap);
 }
 
 void SourceSubPanel::setEnabledState()
@@ -345,6 +676,13 @@ void SourceSubPanel::setEnabledState()
         sourceMenu[i]->setEnabled(!isAudioIn);
         targetMenu[i]->setEnabled(!isAudioIn);
     }
+
+    // Extended-mode controls (disabled wholesale on AUDIO_IN)
+    extModeButton->setEnabled(!isAudioIn);
+    phaseMapShape->setEnabled(!isAudioIn);
+    extM->setEnabled(!isAudioIn);
+    envToExtM->setEnabled(!isAudioIn);
+    lfoToExtM->setEnabled(!isAudioIn);
 
     // Notify source/matrix panels to grey out ratio knob and feedback knob
     editor.sourcePanel->updateOpEnabledState(index);
