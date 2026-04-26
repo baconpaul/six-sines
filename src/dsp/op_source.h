@@ -26,6 +26,7 @@
 #include "synth/patch.h"
 #include "synth/mono_values.h"
 #include "synth/voice_values.h"
+#include "remap_functions.h"
 
 namespace baconpaul::six_sines
 {
@@ -84,6 +85,21 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
         st.setSampleRate(monoValues.sr.sampleRate);
         firstTime = true;
+        extendedMPrior = sourceNode.extendedModeM.value;
+        // Configure the M/N lags only if the operator is actually using an extended mode
+        // that consumes them. In NONE the lag members exist but are never touched.
+        {
+            using EM = Patch::SourceNode::ExtendedMode;
+            auto em = static_cast<EM>(
+                static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
+            if (em == EM::PHASE_REMAP)
+            {
+                extendedLagM.setRateInMilliseconds(10, monoValues.sr.samplerate, blockSizeInv);
+                extendedLagM.snapTo(sourceNode.extendedModeM.value);
+                // N is unused in PHASE_REMAP — leave its lag uninitialized until a future
+                // mode that consumes N is added.
+            }
+        }
         zeroInputs();
         snapActive();
 
@@ -148,6 +164,13 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         used = used || (lfoToRatio != 0);
         used = used || (lfoToRatioFine != 0);
 
+        // Extended-mode targets — only consume the LFO when the mode that uses them is active.
+        using EM = Patch::SourceNode::ExtendedMode;
+        auto em =
+            static_cast<EM>(static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
+        if (em == EM::PHASE_REMAP)
+            used = used || (sourceNode.lfoToExtendedModeM.value != 0);
+
         return used;
     }
 
@@ -204,6 +227,12 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     float lfoRatioAtten{1.0};
     float phaseMod{0.f};
     float priorRF{0.f};
+    float extendedMPrior{0.f};
+    float extendedMMod{0.f}, extendedNMod{0.f};
+
+    // Per-block one-pole smoothers for extended-mode M and N. Unlike the LFO smoother
+    // these are *required* in extended mode — M/N have jumps would alias loudly.
+    sst::basic_blocks::dsp::OnePoleLag<float, false> extendedLagM, extendedLagN;
 
     bool firstTime{true};
     void renderBlock()
@@ -297,6 +326,76 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     void innerLoop(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs)
     {
+        using EM = Patch::SourceNode::ExtendedMode;
+        using PM = Patch::SourceNode::PhaseMapShape;
+        auto em =
+            static_cast<EM>(static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
+        switch (em)
+        {
+        case EM::NONE:
+            innerLoopImpl<EM::NONE>(onto, fbv, rf, dRF, phs);
+            break;
+        case EM::PHASE_REMAP:
+        {
+            auto pm = static_cast<PM>(
+                static_cast<uint32_t>(std::round(sourceNode.phaseMapModeShape.value)));
+            switch (pm)
+            {
+            case PM::SAW:
+                innerLoopImpl<EM::PHASE_REMAP, PM::SAW>(onto, fbv, rf, dRF, phs);
+                break;
+            case PM::SQUARE:
+                innerLoopImpl<EM::PHASE_REMAP, PM::SQUARE>(onto, fbv, rf, dRF, phs);
+                break;
+            case PM::PULSE:
+                innerLoopImpl<EM::PHASE_REMAP, PM::PULSE>(onto, fbv, rf, dRF, phs);
+                break;
+            case PM::DOUBLE:
+                innerLoopImpl<EM::PHASE_REMAP, PM::DOUBLE>(onto, fbv, rf, dRF, phs);
+                break;
+            case PM::SIN_TO_SQUARE:
+                innerLoopImpl<EM::PHASE_REMAP, PM::SIN_TO_SQUARE>(onto, fbv, rf, dRF, phs);
+                break;
+            case PM::DOUBLE_SAW:
+                innerLoopImpl<EM::PHASE_REMAP, PM::DOUBLE_SAW>(onto, fbv, rf, dRF, phs);
+                break;
+            }
+            break;
+        }
+        case EM::RESONANT_SWEEP:
+            // coming soon — falls through to the no-extension path for now
+            innerLoopImpl<EM::NONE>(onto, fbv, rf, dRF, phs);
+            break;
+        case EM::REDACTED_1:
+            // coming soon — falls through to the no-extension path for now
+            innerLoopImpl<EM::NONE>(onto, fbv, rf, dRF, phs);
+            break;
+        }
+    }
+
+    template <Patch::SourceNode::ExtendedMode ET,
+              Patch::SourceNode::PhaseMapShape S = Patch::SourceNode::PhaseMapShape::SAW>
+    void innerLoopImpl(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs)
+    {
+        using EM = Patch::SourceNode::ExtendedMode;
+        float nextM{0.f}, dM{0.f};
+        if constexpr (ET == EM::PHASE_REMAP)
+        {
+            // Raw target m for this block: patch value + external mod + env / lfo contributions.
+            auto lfoFac = *lfoFacP;
+            float target = sourceNode.extendedModeM.value + extendedMMod +
+                           sourceNode.envToExtendedModeM.value * env.outputCache[blockSize - 1] +
+                           lfoFac * sourceNode.lfoToExtendedModeM.value * lfo.outputBlock[0];
+            // Push through the one-pole smoother before the block-walk. M cannot tolerate
+            // jumps the way ratio can (the remap math hard-clamps the shape), so we always
+            // smooth here. Then walk linearly from prior block's smoothed value to this one.
+            extendedLagM.setTarget(target);
+            extendedLagM.process();
+            nextM = extendedLagM.v;
+            dM = (extendedMPrior - nextM) / blockSize;
+            std::swap(nextM, extendedMPrior);
+        }
+
         for (int i = 0; i < blockSize; ++i)
         {
             dPhase = st.dPhase((baseFrequency * (1.0 + fmAmount[i])) * rf);
@@ -312,6 +411,25 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             fb = fb * (1 - sb * (1 - fb));
 
             auto ph = phs + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb);
+
+            if constexpr (ET == EM::PHASE_REMAP)
+            {
+                using PM = Patch::SourceNode::PhaseMapShape;
+                if constexpr (S == PM::SAW)
+                    ph = remap::remapSaw(ph & phase::phaseMask, nextM);
+                else if constexpr (S == PM::SQUARE)
+                    ph = remap::remapSquare(ph & phase::phaseMask, nextM);
+                else if constexpr (S == PM::PULSE)
+                    ph = remap::remapPulse(ph & phase::phaseMask, nextM);
+                else if constexpr (S == PM::DOUBLE)
+                    ph = remap::remapDoubleSine(ph & phase::phaseMask, nextM);
+                else if constexpr (S == PM::SIN_TO_SQUARE)
+                    ph = remap::remapSinToSquare(ph & phase::phaseMask, nextM);
+                else if constexpr (S == PM::DOUBLE_SAW)
+                    ph = remap::remapDoubleSaw(ph & phase::phaseMask, nextM);
+                nextM += dM;
+            }
+
             auto out = st.at(ph);
 
             out = out * rmLevel[i];
@@ -327,6 +445,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         lfoRatioAtten = 1.f;
         ratioMod = 0.f;
         phaseMod = 0.f;
+        extendedMMod = 0.f;
+        extendedNMod = 0.f;
     }
     void calculateModulation()
     {
@@ -370,6 +490,12 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                         break;
                     case Patch::SourceNode::LFO_DEPTH_ATTEN:
                         lfoRatioAtten *= 1.0 - d * (1.0 - std::clamp(*sourcePointers[i], 0.f, 1.f));
+                        break;
+                    case Patch::SourceNode::EXTEND_M:
+                        extendedMMod += d * *sourcePointers[i];
+                        break;
+                    case Patch::SourceNode::EXTEND_N:
+                        extendedNMod += d * *sourcePointers[i];
                         break;
                     default:
                         break;

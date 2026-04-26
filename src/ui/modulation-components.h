@@ -171,6 +171,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
         auto p = juce::PopupMenu();
         p.addSectionHeader("Modulation Target");
         p.addSeparator();
+        auto current = static_cast<int32_t>(std::round(patchPtr->modtarget[index].value));
         for (const auto &[id, nm] : patchPtr->targetList)
         {
             if (id == -1)
@@ -179,7 +180,9 @@ template <typename Comp, typename Patch> struct ModulationComponents
             }
             else
             {
-                p.addItem(nm,
+                auto ticked = (id == current);
+                auto enabled = isTargetAvailable(static_cast<typename Patch::TargetID>(id));
+                p.addItem(nm, enabled, ticked,
                           [si = id, w = juce::Component::SafePointer(asComp()), index]()
                           {
                               if (!w)
@@ -224,6 +227,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
             };
         };
 
+        auto currentSource = static_cast<int32_t>(std::round(patchPtr->modsource[index].value));
         for (const auto &so : asComp()->editor.modMatrixConfig.sources)
         {
             auto dname = so.name;
@@ -231,9 +235,11 @@ template <typename Comp, typename Patch> struct ModulationComponents
             if (debugLevel > 0)
                 dname += " (" + std::to_string(id) + ")";
 
+            auto ticked = (static_cast<int32_t>(id) == currentSource);
+
             if (so.group.empty())
             {
-                p.addItem(dname, genSet(id));
+                p.addItem(dname, true, ticked, genSet(id));
             }
             else
             {
@@ -243,7 +249,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
                     s = juce::PopupMenu();
                 }
                 currCat = so.group;
-                s.addItem(dname, genSet(id));
+                s.addItem(dname, true, ticked, genSet(id));
             }
         }
         if (s.getNumItems() > 0)
@@ -260,6 +266,10 @@ template <typename Comp, typename Patch> struct ModulationComponents
     std::array<std::unique_ptr<jcmp::MenuButton>, numModsPer> targetMenu;
     std::array<std::unique_ptr<jcmp::HSliderFilled>, numModsPer> depthSlider;
     std::array<std::unique_ptr<PatchContinuous>, numModsPer> depthSliderD;
+
+    // Override per-panel to grey out targets that don't apply to the current node state
+    // (e.g. EXTEND_M only available in PHASE_REMAP). Sources are always enabled.
+    std::function<bool(typename Patch::TargetID)> isTargetAvailable{[](auto) { return true; }};
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MODULATION_COMPONENTS_H

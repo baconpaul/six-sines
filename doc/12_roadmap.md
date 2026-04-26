@@ -7,16 +7,16 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 - Add an audio input and allow operator 1 to take the audio input
 - Tricky part: have to upsample from audio input rate to six sines rate, so there will be some input latency. 
 - Mostly useful for really some FSU FM work.
-
+p
 ## User Wavetables
 
 - Allow a user to load a wav and take L channel (if stereo) or mono as a single cycle wavetable.
 - Probably allow CSV of floats also
 - Gotta upsample to 4096 and take derivs to make it work like tables
 - Gotta stream into patch
-- One per operator? Or one per patch?
+- Since we want sharing these are probably 'patch level' slots which the node adddresses
 
-## CZ-style PD features
+## CZ-style PD features **UNDERWAY**
 
 - We already have PD so this really amounts to diferent operator styles
 - The CZ basically has enveloped tuned waveforms it seems which are strictly positive as PD sources
@@ -39,10 +39,10 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 - that crazy idea kisney and i chatted about
 - more t/k
 
-## UI Color Editor
+## UI Color Editor **DONE**
 
 - Make sure everything is themed **DONE**
-- Write a jucegui theme editor which allows constaints to used subset I guess
+- Write a jucegui theme editor which allows constaints to used subset I guess **DONE**
 
 ## UI Ratio editor Upgrade
 

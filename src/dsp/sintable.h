@@ -26,6 +26,17 @@
 
 namespace baconpaul::six_sines
 {
+namespace phase
+{
+// Six Sines uses a 26-bit phase: 14 bits of integer position (12 table + 2 quadrant)
+// plus 12 bits of fractional. The unit cycle spans [0, phaseMax).
+static constexpr uint32_t phaseBits = 26;
+static constexpr uint32_t phaseMax = 1u << phaseBits;
+static constexpr uint32_t phaseMask = phaseMax - 1;
+static constexpr uint32_t halfPhase = phaseMax >> 1;
+static constexpr float phaseMaxF = static_cast<float>(phaseMax);
+} // namespace phase
+
 struct SinTable
 {
     enum WaveForm
