@@ -281,7 +281,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         if (firstTime)
             priorRF = rf;
         firstTime = false;
-        auto dRF = (priorRF - rf) / blockSize;
+        auto dRF = (rf - priorRF) / blockSize;
         std::swap(rf, priorRF);
 
         if (softResetPhaseCount > 0)
@@ -392,7 +392,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             extendedLagM.setTarget(target);
             extendedLagM.process();
             nextM = extendedLagM.v;
-            dM = (extendedMPrior - nextM) / blockSize;
+            dM = (nextM - extendedMPrior) / blockSize;
             std::swap(nextM, extendedMPrior);
         }
 
