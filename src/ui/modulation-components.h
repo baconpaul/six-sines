@@ -26,6 +26,14 @@
 namespace baconpaul::six_sines::ui
 {
 namespace jcmp = sst::jucegui::components;
+
+enum class SourceFilterResult
+{
+    Include,  // show normally
+    Exclude,  // omit from menu entirely
+    Disabled, // show greyed and unselectable
+};
+
 template <typename Comp, typename Patch> struct ModulationComponents
 {
     Comp *asComp() { return static_cast<Comp *>(this); }
@@ -191,6 +199,8 @@ template <typename Comp, typename Patch> struct ModulationComponents
                                   return;
                               w->editor.setAndSendParamValue(w->patchPtr->modtarget[index], si);
                               w->resetTargetLabel(index);
+                              if (w->editor.onModulationRoutingChanged)
+                                  w->editor.onModulationRoutingChanged();
                           });
             }
         }
@@ -224,6 +234,8 @@ template <typename Comp, typename Patch> struct ModulationComponents
                     SXSNLOG("ERROR: GENSET with sCopy=2048 " << lidx);
                 w->editor.setAndSendParamValue(w->patchPtr->modsource[lidx], sCopy);
                 w->resetSourceLabel(lidx);
+                if (w->editor.onModulationRoutingChanged)
+                    w->editor.onModulationRoutingChanged();
             };
         };
 
@@ -235,11 +247,18 @@ template <typename Comp, typename Patch> struct ModulationComponents
             if (debugLevel > 0)
                 dname += " (" + std::to_string(id) + ")";
 
+            auto filt = sourceFilter(static_cast<int>(id));
+            if (filt == SourceFilterResult::Exclude)
+                continue;
+            auto enabled = (filt != SourceFilterResult::Disabled);
+
             auto ticked = (static_cast<int32_t>(id) == currentSource);
 
             if (so.group.empty())
             {
-                p.addItem(dname, true, ticked, genSet(id));
+                if (so.addSeparatorBefore)
+                    p.addSeparator();
+                p.addItem(dname, enabled, ticked, genSet(id));
             }
             else
             {
@@ -249,7 +268,9 @@ template <typename Comp, typename Patch> struct ModulationComponents
                     s = juce::PopupMenu();
                 }
                 currCat = so.group;
-                s.addItem(dname, true, ticked, genSet(id));
+                if (so.addSeparatorBefore)
+                    s.addSeparator();
+                s.addItem(dname, enabled, ticked, genSet(id));
             }
         }
         if (s.getNumItems() > 0)
@@ -268,8 +289,26 @@ template <typename Comp, typename Patch> struct ModulationComponents
     std::array<std::unique_ptr<PatchContinuous>, numModsPer> depthSliderD;
 
     // Override per-panel to grey out targets that don't apply to the current node state
-    // (e.g. EXTEND_M only available in PHASE_REMAP). Sources are always enabled.
+    // (e.g. EXTEND_M only available in PHASE_REMAP).
     std::function<bool(typename Patch::TargetID)> isTargetAvailable{[](auto) { return true; }};
+
+    // Universal source filter: greys MACRO_MOD_k when that macro's power is off.
+    // Panels overriding sourceFilter should fall through to this.
+    SourceFilterResult sharedSourceFilter(int sid)
+    {
+        if (sid >= ModMatrixConfig::MACRO_MOD_0 &&
+            sid < (int)ModMatrixConfig::MACRO_MOD_0 + (int)numMacros)
+        {
+            int k = sid - (int)ModMatrixConfig::MACRO_MOD_0;
+            if (asComp()->editor.patchCopy.macroNodes[k].macroPower.value < 0.5f)
+                return SourceFilterResult::Disabled;
+        }
+        return SourceFilterResult::Include;
+    }
+
+    // Override per-panel to add extra rules; defaults to sharedSourceFilter.
+    std::function<SourceFilterResult(int)> sourceFilter{[this](int sid)
+                                                        { return sharedSourceFilter(sid); }};
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MODULATION_COMPONENTS_H

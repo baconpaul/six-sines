@@ -40,7 +40,8 @@ struct ModMatrixConfig
         MIDICC_0 = 200, // leave 126 gap after this
 
         // Macros
-        MACRO_0 = 400, // leave numMacros gap after this
+        MACRO_0 = 400,     // leave numMacros gap after this
+        MACRO_MOD_0 = 410, // leave numMacros gap after this
 
         // Voice level
         VELOCITY = voiceLevel + 0,
@@ -71,6 +72,7 @@ struct ModMatrixConfig
         int id;
         std::string group;
         std::string name;
+        bool addSeparatorBefore{false}; // render hint: insert a menu separator before this entry
     };
     std::vector<SourceObj> sources;
     std::unordered_map<uint32_t, SourceObj> sourceByID;

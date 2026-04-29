@@ -266,6 +266,21 @@ void PresetManager::sendEntirePatchToAudio(Patch &patch, Synth::mainToAudioQueue
     memset(tmpDat, 0, 128 * sizeof(char));
     strncpy(tmpDat, name.c_str(), 255);
     mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_NAME, 0, 0.f, tmpDat});
+
+    // Each macro name uses its own slot in the rotating buffer so the pointer
+    // stays valid until the audio thread drains the queue.
+    for (uint32_t mi = 0; mi < numMacros; ++mi)
+    {
+        char *macDat = stringBuffer[currentString];
+        currentString = (currentString + 1) % 128;
+        memset(macDat, 0, 256);
+        strncpy(macDat, patch.macroNames[mi].data(), 255);
+        Synth::MainToAudioMsg msg{Synth::MainToAudioMsg::SEND_MACRO_NAME};
+        msg.paramId = mi;
+        msg.uiManagedPointer = macDat;
+        mainToAudio.push(msg);
+    }
+
     mainToAudio.push({Synth::MainToAudioMsg::STOP_AUDIO});
     for (const auto &p : patch.params)
     {

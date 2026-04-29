@@ -17,6 +17,61 @@
 namespace baconpaul::six_sines
 {
 
+void Patch::setupAdditionalState()
+{
+    onResetToInit = [](Patch &p)
+    {
+        for (int i = 0; i < numMacros; ++i)
+        {
+            auto s = "Macro " + std::to_string(i + 1);
+            strncpy(p.macroNames[i].data(), s.c_str(), 63);
+            p.macroNames[i][63] = '\0';
+        }
+    };
+
+    additionalToState = [this](TiXmlElement &root)
+    {
+        TiXmlElement mn("macroNames");
+        for (int i = 0; i < numMacros; ++i)
+        {
+            TiXmlElement entry("macroName");
+            entry.SetAttribute("idx", i);
+            TiXmlText t(macroNames[i].data());
+            t.SetCDATA(true);
+            entry.InsertEndChild(t);
+            mn.InsertEndChild(entry);
+        }
+        root.InsertEndChild(mn);
+    };
+
+    additionalFromState = [this](TiXmlElement *root, uint32_t /*ver*/)
+    {
+        auto *mn = root->FirstChildElement("macroNames");
+        if (!mn)
+            return;
+        auto *entry = mn->FirstChildElement("macroName");
+        while (entry)
+        {
+            int idx = -1;
+            if (entry->QueryIntAttribute("idx", &idx) == TIXML_SUCCESS && idx >= 0 &&
+                idx < numMacros)
+            {
+                auto *n = entry->FirstChild();
+                if (n)
+                {
+                    auto *txt = n->ToText();
+                    if (txt && txt->Value())
+                    {
+                        strncpy(macroNames[idx].data(), txt->Value(), 63);
+                        macroNames[idx][63] = '\0';
+                    }
+                }
+            }
+            entry = entry->NextSiblingElement("macroName");
+        }
+    };
+}
+
 float Patch::migrateParamValueFromVersion(Param *p, float value, uint32_t version)
 {
     if ((p->adhocFeatures & Param::AdHocFeatureValues::ENVTIME) && version <= 2)

@@ -65,9 +65,9 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         c->addAndMakeVisible(*shapes[1]);
         c->addAndMakeVisible(*shapes[2]);
 
-        titleLab = std::make_unique<jcmp::RuledLabel>();
-        titleLab->setText("Envelope");
-        asComp()->addAndMakeVisible(*titleLab);
+        envTitleLab = std::make_unique<jcmp::RuledLabel>();
+        envTitleLab->setText("Envelope");
+        asComp()->addAndMakeVisible(*envTitleLab);
 
         triggerButton = std::make_unique<jcmp::TextPushButton>();
         triggerButton->setOnCallback(
@@ -96,7 +96,7 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
 
     juce::Rectangle<int> layoutDAHDSRAt(int x, int y)
     {
-        if (!titleLab || !slider[0])
+        if (!envTitleLab || !slider[0])
             return {};
 
         namespace jlo = sst::jucegui::layouts;
@@ -104,7 +104,7 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         auto lo =
             jlo::VList().at(x, y).withHeight(180 - uicMargin).withWidth(nels * uicSliderWidth);
 
-        lo.add(titleLabelLayout(titleLab));
+        lo.add(titleLabelLayout(envTitleLab));
         auto sliders = jlo::HList().expandToFill();
 
         for (int i = 0; i < nels; ++i)
@@ -139,7 +139,7 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
     std::array<std::unique_ptr<jcmp::Knob>, nShape> shapes;
     std::array<std::unique_ptr<PatchContinuous>, nShape> shapesD;
     std::array<std::unique_ptr<jcmp::Label>, nels> lab;
-    std::unique_ptr<jcmp::RuledLabel> titleLab;
+    std::unique_ptr<jcmp::RuledLabel> envTitleLab;
 
     std::unique_ptr<jcmp::TextPushButton> triggerButton;
     void setTriggerLabel()

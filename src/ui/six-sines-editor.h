@@ -18,6 +18,7 @@
 
 #include <concepts>
 #include <functional>
+#include <unordered_set>
 #include <utility>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "sst/jucegui/style/JUCELookAndFeelAdapter.h"
@@ -35,6 +36,7 @@
 #include <sst/jucegui/screens/ColorEditor.h>
 
 #include "synth/synth.h"
+#include "synth/macro_usage.h"
 #include "presets/preset-manager.h"
 #include "presets/ui-theme-manager.h"
 #include "ui-defaults.h"
@@ -66,6 +68,7 @@ struct PlayModeSubPanel;
 struct SourcePanel;
 struct SourceSubPanel;
 struct MacroPanel;
+struct MacroSubPanel;
 struct SettingsPanel;
 struct Clipboard;
 struct PresetDataBinding;
@@ -112,6 +115,7 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::unique_ptr<MixerSubPanel> mixerSubPanel;
 
     std::unique_ptr<MacroPanel> macroPanel;
+    std::unique_ptr<MacroSubPanel> macroSubPanel;
     std::unique_ptr<SettingsPanel> settingsPanel;
 
     std::unique_ptr<SourcePanel> sourcePanel;
@@ -185,6 +189,14 @@ struct SixSinesEditor : jcmp::WindowPanel
     void hideAllSubPanels();
     std::unordered_map<uint32_t, juce::Component::SafePointer<juce::Component>> componentByID;
     std::unordered_map<uint32_t, std::function<void()>> componentRefreshByID;
+
+    // Per-macro list of consumers. Recomputed event-driven on post-load,
+    // UPDATE_PARAM (gated by modRoutingParamIds) and onModulationRoutingChanged.
+    std::array<std::vector<MacroUsedRef>, numMacros> macroUsageCache;
+    void recomputeMacroUsage();
+    std::unordered_set<uint32_t> modRoutingParamIds;
+    // Fired by ModulationComponents after a UI commit of modsource/modtarget.
+    std::function<void()> onModulationRoutingChanged{nullptr};
 
     void setAndSendParamValue(uint32_t id, float value, bool notifyAudio = true,
                               bool includeBeginEnd = true);

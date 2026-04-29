@@ -45,7 +45,9 @@ ModMatrixConfig::ModMatrixConfig()
         add(MIDICC_0 + cc, "MIDI CC", q);
     }
     for (int mc = 0; mc < numMacros; ++mc)
-        add(MACRO_0 + mc, "Macros", "Macro " + std::to_string(mc + 1));
+        add(MACRO_0 + mc, "Macros", "Macro " + std::to_string(mc + 1) + " Amplitude");
+    for (int mc = 0; mc < numMacros; ++mc)
+        add(MACRO_MOD_0 + mc, "Macros", "Macro " + std::to_string(mc + 1) + " Modulated");
 
     add(VELOCITY, "MIDI", "Velocity");
     add(RELEASE_VELOCITY, "MIDI", "Release Velocity");
@@ -75,6 +77,27 @@ ModMatrixConfig::ModMatrixConfig()
                       return a.name < b.name;
                   return a.id < b.id;
               });
+
+    // Within the Macros group: amplitudes first (by index), separator, then
+    // modulated entries (by index). Default alphabetical sort interleaves them.
+    auto isMacroAmp = [](const SourceObj &o)
+    { return o.id >= MACRO_0 && o.id < MACRO_0 + (int)numMacros; };
+    auto isMacroMod = [](const SourceObj &o)
+    { return o.id >= MACRO_MOD_0 && o.id < MACRO_MOD_0 + (int)numMacros; };
+    auto isMacro = [&](const SourceObj &o) { return isMacroAmp(o) || isMacroMod(o); };
+    auto firstMacro = std::find_if(sources.begin(), sources.end(), isMacro);
+    auto lastMacro =
+        std::find_if(firstMacro, sources.end(), [&](const SourceObj &o) { return !isMacro(o); });
+    if (firstMacro != lastMacro)
+    {
+        std::stable_partition(firstMacro, lastMacro, isMacroAmp);
+        std::sort(firstMacro, lastMacro,
+                  [](const SourceObj &a, const SourceObj &b) { return a.id < b.id; });
+        auto firstMod = std::find_if(firstMacro, lastMacro, isMacroMod);
+        if (firstMod != lastMacro)
+            firstMod->addSeparatorBefore = true;
+    }
+
     for (auto &s : sources)
     {
         sourceByID[s.id] = s;

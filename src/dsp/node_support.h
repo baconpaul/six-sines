@@ -16,8 +16,10 @@
 #ifndef BACONPAUL_SIX_SINES_DSP_NODE_SUPPORT_H
 #define BACONPAUL_SIX_SINES_DSP_NODE_SUPPORT_H
 
+#include <cassert>
 #include <cstring>
 #include <string.h>
+#include <type_traits>
 
 #include "sst/cpputils/constructors.h"
 #include "sst/basic-blocks/modulators/AHDSRShapedSC.h"
@@ -532,6 +534,25 @@ template <typename Bundle, typename Node> struct ModulationSupport
             sv < ModMatrixConfig::Source::MACRO_0 + numMacros)
         {
             sourcePointers[which] = monoValues.macroPtr[sv - ModMatrixConfig::Source::MACRO_0];
+            return;
+        }
+
+        if (sv >= ModMatrixConfig::Source::MACRO_MOD_0 &&
+            sv < ModMatrixConfig::Source::MACRO_MOD_0 + numMacros)
+        {
+            // Macros are processed in index order; reading a higher-indexed
+            // MACRO_MOD_k would see last block's value. UI prevents this;
+            // assert catches a malformed patch.
+#ifndef NDEBUG
+            if constexpr (std::is_same_v<Bundle, Patch::MacroNode>)
+            {
+                int mySrcIdx = sv - ModMatrixConfig::Source::MACRO_MOD_0;
+                assert(mySrcIdx < paramBundle.index &&
+                       "macro mod-source must reference a lower-indexed macro");
+            }
+#endif
+            sourcePointers[which] =
+                &voiceValues.macroOut[sv - ModMatrixConfig::Source::MACRO_MOD_0];
             return;
         }
 

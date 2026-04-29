@@ -40,7 +40,9 @@ Voice::Voice(const Patch &p, MonoValues &mv)
           {
               return MatrixNodeFrom(p.matrixNodes[i], this->targetAtMatrix(i),
                                     this->sourceAtMatrix(i), mv, voiceValues);
-          }))
+          })),
+      macroNode(scpu::make_array_lambda<MacroVoiceNode, numMacros>(
+          [&p, this, &mv](auto i) { return MacroVoiceNode(p.macroNodes[i], mv, voiceValues); }))
 {
     std::fill(isKeytrack.begin(), isKeytrack.end(), true);
     std::fill(cmRatio.begin(), cmRatio.end(), 1.f);
@@ -53,6 +55,8 @@ void Voice::attack()
     voiceValues.velocityLag.snapTo(voiceValues.velocity);
     voiceValues.velocityLag.setRateInMilliseconds(10, monoValues.sr.sampleRate, 1.0 / blockSize);
 
+    for (auto &n : macroNode)
+        n.attack();
     out.attack();
     for (auto &n : mixerNode)
         n.attack();
@@ -98,6 +102,27 @@ void Voice::renderBlock()
 
     voiceValues.velocityLag.setTarget(voiceValues.velocity);
     voiceValues.velocityLag.process();
+
+    for (int m = 0; m < numMacros; ++m)
+    {
+        auto &mn = macroNode[m];
+        mn.macroPowerOn = mn.macroPowerV > 0.5f;
+        if (mn.macroPowerOn)
+        {
+            if (!mn.wasPowerOn)
+            {
+                mn.envAttack();
+                mn.lfoAttack();
+            }
+            mn.process();
+            voiceValues.macroOut[m] = mn.out;
+        }
+        else
+        {
+            voiceValues.macroOut[m] = *monoValues.macroPtr[m];
+        }
+        mn.wasPowerOn = mn.macroPowerOn;
+    }
 
     for (int i = 0; i < numOps; ++i)
     {
@@ -154,6 +179,11 @@ void Voice::retriggerAllEnvelopesForKeyPress()
                     (tm == TriggerMode::PATCH_DEFAULT && dtm == TriggerMode::KEY_PRESS));
         return res;
     };
+    for (auto &m : macroNode)
+        if (m.macroPowerOn)
+            if (mtm(m.triggerMode))
+                m.envAttack();
+
     for (auto &s : src)
         if (s.active)
             if (mtm(s.triggerMode))
@@ -201,6 +231,11 @@ void Voice::retriggerAllEnvelopesForReGate()
         return (tm != TriggerMode::NEW_VOICE);
     };
 
+    for (auto &m : macroNode)
+        if (m.macroPowerOn)
+            if (mtm(m.triggerMode))
+                m.envAttack();
+
     for (auto &s : src)
         if (s.active)
             if (mtm(s.triggerMode))
@@ -244,6 +279,9 @@ void Voice::cleanup()
     voiceValues.dPorta = 0;
     voiceValues.dPortaFrac = 0;
     voiceValues.mpeBendInSemis = 0;
+
+    for (auto &m : macroNode)
+        m.envCleanup();
 
     for (auto &s : src)
     {

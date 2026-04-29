@@ -240,9 +240,9 @@ template <typename Comp, typename Patch> struct LFOComponents
         createComponent(e, *c, v.lfoShape, shape, shapeD);
         c->addAndMakeVisible(*shape);
 
-        titleLab = std::make_unique<jcmp::RuledLabel>();
-        titleLab->setText("LFO");
-        c->addAndMakeVisible(*titleLab);
+        lfoTitleLab = std::make_unique<jcmp::RuledLabel>();
+        lfoTitleLab->setText("LFO");
+        c->addAndMakeVisible(*lfoTitleLab);
 
         createComponent(e, *c, v.tempoSync, tempoSync, tempoSyncD);
         tempoSync->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
@@ -316,7 +316,7 @@ template <typename Comp, typename Patch> struct LFOComponents
 
     juce::Rectangle<int> layoutLFOAt(int x, int y, int width = -1)
     {
-        if (!titleLab)
+        if (!lfoTitleLab)
             return {};
 
         namespace jlo = sst::jucegui::layouts;
@@ -326,7 +326,7 @@ template <typename Comp, typename Patch> struct LFOComponents
 
         auto lo = jlo::VList().at(x, y).withHeight(h).withWidth(w);
 
-        lo.add(titleLabelLayout(titleLab));
+        lo.add(titleLabelLayout(lfoTitleLab));
 
         auto columns = jlo::HList().expandToFill().withAutoGap(uicMargin);
 
@@ -368,7 +368,7 @@ template <typename Comp, typename Patch> struct LFOComponents
 
     std::unique_ptr<jcmp::MultiSwitch> shape;
     std::unique_ptr<PatchDiscrete> shapeD;
-    std::unique_ptr<jcmp::RuledLabel> titleLab;
+    std::unique_ptr<jcmp::RuledLabel> lfoTitleLab;
 
     std::unique_ptr<jcmp::ToggleButton> tempoSync;
     std::unique_ptr<PatchDiscrete> tempoSyncD;

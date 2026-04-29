@@ -27,7 +27,7 @@ namespace baconpaul::six_sines
 {
 
 static constexpr size_t blockSize{8};
-static constexpr double blockSizeInv{1.0/8};
+static constexpr double blockSizeInv{1.0 / 8};
 
 static constexpr size_t numOps{6};
 static constexpr size_t matrixSize{(numOps * (numOps - 1)) / 2};

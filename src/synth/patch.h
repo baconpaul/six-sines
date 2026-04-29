@@ -36,6 +36,9 @@ namespace baconpaul::six_sines
 namespace scpu = sst::cpputils;
 namespace pats = sst::plugininfra::patch_support;
 using md_t = sst::basic_blocks::params::ParamMetaData;
+
+static constexpr uint64_t isPrimaryMacroFeature = (uint64_t)md_t::Features::USER_FEATURE_0;
+
 struct Param : pats::ParamBase, sst::cpputils::active_set_overlay<Param>::participant
 {
     Param(const md_t &m) : pats::ParamBase(m) {}
@@ -77,9 +80,12 @@ struct Patch : pats::PatchBase<Patch, Param>
     static constexpr uint32_t boolFlags{CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED};
 
     static constexpr uint64_t version_110 = 0x010100;
-    static constexpr uint64_t version_120a = 0x010201; // first chunk of 1.2.0; step sequencer
-    static constexpr uint64_t version_120b =
-        0x010202; // second chunk of 1.2.0; extended mode for source
+    // first chunk of 1.2.0; step sequencer
+    static constexpr uint64_t version_120a = 0x010201;
+    // second chunk of 1.2.0; extended mode for source
+    static constexpr uint64_t version_120b = 0x010202;
+    // third chunk of 1.2.0: super macros
+    static constexpr uint64_t version_120c = 0x010203;
 
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
     static md_t floatMd(uint64_t version = version_110)
@@ -109,6 +115,12 @@ struct Patch : pats::PatchBase<Patch, Param>
           mainPanMod()
     {
         MatrixIndex::initialize();
+        for (int i = 0; i < numMacros; ++i)
+        {
+            auto s = "Macro " + std::to_string(i + 1);
+            strncpy(macroNames[i].data(), s.c_str(), 63);
+            macroNames[i][63] = '\0';
+        }
         auto pushParams = [this](auto &from) { this->pushMultipleParams(from.params()); };
 
         pushParams(output);
@@ -153,7 +165,11 @@ struct Patch : pats::PatchBase<Patch, Param>
 
                       return a->meta.name < b->meta.name;
                   });
+
+        setupAdditionalState();
     }
+
+    void setupAdditionalState();
 
     struct LFOMixin
     {
@@ -169,20 +185,20 @@ struct Patch : pats::PatchBase<Patch, Param>
             Step
         };
 
-        LFOMixin(const std::string name, int id0, int stepid0 = -1)
-            : lfoRate(floatMd()
+        LFOMixin(const std::string name, int id0, int stepid0 = -1, uint64_t version = version_110)
+            : lfoRate(floatMd(version)
                           .asLfoRate(-7, 11)
                           .withName(name + " LFO Rate")
                           .withGroupName(name)
                           .withDefault(0)
                           .withID(id0 + 1)),
-              lfoDeform(floatMd()
+              lfoDeform(floatMd(version)
                             .asPercentBipolar()
                             .withName(name + " LFO Deform")
                             .withGroupName(name)
                             .withDefault(0)
                             .withID(id0 + 2)),
-              lfoShape(intMd()
+              lfoShape(intMd(version)
                            .withName(name + " LFO Shape")
                            .withGroupName(name)
                            .withRange(0, 7)
@@ -196,28 +212,28 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                         {5, "Noise"},
                                                         {6, "S and H"},
                                                         {7, "Step"}})),
-              lfoActive(boolMd()
+              lfoActive(boolMd(version)
                             .withDefault(true)
                             .withID(id0 + 4)
                             .withName(name + " LFO Active")
                             .withGroupName(name)),
-              tempoSync(baseMd() // non-automatable
+              tempoSync(baseMd(version) // non-automatable
                             .asBool()
                             .withID(id0 + 5)
                             .withName(name + " Temposync")
                             .withGroupName(name)
                             .withDefault(false)),
-              lfoBipolar(boolMd()
+              lfoBipolar(boolMd(version)
                              .withDefault(true)
                              .withID(id0 + 6)
                              .withName(name + " Bipolar")
                              .withGroupName(name)),
-              lfoIsEnveloped(boolMd()
+              lfoIsEnveloped(boolMd(version)
                                  .withDefault(false)
                                  .withID(id0 + 7)
                                  .withName(name + " Is Enveloped")
                                  .withGroupName(name)),
-              lfoStartPhase(floatMd()
+              lfoStartPhase(floatMd(version)
                                 .withDefault(0)
                                 .withID(id0 + 8)
                                 .withName(name + " Start Phase")
@@ -292,62 +308,62 @@ struct Patch : pats::PatchBase<Patch, Param>
     {
 
         DAHDSRMixin(const std::string name, int id0, bool longAdsr, bool alwaysAdd = false,
-                    int id1 = -1)
-            : delay(floatEnvRateMd()
+                    int id1 = -1, uint64_t version = version_110)
+            : delay(floatEnvRateMd(version)
                         .withName(name + " Env Delay")
                         .withGroupName(name)
                         .withDefault(0.f)
                         .withID(id0 + 0)),
-              attack(floatEnvRateMd()
+              attack(floatEnvRateMd(version)
                          .withName(name + " Env Attack")
                          .withGroupName(name)
                          .withDefault(longAdsr ? 0.05 : 0.f)
                          .withID(id0 + 1)),
-              hold(floatEnvRateMd()
+              hold(floatEnvRateMd(version)
                        .withName(name + " Env Hold")
                        .withGroupName(name)
                        .withDefault(0.f)
                        .withID(id0 + 2)),
-              decay(floatEnvRateMd()
+              decay(floatEnvRateMd(version)
                         .withName(name + " Env Decay")
                         .withGroupName(name)
                         .withDefault(longAdsr ? 0.3 : 0.f)
                         .withID(id0 + 3)),
-              sustain(floatMd()
+              sustain(floatMd(version)
                           .asPercent()
                           .withName(name + " Env Sustain")
                           .withGroupName(name)
                           .withDefault(longAdsr ? 0.7f : 1.f)
                           .withID(id0 + 4)),
-              release(floatEnvRateMd()
+              release(floatEnvRateMd(version)
                           .withName(name + " Env Release")
                           .withGroupName(name)
                           .withDefault(longAdsr ? 0.4 : 1.f)
                           .withID(id0 + 5)),
-              envPower(boolMd()
+              envPower(boolMd(version)
                            .withName(name + " Env Power")
                            .withGroupName(name)
                            .withDefault(true)
                            .withID(id0 + 6)),
-              aShape(floatMd()
+              aShape(floatMd(version)
                          .asPercentBipolar()
                          .withName(name + " Attack Shape")
                          .withGroupName(name)
                          .withDefault(0)
                          .withID(id0 + 7)),
-              dShape(floatMd()
+              dShape(floatMd(version)
                          .asPercentBipolar()
                          .withName(name + " Decay Shape")
                          .withGroupName(name)
                          .withDefault(0)
                          .withID(id0 + 8)),
-              rShape(floatMd()
+              rShape(floatMd(version)
                          .asPercentBipolar()
                          .withName(name + " Release Shape")
                          .withGroupName(name)
                          .withDefault(0)
                          .withID(id0 + 9)),
-              triggerMode(intMd()
+              triggerMode(intMd(version)
                               .withRange(0, 3)
                               .withName(name + " Env Trigger Mode")
                               .withGroupName(name)
@@ -357,18 +373,18 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                            {1, "Voice Start"},
                                                            {3, "Key Press"},
                                                            {2, "Patch Default"}})),
-              envIsMultiplcative(boolMd()
+              envIsMultiplcative(boolMd(version)
                                      .withName(name + " Env is Multiplicative")
                                      .withGroupName(name)
                                      .withDefault(!alwaysAdd)
                                      .withID(id0 + 11)
                                      .withUnorderedMapFormatting({{0, "Add"}, {1, "Scale"}})),
-              envIsOneShot(boolMd()
+              envIsOneShot(boolMd(version)
                                .withName(name + " Is OneShot")
                                .withGroupName(name)
                                .withDefault(false)
                                .withID(id0 + 12)),
-              envTriggersFromZero(boolMd()
+              envTriggersFromZero(boolMd(version)
                                       .withName(name + " Triggers from Zero")
                                       .withGroupName(name)
                                       .withDefault(false)
@@ -429,11 +445,11 @@ struct Patch : pats::PatchBase<Patch, Param>
 
     struct ModulationMixin
     {
-        ModulationMixin(const std::string name, int id0)
+        ModulationMixin(const std::string name, int id0, uint64_t version = version_110)
             : modsource(scpu::make_array_lambda<Param, numModsPer>(
-                  [id0, name](int i)
+                  [id0, name, version](int i)
                   {
-                      return baseMd()
+                      return baseMd(version)
                           .asInt()
                           .withRange(0, 8192)
                           .withID(id0 + 2 * i)
@@ -442,9 +458,9 @@ struct Patch : pats::PatchBase<Patch, Param>
                           .withDefault(0);
                   })),
               moddepth(scpu::make_array_lambda<Param, numModsPer>(
-                  [id0, name](int i)
+                  [id0, name, version](int i)
                   {
-                      return floatMd()
+                      return floatMd(version)
                           .asPercentBipolar()
                           .withID(id0 + 2 * i + 1)
                           .withName(name + " Mod Depth " + std::to_string(i))
@@ -1168,9 +1184,23 @@ struct Patch : pats::PatchBase<Patch, Param>
         }
     };
 
-    struct MacroNode
+    struct MacroNode : public DAHDSRMixin, public LFOMixin, public ModulationMixin
     {
         static constexpr uint32_t idBase{40000}, idStride{250};
+
+        enum TargetID : int32_t
+        {
+            SKIP = -1,
+            NONE = 0,
+            LEVEL = 10,
+            DEPTH_ATTEN = 20,
+        };
+
+        std::vector<std::pair<int32_t, std::string>> targetList{
+            {TargetID::NONE, "Off"},    {TargetID::SKIP, ""},
+            {TargetID::LEVEL, "Level"}, {TargetID::DEPTH_ATTEN, "Depth Atten"},
+            {TargetID::SKIP, ""},
+        };
 
         MacroNode(size_t idx)
             : level(floatMd()
@@ -1178,18 +1208,74 @@ struct Patch : pats::PatchBase<Patch, Param>
                         .withGroupName(name(idx))
                         .withName(name(idx) + " Level")
                         .withID(id(0, idx))
-                        .withDefault(0))
+                        .withDefault(0)
+                        .withFeature(isPrimaryMacroFeature)),
+              macroPower(boolMd(version_120c)
+                             .withGroupName(name(idx))
+                             .withName(name(idx) + " Power")
+                             .withID(id(1, idx))
+                             .withDefault(false)),
+              envDepth(floatMd(version_120c)
+                           .asPercentBipolar()
+                           .withGroupName(name(idx))
+                           .withName(name(idx) + " Env Depth")
+                           .withID(id(15, idx))
+                           .withDefault(0)),
+              lfoDepth(floatMd(version_120c)
+                           .asPercentBipolar()
+                           .withGroupName(name(idx))
+                           .withName(name(idx) + " LFO Depth")
+                           .withID(id(16, idx))
+                           .withDefault(1)),
+              DAHDSRMixin(name(idx), id(2, idx), false, false, id(20, idx), version_120c),
+              LFOMixin(name(idx), id(30, idx), id(65, idx), version_120c),
+              ModulationMixin(name(idx), id(50, idx), version_120c),
+              modtarget(scpu::make_array_lambda<Param, numModsPer>(
+                  [this, idx](int i)
+                  {
+                      return baseMd(version_120c)
+                          .withName(name(idx) + " Mod Target " + std::to_string(i))
+                          .withGroupName(name(idx))
+                          .withRange(0, 2000)
+                          .withDefault(TargetID::NONE)
+                          .withID(id(60 + i, idx));
+                  }))
         {
+            index = idx;
+            appendLFOTargetName(targetList);
+            appendDAHDSRTargetName(targetList);
         }
 
-        std::string name(int idx) const { return "Macro " + std::to_string(idx + 1); }
+        std::string name(int idx) const { return defaultGroupName(idx); }
         uint32_t id(int f, int idx) const { return idBase + idStride * idx + f; }
 
+        // Default group name. Used by name(idx) and by paramsInfo when building
+        // the "(Macro N)" suffix for the user-renamed level param.
+        static std::string defaultGroupName(int idx) { return "Macro " + std::to_string(idx + 1); }
+
+        int index{-1};
+        std::string name() const
+        {
+            if (index < 0)
+                throw std::runtime_error("Only call this post setup");
+            return name(index);
+        }
+
         Param level;
+        Param macroPower;
+        Param envDepth, lfoDepth;
+        std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level};
+            std::vector<Param *> res{&level, &macroPower, &envDepth, &lfoDepth};
+            appendDAHDSRParams(res);
+            appendLFOParams(res);
+
+            for (int i = 0; i < numModsPer; ++i)
+                res.push_back(&modtarget[i]);
+            appendModulationParams(res);
+
             return res;
         }
     };
@@ -1615,6 +1701,7 @@ struct Patch : pats::PatchBase<Patch, Param>
     MainPanNode mainPanMod;
 
     char name[256]{"Init"};
+    std::array<std::array<char, 64>, numMacros> macroNames;
 
     float migrateParamValueFromVersion(Param *p, float value, uint32_t version);
     void migratePatchFromVersion(uint32_t version);
