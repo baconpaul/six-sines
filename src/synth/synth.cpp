@@ -745,6 +745,26 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
         }
         break;
+        case MainToAudioMsg::SEND_MACRO_NAME:
+        {
+            auto idx = uiM->paramId;
+            if (idx < numMacros && uiM->uiManagedPointer)
+            {
+                auto &buf = patch.macroNames[idx];
+                std::fill(buf.begin(), buf.end(), 0);
+                strncpy(buf.data(), uiM->uiManagedPointer, buf.size() - 1);
+                AudioToUIMsg out{AudioToUIMsg::SET_MACRO_NAME};
+                out.paramId = idx;
+                out.patchNamePointer = buf.data();
+                audioToUi.push(out);
+
+                // Refresh host param info so the renamed macro picks up its display name.
+                AudioToUIMsg rescan{AudioToUIMsg::DO_PARAM_RESCAN};
+                rescan.paramId = CLAP_PARAM_RESCAN_INFO;
+                audioToUi.push(rescan);
+            }
+        }
+        break;
         case MainToAudioMsg::SEND_PATCH_IS_CLEAN:
         {
             patch.dirty = false;

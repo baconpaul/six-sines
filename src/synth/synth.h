@@ -339,9 +339,12 @@ struct Synth
             UPDATE_CPU_USAGE,
             SET_PATCH_NAME,
             SET_PATCH_DIRTY_STATE,
-            DO_PARAM_RESCAN,
+            DO_PARAM_RESCAN, // paramId optionally carries CLAP_PARAM_RESCAN_*
+                             // flags; 0 falls back to VALUES|TEXT
+
             SEND_SAMPLE_RATE,
-            SET_DAW_EXTRA_STATE
+            SET_DAW_EXTRA_STATE,
+            SET_MACRO_NAME // paramId = macro index, patchNamePointer = name buffer
         } action;
         uint32_t paramId{0};
         float value{0}, value2{0};
@@ -367,7 +370,8 @@ struct Synth
             SEND_PREP_FOR_STREAM,
             PANIC_STOP_VOICES,
             SET_DESIGN_MODE_RUN_ALL,
-            SET_DAW_EXTRA_STATE
+            SET_DAW_EXTRA_STATE,
+            SEND_MACRO_NAME // paramId = macro index, uiManagedPointer = name buffer
         } action;
         uint32_t paramId{0};
         float value{0};

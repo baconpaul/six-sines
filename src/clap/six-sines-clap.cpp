@@ -346,7 +346,31 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     uint32_t paramsCount() const noexcept override { return engine->patch.params.size(); }
     bool paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept override
     {
-        return sst::plugininfra::patch_support::patchParamsInfo(paramIndex, info, engine->patch);
+        auto ok = sst::plugininfra::patch_support::patchParamsInfo(paramIndex, info, engine->patch);
+        if (!ok)
+            return ok;
+
+        // The macro amplitude param is tagged with isPrimaryMacroFeature; for that
+        // single param swap the host-displayed name to "Foo (Macro N)" when the
+        // user has renamed the macro. Every other macro param is left alone.
+        auto *param = static_cast<const Param *>(info->cookie);
+        if (param && param->meta.hasFeature(isPrimaryMacroFeature))
+        {
+            int idx = (info->id - Patch::MacroNode::idBase) / Patch::MacroNode::idStride;
+            if (idx >= 0 && idx < (int)numMacros)
+            {
+                const auto &nameBuf = engine->patch.macroNames[idx];
+                std::string userName(nameBuf.data());
+                auto def = Patch::MacroNode::defaultGroupName(idx);
+                if (!userName.empty() && userName != def)
+                {
+                    auto fullName = userName + " (" + def + ")";
+                    strncpy(info->name, fullName.c_str(), CLAP_NAME_SIZE - 1);
+                    info->name[CLAP_NAME_SIZE - 1] = 0;
+                }
+            }
+        }
+        return ok;
     }
     bool paramsValue(clap_id paramId, double *value) noexcept override
     {

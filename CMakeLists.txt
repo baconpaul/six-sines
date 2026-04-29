@@ -49,6 +49,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/ui/source-panel.cpp
         src/ui/source-sub-panel.cpp
         src/ui/macro-panel.cpp
+        src/ui/macro-sub-panel.cpp
         src/ui/finetune-sub-panel.cpp
         src/ui/mainpan-sub-panel.cpp
         src/ui/playmode-sub-panel.cpp
@@ -63,6 +64,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/synth/voice.cpp
         src/synth/patch.cpp
         src/synth/mod_matrix.cpp
+        src/synth/macro_usage.cpp
 
 )
 target_include_directories(${PROJECT_NAME}-impl PUBLIC src)

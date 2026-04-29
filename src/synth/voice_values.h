@@ -16,9 +16,11 @@
 #ifndef BACONPAUL_SIX_SINES_SYNTH_VOICE_VALUES_H
 #define BACONPAUL_SIX_SINES_SYNTH_VOICE_VALUES_H
 
+#include <array>
 #include <sst/basic-blocks/tables/EqualTuningProvider.h>
 #include <sst/basic-blocks/tables/TwoToTheXProvider.h>
 #include "sst/basic-blocks/dsp/Lag.h"
+#include "configuration.h"
 
 struct MTSClient;
 
@@ -64,6 +66,8 @@ struct VoiceValues
     bool phaseRandom{false}, rephaseOnRetrigger{false};
 
     sst::basic_blocks::dsp::OnePoleLag<float, false> velocityLag;
+
+    std::array<float, numMacros> macroOut{};
 
   private:
     bool gatedV{false};

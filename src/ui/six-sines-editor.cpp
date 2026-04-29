@@ -38,6 +38,7 @@
 #include "ui-constants.h"
 #include "presets/preset-manager.h"
 #include "macro-panel.h"
+#include "macro-sub-panel.h"
 #include "clipboard.h"
 #include "patch-data-bindings.h"
 #include "preset-data-binding.h"
@@ -123,6 +124,8 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     singlePanel->addChildComponent(*mainPanSubPanel);
     playModeSubPanel = std::make_unique<PlayModeSubPanel>(*this);
     singlePanel->addChildComponent(*playModeSubPanel);
+    macroSubPanel = std::make_unique<MacroSubPanel>(*this);
+    singlePanel->addChildComponent(*macroSubPanel);
 
     sst::jucegui::component_adapters::setTraversalId(sourcePanel.get(), 20000);
     sst::jucegui::component_adapters::setTraversalId(mainPanel.get(), 30000);
@@ -134,6 +137,33 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     auto startMsg = Synth::MainToAudioMsg{Synth::MainToAudioMsg::REQUEST_REFRESH};
     mainToAudio.push(startMsg);
     requestParamsFlush();
+
+    // Build the routing-relevant param ID set once. Patch shape doesn't change
+    // at runtime, so this is a one-shot scan.
+    auto recordRouting = [this](auto &node)
+    {
+        for (int s = 0; s < numModsPer; ++s)
+        {
+            modRoutingParamIds.insert(node.modsource[s].meta.id);
+            modRoutingParamIds.insert(node.modtarget[s].meta.id);
+        }
+    };
+    for (auto &n : patchCopy.sourceNodes)
+        recordRouting(n);
+    for (auto &n : patchCopy.selfNodes)
+        recordRouting(n);
+    for (auto &n : patchCopy.mixerNodes)
+        recordRouting(n);
+    for (auto &n : patchCopy.matrixNodes)
+        recordRouting(n);
+    for (auto &n : patchCopy.macroNodes)
+        recordRouting(n);
+    recordRouting(patchCopy.output);
+    recordRouting(patchCopy.fineTuneMod);
+    recordRouting(patchCopy.mainPanMod);
+
+    onModulationRoutingChanged = [this]() { recomputeMacroUsage(); };
+    recomputeMacroUsage();
 
     idleTimer = std::make_unique<IdleTimer>(*this);
     idleTimer->startTimer(1000. / 60.);
@@ -232,6 +262,8 @@ void SixSinesEditor::idle()
         if (aum->action == Synth::AudioToUIMsg::UPDATE_PARAM)
         {
             setAndSendParamValue(aum->paramId, aum->value, false);
+            if (modRoutingParamIds.count(aum->paramId))
+                recomputeMacroUsage();
         }
         else if (aum->action == Synth::AudioToUIMsg::UPDATE_VU)
         {
@@ -254,6 +286,20 @@ void SixSinesEditor::idle()
             strncpy(patchCopy.name, aum->patchNamePointer, 255);
             setPatchNameDisplay();
         }
+        else if (aum->action == Synth::AudioToUIMsg::SET_MACRO_NAME)
+        {
+            auto idx = aum->paramId;
+            if (idx < numMacros && aum->patchNamePointer)
+            {
+                auto &buf = patchCopy.macroNames[idx];
+                std::fill(buf.begin(), buf.end(), 0);
+                strncpy(buf.data(), aum->patchNamePointer, buf.size() - 1);
+                if (macroPanel)
+                    macroPanel->refreshLabel(idx);
+                if (macroSubPanel && macroSubPanel->isVisible() && macroSubPanel->index == idx)
+                    macroSubPanel->refreshNameFromPatch();
+            }
+        }
         else if (aum->action == Synth::AudioToUIMsg::SET_PATCH_DIRTY_STATE)
         {
             patchCopy.dirty = (bool)aum->paramId;
@@ -267,8 +313,12 @@ void SixSinesEditor::idle()
                     clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
             if (clapParamsExtension)
             {
-                clapParamsExtension->rescan(clapHost,
-                                            CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
+                // RESCAN_INFO is mutually exclusive with VALUES/TEXT — honour an
+                // explicit flag in paramId when set, default otherwise.
+                auto flags = aum->paramId != 0
+                                 ? aum->paramId
+                                 : (uint32_t)(CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
+                clapParamsExtension->rescan(clapHost, flags);
                 clapParamsExtension->request_flush(clapHost);
             }
         }
@@ -456,6 +506,7 @@ void SixSinesEditor::resized()
     mainPanSubPanel->setBounds(singlePanel->getContentArea());
     fineTuneSubPanel->setBounds(singlePanel->getContentArea());
     playModeSubPanel->setBounds(singlePanel->getContentArea());
+    macroSubPanel->setBounds(singlePanel->getContentArea());
 }
 
 void SixSinesEditor::hideAllSubPanels()
@@ -468,6 +519,7 @@ void SixSinesEditor::hideAllSubPanels()
     sourcePanel->clearHighlight();
     matrixPanel->clearHighlight();
     mixerPanel->clearHighlight();
+    macroPanel->clearHighlight();
     settingsPanel->clearHighlight();
 }
 
@@ -889,6 +941,26 @@ void SixSinesEditor::postPatchChange(const std::string &s)
     for (auto [id, f] : componentRefreshByID)
         f();
 
+    recomputeMacroUsage();
+    repaint();
+}
+
+void SixSinesEditor::recomputeMacroUsage()
+{
+    macroUsageCache = computeMacroUsage(patchCopy);
+    if (macroPanel)
+    {
+        for (size_t i = 0; i < numMacros; ++i)
+        {
+            auto used = !macroUsageCache[i].empty();
+            if (macroPanel->knobs[i])
+                macroPanel->knobs[i]->setEnabled(used);
+        }
+    }
+    if (macroSubPanel && macroSubPanel->isVisible())
+        macroSubPanel->refreshUsedByList();
+
+    // Force a repaint; JUCE otherwise leaves setEnabled() changes until hover.
     repaint();
 }
 

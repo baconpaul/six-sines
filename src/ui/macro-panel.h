@@ -19,7 +19,6 @@
 #include <sst/jucegui/components/Knob.h>
 #include <sst/jucegui/components/Label.h>
 #include <sst/jucegui/components/ToggleButton.h>
-#include <sst/jucegui/component-adapters/DiscreteToReference.h>
 #include <sst/jucegui/data/Continuous.h>
 #include "six-sines-editor.h"
 #include "patch-data-bindings.h"
@@ -38,17 +37,41 @@ struct MacroPanel : jcmp::NamedPanel, HasEditor
 
     void beginEdit(size_t idx);
 
+    void refreshLabel(size_t idx);
+
+    // Single source of truth for macro display names. Short = knob label,
+    // Full = sub-panel title. Both fall back to "Macro N" when unrenamed.
+    static std::string displayShortName(const SixSinesEditor &editor, size_t idx)
+    {
+        auto &buf = editor.patchCopy.macroNames[idx];
+        std::string nm(buf.data());
+        auto def = "Macro " + std::to_string(idx + 1);
+        return (nm.empty() || nm == def) ? def : nm;
+    }
+    static std::string displayName(const SixSinesEditor &editor, size_t idx)
+    {
+        auto &buf = editor.patchCopy.macroNames[idx];
+        std::string nm(buf.data());
+        auto def = "Macro " + std::to_string(idx + 1);
+        return (nm.empty() || nm == def) ? def : (nm + " (" + def + ")");
+    }
+
+    void mouseDown(const juce::MouseEvent &e) override;
+    juce::Rectangle<int> rectangleFor(int idx);
+
+    std::unique_ptr<juce::Component> highlight;
+    void clearHighlight()
+    {
+        if (highlight)
+            highlight->setVisible(false);
+    }
+
     std::array<std::unique_ptr<jcmp::Knob>, numMacros> knobs;
     std::array<std::unique_ptr<PatchContinuous>, numMacros> knobsData;
     std::array<std::unique_ptr<jcmp::Label>, numMacros> labels;
 
-    // Placeholder power toggles — not yet wired to any patch data.
-    std::array<bool, numMacros> powerOnState{};
-    std::array<std::unique_ptr<sst::jucegui::component_adapters::DiscreteToValueReference<
-                   jcmp::ToggleButton, bool>>,
-               numMacros>
-        powerD;
-    std::array<jcmp::ToggleButton *, numOps> power{};
+    std::array<std::unique_ptr<jcmp::ToggleButton>, numMacros> power;
+    std::array<std::unique_ptr<PatchDiscrete>, numMacros> powerD;
 };
 } // namespace baconpaul::six_sines::ui
-#endif // Macro_PANE_H
+#endif // BACONPAUL_SIX_SINES_UI_MACRO_PANEL_H

@@ -19,6 +19,7 @@
 #include <sst/basic-blocks/tables/EqualTuningProvider.h>
 #include "dsp/op_source.h"
 #include "dsp/matrix_node.h"
+#include "dsp/macro_node.h"
 #include "synth/mono_values.h"
 #include "synth/voice_values.h"
 
@@ -60,6 +61,7 @@ struct Voice
     void restartPortaTo(float sourceKey, uint16_t newKey, float log2Seconds, float portaFrac);
 
     std::array<MixerNode, numOps> mixerNode;
+    std::array<MacroVoiceNode, numMacros> macroNode;
     static constexpr int32_t fadeOverBlocks{32};
     float dFade{1.0 / (blockSize * fadeOverBlocks)};
     int32_t fadeBlocks{-1};

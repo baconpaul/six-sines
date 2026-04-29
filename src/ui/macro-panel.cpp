@@ -14,6 +14,7 @@
  */
 
 #include "macro-panel.h"
+#include "macro-sub-panel.h"
 #include "six-sines-editor.h"
 #include "ui-constants.h"
 #include "knob-highlight.h"
@@ -35,16 +36,16 @@ MacroPanel::MacroPanel(SixSinesEditor &e) : jcmp::NamedPanel("Macros"), HasEdito
         labels[i]->setText("Macro " + std::to_string(i + 1));
         addAndMakeVisible(*labels[i]);
 
-        powerOnState[i] = true;
-        powerD[i] = std::make_unique<
-            sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::ToggleButton, bool>>(
-            powerOnState[i]);
-        power[i] = powerD[i]->widget.get();
+        createComponent(editor, *this, mn[i].macroPower, power[i], powerD[i], i);
         power[i]->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
         power[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
         addAndMakeVisible(*power[i]);
     }
+
+    highlight = std::make_unique<KnobHighlight>(editor);
+    addChildComponent(*highlight);
 }
+
 MacroPanel::~MacroPanel() = default;
 
 void MacroPanel::resized()
@@ -59,6 +60,47 @@ void MacroPanel::resized()
     }
 }
 
-void MacroPanel::beginEdit(size_t idx) {}
+juce::Rectangle<int> MacroPanel::rectangleFor(int idx)
+{
+    auto b = getContentArea().reduced(uicMargin, 0);
+    return juce::Rectangle<int>(b.getX() + idx * (uicPowerKnobWidth + uicMargin), b.getY(),
+                                uicPowerKnobWidth + 2, uicLabeledKnobHeight);
+}
+
+void MacroPanel::mouseDown(const juce::MouseEvent &e)
+{
+    if (e.mods.isPopupMenu())
+    {
+        editor.showNavigationMenu();
+        return;
+    }
+    for (int i = 0; i < numMacros; ++i)
+    {
+        if (rectangleFor(i).contains(e.position.toInt()))
+        {
+            beginEdit(i);
+        }
+    }
+}
+
+void MacroPanel::refreshLabel(size_t idx)
+{
+    if (idx >= numMacros || !labels[idx])
+        return;
+    labels[idx]->setText(displayShortName(editor, idx));
+    labels[idx]->repaint();
+}
+
+void MacroPanel::beginEdit(size_t idx)
+{
+    editor.hideAllSubPanels();
+    editor.activateHamburger(true);
+    editor.macroSubPanel->setSelectedIndex(idx);
+    editor.macroSubPanel->setVisible(true);
+    editor.singlePanel->setName(editor.macroSubPanel->displayName());
+    highlight->setBounds(rectangleFor(idx));
+    highlight->setVisible(true);
+    highlight->toBack();
+}
 
 } // namespace baconpaul::six_sines::ui
