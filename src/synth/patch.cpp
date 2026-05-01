@@ -21,6 +21,7 @@ void Patch::setupAdditionalState()
 {
     onResetToInit = [](Patch &p)
     {
+        p.setAuthor(p.defaultAuthor);
         for (int i = 0; i < numMacros; ++i)
         {
             auto s = "Macro " + std::to_string(i + 1);

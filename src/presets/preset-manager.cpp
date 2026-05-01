@@ -257,24 +257,31 @@ void PresetManager::sendEntirePatchToAudio(Patch &patch, Synth::mainToAudioQueue
     {
         hostPar = static_cast<const clap_host_params_t *>(h->get_extension(h, CLAP_EXT_PARAMS));
     }
-    static char stringBuffer[128][256];
+    static char stringBuffer[stringBufferEntries][stringBufferLen];
     static int currentString{0};
 
     char *tmpDat = stringBuffer[currentString];
-    currentString = (currentString + 1) % 128;
+    currentString = (currentString + 1) % stringBufferEntries;
 
-    memset(tmpDat, 0, 128 * sizeof(char));
-    strncpy(tmpDat, name.c_str(), 255);
+    memset(tmpDat, 0, stringBufferLen);
+    strncpy(tmpDat, name.c_str(), stringBufferLen - 1);
     mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_NAME, 0, 0.f, tmpDat});
+
+    char *authorDat = stringBuffer[currentString];
+    currentString = (currentString + 1) % stringBufferEntries;
+    memset(authorDat, 0, stringBufferLen);
+    auto authorStr = patch.getAuthor();
+    strncpy(authorDat, authorStr.c_str(), stringBufferLen - 1);
+    mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_AUTHOR, 0, 0.f, authorDat});
 
     // Each macro name uses its own slot in the rotating buffer so the pointer
     // stays valid until the audio thread drains the queue.
     for (uint32_t mi = 0; mi < numMacros; ++mi)
     {
         char *macDat = stringBuffer[currentString];
-        currentString = (currentString + 1) % 128;
-        memset(macDat, 0, 256);
-        strncpy(macDat, patch.macroNames[mi].data(), 255);
+        currentString = (currentString + 1) % stringBufferEntries;
+        memset(macDat, 0, stringBufferLen);
+        strncpy(macDat, patch.macroNames[mi].data(), stringBufferLen - 1);
         Synth::MainToAudioMsg msg{Synth::MainToAudioMsg::SEND_MACRO_NAME};
         msg.paramId = mi;
         msg.uiManagedPointer = macDat;

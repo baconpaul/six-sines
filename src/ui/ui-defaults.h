@@ -30,6 +30,7 @@ enum Defaults
     flipSourceAndMatrix,
     designModeRunAllNodes,
     designModeAllSoundsOffOnToggle,
+    defaultAuthor,
     numDefaults
 };
 
@@ -49,6 +50,8 @@ inline std::string defaultName(Defaults d)
         return "designModeRunAllNodes";
     case designModeAllSoundsOffOnToggle:
         return "designModeAllSoundsOffOnToggle";
+    case defaultAuthor:
+        return "defaultAuthor";
     case numDefaults:
     {
         SXSNLOG("Software Error - defaults found");

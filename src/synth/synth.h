@@ -363,6 +363,7 @@ struct Synth
             STOP_AUDIO,
             START_AUDIO,
             SEND_PATCH_NAME,
+            SEND_PATCH_AUTHOR,
             SEND_PATCH_IS_CLEAN,
             SEND_POST_LOAD,
             SEND_REQUEST_RESCAN,

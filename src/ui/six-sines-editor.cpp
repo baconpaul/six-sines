@@ -13,9 +13,12 @@
  * The source code and license are at https://github.com/baconpaul/six-sines
  */
 
+#include <cstring>
 #include "six-sines-editor.h"
 
 #include "dahdsr-components.h"
+#include "sst/jucegui/screens/AlertOrPrompt.h"
+#include "sst/jucegui/screens/PromptForValue.h"
 #include "sst/plugininfra/version_information.h"
 #include "sst/clap_juce_shim/menu_helper.h"
 #include "sst/plugininfra/misc_platform.h"
@@ -216,6 +219,9 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
         sessionRunAllNodes = true;
     if (defaultsProvider->getUserDefaultValue(Defaults::designModeAllSoundsOffOnToggle, false))
         sessionAllSoundsOffOnToggle = true;
+
+    patchCopy.defaultAuthor =
+        defaultsProvider->getUserDefaultValue(Defaults::defaultAuthor, std::string{});
 
     mainToAudio.push({Synth::MainToAudioMsg::EDITOR_ATTACH_DETATCH, true});
     sendDesignModeToAudio();
@@ -645,7 +651,19 @@ void SixSinesEditor::showPresetPopup()
               [w = juce::Component::SafePointer(this)]()
               {
                   if (w)
-                      w->doSavePatch();
+                      w->startSavePatch();
+              });
+    p.addSeparator();
+    std::string ap = "Set Author";
+    if (!patchCopy.defaultAuthor.empty())
+    {
+        ap = "Set Author (" + patchCopy.defaultAuthor + ")";
+    }
+    p.addItem(ap,
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                      w->doSetDefaultAuthor();
               });
     p.addSeparator();
     p.addItem("Reset to Init",
@@ -835,7 +853,51 @@ void SixSinesEditor::showPresetPopup()
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
 }
 
-void SixSinesEditor::doSavePatch()
+void SixSinesEditor::startSavePatch()
+{
+    if (patchCopy.author[0] == 0)
+    {
+        if (!patchCopy.defaultAuthor.empty())
+        {
+            patchCopy.setAuthor(patchCopy.defaultAuthor);
+            mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_AUTHOR, 0, 0, patchCopy.author});
+        }
+        else
+        {
+            doSetDefaultAuthor(true);
+            return;
+        }
+    }
+
+    if (!patchCopy.defaultAuthor.empty() &&
+        std::strcmp(patchCopy.author, patchCopy.defaultAuthor.c_str()) != 0)
+    {
+        auto current = std::string(patchCopy.author);
+        auto replacement = patchCopy.defaultAuthor;
+        auto prompt = sst::jucegui::screens::AlertOrPrompt::YesNo(
+            "Replace Author?", "Replace author '" + current + "' with '" + replacement + "'?",
+            [w = juce::Component::SafePointer(this), replacement]()
+            {
+                if (!w)
+                    return;
+                w->patchCopy.setAuthor(replacement);
+                w->mainToAudio.push(
+                    {Synth::MainToAudioMsg::SEND_PATCH_AUTHOR, 0, 0, w->patchCopy.author});
+                w->finishSavePatch();
+            },
+            [w = juce::Component::SafePointer(this)]()
+            {
+                if (w)
+                    w->finishSavePatch();
+            });
+        displayModalOverlay(std::move(prompt));
+        return;
+    }
+
+    finishSavePatch();
+}
+
+void SixSinesEditor::finishSavePatch()
 {
     auto svP = presetManager->userPatchesPath;
     if (strcmp(patchCopy.name, "Init") != 0)
@@ -900,6 +962,28 @@ void SixSinesEditor::doLoadPatch()
 }
 
 void SixSinesEditor::resetToDefault() { presetManager->loadInit(patchCopy, mainToAudio); }
+
+void SixSinesEditor::doSetDefaultAuthor(bool saveAfter)
+{
+    auto prompt = sst::jucegui::screens::PromptForValue::Prompt(
+        "Set Default Author",
+        "Please provide the author name you want embedded in patches you save.",
+        patchCopy.defaultAuthor,
+        [w = juce::Component::SafePointer(this), saveAfter](const std::string &value)
+        {
+            if (!w)
+                return;
+            w->defaultsProvider->updateUserDefaultValue(Defaults::defaultAuthor, value);
+            w->patchCopy.defaultAuthor = value;
+            w->patchCopy.setAuthor(value);
+            w->mainToAudio.push(
+                {Synth::MainToAudioMsg::SEND_PATCH_AUTHOR, 0, 0, w->patchCopy.author});
+            if (saveAfter)
+                w->startSavePatch();
+        },
+        []() {});
+    displayModalOverlay(std::move(prompt));
+}
 
 void SixSinesEditor::setAndSendParamValue(uint32_t paramId, float value, bool notifyAudio,
                                           bool sendBeginEnd)

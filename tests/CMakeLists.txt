@@ -3,12 +3,14 @@ add_executable(six-sines-test
 		test_main.cpp
 
 		structure.cpp
+		factory_patches.cpp
 )
 
 target_link_libraries(six-sines-test
 		fmt
 		six-sines-impl
 		catch2
+		six-sines-patches
 
         )
 
