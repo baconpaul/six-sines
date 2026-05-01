@@ -38,6 +38,9 @@ static constexpr size_t maxVoices{64};
 static constexpr size_t numModsPer{3};
 static constexpr size_t numSeqSteps{16};
 
+static constexpr size_t stringBufferLen{256};
+static constexpr size_t stringBufferEntries{128};
+
 extern int debugLevel;
 
 // These values are streamed

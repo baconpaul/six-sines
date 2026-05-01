@@ -20,6 +20,7 @@
 #include <array>
 #include <unordered_map>
 #include <algorithm>
+#include <string>
 #include <clap/clap.h>
 #include "configuration.h"
 #include "sst/cpputils/constructors.h"
@@ -1700,7 +1701,9 @@ struct Patch : pats::PatchBase<Patch, Param>
     FineTuneNode fineTuneMod;
     MainPanNode mainPanMod;
 
-    char name[256]{"Init"};
+    std::string defaultAuthor{};
+    char name[stringBufferLen]{"Init"};
+    char author[stringBufferLen]{""};
     std::array<std::array<char, 64>, numMacros> macroNames;
 
     float migrateParamValueFromVersion(Param *p, float value, uint32_t version);

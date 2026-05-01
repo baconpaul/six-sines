@@ -543,7 +543,7 @@ template <typename Bundle, typename Node> struct ModulationSupport
             // Macros are processed in index order; reading a higher-indexed
             // MACRO_MOD_k would see last block's value. UI prevents this;
             // assert catches a malformed patch.
-#ifndef NDEBUG
+#ifdef DEBUG
             if constexpr (std::is_same_v<Bundle, Patch::MacroNode>)
             {
                 int mySrcIdx = sv - ModMatrixConfig::Source::MACRO_MOD_0;

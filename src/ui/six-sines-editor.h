@@ -34,6 +34,7 @@
 #include <sst/jucegui/accessibility/FocusDebugger.h>
 #include <sst/jucegui/data/Continuous.h>
 #include <sst/jucegui/screens/ColorEditor.h>
+#include <sst/jucegui/screens/ScreenHolder.h>
 
 #include "synth/synth.h"
 #include "synth/macro_usage.h"
@@ -73,7 +74,7 @@ struct SettingsPanel;
 struct Clipboard;
 struct PresetDataBinding;
 
-struct SixSinesEditor : jcmp::WindowPanel
+struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<SixSinesEditor>
 {
     Patch patchCopy;
     ModMatrixConfig modMatrixConfig;
@@ -127,7 +128,9 @@ struct SixSinesEditor : jcmp::WindowPanel
     std::unique_ptr<jcmp::JogUpDownButton> presetButton;
     void showPresetPopup();
     void doLoadPatch();
-    void doSavePatch();
+    void startSavePatch();
+    void finishSavePatch();
+    void doSetDefaultAuthor(bool saveAfter = false);
     void postPatchChange(const std::string &displayName);
     void resetToDefault();
     void setPatchNameDisplay();

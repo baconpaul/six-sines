@@ -745,6 +745,11 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
         }
         break;
+        case MainToAudioMsg::SEND_PATCH_AUTHOR:
+        {
+            patch.setAuthor(uiM->uiManagedPointer ? uiM->uiManagedPointer : "");
+        }
+        break;
         case MainToAudioMsg::SEND_MACRO_NAME:
         {
             auto idx = uiM->paramId;
