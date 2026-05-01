@@ -57,9 +57,9 @@ TEST_CASE("All factory patches load", "[factory]")
             auto file = fs.open(fullPath);
             auto data = std::string(file.begin(), file.end());
 
-            Patch patch;
+            auto patch = std::make_unique<Patch>();
             INFO("Loading " << fullPath);
-            REQUIRE(patch.fromState(data));
+            REQUIRE(patch->fromState(data));
             ++count;
         }
     }
