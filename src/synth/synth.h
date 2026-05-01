@@ -383,6 +383,10 @@ struct Synth
     using mainToAudioQueue_T = sst::cpputils::SimpleRingBuffer<MainToAudioMsg, 1024 * 64>;
     audioToUIQueue_t audioToUi;
     mainToAudioQueue_T mainToAudio;
+
+    // Stereo audio tap for visualizers; ~1.4s @ 96kHz / 2.7s @ 48kHz.
+    using audioOutputQueue_t = sst::cpputils::StereoRingBuffer<float, 1024 * 128>;
+    audioOutputQueue_t audioOutputRing;
     std::atomic<bool> doFullRefresh{false};
     bool isEditorAttached{false};
     sst::basic_blocks::dsp::UIComponentLagHandler lagHandler;

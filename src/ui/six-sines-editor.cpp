@@ -41,6 +41,9 @@
 #include "ui-constants.h"
 #include "presets/preset-manager.h"
 #include "macro-panel.h"
+#include "spectrum-analyzer.h"
+#include <sst/jucegui/components/GlyphButton.h>
+#include <sst/jucegui/components/ButtonPainter.h>
 #include "macro-sub-panel.h"
 #include "clipboard.h"
 #include "patch-data-bindings.h"
@@ -66,13 +69,49 @@ struct DesPushTimer : juce::Timer
     }
 };
 
+// Toggle button for the analyzer window. Reuses GlyphButton's chrome and draws a tiny
+// sawtooth-style spectrum (bars at 1/n amplitude) as the glyph.
+struct AnalyzerToggleButton : sst::jucegui::components::GlyphButton
+{
+    AnalyzerToggleButton() : GlyphButton(sst::jucegui::components::GlyphPainter::CLOSE) {}
+    void paint(juce::Graphics &g) override
+    {
+        if (!style())
+            return;
+
+        sst::jucegui::components::paintButtonBG(this, g);
+        g.setColour(style()->getColour(jcmp::base_styles::ValueBearing::styleClass,
+                                       jcmp::base_styles::ValueBearing::value));
+        if (isHovered)
+            g.setColour(style()->getColour(jcmp::base_styles::ValueBearing::styleClass,
+                                           jcmp::base_styles::ValueBearing::value_hover));
+
+        auto bd = getLocalBounds().reduced(3);
+
+        auto dph = 2.0 * M_PI * 1.5 / bd.getWidth();
+        juce::Path p;
+        auto phase = 0.0;
+        for (int i = 0; i < bd.getWidth(); ++i)
+        {
+            phase += dph * (1.0 + 0.1 * sin(phase * 2.32));
+            auto bv = 0.6 * sin(phase) + 0.3 * sin(phase * 3.32);
+            auto sbv = (-bv + 1) * 0.5 * bd.getHeight();
+            if (i == 0)
+                p.startNewSubPath(i + bd.getX(), sbv + bd.getY());
+            else
+                p.lineTo(i + bd.getX(), sbv + bd.getY());
+        }
+        g.strokePath(p, juce::PathStrokeType(1.0f));
+    }
+};
+
 namespace jstl = sst::jucegui::style;
 using sheet_t = jstl::StyleSheet;
 static constexpr sheet_t::Class PatchMenu("six-sines.patch-menu");
 
 SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudioQueue_T &utoa,
-                               const clap_host_t *h)
-    : jcmp::WindowPanel(true), audioToUI(atou), mainToAudio(utoa), clapHost(h)
+                               Synth::audioOutputQueue_t &aor, const clap_host_t *h)
+    : jcmp::WindowPanel(true), audioToUI(atou), mainToAudio(utoa), audioOutputRing(aor), clapHost(h)
 {
     setTitle("Six Sines - an Audio Rate Modulation Synthesizer");
     setAccessible(true);
@@ -215,6 +254,16 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::HORIZONTAL);
     addAndMakeVisible(*vuMeter);
 
+    analyzerToggleButton = std::make_unique<AnalyzerToggleButton>();
+    analyzerToggleButton->setOnCallback(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->toggleSpectrumAnalyzer();
+        });
+    analyzerToggleButton->setTitle("Toggle Analyzer Window");
+    addAndMakeVisible(*analyzerToggleButton);
+
     if (defaultsProvider->getUserDefaultValue(Defaults::designModeRunAllNodes, false))
         sessionRunAllNodes = true;
     if (defaultsProvider->getUserDefaultValue(Defaults::designModeAllSoundsOffOnToggle, false))
@@ -332,6 +381,10 @@ void SixSinesEditor::idle()
         {
             engineSR = aum->value2;
             hostSR = aum->value;
+            if (spectrumWindow)
+                if (auto *c = dynamic_cast<SpectrumAnalyzerComponent *>(
+                        spectrumWindow->getContentComponent()))
+                    c->setHostSampleRate(hostSR);
             repaint();
         }
         else if (aum->action == Synth::AudioToUIMsg::SET_DAW_EXTRA_STATE)
@@ -451,17 +504,23 @@ void SixSinesEditor::resized()
 
     auto panelMargin{1};
 
-    // Top bar: [ preset | vu ]
+    // Top bar: [ preset | analyzer-toggle | vu ]
     auto topInner = presetArea.withTrimmedTop(uicMargin);
     int vuWidth = 150;
+    int analyzerW = topInner.getHeight();
 
     auto vuRect = juce::Rectangle<int>(getWidth() - uicMargin - vuWidth, topInner.getY(), vuWidth,
                                        topInner.getHeight());
     vuMeter->setBounds(vuRect);
 
+    auto analyzerRect = juce::Rectangle<int>(vuRect.getX() - uicMargin - analyzerW, topInner.getY(),
+                                             analyzerW, topInner.getHeight());
+    analyzerToggleButton->setBounds(analyzerRect);
+
     int presetLeft = 110;
-    auto presetRect = juce::Rectangle<int>(
-        presetLeft, topInner.getY(), vuRect.getX() - uicMargin - presetLeft, topInner.getHeight());
+    auto presetRect =
+        juce::Rectangle<int>(presetLeft, topInner.getY(),
+                             analyzerRect.getX() - uicMargin - presetLeft, topInner.getHeight());
     presetButton->setBounds(presetRect);
 
     auto sourceRect =
@@ -836,6 +895,14 @@ void SixSinesEditor::showPresetPopup()
     p.addSubMenu("Design Mode", dm);
 
     p.addSeparator();
+    p.addItem(spectrumWindow ? "Hide Analyzer" : "Show Analyzer",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                      w->toggleSpectrumAnalyzer();
+              });
+
+    p.addSeparator();
     p.addItem("Read the Manual",
               []()
               {
@@ -1178,7 +1245,41 @@ void SixSinesEditor::showNavigationMenu()
                   }
               });
 
+    p.addSeparator();
+    p.addItem(spectrumWindow ? "Hide Analyzer" : "Show Analyzer",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                      w->toggleSpectrumAnalyzer();
+              });
+
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
+}
+
+void SixSinesEditor::showSpectrumAnalyzer()
+{
+    if (spectrumWindow)
+    {
+        spectrumWindow->toFront(true);
+        return;
+    }
+    auto comp = std::make_unique<SpectrumAnalyzerComponent>(audioOutputRing, hostSR,
+                                                            defaultsProvider.get());
+    spectrumWindow = std::make_unique<SpectrumAnalyzerWindow>(std::move(comp));
+    spectrumWindow->onCloseRequested = [w = juce::Component::SafePointer(this)]()
+    {
+        if (w)
+            w->spectrumWindow.reset();
+    };
+    spectrumWindow->setVisible(true);
+}
+
+void SixSinesEditor::toggleSpectrumAnalyzer()
+{
+    if (spectrumWindow)
+        spectrumWindow.reset();
+    else
+        showSpectrumAnalyzer();
 }
 
 bool SixSinesEditor::keyPressed(const juce::KeyPress &key)

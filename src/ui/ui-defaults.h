@@ -31,6 +31,8 @@ enum Defaults
     designModeRunAllNodes,
     designModeAllSoundsOffOnToggle,
     defaultAuthor,
+    spectrumAnalysisMode,
+    spectrumScopeScale,
     numDefaults
 };
 
@@ -52,6 +54,10 @@ inline std::string defaultName(Defaults d)
         return "designModeAllSoundsOffOnToggle";
     case defaultAuthor:
         return "defaultAuthor";
+    case spectrumAnalysisMode:
+        return "spectrumAnalysisMode";
+    case spectrumScopeScale:
+        return "spectrumScopeScale";
     case numDefaults:
     {
         SXSNLOG("Software Error - defaults found");
