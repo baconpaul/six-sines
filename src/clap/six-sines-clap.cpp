@@ -465,7 +465,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     std::unique_ptr<juce::Component> createEditor() override
     {
         auto res = std::make_unique<baconpaul::six_sines::ui::SixSinesEditor>(
-            engine->audioToUi, engine->mainToAudio, _host.host());
+            engine->audioToUi, engine->mainToAudio, engine->audioOutputRing, _host.host());
 
         res->onZoomChanged = [this](auto f)
         {

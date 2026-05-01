@@ -81,10 +81,11 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
 
     Synth::audioToUIQueue_t &audioToUI;
     Synth::mainToAudioQueue_T &mainToAudio;
+    Synth::audioOutputQueue_t &audioOutputRing;
     const clap_host_t *clapHost{nullptr};
 
     SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudioQueue_T &utoa,
-                   const clap_host_t *ch);
+                   Synth::audioOutputQueue_t &aor, const clap_host_t *ch);
     virtual ~SixSinesEditor();
 
     std::unique_ptr<sst::jucegui::style::LookAndFeelManager> lnf;
@@ -178,6 +179,13 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     // Safe pointer to the ColorEditorContent (a WindowPanel subclass) so that
     // onStyleChanged() can propagate style changes to the floating colour editor window.
     juce::Component::SafePointer<jcmp::WindowPanel> colorEditorContent;
+
+    // Spectrum analyzer floating window. Lifecycle: created on showSpectrumAnalyzer(),
+    // destroyed on close (which unsubscribes the audio ring and joins the analysis thread).
+    std::unique_ptr<struct SpectrumAnalyzerWindow> spectrumWindow;
+    void showSpectrumAnalyzer();
+    void toggleSpectrumAnalyzer();
+    std::unique_ptr<struct AnalyzerToggleButton> analyzerToggleButton;
 
     std::unique_ptr<jcmp::ToolTip> toolTip;
     void showTooltipOn(juce::Component *c);

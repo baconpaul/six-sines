@@ -528,9 +528,15 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
         }
     }
 
-    // Finish CPU calculation
     if (isEditorAttached)
     {
+        // Tap host-SR main bus for visualizers (only when someone is listening).
+        if (audioOutputRing.subscribed())
+        {
+            audioOutputRing.push(output[0], output[1], blockSize);
+        }
+
+        // Finish CPU calculation
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
         auto micros = duration.count();

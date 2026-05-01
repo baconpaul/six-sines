@@ -37,6 +37,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/clap/preset-discovery-impl.cpp
 
         src/ui/six-sines-editor.cpp
+        src/ui/spectrum-analyzer.cpp
 
         src/ui/clipboard.cpp
         src/ui/main-panel.cpp
@@ -100,6 +101,7 @@ target_link_libraries(${PROJECT_NAME}-impl PUBLIC  # PW change to public since w
         sst-plugininfra::patchbase
         sst-plugininfra::version_information
         sst::clap_juce_shim sst::clap_juce_shim_headers
+        juce::juce_dsp
         ${PROJECT_NAME}-patches
         ${PROJECT_NAME}-themes
         samplerate
