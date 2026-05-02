@@ -378,6 +378,8 @@ void MacroSubPanel::commitName()
     msg.paramId = static_cast<uint32_t>(index);
     msg.uiManagedPointer = buf.data();
     editor.mainToAudio.push(msg);
+    // The audio-side SEND_MACRO_NAME handler diffs against the current name and
+    // requests an INFO rescan via Synth::requestParamRescan when it actually changes.
 
     if (editor.macroPanel && index < editor.macroPanel->labels.size() &&
         editor.macroPanel->labels[index])

@@ -287,6 +287,9 @@ void PresetManager::sendEntirePatchToAudio(Patch &patch, Synth::mainToAudioQueue
         msg.uiManagedPointer = macDat;
         mainToAudio.push(msg);
     }
+    // The audio-side SEND_MACRO_NAME handler decides whether each name actually
+    // changed and requests an INFO rescan only if so (atomic-OR coalesces the
+    // burst into a single host call).
 
     mainToAudio.push({Synth::MainToAudioMsg::STOP_AUDIO});
     for (const auto &p : patch.params)
@@ -296,8 +299,9 @@ void PresetManager::sendEntirePatchToAudio(Patch &patch, Synth::mainToAudioQueue
     }
     mainToAudio.push({Synth::MainToAudioMsg::START_AUDIO});
     mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_IS_CLEAN, true});
+    // SEND_POST_LOAD's audio handler now requests the VALUES rescan via
+    // Synth::requestParamRescan, so no separate rescan message is needed here.
     mainToAudio.push({Synth::MainToAudioMsg::SEND_POST_LOAD, true});
-    mainToAudio.push({Synth::MainToAudioMsg::SEND_REQUEST_RESCAN, true});
 
     if (hostPar)
     {

@@ -627,6 +627,10 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
         doFullRefresh = false;
         didRefresh = true;
     }
+    // Accumulate rescan flags across the whole drain so we issue one
+    // requestParamRescan / request_callback at the end, regardless of how many
+    // messages in this batch wanted a rescan.
+    uint32_t pendingRescan{0};
     auto uiM = mainToAudio.pop();
     while (uiM.has_value())
     {
@@ -762,17 +766,18 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             if (idx < numMacros && uiM->uiManagedPointer)
             {
                 auto &buf = patch.macroNames[idx];
-                std::fill(buf.begin(), buf.end(), 0);
-                strncpy(buf.data(), uiM->uiManagedPointer, buf.size() - 1);
-                AudioToUIMsg out{AudioToUIMsg::SET_MACRO_NAME};
-                out.paramId = idx;
-                out.patchNamePointer = buf.data();
-                audioToUi.push(out);
-
-                // Refresh host param info so the renamed macro picks up its display name.
-                AudioToUIMsg rescan{AudioToUIMsg::DO_PARAM_RESCAN};
-                rescan.paramId = CLAP_PARAM_RESCAN_INFO;
-                audioToUi.push(rescan);
+                // Only act on actual changes — avoids gratuitous INFO rescans on
+                // preset loads where macro names match what the host already knows.
+                if (std::strncmp(buf.data(), uiM->uiManagedPointer, buf.size()) != 0)
+                {
+                    std::fill(buf.begin(), buf.end(), 0);
+                    strncpy(buf.data(), uiM->uiManagedPointer, buf.size() - 1);
+                    AudioToUIMsg out{AudioToUIMsg::SET_MACRO_NAME};
+                    out.paramId = idx;
+                    out.patchNamePointer = buf.data();
+                    audioToUi.push(out);
+                    pendingRescan |= RescanRequest::INFO;
+                }
             }
         }
         break;
@@ -785,18 +790,13 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
         case MainToAudioMsg::SEND_POST_LOAD:
         {
             postLoad();
+            // Preset load just rewrote every param value — let the host re-read.
+            pendingRescan |= RescanRequest::VALUES;
         }
         break;
         case MainToAudioMsg::SEND_PREP_FOR_STREAM:
         {
             prepForStream();
-        }
-        break;
-        case MainToAudioMsg::SEND_REQUEST_RESCAN:
-        {
-            onMainRescanParams = true;
-            audioToUi.push({AudioToUIMsg::DO_PARAM_RESCAN});
-            clapHost->request_callback(clapHost);
         }
         break;
         case MainToAudioMsg::EDITOR_ATTACH_DETATCH:
@@ -830,6 +830,10 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
         }
         uiM = mainToAudio.pop();
     }
+
+    // One coalesced rescan request per drain pass.
+    if (pendingRescan)
+        requestParamRescan(pendingRescan);
 }
 
 void Synth::reapplyControlSettings()
@@ -930,16 +934,26 @@ void Synth::resetSoloState()
 
 void Synth::onMainThread()
 {
-    bool ex{true}, re{false};
-    if (onMainRescanParams.compare_exchange_strong(ex, re))
-    {
-        auto pe = static_cast<const clap_host_params_t *>(
-            clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
-        if (pe)
-        {
-            pe->rescan(clapHost, CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
-        }
-    }
+    auto flags = onMainRescanFlags.exchange(0, std::memory_order_acquire);
+    if (flags == 0 || !clapHost)
+        return;
+    auto pe =
+        static_cast<const clap_host_params_t *>(clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
+    if (!pe)
+        return;
+    // CLAP says INFO is mutually exclusive with VALUES; issue separately.
+    if (flags & RescanRequest::VALUES)
+        pe->rescan(clapHost, CLAP_PARAM_RESCAN_VALUES);
+    if (flags & RescanRequest::INFO)
+        pe->rescan(clapHost, CLAP_PARAM_RESCAN_INFO);
+}
+
+void Synth::requestParamRescan(uint32_t flags)
+{
+    if (flags == 0 || !clapHost)
+        return;
+    onMainRescanFlags.fetch_or(flags, std::memory_order_release);
+    clapHost->request_callback(clapHost);
 }
 
 } // namespace baconpaul::six_sines
