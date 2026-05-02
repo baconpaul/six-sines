@@ -228,6 +228,7 @@ void createComponent(SixSinesEditor &e, P &panel, const Param &parm, std::unique
     };
     cm->onEndEdit = [&e, id, &pc]()
     {
+        e.mainToAudio.push({Synth::MainToAudioMsg::Action::END_EDIT, id});
         if constexpr (!suppressTooltipByWidget<T>())
         {
             e.updateTooltip(pc.get());
