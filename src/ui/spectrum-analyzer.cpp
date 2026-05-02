@@ -184,7 +184,7 @@ void SpectrumAnalyzerComponent::applyMode(int newIdx)
     paintScope.assign(scopeFrameLen, 0.f);
     paintNextColumn = 0;
     cachedSpecImage = juce::Image();
-    cachedSpecImageH = 0;
+    cachedSpecImageW = 0;
     lastPaintedSpectrumVersion = (uint32_t)-1;
 
     auto framePeriod = (float)hopSize / hostSampleRate;
@@ -376,34 +376,40 @@ void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
     auto tAt = [&](float f) { return std::log(f / fmin) / logRatio; };
     auto binAt = [&](float f) { return f * (float)snapFftSize / hostSampleRate; };
 
-    // Spectrogram: a small (columns × pixelHeight) image is cached as a member, rebuilt
-    // only when geometry changes or new spectrum data has arrived since the last paint.
-    // Pixels are written via PixelARGB raw access (much faster than setPixelColour).
-    auto specPxH = specArea.getHeight();
-    if (specPxH > 0)
+    // Spectrogram: rotated so frequency runs along X (matching the line plot below) and
+    // time runs along Y, with the newest row at the top. Image is (specPxW × columns),
+    // cached as a member and rebuilt only on geometry or data changes.
+    auto specPxW = specArea.getWidth();
+    if (specPxW > 0)
     {
-        bool dimsChanged = (specPxH != cachedSpecImageH || !cachedSpecImage.isValid());
+        bool dimsChanged = (specPxW != cachedSpecImageW || !cachedSpecImage.isValid());
         if (dimsChanged)
         {
-            cachedSpecImage = juce::Image(juce::Image::ARGB, spectrogramColumns, specPxH, false);
-            cachedSpecImageH = specPxH;
+            cachedSpecImage = juce::Image(juce::Image::ARGB, specPxW, spectrogramColumns, false);
+            cachedSpecImageW = specPxW;
         }
         if (dimsChanged || snapVersion != lastPaintedSpectrumVersion)
         {
-            juce::Image::BitmapData bd(cachedSpecImage, juce::Image::BitmapData::writeOnly);
-            for (int prow = 0; prow < specPxH; ++prow)
+            std::vector<float> b0s(specPxW), b1s(specPxW);
+            for (int pcol = 0; pcol < specPxW; ++pcol)
             {
-                auto t0 = (specPxH - 1 - prow) / (float)specPxH;
-                auto t1 = (specPxH - prow) / (float)specPxH;
-                auto b0 = binAt(freqAt(t0));
-                auto b1 = binAt(freqAt(t1));
+                auto t0 = pcol / (float)specPxW;
+                auto t1 = (pcol + 1) / (float)specPxW;
+                b0s[pcol] = binAt(freqAt(t0));
+                b1s[pcol] = binAt(freqAt(t1));
+            }
+            juce::Image::BitmapData bd(cachedSpecImage, juce::Image::BitmapData::writeOnly);
+            for (int prow = 0; prow < spectrogramColumns; ++prow)
+            {
+                // prow=columns-1 (bottom) = newest column; prow=0 (top) = oldest
+                auto idx = (paintNextColumn + prow) % spectrogramColumns;
+                auto *cdata = colDataAt(idx);
                 auto *line = (juce::PixelARGB *)bd.getLinePointer(prow);
-                for (int c = 0; c < spectrogramColumns; ++c)
+                for (int pcol = 0; pcol < specPxW; ++pcol)
                 {
-                    auto idx = (paintNextColumn + c) % spectrogramColumns;
-                    auto v = magInRange(colDataAt(idx), b0, b1);
+                    auto v = magInRange(cdata, b0s[pcol], b1s[pcol]);
                     auto col = colorFor(v);
-                    line[c] = juce::PixelARGB(255, col.getRed(), col.getGreen(), col.getBlue());
+                    line[pcol] = juce::PixelARGB(255, col.getRed(), col.getGreen(), col.getBlue());
                 }
             }
             lastPaintedSpectrumVersion = snapVersion;
@@ -514,14 +520,6 @@ void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
         auto x = lineRect.getX() + tAt(f) * lineRect.getWidth();
         g.drawText(freqLabel(f), (int)x - 24, freqLabels.getY(), 48, freqLabels.getHeight(),
                    juce::Justification::centred);
-    }
-    for (auto f : ticks)
-    {
-        if (f < fmin || f > fmax)
-            continue;
-        auto y = specRect.getBottom() - tAt(f) * specRect.getHeight();
-        g.drawText(freqLabel(f), leftLabels.getX(), (int)y - 6, leftMargin - 4, 12,
-                   juce::Justification::centredRight);
     }
     for (int db = 0; db >= -80; db -= 20)
     {

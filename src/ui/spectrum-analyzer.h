@@ -123,7 +123,7 @@ struct SpectrumAnalyzerComponent : juce::Component, private juce::AsyncUpdater
     std::vector<float> paintScope;
     int paintNextColumn{0};
     juce::Image cachedSpecImage;
-    int cachedSpecImageH{0};
+    int cachedSpecImageW{0};
     uint32_t lastPaintedSpectrumVersion{(uint32_t)-1};
 
     // Peak-hold decay per analysis frame; depends on hop period and target half-life.
