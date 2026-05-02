@@ -339,8 +339,6 @@ struct Synth
             UPDATE_CPU_USAGE,
             SET_PATCH_NAME,
             SET_PATCH_DIRTY_STATE,
-            DO_PARAM_RESCAN, // paramId optionally carries CLAP_PARAM_RESCAN_*
-                             // flags; 0 falls back to VALUES|TEXT
 
             SEND_SAMPLE_RATE,
             SET_DAW_EXTRA_STATE,
@@ -366,7 +364,6 @@ struct Synth
             SEND_PATCH_AUTHOR,
             SEND_PATCH_IS_CLEAN,
             SEND_POST_LOAD,
-            SEND_REQUEST_RESCAN,
             EDITOR_ATTACH_DETATCH, // paramid is true for attach and false for detach
             SEND_PREP_FOR_STREAM,
             PANIC_STOP_VOICES,
@@ -379,6 +376,20 @@ struct Synth
         const char *uiManagedPointer{nullptr};
         const void *dawExtraStatePointer{nullptr};
     };
+
+    // Rescan request flags accumulated in onMainRescanFlags. Bit positions match
+    // CLAP's CLAP_PARAM_RESCAN_* so onMainThread can map them with no translation.
+    // The indirection lets non-CLAP layers stay CLAP-header-clean.
+    enum RescanRequest : uint32_t
+    {
+        VALUES = 1 << 0,
+        INFO = 1 << 2,
+        ALL = VALUES | INFO
+    };
+
+    // Thread-safe; accumulates flags and asks the host to call us back on the main
+    // thread, where onMainThread() will issue the actual clap rescans.
+    void requestParamRescan(uint32_t flags);
     using audioToUIQueue_t = sst::cpputils::SimpleRingBuffer<AudioToUIMsg, 1024 * 16>;
     using mainToAudioQueue_T = sst::cpputils::SimpleRingBuffer<MainToAudioMsg, 1024 * 64>;
     audioToUIQueue_t audioToUi;
@@ -422,7 +433,7 @@ struct Synth
         }
     }
 
-    std::atomic<bool> onMainRescanParams{false};
+    std::atomic<uint32_t> onMainRescanFlags{0};
     void onMainThread();
 
     void reapplyControlSettings();

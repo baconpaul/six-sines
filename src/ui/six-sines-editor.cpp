@@ -361,22 +361,6 @@ void SixSinesEditor::idle()
             presetDataBinding->setDirtyState(patchCopy.dirty);
             presetButton->repaint();
         }
-        else if (aum->action == Synth::AudioToUIMsg::DO_PARAM_RESCAN)
-        {
-            if (!clapParamsExtension)
-                clapParamsExtension = static_cast<const clap_host_params_t *>(
-                    clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
-            if (clapParamsExtension)
-            {
-                // RESCAN_INFO is mutually exclusive with VALUES/TEXT — honour an
-                // explicit flag in paramId when set, default otherwise.
-                auto flags = aum->paramId != 0
-                                 ? aum->paramId
-                                 : (uint32_t)(CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
-                clapParamsExtension->rescan(clapHost, flags);
-                clapParamsExtension->request_flush(clapHost);
-            }
-        }
         else if (aum->action == Synth::AudioToUIMsg::SEND_SAMPLE_RATE)
         {
             engineSR = aum->value2;
