@@ -20,9 +20,12 @@
 #include <sst/jucegui/components/GlyphButton.h>
 #include "six-sines-editor.h"
 #include "patch-data-bindings.h"
+#include "ui-defaults.h"
 
 namespace baconpaul::six_sines::ui
 {
+struct SegmentedRatioEditor;
+
 struct SourcePanel : jcmp::NamedPanel, HasEditor
 {
     SourcePanel(SixSinesEditor &);
@@ -48,6 +51,13 @@ struct SourcePanel : jcmp::NamedPanel, HasEditor
     std::array<std::unique_ptr<jcmp::Label>, numOps> labels;
     std::array<std::unique_ptr<PatchDiscrete>, numOps> powerData;
     std::array<std::unique_ptr<jcmp::GlyphButton>, numOps> upButton, downButton;
+
+    std::array<std::unique_ptr<SegmentedRatioEditor>, numOps> segmentedEditors;
+    std::array<std::unique_ptr<PatchContinuous>, numOps> segmentedEditorsData;
+
+    SourceEditorType editorType{SourceEditor_Knob};
+    void setEditorType(SourceEditorType t, bool persist);
+    void showHamburgerMenu();
 
     void adjustRatio(int idx, bool up);
     void updateOpEnabledState(int idx);

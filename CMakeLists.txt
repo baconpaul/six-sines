@@ -49,6 +49,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/ui/mixer-sub-panel.cpp
         src/ui/source-panel.cpp
         src/ui/source-sub-panel.cpp
+        src/ui/segmented-ratio-editor.cpp
         src/ui/macro-panel.cpp
         src/ui/macro-sub-panel.cpp
         src/ui/finetune-sub-panel.cpp

@@ -16,6 +16,7 @@
 #include "sst/jucegui/components/ToggleButton.h"
 #include "source-panel.h"
 #include "source-sub-panel.h"
+#include "segmented-ratio-editor.h"
 #include "ui-constants.h"
 #include "dsp/sintable.h"
 #include "sst/jucegui/accessibility/KeyboardTraverser.h"
@@ -26,7 +27,6 @@ namespace baconpaul::six_sines::ui
 {
 SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEditor(e)
 {
-    using kt_t = sst::jucegui::accessibility::KeyboardTraverser;
     auto &mn = editor.patchCopy.sourceNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
@@ -70,10 +70,67 @@ SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEdi
         sst::jucegui::component_adapters::setTraversalId(downButton[i].get(), i * 5 + 20);
         sst::jucegui::component_adapters::setTraversalId(upButton[i].get(), i * 5 + 20);
         sst::jucegui::component_adapters::setTraversalId(knobs[i].get(), i * 5 + 21);
+
+        // Build the segmented editor eagerly. Both knob and segmented are bound to the
+        // ratio param at all times; we only swap visibility when the editor type changes.
+        createComponent(editor, *this, mn[i].ratio, segmentedEditors[i], segmentedEditorsData[i],
+                        i);
+        segmentedEditors[i]->finalizeSetup();
+        addChildComponent(*segmentedEditors[i]);
+
+        // The second createComponent above clobbered componentByID[ratioId]; restore it
+        // to the knob (the popup-menu/accessibility default), then register a refresh
+        // hook that fans inbound updates out to BOTH widgets so neither goes stale.
+        auto id = mn[i].ratio.meta.id;
+        editor.componentByID[id] = juce::Component::SafePointer<juce::Component>(knobs[i].get());
+        editor.componentRefreshByID[id] =
+            [kw = juce::Component::SafePointer<juce::Component>(knobs[i].get()),
+             sw = juce::Component::SafePointer<SegmentedRatioEditor>(segmentedEditors[i].get())]()
+        {
+            if (kw)
+                kw->repaint();
+            if (sw)
+                sw->refreshFromExternal();
+        };
+
+        // When the knob writes the ratio, force the segmented editor to re-decompose
+        // from the new float — PatchContinuous doesn't fire data listeners on its own.
+        knobsData[i]->onGuiSetValue =
+            [sw = juce::Component::SafePointer<SegmentedRatioEditor>(segmentedEditors[i].get())]()
+        {
+            if (sw)
+                sw->refreshFromExternal();
+        };
+
+        // The segmented editor has its own PatchContinuous binding (built by the
+        // second createComponent above). Right-click → popup-menu typein writes
+        // through that binding, which also bypasses data listeners; reseed the
+        // cached digits the same way.
+        segmentedEditorsData[i]->onGuiSetValue =
+            [sw = juce::Component::SafePointer<SegmentedRatioEditor>(segmentedEditors[i].get())]()
+        {
+            if (sw)
+                sw->refreshFromExternal();
+        };
     }
 
     highlight = std::make_unique<KnobHighlight>(editor);
     addChildComponent(*highlight);
+
+    hasHamburger = true;
+    onHamburger = [w = juce::Component::SafePointer(this)]()
+    {
+        if (w)
+            w->showHamburgerMenu();
+    };
+
+    auto stored = editor.defaultsProvider->getUserDefaultValue(Defaults::sourceEditorType,
+                                                               static_cast<int>(SourceEditor_Knob));
+    // Sanitize: if the persisted value isn't one of the editor types we know about
+    // (e.g. left over from an earlier build with extra enumerators), fall back to Knob.
+    if (stored != SourceEditor_Knob && stored != SourceEditor_SegmentedDecimal)
+        stored = SourceEditor_Knob;
+    setEditorType(static_cast<SourceEditorType>(stored), false);
 }
 SourcePanel::~SourcePanel() = default;
 
@@ -84,14 +141,74 @@ void SourcePanel::resized()
     auto y = b.getY();
     for (auto i = 0U; i < numOps; ++i)
     {
-        positionPowerKnobSwitchAndLabel(x, y, power[i], upButton[i], knobs[i], labels[i]);
-        auto b = upButton[i]->getBounds().reduced(2, 0).translated(0, -2);
-        auto ub = b.withTrimmedLeft(b.getWidth() / 2).withTrimmedBottom(uicMargin / 2);
-        auto db = b.withTrimmedRight(b.getWidth() / 2).withTrimmedBottom(uicMargin / 2);
-        upButton[i]->setBounds(ub);
-        downButton[i]->setBounds(db);
+        if (editorType == SourceEditor_Knob)
+        {
+            positionPowerKnobSwitchAndLabel(x, y, power[i], upButton[i], knobs[i], labels[i]);
+            auto b = upButton[i]->getBounds().reduced(2, 0).translated(0, -2);
+            auto ub = b.withTrimmedLeft(b.getWidth() / 2).withTrimmedBottom(uicMargin / 2);
+            auto db = b.withTrimmedRight(b.getWidth() / 2).withTrimmedBottom(uicMargin / 2);
+            upButton[i]->setBounds(ub);
+            downButton[i]->setBounds(db);
+        }
+        else
+        {
+            // editor takes the full cell width above the label row;
+            // power button sits in the label row on the left, label to its right
+            auto cell = juce::Rectangle<int>(x, y, uicPowerKnobWidth, uicKnobSize);
+            segmentedEditors[i]->setBounds(cell);
+
+            auto labelRow = juce::Rectangle<int>(x, y + uicKnobSize + uicLabelGap,
+                                                 uicPowerKnobWidth, uicLabelHeight);
+            power[i]->setBounds(labelRow.withWidth(uicLabelHeight).reduced(2));
+            labels[i]->setBounds(labelRow.withTrimmedLeft(uicLabelHeight + uicMargin));
+        }
         x += uicPowerKnobWidth + uicMargin;
     }
+}
+
+void SourcePanel::setEditorType(SourceEditorType t, bool persist)
+{
+    editorType = t;
+
+    for (auto i = 0U; i < numOps; ++i)
+    {
+        bool isKnob = (t == SourceEditor_Knob);
+        bool isSeg = (t == SourceEditor_SegmentedDecimal);
+        knobs[i]->setVisible(isKnob);
+        upButton[i]->setVisible(isKnob);
+        downButton[i]->setVisible(isKnob);
+        segmentedEditors[i]->setVisible(isSeg);
+        labels[i]->setText(isKnob ? ("Op " + std::to_string(i + 1) + " Ratio")
+                                  : ("Op " + std::to_string(i + 1)));
+
+        updateOpEnabledState(i);
+    }
+
+    if (persist)
+        editor.defaultsProvider->updateUserDefaultValue(Defaults::sourceEditorType,
+                                                        static_cast<int>(t));
+
+    resized();
+    repaint();
+}
+
+void SourcePanel::showHamburgerMenu()
+{
+    juce::PopupMenu p;
+    p.addSectionHeader("Source Editor");
+    p.addSeparator();
+    auto add = [this, &p](const juce::String &name, SourceEditorType t)
+    {
+        p.addItem(name, true, editorType == t,
+                  [w = juce::Component::SafePointer(this), t]()
+                  {
+                      if (w)
+                          w->setEditorType(t, true);
+                  });
+    };
+    add("Knob", SourceEditor_Knob);
+    add("Segmented", SourceEditor_SegmentedDecimal);
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
 }
 
 void SourcePanel::mouseDown(const juce::MouseEvent &e)
@@ -99,6 +216,11 @@ void SourcePanel::mouseDown(const juce::MouseEvent &e)
     if (e.mods.isPopupMenu())
     {
         editor.showNavigationMenu();
+        return;
+    }
+    if (hasHamburger && getHamburgerRegion().contains(e.position.toInt()))
+    {
+        jcmp::NamedPanel::mouseDown(e);
         return;
     }
     for (int i = 0; i < numOps; ++i)
@@ -192,6 +314,7 @@ void SourcePanel::updateOpEnabledState(int idx)
     knobs[idx]->setEnabled(!isAudioIn);
     upButton[idx]->setEnabled(!isAudioIn);
     downButton[idx]->setEnabled(!isAudioIn);
+    segmentedEditors[idx]->setEnabled(!isAudioIn);
 }
 
 } // namespace baconpaul::six_sines::ui

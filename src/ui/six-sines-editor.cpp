@@ -115,6 +115,21 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
 {
     setTitle("Six Sines - an Audio Rate Modulation Synthesizer");
     setAccessible(true);
+
+    // Some panels use defaults on construction
+    presetManager = std::make_unique<presets::PresetManager>(clapHost);
+    presetManager->onPresetLoaded = [this](auto s)
+    {
+        this->postPatchChange(s);
+        repaint();
+    };
+
+    uiThemeManager = std::make_unique<presets::UIThemeManager>();
+
+    defaultsProvider = std::make_unique<defaultsProvder_t>(
+        presetManager->userPath, "SixSinesUI", defaultName,
+        [](auto e, auto b) { SXSNLOG("[ERROR]" << e << " " << b); });
+
     sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
 
     sheet_t::addClass(PatchMenu).withBaseClass(jcmp::JogUpDownButton::Styles::styleClass);
@@ -215,14 +230,6 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     toolTip = std::make_unique<jcmp::ToolTip>();
     addChildComponent(*toolTip);
 
-    presetManager = std::make_unique<presets::PresetManager>(clapHost);
-    uiThemeManager = std::make_unique<presets::UIThemeManager>();
-    presetManager->onPresetLoaded = [this](auto s)
-    {
-        this->postPatchChange(s);
-        repaint();
-    };
-
     presetDataBinding = std::make_unique<PresetDataBinding>(*presetManager, patchCopy, mainToAudio);
     presetDataBinding->setStateForDisplayName(patchCopy.name);
 
@@ -234,9 +241,6 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     setPatchNameDisplay();
     sst::jucegui::component_adapters::setTraversalId(presetButton.get(), 174);
 
-    defaultsProvider = std::make_unique<defaultsProvder_t>(
-        presetManager->userPath, "SixSinesUI", defaultName,
-        [](auto e, auto b) { SXSNLOG("[ERROR]" << e << " " << b); });
     // initializeBaseSkin() calls applyToStylesheet and guards lnf->setStyle with
     // "if (lnf)" — lnf is null at this point so that guard is a no-op.  lnf is
     // created immediately after and explicitly calls setStyle, which is correct.

@@ -39,11 +39,9 @@ Probably want a legacy mode of knob
   - windows ui open isn't right
   - jack on linux
 
-## Visualization
+## Visualization **DONE**
 
-- That fun explicig DFT as spectrum
-- Show the wavetable somehow?
-- or maybe do none of this
+- Add a simple built in spectrum and scope
 
 ## Super-Macros **DONE**
 

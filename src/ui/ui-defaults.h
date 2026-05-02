@@ -33,7 +33,14 @@ enum Defaults
     defaultAuthor,
     spectrumAnalysisMode,
     spectrumScopeScale,
+    sourceEditorType,
     numDefaults
+};
+
+enum SourceEditorType : int
+{
+    SourceEditor_Knob = 0,
+    SourceEditor_SegmentedDecimal = 1
 };
 
 inline std::string defaultName(Defaults d)
@@ -58,6 +65,8 @@ inline std::string defaultName(Defaults d)
         return "spectrumAnalysisMode";
     case spectrumScopeScale:
         return "spectrumScopeScale";
+    case sourceEditorType:
+        return "sourceEditorType";
     case numDefaults:
     {
         SXSNLOG("Software Error - defaults found");
