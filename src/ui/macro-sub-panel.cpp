@@ -108,6 +108,7 @@ void MacroSubPanel::setSelectedIndex(size_t i)
             w->setEnabledState();
     };
     editor.componentRefreshByID[mn.envIsMultiplcative.meta.id] = refreshEnabled;
+    editor.componentRefreshByID[mn.macroPower.meta.id] = refreshEnabled;
     envMulD->onGuiSetValue = refreshEnabled;
 
     auto &nameBuf = editor.patchCopy.macroNames[i];

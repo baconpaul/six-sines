@@ -184,6 +184,10 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     addAndMakeVisible(*panicButton);
     addAndMakeVisible(*panicTitle);
 
+    outputControlTitle = std::make_unique<jcmp::RuledLabel>();
+    outputControlTitle->setText("Output Control");
+    addAndMakeVisible(*outputControlTitle);
+
     createComponent(editor, *this, editor.patchCopy.output.sampleRateStrategy, srStrat, srStratD);
     addAndMakeVisible(*srStrat);
     createComponent(editor, *this, editor.patchCopy.output.resampleEngine, rsEng, rsEngD);
@@ -199,61 +203,67 @@ void PlayModeSubPanel::resized()
 {
     namespace jlo = sst::jucegui::layouts;
     auto skinny = uicKnobSize + 30;
-    auto playRowHeight =
-        uicTitleLabelInnerBox + 2 * uicLabelHeight + uicMargin + 5 * uicLabelHeight + 6 * uicMargin;
 
-    auto outer = jlo::HList().at(uicMargin, 0).withAutoGap(2 * uicMargin);
+    // Top section: 4 columns, each split into a top sub-section and a bottom sub-section
+    //   col1: Voices / Unison
+    //   col2: Play (mode + triggers + porta)
+    //   col3: Bend / Octave
+    //   col4: MPE / Panic
+    // The two tallest columns (1 and 2) drive the row height.
+    auto topRowHeight = uicTitleLabelInnerBox + 7 * uicLabelHeight + 7 * uicMargin;
 
-    // Column 1: voices / bend / octave / mpe / panic
+    auto outer = jlo::VList().at(uicMargin, 0).withAutoGap(2 * uicMargin);
+
+    auto topRow = jlo::HList().withHeight(topRowHeight).withAutoGap(2 * uicMargin);
+
     auto col1 = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
     col1.add(titleLabelGaplessLayout(voiceLimitL));
     col1.add(jlo::Component(*voiceLimit).withHeight(uicLabelHeight));
-    col1.add(titleLabelGaplessLayout(bendTitle));
-    col1.add(sideLabel(bUpL, bUp));
-    col1.add(sideLabel(bDnL, bDn));
-    col1.add(titleLabelGaplessLayout(tsposeTitle));
-    col1.add(jlo::Component(*tsposeButton).withHeight(uicLabelHeight));
-    col1.add(titleLabelGaplessLayout(mpeTitle));
-    col1.add(jlo::Component(*mpeActiveButton).withHeight(uicLabelHeight));
-    col1.add(jlo::Component(*mpeRange).withHeight(uicLabelHeight));
-    col1.add(jlo::Component(*mpeRangeL).withHeight(uicLabelHeight));
-    col1.add(titleLabelGaplessLayout(panicTitle));
-    col1.add(jlo::Component(*panicButton).withHeight(uicLabelHeight));
-    outer.add(col1);
+    col1.add(titleLabelGaplessLayout(uniTitle));
+    col1.add(jlo::Component(*uniCt).withHeight(uicLabelHeight));
+    col1.add(jlo::Component(*uniCtL).withHeight(uicLabelHeight));
+    col1.add(jlo::Component(*uniRPhase).withHeight(uicLabelHeight));
+    col1.add(sideLabelSlider(uniSpreadG, uniSpread));
+    col1.add(sideLabelSlider(uniPanG, uniPan));
+    topRow.add(col1);
 
-    // Column 2: play + unison on top, oversampling below
-    auto col2 = jlo::VList().withWidth(2 * skinny + 2 * uicMargin).withAutoGap(2 * uicMargin);
+    auto col2 = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
+    col2.add(titleLabelGaplessLayout(playTitle));
+    col2.add(jlo::Component(*playMode).withHeight(2 * uicLabelHeight + uicMargin));
+    col2.add(jlo::Component(*triggerButton).withHeight(uicLabelHeight));
+    col2.add(jlo::Component(*pianoModeButton).withHeight(uicLabelHeight));
+    col2.add(jlo::Component(*portaL).withHeight(uicLabelHeight));
+    col2.add(jlo::Component(*portaTime).withHeight(uicLabelHeight).insetBy(0, 2));
+    col2.add(jlo::Component(*portaContinuationButton).withHeight(uicLabelHeight));
+    topRow.add(col2);
 
-    auto topRow = jlo::HList().withHeight(playRowHeight).withAutoGap(2 * uicMargin);
+    auto col3 = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
+    col3.add(titleLabelGaplessLayout(bendTitle));
+    col3.add(sideLabel(bUpL, bUp));
+    col3.add(sideLabel(bDnL, bDn));
+    col3.add(titleLabelGaplessLayout(tsposeTitle));
+    col3.add(jlo::Component(*tsposeButton).withHeight(uicLabelHeight));
+    topRow.add(col3);
 
-    auto pml = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
-    pml.add(titleLabelGaplessLayout(playTitle));
-    pml.add(jlo::Component(*playMode).withHeight(2 * uicLabelHeight + uicMargin));
-    pml.add(jlo::Component(*triggerButton).withHeight(uicLabelHeight));
-    pml.add(jlo::Component(*pianoModeButton).withHeight(uicLabelHeight));
-    pml.add(jlo::Component(*portaL).withHeight(uicLabelHeight));
-    pml.add(jlo::Component(*portaTime).withHeight(uicLabelHeight).insetBy(0, 2));
-    pml.add(jlo::Component(*portaContinuationButton).withHeight(uicLabelHeight));
-    topRow.add(pml);
+    auto col4 = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
+    col4.add(titleLabelGaplessLayout(mpeTitle));
+    col4.add(jlo::Component(*mpeActiveButton).withHeight(uicLabelHeight));
+    col4.add(jlo::Component(*mpeRange).withHeight(uicLabelHeight));
+    col4.add(jlo::Component(*mpeRangeL).withHeight(uicLabelHeight));
+    col4.add(titleLabelGaplessLayout(panicTitle));
+    col4.add(jlo::Component(*panicButton).withHeight(uicLabelHeight));
+    topRow.add(col4);
 
-    auto uml = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
-    uml.add(titleLabelGaplessLayout(uniTitle));
-    uml.add(jlo::Component(*uniCt).withHeight(uicLabelHeight));
-    uml.add(jlo::Component(*uniCtL).withHeight(uicLabelHeight));
-    uml.add(jlo::Component(*uniRPhase).withHeight(uicLabelHeight));
-    uml.add(sideLabelSlider(uniSpreadG, uniSpread));
-    uml.add(sideLabelSlider(uniPanG, uniPan));
-    topRow.add(uml);
+    outer.add(topRow);
 
-    col2.add(topRow);
+    auto bottomWidth = 4 * skinny + 3 * 2 * uicMargin;
+    outer.add(titleLabelGaplessLayout(outputControlTitle).withWidth(bottomWidth));
 
-    auto rsl = jlo::VList().withAutoGap(uicMargin);
+    auto rsl = jlo::VList().withWidth(bottomWidth).withAutoGap(uicMargin);
     rsl.add(titleLabelGaplessLayout(srStratLab));
     rsl.add(jlo::Component(*srStrat).withHeight(uicLabelHeight));
     rsl.add(jlo::Component(*rsEng).withHeight(uicLabelHeight));
-    col2.add(rsl);
-
-    outer.add(col2);
+    outer.add(rsl);
 
     outer.doLayout();
 }

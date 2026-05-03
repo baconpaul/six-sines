@@ -85,6 +85,8 @@ struct PlayModeSubPanel : juce::Component, HasEditor
 
     std::unique_ptr<jcmp::TextPushButton> panicButton;
 
+    std::unique_ptr<jcmp::RuledLabel> outputControlTitle;
+
     std::unique_ptr<jcmp::RuledLabel> srStratLab;
     std::unique_ptr<jcmp::JogUpDownButton> srStrat;
     std::unique_ptr<PatchDiscrete> srStratD;

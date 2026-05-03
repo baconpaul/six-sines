@@ -166,10 +166,10 @@ void Synth::setSampleRate(double sampleRate)
     monoValues.sr.setSampleRate(internalRate);
 
     lagHandler.setRate(60, blockSize, monoValues.sr.sampleRate);
-    vuPeak.setSampleRate(monoValues.sr.sampleRate);
+    vuPeak.setSampleRate(monoValues.sr.sampleRate, 20);
     for (int i = 0; i < numOps; ++i)
     {
-        opVuPeak[i].setSampleRate(monoValues.sr.sampleRate);
+        opVuPeak[i].setSampleRate(monoValues.sr.sampleRate, 20);
     }
     sampleRateRatio = hostSampleRate / engineSampleRate;
 
