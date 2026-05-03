@@ -14,7 +14,11 @@
  */
 
 #include <cstring>
+#include <unordered_map>
+#include <cmrc/cmrc.hpp>
 #include "six-sines-editor.h"
+
+CMRC_DECLARE(sixsines_fonts);
 
 #include "dahdsr-components.h"
 #include "sst/jucegui/screens/AlertOrPrompt.h"
@@ -1334,6 +1338,12 @@ void SixSinesEditor::initializeBaseSkin()
         sst::jucegui::style::StyleSheet::DARK));
     currentSkin = SixSinesSkin::darkDefault();
     currentSkin.applyToStylesheet(style());
+
+    if (auto manrope = typefaceFromResources("Manrope/static/Manrope-Regular.ttf"))
+        style()->replaceFontsWithTypeface(manrope);
+    style()->adjustFontHeight(2.0f);
+    style()->setFontExtraKerningFactor(0.03f);
+
     if (lnf)
         lnf->setStyle(style());
 
@@ -1342,6 +1352,26 @@ void SixSinesEditor::initializeBaseSkin()
         style()
             ->getFont(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont)
             .withHeight(18));
+}
+
+juce::Typeface::Ptr SixSinesEditor::typefaceFromResources(const std::string &relPath)
+{
+    if (auto it = typefaceCache.find(relPath); it != typefaceCache.end())
+        return it->second;
+    try
+    {
+        auto fs = cmrc::sixsines_fonts::get_filesystem();
+        auto file = fs.open("resources/fonts/" + relPath);
+        auto tf = juce::Typeface::createSystemTypefaceFor(file.begin(), file.size());
+        typefaceCache[relPath] = tf;
+        return tf;
+    }
+    catch (const std::exception &e)
+    {
+        SXSNLOG("typefaceFromResources: " << relPath << ": " << e.what());
+        typefaceCache[relPath] = nullptr;
+        return nullptr;
+    }
 }
 
 void SixSinesEditor::setZoomFactor(float zf)

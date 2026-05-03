@@ -75,7 +75,7 @@ SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEdi
         // ratio param at all times; we only swap visibility when the editor type changes.
         createComponent(editor, *this, mn[i].ratio, segmentedEditors[i], segmentedEditorsData[i],
                         i);
-        segmentedEditors[i]->finalizeSetup();
+        segmentedEditors[i]->finalizeSetup(editor);
         addChildComponent(*segmentedEditors[i]);
 
         // The second createComponent above clobbered componentByID[ratioId]; restore it

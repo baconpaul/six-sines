@@ -18,6 +18,7 @@
 
 #include <concepts>
 #include <functional>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -159,6 +160,19 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     // Install the dark base stylesheet + dark skin.  Called once during construction
     // before lnf exists; setThemeFromPreference() then overlays the user's saved theme.
     void initializeBaseSkin();
+
+    // Load a TTF from the embedded fonts cmrc filesystem (paths relative to
+    // resources/fonts, e.g. "Manrope/static/Manrope-Regular.ttf"). Cached on
+    // the editor instance: a second call with the same path returns the same
+    // Typeface::Ptr without re-parsing. Non-static so the cache dies with the
+    // editor — keeping it static caused a JUCE leak warning at exit because
+    // typeface ownership outlived the JUCE shutdown sequence.
+    juce::Typeface::Ptr typefaceFromResources(const std::string &relPath);
+
+  private:
+    std::unordered_map<std::string, juce::Typeface::Ptr> typefaceCache;
+
+  public:
     // Sentinel prefix used when storing a factory theme name in the themePath user default.
     // A stored value of e.g. "factory:Dark" means use uiThemeManager->factoryThemes["Dark"].
     static constexpr const char *factoryThemeSentinel{"factory:"};
