@@ -78,6 +78,12 @@ SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEdi
         segmentedEditors[i]->finalizeSetup(editor);
         addChildComponent(*segmentedEditors[i]);
 
+        segmentedEditors[i]->onSelected = [w = juce::Component::SafePointer(this), i]()
+        {
+            if (w)
+                w->beginEdit(i);
+        };
+
         // The second createComponent above clobbered componentByID[ratioId]; restore it
         // to the knob (the popup-menu/accessibility default), then register a refresh
         // hook that fans inbound updates out to BOTH widgets so neither goes stale.

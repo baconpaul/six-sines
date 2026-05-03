@@ -183,6 +183,8 @@ struct SegmentedRatioEditor::RatioDTE : jcmp::DraggableTextEditableValue
         DraggableTextEditableValue::mouseDown(e);
         if (e.mods.isPopupMenu())
             return;
+        if (parent->onSelected)
+            parent->onSelected();
         activeSlot = slotFromX(e.x);
         parent->readDigits(t1Down, t2Down, t3Down);
     }

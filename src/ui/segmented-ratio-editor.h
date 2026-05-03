@@ -56,6 +56,12 @@ struct SegmentedRatioEditor : sst::jucegui::components::ContinuousParamEditor
     // call after createComponent has set the source
     void finalizeSetup(SixSinesEditor &e);
 
+    // Fired on a primary-button mouseDown anywhere in the inner editor (the
+    // click that activates the typein). SourcePanel uses this to select the
+    // owning operator's sub-panel — the inner child consumes the mouse event,
+    // so SourcePanel::mouseDown never sees the click.
+    std::function<void()> onSelected;
+
     // SixSinesEditor used to look up cached typefaces (set by finalizeSetup).
     SixSinesEditor *sixSinesEditor{nullptr};
 
