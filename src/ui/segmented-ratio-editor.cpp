@@ -14,142 +14,301 @@
  */
 
 #include "segmented-ratio-editor.h"
+#include "six-sines-editor.h"
 #include <cmath>
 #include <algorithm>
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
 
 namespace baconpaul::six_sines::ui
 {
 
 namespace jcmp = sst::jucegui::components;
-namespace jdat = sst::jucegui::data;
 
-struct SegmentedRatioEditor::DigitSource : jdat::Continuous
+struct SegmentedRatioEditor::RatioDTE : jcmp::DraggableTextEditableValue
 {
+    // Layout: monospace text laid out as if every value had max width (e.g.
+    // "-32.0000 "), broken into three equal-width slot rects:
+    //   slot 0: sign + 2 integer digits   ("-32" / " 32" / "  2")
+    //   slot 1: '.' + first 2 fractionals (".00" .. ".99")
+    //   slot 2: last 2 fractionals + pad  ("00 " .. "99 ")
+    // Equal widths make the jog buttons above/below identical in size.
+
     SegmentedRatioEditor *parent;
-    int slot; // 0=t1 (integer), 1=t2 (hundredths), 2=t3 (hundred-thousandths)
+    int activeSlot{-1};
+    int hoverSlot{-1};
+    int t1Down{1}, t2Down{0}, t3Down{0};
+    std::array<juce::Rectangle<int>, numSlots> slotRects;
+    float fittedHeight{12.f};
+    // Computed in resized() (and refreshed via onStyleChanged) so paint()
+    // doesn't reconstruct the font + re-measure char width every frame.
+    juce::Font cachedFont{juce::FontOptions{}};
+    int cachedTextW{0};
 
-    DigitSource(SegmentedRatioEditor *p, int s) : parent(p), slot(s) {}
-
-    std::string getLabel() const override
+    RatioDTE(SegmentedRatioEditor *p) : parent(p)
     {
-        switch (slot)
+        setMouseCursor(juce::MouseCursor::PointingHandCursor);
+        // Re-bind the typein commit callbacks to our ratio-aware parser; the
+        // base class's setFromEditor would route the typein string straight
+        // into the bound Continuous, which here is the log2 ratio.
+        underlyingEditor->onReturnKey = [this]() { commitFromEditor(); };
+        underlyingEditor->onFocusLost = [this]()
         {
-        case 0:
-            return "Integer";
-        case 1:
-            return "10^-2";
-        case 2:
-            return "10^-4";
+            if (underlyingEditor->isVisible())
+                commitFromEditor();
+        };
+    }
+
+    juce::Typeface::Ptr typeface()
+    {
+        return parent->sixSinesEditor ? parent->sixSinesEditor->typefaceFromResources(
+                                            "Anonymous_Pro/AnonymousPro-Regular.ttf")
+                                      : nullptr;
+    }
+
+    static constexpr float ratioKerning = 0.03f;
+
+    juce::Font paintFont()
+    {
+        if (auto tf = typeface())
+        {
+            auto f = juce::Font(juce::FontOptions{tf}.withHeight(fittedHeight));
+            f.setExtraKerningFactor(ratioKerning);
+            return f;
         }
-        return "";
+        return getFont(Styles::labelfont);
     }
 
-    float getValue() const override
+    int slotFromX(int x) const
     {
-        int t1, t2, t3;
-        parent->readDigits(t1, t2, t3);
-        if (slot == 0)
-            return static_cast<float>(t1);
-        if (slot == 1)
-            return static_cast<float>(t2);
-        return static_cast<float>(t3);
+        if (slotRects[0].getWidth() == 0)
+            return -1;
+        if (x < slotRects[0].getX() || x >= slotRects[numSlots - 1].getRight())
+            return -1;
+        for (int i = numSlots - 1; i >= 0; --i)
+            if (x >= slotRects[i].getX())
+                return i;
+        return -1;
     }
 
-    void setValueFromGUI(const float &f) override
+    void resized() override
     {
-        int t1, t2, t3;
-        parent->readDigits(t1, t2, t3);
-        int v = static_cast<int>(std::round(f));
-        if (slot == 0)
+        assert(parent->sixSinesEditor);
+        DraggableTextEditableValue::resized();
+        auto b = getLocalBounds();
+        int slotW = b.getWidth() / numSlots;
+        for (int i = 0; i < numSlots; ++i)
+            slotRects[i] =
+                juce::Rectangle<int>(b.getX() + i * slotW, b.getY(), slotW, b.getHeight());
+        slotRects[numSlots - 1].setRight(b.getRight()); // soak up rounding
+
+        // Pick the largest font height that lets 9 monospace chars fit the
+        // editor width — equivalently, 3 chars in a slot. Measure at a
+        // reference height and scale; clamp by component height too.
+        if (auto tf = typeface())
         {
+            constexpr float refH = 20.f;
+            auto refFont = juce::Font(juce::FontOptions{tf}.withHeight(refH));
+            refFont.setExtraKerningFactor(ratioKerning);
+            auto refW = SST_STRING_WIDTH_FLOAT(refFont, "000000000");
+            if (refW > 0)
+                fittedHeight = std::min(refH * b.getWidth() / refW, (float)b.getHeight());
+        }
+
+        // Cache the painted font + the centered-text width so paint() doesn't
+        // rebuild a juce::Font and run a glyph layout every frame.
+        cachedFont = paintFont();
+        cachedTextW = static_cast<int>(std::ceil(SST_STRING_WIDTH_FLOAT(cachedFont, "000000000")));
+    }
+
+    // The first SegmentedRatioEditor::resized() runs before the stylesheet is
+    // plumbed, so getFont() falls back to a tiny placeholder and our slot rects
+    // collapse. Re-run layout (and bubble up so the parent re-aligns jogs)
+    // every time the style becomes valid.
+    void onStyleChanged() override
+    {
+        DraggableTextEditableValue::onStyleChanged();
+        resized();
+        if (parent)
+            parent->resized();
+    }
+
+    void paint(juce::Graphics &g) override
+    {
+        assert(parent->sixSinesEditor);
+        g.setColour(getColour(Styles::background));
+        if (isHovered)
+            g.setColour(getColour(Styles::background_hover));
+        g.fillRoundedRectangle(getLocalBounds().toFloat(), 3.f);
+
+        if (underlyingEditor->isVisible())
+            return;
+
+        // hover/drag highlight on the active segment: 2px-radius filled rect
+        int hl = activeSlot >= 0 ? activeSlot : hoverSlot;
+        if (hl >= 0)
+        {
+            g.setColour(getColour(Styles::value).withAlpha(0.3f));
+            g.fillRoundedRectangle(slotRects[hl].toFloat(), 2.f);
+        }
+
+        int t1, t2, t3;
+        parent->readDigits(t1, t2, t3);
+
+        g.setFont(cachedFont);
+        g.setColour(isEnabled() ? getColour(Styles::value)
+                                : getColour(Styles::value).withAlpha(0.5f));
+
+        // Single 9-char monospace string spanning all three slots — drops the
+        // micro-gaps that come from drawing each segment in its own rect.
+        // Justification::centred measures the rendered string width and
+        // centers — leading/trailing spaces in monospace can render slightly
+        // narrower than digits, which shifts the decimal point as the integer
+        // changes width (e.g. "1" → "-1"). Use a fixed-width target rect sized
+        // to the 9-digit reference string and draw centredLeft so the column
+        // positions stay locked across values.
+        char buf[16];
+        std::snprintf(buf, sizeof buf, "%3d.%02d%02d ", t1, t2, t3);
+        auto fullRect = juce::Rectangle<int>(slotRects[0].getX(), slotRects[0].getY(),
+                                             slotRects[2].getRight() - slotRects[0].getX(),
+                                             slotRects[0].getHeight());
+        auto target = fullRect.withSizeKeepingCentre(cachedTextW, fullRect.getHeight());
+        g.drawText(buf, target, juce::Justification::centredLeft);
+    }
+
+    void mouseDown(const juce::MouseEvent &e) override
+    {
+        DraggableTextEditableValue::mouseDown(e);
+        if (e.mods.isPopupMenu())
+            return;
+        activeSlot = slotFromX(e.x);
+        parent->readDigits(t1Down, t2Down, t3Down);
+    }
+
+    void mouseMove(const juce::MouseEvent &e) override
+    {
+        DraggableTextEditableValue::mouseMove(e);
+        int s = slotFromX(e.x);
+        if (s != hoverSlot)
+        {
+            hoverSlot = s;
+            repaint();
+        }
+    }
+
+    void mouseEnter(const juce::MouseEvent &e) override
+    {
+        DraggableTextEditableValue::mouseEnter(e);
+        hoverSlot = slotFromX(e.x);
+        repaint();
+    }
+
+    void mouseExit(const juce::MouseEvent &e) override
+    {
+        DraggableTextEditableValue::mouseExit(e);
+        hoverSlot = -1;
+        repaint();
+    }
+
+    void mouseDrag(const juce::MouseEvent &e) override
+    {
+        if (e.mods.isPopupMenu())
+            return;
+        auto d = -e.getDistanceFromDragStartY();
+        if (!everDragged)
+        {
+            parent->inOuterGesture = true;
+            onBeginEdit();
+        }
+        everDragged = true;
+
+        float fineFactor = e.mods.isShiftDown() ? 0.25f : 1.0f;
+        float pxPerUnit = (activeSlot == 0 ? 8.0f : 4.0f) / fineFactor;
+        int delta = static_cast<int>(std::round(d / pxPerUnit));
+
+        int t1 = t1Down, t2 = t2Down, t3 = t3Down;
+        if (activeSlot == 0)
+        {
+            int v = t1 + delta;
             // Skip 0 in the same direction as the jog buttons: dragging from a
-            // positive value down past 0 lands on -1; dragging a negative value
-            // up past 0 lands on +1. Without this, dragging through zero stalls
-            // because v=0 gets rebounded to the previous side.
+            // positive value down past 0 lands on -1; up past 0 lands on +1.
             if (v == 0)
-                v = (t1 > 0) ? -1 : 1;
-            t1 = std::clamp(v, static_cast<int>(getMin()), static_cast<int>(getMax()));
+                v = (delta > 0) ? 1 : -1;
+            t1 = std::clamp(v, parent->t1Min(), parent->t1Max());
         }
-        else if (slot == 1)
+        else if (activeSlot == 1)
+            t2 = std::clamp(t2 + delta, 0, 99);
+        else
+            t3 = std::clamp(t3 + delta, 0, 99);
+
+        parent->writeDigits(t1, t2, t3);
+        repaint();
+    }
+
+    void mouseUp(const juce::MouseEvent &e) override
+    {
+        if (e.mods.isPopupMenu())
+            return;
+        if (everDragged)
         {
-            t2 = std::clamp(v, 0, 99);
+            onEndEdit();
+            parent->inOuterGesture = false;
         }
         else
         {
-            t3 = std::clamp(v, 0, 99);
+            activateRatioEditor();
         }
-        parent->writeDigits(t1, t2, t3);
+        everDragged = false;
+        // Clear the drag highlight and re-evaluate hover from the release
+        // position; if the user released outside the component, mouseExit may
+        // not fire after the drag, so resync explicitly here.
+        activeSlot = -1;
+        hoverSlot = getLocalBounds().contains(e.getPosition()) ? slotFromX(e.x) : -1;
+        repaint();
     }
 
-    void setValueFromModel(const float &) override {}
+    void mouseDoubleClick(const juce::MouseEvent &) override { activateRatioEditor(); }
 
-    float getDefaultValue() const override
+    void activateRatioEditor()
     {
-        if (slot == 0)
-            return 1.f;
-        return 0.f;
+        // Pre-fill with the same string the underlying source produces, so a
+        // round-trip through the typein is value-preserving. PatchContinuous
+        // formats fractional ratios as "1/N" (e.g. "1/4"); the segmented
+        // editor displays those as "-N" (e.g. "-4"), so rewrite the prefix
+        // here for visual consistency. setValueAsString in basic-blocks
+        // accepts both forms, so the round-trip still works.
+        auto s = continuous()->getValueAsStringWithoutUnits();
+        if (s.rfind("1/", 0) == 0)
+            s = "-" + s.substr(2);
+        underlyingEditor->setText(s);
+        underlyingEditor->setVisible(true);
+        underlyingEditor->selectAll();
+        underlyingEditor->grabKeyboardFocus();
     }
 
-    float getMin() const override
+    void commitFromEditor()
     {
-        if (slot == 0)
-        {
-            auto c = parent->continuous();
-            if (!c)
-                return -64.f;
-            auto minLog = c->getMin();
-            float mn = -1.f;
-            if (minLog < 0)
-                mn = -std::floor(std::pow(2.0, -minLog));
-            return mn;
-        }
-        return 0.f;
-    }
-
-    float getMax() const override
-    {
-        if (slot == 0)
-        {
-            auto c = parent->continuous();
-            if (!c)
-                return 64.f;
-            auto maxLog = c->getMax();
-            float mx = 1.f;
-            if (maxLog > 0)
-                mx = std::floor(std::pow(2.0, maxLog));
-            return mx;
-        }
-        if (slot == 1)
-            return 99.f;
-        return 99.f;
-    }
-
-    std::string getValueAsStringFor(float f) const override
-    {
-        int v = static_cast<int>(std::round(f));
-        if (slot == 0)
-            return std::to_string(v);
-        char buf[8];
-        std::snprintf(buf, sizeof(buf), "%02d", v);
-        return std::string(buf);
-    }
-
-    void setValueAsString(const std::string &s) override
-    {
-        if (s.empty())
-        {
-            setValueFromGUI(getDefaultValue());
+        if (!underlyingEditor->isVisible())
             return;
-        }
-        try
-        {
-            int v = std::stoi(s);
-            setValueFromGUI(static_cast<float>(v));
-        }
-        catch (...)
-        {
-            setValueFromGUI(getDefaultValue());
-        }
+        auto text = underlyingEditor->getText().toStdString();
+        underlyingEditor->setVisible(false);
+
+        // Route through the bound source's own parser (PatchContinuous
+        // handles the ratio→log2 conversion). The begin/end wrapper has to
+        // surround the SET — clap-helpers warns when a CLAP_EVENT_PARAM_VALUE
+        // arrives without an open gesture marker. setValueAsString may silently
+        // no-op on a parse failure, in which case begin+end fan out to an
+        // empty gesture pair; the engine tolerates that, but tolerates a
+        // stray SET (begin-after-set) far less.
+        onBeginEdit();
+        if (text.empty())
+            continuous()->setValueFromGUI(continuous()->getDefaultValue());
+        else
+            continuous()->setValueAsString(text);
+        onEndEdit();
+        parent->refreshFromExternal();
     }
 };
 
@@ -220,24 +379,45 @@ void SegmentedRatioEditor::readDigits(int &t1, int &t2, int &t3) const
     digitsValid = true;
 }
 
+int SegmentedRatioEditor::t1Min() const
+{
+    auto c = const_cast<SegmentedRatioEditor *>(this)->continuous();
+    if (!c)
+        return -64;
+    auto minLog = c->getMin();
+    if (minLog < 0)
+        return -static_cast<int>(std::floor(std::pow(2.0, -minLog)));
+    return -1;
+}
+
+int SegmentedRatioEditor::t1Max() const
+{
+    auto c = const_cast<SegmentedRatioEditor *>(this)->continuous();
+    if (!c)
+        return 64;
+    auto maxLog = c->getMax();
+    if (maxLog > 0)
+        return static_cast<int>(std::floor(std::pow(2.0, maxLog)));
+    return 1;
+}
+
 void SegmentedRatioEditor::writeDigits(int t1, int t2, int t3)
 {
     auto c = continuous();
     if (!c)
         return;
 
-    // at the t1 extremes, t2/t3 must be 0 to stay within param min/max
-    int t1Min = static_cast<int>(slotSources[0]->getMin());
-    int t1Max = static_cast<int>(slotSources[0]->getMax());
-    if (t1 <= t1Min)
+    int mn = t1Min();
+    int mx = t1Max();
+    if (t1 <= mn)
     {
-        t1 = t1Min;
+        t1 = mn;
         t2 = 0;
         t3 = 0;
     }
-    else if (t1 >= t1Max)
+    else if (t1 >= mx)
     {
-        t1 = t1Max;
+        t1 = mx;
         t2 = 0;
         t3 = 0;
     }
@@ -249,7 +429,7 @@ void SegmentedRatioEditor::writeDigits(int t1, int t2, int t3)
     auto v = recompose(t1, t2, t3);
     if (inOuterGesture)
     {
-        // a slot widget already opened the gesture (drag); just set the value
+        // a drag gesture is already open; just set the value
         c->setValueFromGUI(v);
     }
     else
@@ -259,9 +439,8 @@ void SegmentedRatioEditor::writeDigits(int t1, int t2, int t3)
         c->setValueFromGUI(v);
         onEndEdit();
     }
-    for (auto &e : slotEditors)
-        if (e)
-            e->repaint();
+    if (editor)
+        editor->repaint();
     repaint();
 }
 
@@ -290,8 +469,9 @@ void SegmentedRatioEditor::jogSlot(int slot, bool up)
     writeDigits(t1, t2, t3);
 }
 
-void SegmentedRatioEditor::finalizeSetup()
+void SegmentedRatioEditor::finalizeSetup(SixSinesEditor &e)
 {
+    sixSinesEditor = &e;
     // seed cached digits from the current float so the UI starts coherent
     digitsValid = false;
     if (auto c = continuous())
@@ -300,37 +480,27 @@ void SegmentedRatioEditor::finalizeSetup()
         digitsValid = true;
     }
 
-    if (!slotSources[0])
+    if (!editor)
     {
+        editor = std::make_unique<RatioDTE>(this);
+        // Bind the inner editor to the same Continuous as the parent so
+        // mouseDown/mouseDrag/setValueAsString go through the canonical source.
+        // Side effect: the source ends up with two GUI data listeners (parent
+        // + child), so external writes fire dataChanged() on both — i.e. two
+        // repaints. Cheap, but worth knowing if you ever debug a redraw loop.
+        if (auto c = continuous())
+            editor->setSource(c);
+        editor->onPopupMenu = [this](const juce::ModifierKeys &m)
+        {
+            if (onPopupMenu)
+                onPopupMenu(m);
+        };
+        editor->onBeginEdit = [this]() { onBeginEdit(); };
+        editor->onEndEdit = [this]() { onEndEdit(); };
+        addAndMakeVisible(*editor);
+
         for (int i = 0; i < numSlots; ++i)
         {
-            slotSources[i] = std::make_unique<DigitSource>(this, i);
-
-            slotEditors[i] = std::make_unique<jcmp::DraggableTextEditableValue>();
-            slotEditors[i]->setSource(slotSources[i].get());
-            // Right-click on a slot routes to the parent's popup (the same one
-            // createComponent wired for the segmented editor as a whole), so the
-            // user gets the standard param menu wherever they click.
-            slotEditors[i]->onPopupMenu = [this](const juce::ModifierKeys &m)
-            {
-                if (onPopupMenu)
-                    onPopupMenu(m);
-            };
-            // Mark the outer gesture open BEFORE forwarding BEGIN, and clear it
-            // AFTER forwarding END, so writeDigits can suppress its inner pair
-            // for any sets that arrive between them (i.e. drag ticks).
-            slotEditors[i]->onBeginEdit = [this]()
-            {
-                inOuterGesture = true;
-                onBeginEdit();
-            };
-            slotEditors[i]->onEndEdit = [this]()
-            {
-                onEndEdit();
-                inOuterGesture = false;
-            };
-            addAndMakeVisible(*slotEditors[i]);
-
             upButtons[i] = std::make_unique<jcmp::GlyphButton>(jcmp::GlyphPainter::JOG_UP);
             upButtons[i]->setOnCallback([this, i]() { jogSlot(i, true); });
             upButtons[i]->setLongHoldRepeats(true, 500, 100);
@@ -348,26 +518,28 @@ void SegmentedRatioEditor::finalizeSetup()
 
 void SegmentedRatioEditor::resized()
 {
-    if (!slotEditors[0])
+    if (!editor)
         return;
     auto b = getLocalBounds();
-    auto cellW = b.getWidth() / numSlots;
     int jogH = 11;
+    auto top = b.removeFromTop(jogH);
+    auto bot = b.removeFromBottom(jogH);
+    editor->setBounds(b.reduced(1, 0)); // triggers editor->resized() to compute slotRects
     for (int i = 0; i < numSlots; ++i)
     {
-        auto cell = juce::Rectangle<int>(b.getX() + i * cellW, b.getY(), cellW, b.getHeight());
-        upButtons[i]->setBounds(cell.removeFromTop(jogH).reduced(1));
-        downButtons[i]->setBounds(cell.removeFromBottom(jogH).reduced(1));
-        slotEditors[i]->setBounds(cell.reduced(1, 0));
+        auto sr = editor->slotRects[i];
+        int x = sr.getX() + editor->getX();
+        int w = sr.getWidth();
+        upButtons[i]->setBounds(juce::Rectangle<int>(x, top.getY(), w, jogH).reduced(1));
+        downButtons[i]->setBounds(juce::Rectangle<int>(x, bot.getY(), w, jogH).reduced(1));
     }
 }
 
 void SegmentedRatioEditor::refreshFromExternal()
 {
     digitsValid = false;
-    for (auto &e : slotEditors)
-        if (e)
-            e->repaint();
+    if (editor)
+        editor->repaint();
     repaint();
 }
 

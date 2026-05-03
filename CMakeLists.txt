@@ -28,6 +28,11 @@ cmrc_add_resource_library(${PROJECT_NAME}-patches NAMESPACE sixsines_patches ${P
 file(GLOB THEMES "resources/factory_themes/*.sixtheme")
 cmrc_add_resource_library(${PROJECT_NAME}-themes NAMESPACE sixsines_themes ${THEMES})
 
+file(GLOB FONTS
+        "resources/fonts/Manrope/static/*.ttf"
+        "resources/fonts/Anonymous_Pro/*.ttf")
+cmrc_add_resource_library(${PROJECT_NAME}-fonts NAMESPACE sixsines_fonts ${FONTS})
+
 set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
 add_subdirectory(libs)
 
@@ -105,6 +110,7 @@ target_link_libraries(${PROJECT_NAME}-impl PUBLIC  # PW change to public since w
         juce::juce_dsp
         ${PROJECT_NAME}-patches
         ${PROJECT_NAME}-themes
+        ${PROJECT_NAME}-fonts
         samplerate
 )
 

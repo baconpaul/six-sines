@@ -21,10 +21,11 @@
 #include <sst/jucegui/components/ContinuousParamEditor.h>
 #include <sst/jucegui/components/DraggableTextEditableValue.h>
 #include <sst/jucegui/components/GlyphButton.h>
-#include <sst/jucegui/data/Continuous.h>
 
 namespace baconpaul::six_sines::ui
 {
+struct SixSinesEditor;
+
 struct SegmentedRatioEditor : sst::jucegui::components::ContinuousParamEditor
 {
     static constexpr int numSlots = 3;
@@ -46,14 +47,17 @@ struct SegmentedRatioEditor : sst::jucegui::components::ContinuousParamEditor
     void mouseUp(const juce::MouseEvent &) override {}
     void mouseDoubleClick(const juce::MouseEvent &) override {}
 
-    // invalidate cached digits and repaint slot widgets — call when the underlying
+    // invalidate cached digits and repaint the editor — call when the underlying
     // value changed (automation, preset load, knob edit). PatchContinuous doesn't
     // fan its data listeners on writes, so dataChanged() can't carry this for us
     // and the SourcePanel routes external updates through this method directly.
     void refreshFromExternal();
 
     // call after createComponent has set the source
-    void finalizeSetup();
+    void finalizeSetup(SixSinesEditor &e);
+
+    // SixSinesEditor used to look up cached typefaces (set by finalizeSetup).
+    SixSinesEditor *sixSinesEditor{nullptr};
 
     // decomposition: given underlying log2 value, get t1/t2/t3
     static void decompose(float val, int &t1, int &t2, int &t3);
@@ -63,24 +67,26 @@ struct SegmentedRatioEditor : sst::jucegui::components::ContinuousParamEditor
     // read the current digits — returns cached ints when the UI authored the
     // current float; otherwise decomposes from the float.
     void readDigits(int &t1, int &t2, int &t3) const;
-    // write digits back through the main source (with begin/end edit)
+    // write digits back through the main source (with begin/end edit when no
+    // outer gesture is open)
     void writeDigits(int t1, int t2, int t3);
 
     void jogSlot(int slot, bool up);
+
+    // t1's range derived from the bound continuous's min/max
+    int t1Min() const;
+    int t1Max() const;
 
     // cached digits — UI-owned representation that survives float roundtrip
     mutable int cachedT1{1}, cachedT2{0}, cachedT3{0};
     mutable bool digitsValid{false};
 
-    // Set by the slot widgets' begin/end-edit hooks while a drag gesture is open.
-    // While true, writeDigits skips its own BEGIN/END pair so we don't nest
-    // gestures within the slot widget's outer one.
+    // Set by the inner editor's drag start/end so writeDigits skips its own
+    // BEGIN/END pair while a drag gesture is open.
     bool inOuterGesture{false};
 
-    struct DigitSource;
-    std::array<std::unique_ptr<DigitSource>, numSlots> slotSources;
-    std::array<std::unique_ptr<sst::jucegui::components::DraggableTextEditableValue>, numSlots>
-        slotEditors;
+    struct RatioDTE;
+    std::unique_ptr<RatioDTE> editor;
     std::array<std::unique_ptr<sst::jucegui::components::GlyphButton>, numSlots> upButtons,
         downButtons;
 };
