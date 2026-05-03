@@ -422,10 +422,6 @@ void SegmentedRatioEditor::writeDigits(int t1, int t2, int t3)
         t3 = 0;
     }
 
-    cachedT1 = t1;
-    cachedT2 = t2;
-    cachedT3 = t3;
-    digitsValid = true;
     auto v = recompose(t1, t2, t3);
     if (inOuterGesture)
     {
@@ -439,6 +435,14 @@ void SegmentedRatioEditor::writeDigits(int t1, int t2, int t3)
         c->setValueFromGUI(v);
         onEndEdit();
     }
+    // Restore the cache after setValueFromGUI: the panel wires onGuiSetValue →
+    // refreshFromExternal, which invalidates digits. +1 and -1 both encode to
+    // log2(1)=0 in the float, so decompose can't tell them apart; the cache is
+    // the only thing that keeps the sign at that boundary.
+    cachedT1 = t1;
+    cachedT2 = t2;
+    cachedT3 = t3;
+    digitsValid = true;
     if (editor)
         editor->repaint();
     repaint();

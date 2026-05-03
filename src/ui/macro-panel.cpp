@@ -39,6 +39,15 @@ MacroPanel::MacroPanel(SixSinesEditor &e) : jcmp::NamedPanel("Macros"), HasEdito
         createComponent(editor, *this, mn[i].macroPower, power[i], powerD[i], i);
         power[i]->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
         power[i]->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
+        // The toggle's onBeginEdit calls beginEdit(i) → setSelectedIndex →
+        // setEnabledState before setValueFromGUI flips macroPower, so the sub-panel
+        // would latch the stale value. Re-run setEnabledState after the GUI write.
+        powerD[i]->onGuiSetValue = [this, i]()
+        {
+            if (editor.macroSubPanel && editor.macroSubPanel->isVisible() &&
+                editor.macroSubPanel->index == i)
+                editor.macroSubPanel->setEnabledState();
+        };
         addAndMakeVisible(*power[i]);
     }
 
