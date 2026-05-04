@@ -516,7 +516,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     addAndMakeVisible(*keyTrackTitle);
 
     createComponent(editor, *this, sn.keyTrack, keyTrack, keyTrackD);
-    keyTrack->setLabel("KeyTrak");
+    keyTrack->setLabel("Key Track");
     addAndMakeVisible(*keyTrack);
     traverse(keyTrack);
 
@@ -551,8 +551,8 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     tsposeButtonL->setText("Oct");
     addAndMakeVisible(*tsposeButtonL);
 
-    unisonBehaviorB = std::make_unique<jcmp::TextPushButton>();
-    unisonBehaviorB->setLabel("Unison");
+    unisonBehaviorB = std::make_unique<jcmp::MenuButton>();
+    unisonBehaviorB->setLabelAndTitle("Unison", "Unison");
     unisonBehaviorB->setOnCallback(
         [w = juce::Component::SafePointer(this)]()
         {

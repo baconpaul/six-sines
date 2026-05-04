@@ -76,7 +76,7 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::ToggleButton> keyTrackLow;
     std::unique_ptr<PatchDiscrete> keyTrackLowD;
 
-    std::unique_ptr<jcmp::TextPushButton> unisonBehaviorB;
+    std::unique_ptr<jcmp::MenuButton> unisonBehaviorB;
 
     std::unique_ptr<jcmp::LineSegment> extModeRuleLeft, extModeRuleRight;
     std::unique_ptr<jcmp::Label> extModeLabel;
