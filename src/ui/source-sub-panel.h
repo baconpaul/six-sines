@@ -98,7 +98,7 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::JogUpDownButton> resonantSweepDepth;
     std::unique_ptr<PatchDiscrete> resonantSweepDepthD;
     std::unique_ptr<jcmp::Label> resonantSweepDepthL;
-    std::unique_ptr<jcmp::Label> resonantSweepPlotPlaceholderL;
+    std::unique_ptr<juce::Component> resSweepPainter;
 
     void setExtendedModeVisibility();
 

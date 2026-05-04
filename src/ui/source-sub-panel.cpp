@@ -22,6 +22,7 @@
 #include "ui-constants.h"
 #include "dsp/sintable.h" // for drawing
 #include "dsp/remap_functions.h"
+#include "dsp/resonant_window.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -222,6 +223,184 @@ struct PDWavPainter : juce::Component
     }
 };
 
+/*
+ * ResSweepPlotter shows the resonant-sweep output as the product of a window function
+ * and an inner sine that runs at k(m) times the fundamental. Three overlaid traces:
+ *   - faint underlying inner waveform (no window applied)
+ *   - dotted upper-envelope window
+ *   - the windowed product
+ * Two fundamental cycles are drawn so non-integer k factors and their hard restart
+ * at the wrap are visible.
+ */
+struct ResSweepPlotter : juce::Component
+{
+    const Param &wf, &ph, &mp, &winShape, &freqDepth;
+    SixSinesEditor &editor;
+    SinTable st, stWindow;
+
+    static constexpr int numCycles{2};
+
+    ResSweepPlotter(const Param &w, const Param &p, const Param &mParam, const Param &winSh,
+                    const Param &fDep, SixSinesEditor &e)
+        : wf(w), ph(p), mp(mParam), winShape(winSh), freqDepth(fDep), editor(e)
+    {
+    }
+
+    float kScaleVal() const
+    {
+        using RFD = Patch::SourceNode::ResonantSweepFrequencyDepth;
+        auto rfd = static_cast<RFD>(static_cast<uint32_t>(std::round(freqDepth.value)));
+        switch (rfd)
+        {
+        case RFD::TWO:
+            return 2.0f;
+        case RFD::FOUR:
+            return 4.0f;
+        case RFD::TEN:
+            return 10.0f;
+        }
+        return 4.0f;
+    }
+
+    void syncWindowTable()
+    {
+        using RW = Patch::SourceNode::ResonantSweepWindow;
+        auto rw = static_cast<RW>(static_cast<uint32_t>(std::round(winShape.value)));
+        switch (rw)
+        {
+        case RW::BLACKMAN_HARRIS:
+            stWindow.setWaveForm(SinTable::BLACKMAN_HARRIS_WINDOW);
+            break;
+        case RW::TUKEY:
+            stWindow.setWaveForm(SinTable::TUKEY_WINDOW);
+            break;
+        default:
+            stWindow.setWaveForm(SinTable::HANN_WINDOW);
+            break;
+        }
+    }
+
+    float windowAt(Patch::SourceNode::ResonantSweepWindow rw, uint32_t wph) const
+    {
+        using RW = Patch::SourceNode::ResonantSweepWindow;
+        switch (rw)
+        {
+        case RW::SAW:
+            return resonant_window::windowSaw(wph);
+        case RW::TRIANGLE:
+            return resonant_window::windowTriangle(wph);
+        case RW::TRAPEZOID:
+            return resonant_window::windowTrapezoid(wph);
+        case RW::FULLTRAP:
+            return resonant_window::windowFullTrapezoid(wph);
+        case RW::HANN:
+        case RW::BLACKMAN_HARRIS:
+        case RW::TUKEY:
+            return stWindow.at(wph);
+        }
+        return resonant_window::windowSaw(wph);
+    }
+
+    void paint(juce::Graphics &g) override
+    {
+        auto labelCol = editor.style()->getColour(jcmp::base_styles::BaseLabel::styleClass,
+                                                  jcmp::base_styles::BaseLabel::labelcolor);
+        auto gridCol = labelCol.withAlpha(0.3f);
+        auto wavCol = editor.style()->getColour(jcmp::base_styles::ValueBearing::styleClass,
+                                                jcmp::base_styles::ValueBearing::value);
+        auto bg = editor.style()->getColour(jcmp::base_styles::PushButton::styleClass,
+                                            jcmp::base_styles::PushButton::fill);
+        g.fillAll(bg);
+        g.setColour(gridCol);
+        g.drawRect(getLocalBounds(), 1.f);
+
+        auto wfVal = (SinTable::WaveForm)std::round(wf.value);
+        if (wfVal == SinTable::AUDIO_IN)
+        {
+            g.setColour(labelCol);
+            g.setFont(juce::Font(juce::FontOptions{}.withHeight(20.f)));
+            g.drawFittedText("Audio In", getLocalBounds(), juce::Justification::centred, 1);
+            return;
+        }
+
+        // centre line + axis tick marks: 10px every quarter cycle, 20px at full cycles.
+        g.setColour(gridCol);
+        const int midY = getHeight() / 2;
+        g.drawHorizontalLine(midY, 0, getWidth());
+        const int totalQuarters = numCycles * 4;
+        for (int q = 1; q < totalQuarters; ++q)
+        {
+            int x = static_cast<int>(static_cast<float>(q) / totalQuarters * getWidth());
+            int halfTick = (q % 4 == 0) ? 10 : 5; // 20px / 10px total
+            g.drawVerticalLine(x, midY - halfTick, midY + halfTick);
+        }
+
+        st.setWaveForm(wfVal);
+        syncWindowTable();
+        using RW = Patch::SourceNode::ResonantSweepWindow;
+        const auto rw = static_cast<RW>(static_cast<uint32_t>(std::round(winShape.value)));
+        const float kFactor = kScaleVal() * mp.value + 1.0f;
+
+        const uint32_t phStart = static_cast<uint32_t>((1u << 26) * ph.value) & phase::phaseMask;
+
+        const int nPixels = getWidth();
+        const float h = static_cast<float>(getHeight() - 2);
+        const float ho = 1.f;
+        auto toY = [h, ho](float v) { return (1.f - (v + 1.f) * 0.5f) * h + ho; };
+
+        juce::Path pInner, pWindow, pProduct;
+
+        for (int i = 0; i < nPixels; ++i)
+        {
+            float t =
+                static_cast<float>(i) / std::max(1, nPixels - 1) * static_cast<float>(numCycles);
+            float wphNorm = t - std::floor(t);
+            uint32_t wph =
+                (static_cast<uint32_t>(wphNorm * phase::phaseMaxF) + phStart) & phase::phaseMask;
+
+            float window = windowAt(rw, wph);
+            uint32_t kmph = static_cast<uint32_t>(static_cast<float>(wph) * kFactor);
+            float inner = st.at(kmph);
+            float product = window * inner;
+
+            float x = static_cast<float>(i);
+            float yInner = toY(inner * 0.98f);
+            float yWindow = toY(window * 0.98f);
+            float yProduct = toY(product * 0.98f);
+
+            if (i == 0)
+            {
+                pInner.startNewSubPath(x, yInner);
+                pWindow.startNewSubPath(x, yWindow);
+                pProduct.startNewSubPath(x, yProduct);
+            }
+            else
+            {
+                pInner.lineTo(x, yInner);
+                pWindow.lineTo(x, yWindow);
+                pProduct.lineTo(x, yProduct);
+            }
+        }
+
+        // 1) underlying inner waveform — faint solid line
+        g.setColour(wavCol.withAlpha(0.2f));
+        g.strokePath(pInner, juce::PathStrokeType(1.0f));
+
+        // 2) window — dotted upper envelope
+        {
+            juce::Path dashed;
+            const float dashLengths[] = {3.f, 3.f};
+            juce::PathStrokeType(1.0f).createDashedStroke(dashed, pWindow, dashLengths, 2);
+            g.setColour(wavCol.withAlpha(0.3f));
+            g.fillPath(dashed);
+        }
+
+        // 3) windowed product — full-strength
+        g.setColour(wavCol);
+        g.strokePath(pProduct, juce::PathStrokeType(1.5f));
+    }
+};
+
 void SourceSubPanel::setSelectedIndex(size_t idx)
 {
     index = idx;
@@ -302,6 +481,8 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
         wavPainter->repaint();
         if (pdWavPainter)
             pdWavPainter->repaint();
+        if (resSweepPainter)
+            resSweepPainter->repaint();
         wavButton->repaint();
         setEnabledState();
     };
@@ -322,6 +503,8 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
         w->wavPainter->repaint();
         if (w->pdWavPainter)
             w->pdWavPainter->repaint();
+        if (w->resSweepPainter)
+            w->resSweepPainter->repaint();
     };
 
     startingPhaseL = std::make_unique<jcmp::Label>();
@@ -449,20 +632,29 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     resonantSweepDepthL->setText("Depth");
     addChildComponent(*resonantSweepDepthL);
 
-    resonantSweepPlotPlaceholderL = std::make_unique<jcmp::Label>();
-    resonantSweepPlotPlaceholderL->setText("plot coming soon");
-    addChildComponent(*resonantSweepPlotPlaceholderL);
+    resSweepPainter = std::make_unique<ResSweepPlotter>(
+        sn.waveForm, sn.startingPhase, sn.extendedModeM, sn.resonantSweepWindowShape,
+        sn.resonantSweepFrequencyDepth, editor);
+    addChildComponent(*resSweepPainter);
 
-    // Live-repaint the PD painter when any input it draws from changes.
-    auto repaintPD = [w = juce::Component::SafePointer(this)]()
+    // Live-repaint both extended-mode painters when any input either reads from changes.
+    auto repaintExt = [w = juce::Component::SafePointer(this)]()
     {
-        if (w && w->pdWavPainter)
+        if (!w)
+            return;
+        if (w->pdWavPainter)
             w->pdWavPainter->repaint();
+        if (w->resSweepPainter)
+            w->resSweepPainter->repaint();
     };
-    extMD->onGuiSetValue = repaintPD;
-    phaseMapShapeD->onGuiSetValue = repaintPD;
-    editor.componentRefreshByID[sn.extendedModeM.meta.id] = repaintPD;
-    editor.componentRefreshByID[sn.phaseMapModeShape.meta.id] = repaintPD;
+    extMD->onGuiSetValue = repaintExt;
+    phaseMapShapeD->onGuiSetValue = repaintExt;
+    resonantWindowShapeD->onGuiSetValue = repaintExt;
+    resonantSweepDepthD->onGuiSetValue = repaintExt;
+    editor.componentRefreshByID[sn.extendedModeM.meta.id] = repaintExt;
+    editor.componentRefreshByID[sn.phaseMapModeShape.meta.id] = repaintExt;
+    editor.componentRefreshByID[sn.resonantSweepWindowShape.meta.id] = repaintExt;
+    editor.componentRefreshByID[sn.resonantSweepFrequencyDepth.meta.id] = repaintExt;
 
     setExtendedModeVisibility();
 
@@ -626,14 +818,13 @@ void SourceSubPanel::resized()
     }
     else if (em == EM::RESONANT_SWEEP)
     {
-        // Layout:
-        //   [ window-shape multi (tall) ] [ depth jog ] [ M ] [ Env->M ] [ LFO->M ]
-        //   [               "plot coming soon" placeholder spanning full width                ]
-        // The window multi has 7 entries so it spans two rows of body height; the
-        // right-side cells are vertically centered in that taller block.
+        // Layout mirrors PHASE_REMAP:
+        //   [ window-multi ] [ res-sweep plotter spans                              ]
+        //   [ window-multi ] [ depth ] [ M ] [ Env->M ] [ LFO->M ]
+        constexpr int plotHeight = painterH - 15;
         constexpr int cellW = uicKnobSize;
-        constexpr int rowH = uicLabeledKnobHeight;
-        constexpr int bodyH = 2 * rowH + uicMargin;
+        constexpr int row2H = uicLabeledKnobHeight;
+        constexpr int bodyH = plotHeight + uicMargin + row2H;
         auto bodyRect = juce::Rectangle<int>(depx, bodyY, p.getWidth(), bodyH);
 
         auto knobCell = [](auto &k, auto &l)
@@ -649,7 +840,14 @@ void SourceSubPanel::resized()
                           .withHeight(bodyRect.getHeight())
                           .withAutoGap(uicMargin * 2);
 
-        bodyLo.add(jlo::Component(*resonantWindowShape).withWidth(2 * cellW).withHeight(bodyH));
+        // Left: multiswitch spans full body height
+        auto leftCol = jlo::VList().withWidth(2 * cellW);
+        leftCol.add(jlo::Component(*resonantWindowShape).withHeight(bodyH));
+        bodyLo.add(leftCol);
+
+        // Right: plotter on top, then depth + 3 knobs
+        auto rightCol = jlo::VList().withAutoGap(uicMargin);
+        rightCol.add(jlo::Component(*resSweepPainter).withHeight(plotHeight));
 
         constexpr int depthColW = (cellW * 3) / 2;
         auto depthInner = jlo::VList().withAutoGap(uicLabelGap);
@@ -657,19 +855,17 @@ void SourceSubPanel::resized()
         depthInner.add(jlo::Component(*resonantSweepDepth).withHeight(uicLabelHeight));
         auto depthCol = jlo::VList().withWidth(depthColW);
         depthCol.add(depthInner.centerInParent());
-        bodyLo.add(depthCol);
 
-        bodyLo.add(knobCell(extM, extML));
-        bodyLo.add(knobCell(envToExtM, envToExtML));
-        bodyLo.add(knobCell(lfoToExtM, lfoToExtML));
+        auto knobRow = jlo::HList().withHeight(row2H).withAutoGap(uicMargin);
+        knobRow.add(depthCol);
+        knobRow.add(knobCell(extM, extML));
+        knobRow.add(knobCell(envToExtM, envToExtML));
+        knobRow.add(knobCell(lfoToExtM, lfoToExtML));
+        rightCol.addGap(uicMargin);
+        rightCol.add(knobRow);
+
+        bodyLo.add(rightCol.expandToFill());
         bodyLo.doLayout();
-
-        // "plot coming soon" placeholder — sits just under the body. Use a small
-        // height so the label hugs the knob row above instead of floating low.
-        constexpr int placeholderH = uicLabelHeight * 2;
-        auto placeholderRect = juce::Rectangle<int>(depx, bodyRect.getBottom() - 10 * uicMargin,
-                                                    p.getWidth(), placeholderH);
-        resonantSweepPlotPlaceholderL->setBounds(placeholderRect);
     }
     else if (em == EM::REDACTED_1)
     {
@@ -703,7 +899,8 @@ void SourceSubPanel::setExtendedModeVisibility()
     resonantWindowShape->setVisible(isResonantSweep);
     resonantSweepDepth->setVisible(isResonantSweep);
     resonantSweepDepthL->setVisible(isResonantSweep);
-    resonantSweepPlotPlaceholderL->setVisible(isResonantSweep);
+    if (resSweepPainter)
+        resSweepPainter->setVisible(isResonantSweep);
 }
 
 void SourceSubPanel::setEnabledState()
