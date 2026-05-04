@@ -2,10 +2,6 @@
 
 I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatible. But expanded. Here's my rough list
 
-## CZ-style PD features **UNDERWAY**
-
-- Implement phase remap **done**
-- Implement phase formant sweep + window style
 
 ## Upgrades to the Resampler, Final path, and Reconstruction
 
@@ -33,6 +29,11 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
   - windows ui open isn't right
   - jack on linux
 
+## CZ-style PD features **done**
+
+- Implement phase remap **done**
+- Implement phase formant sweep + window style **done**
+- 
 ## UI Ratio editor Upgrade **DONE**
 
 The ratio editor is a knob. That's clumsy. segmented control will be better.
