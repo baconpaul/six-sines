@@ -27,6 +27,7 @@
 #include "synth/mono_values.h"
 #include "synth/voice_values.h"
 #include "remap_functions.h"
+#include "resonant_window.h"
 
 namespace baconpaul::six_sines
 {
@@ -84,6 +85,28 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         lfoResetMod();
 
         st.setSampleRate(monoValues.sr.sampleRate);
+        stWindow.setSampleRate(monoValues.sr.sampleRate);
+        // Pick the table for the resonant-sweep window. BLACKMAN_HARRIS and TUKEY pull
+        // their own tables; everything else (closed-form windows + HANN) defaults to
+        // HANN so a mid-note shape change doesn't read a stale unrelated table — the
+        // closed-form arms in the inner loop don't read stWindow at all.
+        {
+            using RW = Patch::SourceNode::ResonantSweepWindow;
+            auto rw = static_cast<RW>(
+                static_cast<uint32_t>(std::round(sourceNode.resonantSweepWindowShape.value)));
+            switch (rw)
+            {
+            case RW::BLACKMAN_HARRIS:
+                stWindow.setWaveForm(SinTable::BLACKMAN_HARRIS_WINDOW);
+                break;
+            case RW::TUKEY:
+                stWindow.setWaveForm(SinTable::TUKEY_WINDOW);
+                break;
+            default:
+                stWindow.setWaveForm(SinTable::HANN_WINDOW);
+                break;
+            }
+        }
         firstTime = true;
         extendedMPrior = sourceNode.extendedModeM.value;
         // Configure the M/N lags only if the operator is actually using an extended mode
@@ -92,12 +115,12 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             using EM = Patch::SourceNode::ExtendedMode;
             auto em = static_cast<EM>(
                 static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
-            if (em == EM::PHASE_REMAP)
+            if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP)
             {
                 extendedLagM.setRateInMilliseconds(10, monoValues.sr.samplerate, blockSizeInv);
                 extendedLagM.snapTo(sourceNode.extendedModeM.value);
-                // N is unused in PHASE_REMAP — leave its lag uninitialized until a future
-                // mode that consumes N is added.
+                // N is unused in PHASE_REMAP / RESONANT_SWEEP — leave its lag uninitialized
+                // until a future mode that consumes N is added.
             }
         }
         zeroInputs();
@@ -168,7 +191,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         using EM = Patch::SourceNode::ExtendedMode;
         auto em =
             static_cast<EM>(static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
-        if (em == EM::PHASE_REMAP)
+        if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP)
             used = used || (sourceNode.lfoToExtendedModeM.value != 0);
 
         return used;
@@ -363,9 +386,60 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             break;
         }
         case EM::RESONANT_SWEEP:
-            // coming soon — falls through to the no-extension path for now
-            innerLoopImpl<EM::NONE>(onto, fbv, rf, dRF, phs);
+        {
+            using RW = Patch::SourceNode::ResonantSweepWindow;
+            using RFD = Patch::SourceNode::ResonantSweepFrequencyDepth;
+            auto rw = static_cast<RW>(
+                static_cast<uint32_t>(std::round(sourceNode.resonantSweepWindowShape.value)));
+            auto rfd = static_cast<RFD>(
+                static_cast<uint32_t>(std::round(sourceNode.resonantSweepFrequencyDepth.value)));
+            float kScale = 4.0f;
+            switch (rfd)
+            {
+            case RFD::TWO:
+                kScale = 2.0f;
+                break;
+            case RFD::FOUR:
+                kScale = 4.0f;
+                break;
+            case RFD::TEN:
+                kScale = 10.0f;
+                break;
+            }
+            // The PhaseMapShape template arg is unused on this branch; leave it at default.
+            switch (rw)
+            {
+            case RW::SAW:
+                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW, RW::SAW>(
+                    onto, fbv, rf, dRF, phs, kScale);
+                break;
+            case RW::TRIANGLE:
+                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::TRIANGLE>(onto, fbv, rf, dRF, phs, kScale);
+                break;
+            case RW::TRAPEZOID:
+                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::TRAPEZOID>(onto, fbv, rf, dRF, phs, kScale);
+                break;
+            case RW::FULLTRAP:
+                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::FULLTRAP>(onto, fbv, rf, dRF, phs, kScale);
+                break;
+            case RW::HANN:
+                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW, RW::HANN>(
+                    onto, fbv, rf, dRF, phs, kScale);
+                break;
+            case RW::BLACKMAN_HARRIS:
+                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::BLACKMAN_HARRIS>(onto, fbv, rf, dRF, phs, kScale);
+                break;
+            case RW::TUKEY:
+                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW, RW::TUKEY>(
+                    onto, fbv, rf, dRF, phs, kScale);
+                break;
+            }
             break;
+        }
         case EM::REDACTED_1:
             // coming soon — falls through to the no-extension path for now
             innerLoopImpl<EM::NONE>(onto, fbv, rf, dRF, phs);
@@ -373,13 +447,16 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         }
     }
 
-    template <Patch::SourceNode::ExtendedMode ET,
-              Patch::SourceNode::PhaseMapShape S = Patch::SourceNode::PhaseMapShape::SAW>
-    void innerLoopImpl(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs)
+    template <
+        Patch::SourceNode::ExtendedMode ET,
+        Patch::SourceNode::PhaseMapShape S = Patch::SourceNode::PhaseMapShape::SAW,
+        Patch::SourceNode::ResonantSweepWindow R = Patch::SourceNode::ResonantSweepWindow::SAW>
+    void innerLoopImpl(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs,
+                       float kScale = 1.0f)
     {
         using EM = Patch::SourceNode::ExtendedMode;
         float nextM{0.f}, dM{0.f};
-        if constexpr (ET == EM::PHASE_REMAP)
+        if constexpr (ET == EM::PHASE_REMAP || ET == EM::RESONANT_SWEEP)
         {
             // Raw target m for this block: patch value + external mod + env / lfo contributions.
             auto lfoFac = *lfoFacP;
@@ -412,6 +489,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
             auto ph = phs + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb);
 
+            float out;
             if constexpr (ET == EM::PHASE_REMAP)
             {
                 using PM = Patch::SourceNode::PhaseMapShape;
@@ -428,9 +506,35 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                 else if constexpr (S == PM::DOUBLE_SAW)
                     ph = remap::remapDoubleSaw(ph & phase::phaseMask, nextM);
                 nextM += dM;
+                out = st.at(ph);
             }
-
-            auto out = st.at(ph);
+            else if constexpr (ET == EM::RESONANT_SWEEP)
+            {
+                using RW = Patch::SourceNode::ResonantSweepWindow;
+                auto wph = ph & phase::phaseMask;
+                float window;
+                if constexpr (R == RW::TRIANGLE)
+                    window = resonant_window::windowTriangle(wph);
+                else if constexpr (R == RW::TRAPEZOID)
+                    window = resonant_window::windowTrapezoid(wph);
+                else if constexpr (R == RW::FULLTRAP)
+                    window = resonant_window::windowFullTrapezoid(wph);
+                else if constexpr (R == RW::HANN || R == RW::BLACKMAN_HARRIS || R == RW::TUKEY)
+                    window = stWindow.at(wph);
+                else // RW::SAW and any unhandled future value — keep `window` defined.
+                    window = resonant_window::windowSaw(wph);
+                // Inner phase runs at k(m)x the fundamental and natural-wraps at the
+                // fundamental boundary via uint32 multiplication (mod phaseMax).
+                // kScale is the patch-selected sweep depth (2 / 4 / 10).
+                auto kFactor = kScale * nextM + 1.0f;
+                uint32_t kmph = static_cast<uint32_t>(static_cast<float>(wph) * kFactor);
+                nextM += dM;
+                out = window * st.at(kmph);
+            }
+            else
+            {
+                out = st.at(ph);
+            }
 
             out = out * rmLevel[i];
             onto[i] = out;
@@ -506,6 +610,9 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     }
 
     SinTable st;
+    // Used by RESONANT_SWEEP for table-based windows (Hann / Blackman-Harris / Tukey).
+    // Independent of `st` so the operator's main waveform stays selectable freely.
+    SinTable stWindow;
     float fbVal[2]{0.f, 0.f};
 };
 } // namespace baconpaul::six_sines

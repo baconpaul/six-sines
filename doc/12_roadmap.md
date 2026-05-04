@@ -16,6 +16,7 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
   - Add a cytomic SVF at 16khz / root 2 resonance
   - ZOH decimate the signal to 32khz at upper rate
   - Do a bitheight redicution (round(f * (1<<b)) / (1<<b))
+  - Add an optional highpass at 5-15hz to kill DC
   - Downsample with strategy
 - Each of those steps except the first and last is optional.
 - basically all options to make it less 'clean' which all toggle at internal block
@@ -26,18 +27,16 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 - that crazy idea kisney and i chatted about
 - more t/k
 
-## UI Ratio editor Upgrade
-
-The ratio editor is a knob. That's clumsy. segmented control will be better. 
-Want modes - like segmented float, ratio as pair of ints, etc...
-Some of those modes like ratio as pair of ints requires extra streaming to store and retain
-Probably want a legacy mode of knob
-
 ## Infrastructure
 
 - Clap Wrapper Standalone upgrades
   - windows ui open isn't right
   - jack on linux
+
+## UI Ratio editor Upgrade **DONE**
+
+The ratio editor is a knob. That's clumsy. segmented control will be better.
+Want modes - like segmented float, 
 
 ## Visualization **DONE**
 

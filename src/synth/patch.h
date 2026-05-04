@@ -87,6 +87,8 @@ struct Patch : pats::PatchBase<Patch, Param>
     static constexpr uint64_t version_120b = 0x010202;
     // third chunk of 1.2.0: super macros
     static constexpr uint64_t version_120c = 0x010203;
+    // Fourth chunk of 1.2.0: resonant sweeps
+    static constexpr uint64_t version_120d = 0x010204;
 
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
     static md_t floatMd(uint64_t version = version_110)
@@ -531,6 +533,24 @@ struct Patch : pats::PatchBase<Patch, Param>
             DOUBLE_SAW = 5
         };
 
+        enum struct ResonantSweepWindow : uint32_t
+        {
+            SAW = 0,
+            TRIANGLE = 1,
+            TRAPEZOID = 2,
+            FULLTRAP = 3,
+            HANN = 4,
+            BLACKMAN_HARRIS = 5,
+            TUKEY = 6,
+        };
+
+        enum struct ResonantSweepFrequencyDepth : uint32_t
+        {
+            TWO = 0,
+            FOUR = 1,
+            TEN = 2,
+        };
+
         SourceNode(size_t idx)
             : ratio(floatMd()
                         .withRange(-5, 5)
@@ -757,7 +777,34 @@ struct Patch : pats::PatchBase<Patch, Param>
                                         {(int)PhaseMapShape::DOUBLE, "Double (CZ4)"},
                                         {(int)PhaseMapShape::SIN_TO_SQUARE, "Sin to Square"},
                                         {(int)PhaseMapShape::DOUBLE_SAW, "Sin to Saw"},
-                                    }))
+                                    })),
+              resonantSweepWindowShape(
+                  intMd(version_120d)
+                      .withRange(0, 6)
+                      .withDefault(0)
+                      .withID(id(183, idx))
+                      .withName(name(idx) + " Resonant Sweep Window")
+                      .withGroupName(name(idx))
+                      .withUnorderedMapFormatting({
+                          {(int)ResonantSweepWindow::SAW, "Saw"},
+                          {(int)ResonantSweepWindow::TRIANGLE, "Tri"},
+                          {(int)ResonantSweepWindow::TRAPEZOID, "1/2 Trap"},
+                          {(int)ResonantSweepWindow::FULLTRAP, "Full Trap"},
+                          {(int)ResonantSweepWindow::HANN, "Hann"},
+                          {(int)ResonantSweepWindow::BLACKMAN_HARRIS, "Blkmn/Harris"},
+                          {(int)ResonantSweepWindow::TUKEY, "Tukey"},
+                      })),
+              resonantSweepFrequencyDepth(intMd(version_120d)
+                                              .withRange(0, 2)
+                                              .withDefault(1)
+                                              .withID(id(184, idx))
+                                              .withName(name(idx) + " Sweep Depth")
+                                              .withGroupName(name(idx))
+                                              .withUnorderedMapFormatting({
+                                                  {(int)ResonantSweepFrequencyDepth::TWO, "2 oct"},
+                                                  {(int)ResonantSweepFrequencyDepth::FOUR, "4 oct"},
+                                                  {(int)ResonantSweepFrequencyDepth::TEN, "10 oct"},
+                                              }))
 
         {
             index = idx;
@@ -798,6 +845,8 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param lfoToExtendedModeM, lfoToExtendedModeN;
 
         Param phaseMapModeShape;
+        Param resonantSweepWindowShape;
+        Param resonantSweepFrequencyDepth;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -826,7 +875,9 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &envToExtendedModeN,
                                      &lfoToExtendedModeM,
                                      &lfoToExtendedModeN,
-                                     &phaseMapModeShape};
+                                     &phaseMapModeShape,
+                                     &resonantSweepWindowShape,
+                                     &resonantSweepFrequencyDepth};
             for (int i = 0; i < numModsPer; ++i)
                 res.push_back(&modtarget[i]);
             appendDAHDSRParams(res);

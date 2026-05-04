@@ -243,7 +243,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
         auto em = static_cast<EM>(static_cast<int>(
             std::round(w->editor.patchCopy.sourceNodes[w->index].extendedModeMode.value)));
         if (tid == TID::EXTEND_M)
-            return em == EM::PHASE_REMAP;
+            return em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP;
         if (tid == TID::EXTEND_N)
             return false;
         return true;
@@ -436,6 +436,23 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
                                                   sn.phaseMapModeShape, editor);
     addChildComponent(*pdWavPainter);
 
+    createComponent(editor, *this, sn.resonantSweepWindowShape, resonantWindowShape,
+                    resonantWindowShapeD);
+    addChildComponent(*resonantWindowShape);
+    traverse(resonantWindowShape);
+
+    createComponent(editor, *this, sn.resonantSweepFrequencyDepth, resonantSweepDepth,
+                    resonantSweepDepthD);
+    addChildComponent(*resonantSweepDepth);
+    traverse(resonantSweepDepth);
+    resonantSweepDepthL = std::make_unique<jcmp::Label>();
+    resonantSweepDepthL->setText("Depth");
+    addChildComponent(*resonantSweepDepthL);
+
+    resonantSweepPlotPlaceholderL = std::make_unique<jcmp::Label>();
+    resonantSweepPlotPlaceholderL->setText("plot coming soon");
+    addChildComponent(*resonantSweepPlotPlaceholderL);
+
     // Live-repaint the PD painter when any input it draws from changes.
     auto repaintPD = [w = juce::Component::SafePointer(this)]()
     {
@@ -607,7 +624,54 @@ void SourceSubPanel::resized()
         bodyLo.add(rightCol.expandToFill());
         bodyLo.doLayout();
     }
-    else if (em == EM::RESONANT_SWEEP || em == EM::REDACTED_1)
+    else if (em == EM::RESONANT_SWEEP)
+    {
+        // Layout:
+        //   [ window-shape multi (tall) ] [ depth jog ] [ M ] [ Env->M ] [ LFO->M ]
+        //   [               "plot coming soon" placeholder spanning full width                ]
+        // The window multi has 7 entries so it spans two rows of body height; the
+        // right-side cells are vertically centered in that taller block.
+        constexpr int cellW = uicKnobSize;
+        constexpr int rowH = uicLabeledKnobHeight;
+        constexpr int bodyH = 2 * rowH + uicMargin;
+        auto bodyRect = juce::Rectangle<int>(depx, bodyY, p.getWidth(), bodyH);
+
+        auto knobCell = [](auto &k, auto &l)
+        {
+            auto cell = jlo::VList().withWidth(cellW);
+            cell.add(labelKnobLayout(k, l).centerInParent());
+            return cell;
+        };
+
+        auto bodyLo = jlo::HList()
+                          .at(bodyRect.getX(), bodyRect.getY())
+                          .withWidth(bodyRect.getWidth())
+                          .withHeight(bodyRect.getHeight())
+                          .withAutoGap(uicMargin * 2);
+
+        bodyLo.add(jlo::Component(*resonantWindowShape).withWidth(2 * cellW).withHeight(bodyH));
+
+        constexpr int depthColW = (cellW * 3) / 2;
+        auto depthInner = jlo::VList().withAutoGap(uicLabelGap);
+        depthInner.add(jlo::Component(*resonantSweepDepthL).withHeight(uicLabelHeight));
+        depthInner.add(jlo::Component(*resonantSweepDepth).withHeight(uicLabelHeight));
+        auto depthCol = jlo::VList().withWidth(depthColW);
+        depthCol.add(depthInner.centerInParent());
+        bodyLo.add(depthCol);
+
+        bodyLo.add(knobCell(extM, extML));
+        bodyLo.add(knobCell(envToExtM, envToExtML));
+        bodyLo.add(knobCell(lfoToExtM, lfoToExtML));
+        bodyLo.doLayout();
+
+        // "plot coming soon" placeholder — sits just under the body. Use a small
+        // height so the label hugs the knob row above instead of floating low.
+        constexpr int placeholderH = uicLabelHeight * 2;
+        auto placeholderRect = juce::Rectangle<int>(depx, bodyRect.getBottom() - 10 * uicMargin,
+                                                    p.getWidth(), placeholderH);
+        resonantSweepPlotPlaceholderL->setBounds(placeholderRect);
+    }
+    else if (em == EM::REDACTED_1)
     {
         auto bodyRect = juce::Rectangle<int>(depx, bodyY, p.getWidth(), uicLabeledKnobHeight);
         comingSoonLabel->setBounds(bodyRect);
@@ -622,18 +686,24 @@ void SourceSubPanel::setExtendedModeVisibility()
     auto em = static_cast<EM>(static_cast<int>(std::round(extModeButtonD->getValue())));
 
     auto isPhaseRemap = (em == EM::PHASE_REMAP);
-    auto isComing = (em == EM::RESONANT_SWEEP || em == EM::REDACTED_1);
+    auto isResonantSweep = (em == EM::RESONANT_SWEEP);
+    auto isComing = (em == EM::REDACTED_1);
+    auto showsM = isPhaseRemap || isResonantSweep;
 
     comingSoonLabel->setVisible(isComing);
     phaseMapShape->setVisible(isPhaseRemap);
-    extM->setVisible(isPhaseRemap);
-    extML->setVisible(isPhaseRemap);
-    envToExtM->setVisible(isPhaseRemap);
-    envToExtML->setVisible(isPhaseRemap);
-    lfoToExtM->setVisible(isPhaseRemap);
-    lfoToExtML->setVisible(isPhaseRemap);
+    extM->setVisible(showsM);
+    extML->setVisible(showsM);
+    envToExtM->setVisible(showsM);
+    envToExtML->setVisible(showsM);
+    lfoToExtM->setVisible(showsM);
+    lfoToExtML->setVisible(showsM);
     if (pdWavPainter)
         pdWavPainter->setVisible(isPhaseRemap);
+    resonantWindowShape->setVisible(isResonantSweep);
+    resonantSweepDepth->setVisible(isResonantSweep);
+    resonantSweepDepthL->setVisible(isResonantSweep);
+    resonantSweepPlotPlaceholderL->setVisible(isResonantSweep);
 }
 
 void SourceSubPanel::setEnabledState()
@@ -680,6 +750,8 @@ void SourceSubPanel::setEnabledState()
     // Extended-mode controls (disabled wholesale on AUDIO_IN)
     extModeButton->setEnabled(!isAudioIn);
     phaseMapShape->setEnabled(!isAudioIn);
+    resonantWindowShape->setEnabled(!isAudioIn);
+    resonantSweepDepth->setEnabled(!isAudioIn);
     extM->setEnabled(!isAudioIn);
     envToExtM->setEnabled(!isAudioIn);
     lfoToExtM->setEnabled(!isAudioIn);
