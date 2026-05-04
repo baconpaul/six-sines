@@ -92,6 +92,14 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::Label> extML, envToExtML, lfoToExtML;
     std::unique_ptr<juce::Component> pdWavPainter;
 
+    // Resonant sweep body components
+    std::unique_ptr<jcmp::MultiSwitch> resonantWindowShape;
+    std::unique_ptr<PatchDiscrete> resonantWindowShapeD;
+    std::unique_ptr<jcmp::JogUpDownButton> resonantSweepDepth;
+    std::unique_ptr<PatchDiscrete> resonantSweepDepthD;
+    std::unique_ptr<jcmp::Label> resonantSweepDepthL;
+    std::unique_ptr<jcmp::Label> resonantSweepPlotPlaceholderL;
+
     void setExtendedModeVisibility();
 
     std::unique_ptr<jcmp::HSliderFilled> keyTrackValue;
