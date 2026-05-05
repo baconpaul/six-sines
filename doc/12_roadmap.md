@@ -3,25 +3,13 @@
 I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatible. But expanded. Here's my rough list
 
 
-## Upgrades to the Resampler, Final path, and Reconstruction
+## MPE Pitch Bend
 
-- Make the upsample / downsample path have more control and better viz
-- Specifically have the pipeline be
-  - Run at internal sample rate to make high bit rate clean signal
-  - Soft drive saturator (use the cubic clamp form) with optional small drive
-  - Add a cytomic SVF at 16khz / root 2 resonance
-  - ZOH decimate the signal to 32khz at upper rate
-  - Do a bitheight redicution (round(f * (1<<b)) / (1<<b))
-  - Add an optional highpass at 5-15hz to kill DC
-  - Downsample with strategy
-- Each of those steps except the first and last is optional.
-- basically all options to make it less 'clean' which all toggle at internal block
+- basically in mpe mode interpolate between keys for mts tuning in voice.cpp
+
+## Pink Noise as mode
 
 
-## Granular FM
-
-- that crazy idea kisney and i chatted about
-- more t/k
 
 ## Infrastructure
 
@@ -42,6 +30,20 @@ Want modes - like segmented float,
 ## Visualization **DONE**
 
 - Add a simple built in spectrum and scope
+
+## Upgrades to the Resampler, Final path, and Reconstruction **DONE**
+
+- Make the upsample / downsample path have more control and better viz
+- Specifically have the pipeline be
+  - Run at internal sample rate to make high bit rate clean signal
+  - Soft drive saturator (use the cubic clamp form) with optional small drive
+  - Add a cytomic SVF at 16khz / root 2 resonance
+  - ZOH decimate the signal to 32khz at upper rate
+  - Do a bitheight redicution (round(f * (1<<b)) / (1<<b))
+  - Add an optional highpass at 5-15hz to kill DC
+  - Downsample with strategy
+- Each of those steps except the first and last is optional.
+- basically all options to make it less 'clean' which all toggle at internal block
 
 ## Super-Macros **DONE**
 
@@ -66,6 +68,11 @@ Want modes - like segmented float,
 
 
 # 1.3 Roadmap (pushed from 1.2)
+
+## Granular FM
+
+- that crazy idea kisney and i chatted about
+- more t/k
 
 ## User Wavetables (May not do)
 

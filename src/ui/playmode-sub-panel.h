@@ -87,11 +87,24 @@ struct PlayModeSubPanel : juce::Component, HasEditor
 
     std::unique_ptr<jcmp::RuledLabel> outputControlTitle;
 
-    std::unique_ptr<jcmp::RuledLabel> srStratLab;
     std::unique_ptr<jcmp::JogUpDownButton> srStrat;
     std::unique_ptr<PatchDiscrete> srStratD;
     std::unique_ptr<jcmp::JogUpDownButton> rsEng;
     std::unique_ptr<PatchDiscrete> rsEngD;
+
+    std::unique_ptr<jcmp::JogUpDownButton> satType, lowpass, bitRate, bitDepth, highpass;
+    std::unique_ptr<PatchDiscrete> satTypeD, lowpassD, bitRateD, bitDepthD, highpassD;
+
+    std::unique_ptr<jcmp::HSliderFilled> satDrive;
+    std::unique_ptr<PatchContinuous> satDriveD;
+
+    std::unique_ptr<jcmp::HSliderFilled> outGain;
+    std::unique_ptr<PatchContinuous> outGainD;
+    std::unique_ptr<jcmp::Label> outGainLabel;
+
+    std::unique_ptr<jcmp::Label> sampleRateLabel, downsamplerLabel;
+    std::unique_ptr<jcmp::Label> saturationLabel, lowpassLabel, bitRateLabel, bitDepthLabel,
+        highpassLabel;
 
     void showPolyLimitMenu();
     int getPolyLimit();
