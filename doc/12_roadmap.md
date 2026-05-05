@@ -2,14 +2,11 @@
 
 I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatible. But expanded. Here's my rough list
 
+## Reset when automated memory for clap edge with output stage
 
 ## MPE Pitch Bend
 
 - basically in mpe mode interpolate between keys for mts tuning in voice.cpp
-
-## Pink Noise as mode
-
-
 
 ## Infrastructure
 
@@ -21,7 +18,9 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 
 - Implement phase remap **done**
 - Implement phase formant sweep + window style **done**
-- 
+
+## Pink Noise as mode **DONE**
+
 ## UI Ratio editor Upgrade **DONE**
 
 The ratio editor is a knob. That's clumsy. segmented control will be better.

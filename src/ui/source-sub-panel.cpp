@@ -23,6 +23,7 @@
 #include "dsp/sintable.h" // for drawing
 #include "dsp/remap_functions.h"
 #include "dsp/resonant_window.h"
+#include "sst/basic-blocks/dsp/PinkNoise.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -401,6 +402,129 @@ struct ResSweepPlotter : juce::Component
     }
 };
 
+/*
+ * PinkNoisePainter shows the result of applying the active NoiseMode to the current
+ * waveform with a fixed-seed pink noise source so the picture is reproducible. We
+ * draw the underlying waveform faintly behind, the noise sequence dotted, and the
+ * combined result on top.
+ */
+struct PinkNoisePainter : juce::Component
+{
+    const Param &wf, &ph, &mp, &noiseMode;
+    SixSinesEditor &editor;
+    SinTable st;
+
+    static constexpr int numCycles{2};
+    static constexpr uint32_t fixedSeed{0xDEC0DE42u};
+
+    PinkNoisePainter(const Param &w, const Param &p, const Param &mParam, const Param &nMode,
+                     SixSinesEditor &e)
+        : wf(w), ph(p), mp(mParam), noiseMode(nMode), editor(e)
+    {
+    }
+
+    void paint(juce::Graphics &g) override
+    {
+        auto labelCol = editor.style()->getColour(jcmp::base_styles::BaseLabel::styleClass,
+                                                  jcmp::base_styles::BaseLabel::labelcolor);
+        auto gridCol = labelCol.withAlpha(0.3f);
+        auto wavCol = editor.style()->getColour(jcmp::base_styles::ValueBearing::styleClass,
+                                                jcmp::base_styles::ValueBearing::value);
+        auto bg = editor.style()->getColour(jcmp::base_styles::PushButton::styleClass,
+                                            jcmp::base_styles::PushButton::fill);
+        g.fillAll(bg);
+        g.setColour(gridCol);
+        g.drawRect(getLocalBounds(), 1.f);
+
+        auto wfVal = (SinTable::WaveForm)std::round(wf.value);
+        if (wfVal == SinTable::AUDIO_IN)
+        {
+            g.setColour(labelCol);
+            g.setFont(juce::Font(juce::FontOptions{}.withHeight(20.f)));
+            g.drawFittedText("Audio In", getLocalBounds(), juce::Justification::centred, 1);
+            return;
+        }
+
+        const int midY = getHeight() / 2;
+        g.setColour(gridCol);
+        g.drawHorizontalLine(midY, 0, getWidth());
+        const int totalQuarters = numCycles * 4;
+        for (int q = 1; q < totalQuarters; ++q)
+        {
+            int x = static_cast<int>(static_cast<float>(q) / totalQuarters * getWidth());
+            int halfTick = (q % 4 == 0) ? 10 : 5;
+            g.drawVerticalLine(x, midY - halfTick, midY + halfTick);
+        }
+
+        st.setWaveForm(wfVal);
+
+        using NM = Patch::SourceNode::NoiseMode;
+        const auto nm = static_cast<NM>(static_cast<uint32_t>(std::round(noiseMode.value)));
+        const float m = mp.value;
+
+        const uint32_t phStart = static_cast<uint32_t>((1u << 26) * ph.value) & phase::phaseMask;
+        const int nPixels = getWidth();
+        const float h = static_cast<float>(getHeight() - 2);
+        const float ho = 1.f;
+        auto toY = [h, ho](float v) { return (1.f - (v + 1.f) * 0.5f) * h + ho; };
+
+        // Fixed-seed pink noise, refilled into a 16-sample stack buffer as we walk.
+        sst::basic_blocks::dsp::PinkNoise rng(fixedSeed);
+        float noiseBuf alignas(16)[16]{};
+        int noisePos{16};
+
+        juce::Path pOut;
+        for (int i = 0; i < nPixels; ++i)
+        {
+            float t =
+                static_cast<float>(i) / std::max(1, nPixels - 1) * static_cast<float>(numCycles);
+            float wphNorm = t - std::floor(t);
+            uint32_t wph =
+                (static_cast<uint32_t>(wphNorm * phase::phaseMaxF) + phStart) & phase::phaseMask;
+
+            if (noisePos >= 16)
+            {
+                rng.generate16(noiseBuf);
+                noisePos = 0;
+            }
+            float n = noiseBuf[noisePos++] * Patch::SourceNode::pinkNoiseScale;
+            float base = st.at(wph);
+            float out;
+            uint32_t modPh = wph;
+
+            switch (nm)
+            {
+            case NM::ADD_TO_PHASE:
+                modPh = (wph + static_cast<int32_t>(m * n * phase::phaseMaxF *
+                                                    Patch::SourceNode::pinkNoisePhaseScale)) &
+                        phase::phaseMask;
+                out = st.at(modPh);
+                break;
+            case NM::ADD_TO_SIGNAL:
+                out = base + m * n;
+                break;
+            case NM::MUL_BY_SIGNAL:
+                out = base * (1.f + m * n);
+                break;
+            case NM::MIX_WITH_SIGNAL:
+                out = (1.f - m) * base + m * n;
+                break;
+            }
+
+            float x = static_cast<float>(i);
+            float yOut = toY(out * 0.98f);
+
+            if (i == 0)
+                pOut.startNewSubPath(x, yOut);
+            else
+                pOut.lineTo(x, yOut);
+        }
+
+        g.setColour(wavCol);
+        g.strokePath(pOut, juce::PathStrokeType(1.5f));
+    }
+};
+
 void SourceSubPanel::setSelectedIndex(size_t idx)
 {
     index = idx;
@@ -422,7 +546,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
         auto em = static_cast<EM>(static_cast<int>(
             std::round(w->editor.patchCopy.sourceNodes[w->index].extendedModeMode.value)));
         if (tid == TID::EXTEND_M)
-            return em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP;
+            return em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::PINK_NOISE;
         if (tid == TID::EXTEND_N)
             return false;
         return true;
@@ -483,6 +607,8 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
             pdWavPainter->repaint();
         if (resSweepPainter)
             resSweepPainter->repaint();
+        if (pinkNoisePainter)
+            pinkNoisePainter->repaint();
         wavButton->repaint();
         setEnabledState();
     };
@@ -505,6 +631,8 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
             w->pdWavPainter->repaint();
         if (w->resSweepPainter)
             w->resSweepPainter->repaint();
+        if (w->pinkNoisePainter)
+            w->pinkNoisePainter->repaint();
     };
 
     startingPhaseL = std::make_unique<jcmp::Label>();
@@ -637,7 +765,15 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
         sn.resonantSweepFrequencyDepth, editor);
     addChildComponent(*resSweepPainter);
 
-    // Live-repaint both extended-mode painters when any input either reads from changes.
+    createComponent(editor, *this, sn.pinkNoiseMode, pinkNoiseMode, pinkNoiseModeD);
+    addChildComponent(*pinkNoiseMode);
+    traverse(pinkNoiseMode);
+
+    pinkNoisePainter = std::make_unique<PinkNoisePainter>(
+        sn.waveForm, sn.startingPhase, sn.extendedModeM, sn.pinkNoiseMode, editor);
+    addChildComponent(*pinkNoisePainter);
+
+    // Live-repaint extended-mode painters when any of their inputs change.
     auto repaintExt = [w = juce::Component::SafePointer(this)]()
     {
         if (!w)
@@ -646,15 +782,19 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
             w->pdWavPainter->repaint();
         if (w->resSweepPainter)
             w->resSweepPainter->repaint();
+        if (w->pinkNoisePainter)
+            w->pinkNoisePainter->repaint();
     };
     extMD->onGuiSetValue = repaintExt;
     phaseMapShapeD->onGuiSetValue = repaintExt;
     resonantWindowShapeD->onGuiSetValue = repaintExt;
     resonantSweepDepthD->onGuiSetValue = repaintExt;
+    pinkNoiseModeD->onGuiSetValue = repaintExt;
     editor.componentRefreshByID[sn.extendedModeM.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.phaseMapModeShape.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.resonantSweepWindowShape.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.resonantSweepFrequencyDepth.meta.id] = repaintExt;
+    editor.componentRefreshByID[sn.pinkNoiseMode.meta.id] = repaintExt;
 
     setExtendedModeVisibility();
 
@@ -867,10 +1007,48 @@ void SourceSubPanel::resized()
         bodyLo.add(rightCol.expandToFill());
         bodyLo.doLayout();
     }
-    else if (em == EM::REDACTED_1)
+    else if (em == EM::PINK_NOISE)
     {
-        auto bodyRect = juce::Rectangle<int>(depx, bodyY, p.getWidth(), uicLabeledKnobHeight);
-        comingSoonLabel->setBounds(bodyRect);
+        // Layout mirrors RESONANT_SWEEP:
+        //   [ noise-mode multi ] [ pink-noise painter spans                ]
+        //   [ noise-mode multi ] [ M ] [ Env->M ] [ LFO->M ]
+        constexpr int plotHeight = painterH - 15;
+        constexpr int cellW = uicKnobSize;
+        constexpr int row2H = uicLabeledKnobHeight;
+        constexpr int bodyH = plotHeight + uicMargin + row2H;
+        auto bodyRect = juce::Rectangle<int>(depx, bodyY, p.getWidth(), bodyH);
+
+        auto knobCell = [](auto &k, auto &l)
+        {
+            auto cell = jlo::VList().withWidth(cellW);
+            cell.add(labelKnobLayout(k, l).centerInParent());
+            return cell;
+        };
+
+        auto bodyLo = jlo::HList()
+                          .at(bodyRect.getX(), bodyRect.getY())
+                          .withWidth(bodyRect.getWidth())
+                          .withHeight(bodyRect.getHeight())
+                          .withAutoGap(uicMargin * 2);
+
+        // Left: multiswitch spans full body height
+        auto leftCol = jlo::VList().withWidth(2 * cellW);
+        leftCol.add(jlo::Component(*pinkNoiseMode).withHeight(bodyH));
+        bodyLo.add(leftCol);
+
+        // Right: painter on top, then M / Env->M / LFO->M
+        auto rightCol = jlo::VList().withAutoGap(uicMargin);
+        rightCol.add(jlo::Component(*pinkNoisePainter).withHeight(plotHeight));
+
+        auto knobRow = jlo::HList().withHeight(row2H).withAutoGap(uicMargin);
+        knobRow.add(knobCell(extM, extML));
+        knobRow.add(knobCell(envToExtM, envToExtML));
+        knobRow.add(knobCell(lfoToExtM, lfoToExtML));
+        rightCol.addGap(uicMargin);
+        rightCol.add(knobRow);
+
+        bodyLo.add(rightCol.expandToFill());
+        bodyLo.doLayout();
     }
 
     layoutModulation(p);
@@ -883,10 +1061,10 @@ void SourceSubPanel::setExtendedModeVisibility()
 
     auto isPhaseRemap = (em == EM::PHASE_REMAP);
     auto isResonantSweep = (em == EM::RESONANT_SWEEP);
-    auto isComing = (em == EM::REDACTED_1);
-    auto showsM = isPhaseRemap || isResonantSweep;
+    auto isPinkNoise = (em == EM::PINK_NOISE);
+    auto showsM = isPhaseRemap || isResonantSweep || isPinkNoise;
 
-    comingSoonLabel->setVisible(isComing);
+    comingSoonLabel->setVisible(false);
     phaseMapShape->setVisible(isPhaseRemap);
     extM->setVisible(showsM);
     extML->setVisible(showsM);
@@ -901,6 +1079,10 @@ void SourceSubPanel::setExtendedModeVisibility()
     resonantSweepDepthL->setVisible(isResonantSweep);
     if (resSweepPainter)
         resSweepPainter->setVisible(isResonantSweep);
+    if (pinkNoiseMode)
+        pinkNoiseMode->setVisible(isPinkNoise);
+    if (pinkNoisePainter)
+        pinkNoisePainter->setVisible(isPinkNoise);
 }
 
 void SourceSubPanel::setEnabledState()
@@ -952,6 +1134,8 @@ void SourceSubPanel::setEnabledState()
     extM->setEnabled(!isAudioIn);
     envToExtM->setEnabled(!isAudioIn);
     lfoToExtM->setEnabled(!isAudioIn);
+    if (pinkNoiseMode)
+        pinkNoiseMode->setEnabled(!isAudioIn);
 
     // Notify source/matrix panels to grey out ratio knob and feedback knob
     editor.sourcePanel->updateOpEnabledState(index);
