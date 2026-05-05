@@ -21,6 +21,8 @@
 
 #include "configuration.h"
 
+#include "sst/basic-blocks/dsp/PinkNoise.h"
+
 #include "dsp/sintable.h"
 #include "dsp/node_support.h"
 #include "synth/patch.h"
@@ -70,7 +72,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
           waveForm(sn.waveForm), kt(sn.keyTrack), ktv(sn.keyTrackValue),
           ktlo(sn.keyTrackValueIsLow), ktlov(sn.keyTrackLowFrequencyValue),
           startPhase(sn.startingPhase), octTranspose(sn.octTranspose),
-          lfoToRatioFine(sn.lfoToRatioFine), envToRatioFine(sn.envToRatioFine)
+          lfoToRatioFine(sn.lfoToRatioFine), envToRatioFine(sn.envToRatioFine),
+          pinkNoise(mv.rng.unifU32())
     {
         reset();
     }
@@ -115,11 +118,11 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             using EM = Patch::SourceNode::ExtendedMode;
             auto em = static_cast<EM>(
                 static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
-            if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP)
+            if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::PINK_NOISE)
             {
                 extendedLagM.setRateInMilliseconds(10, monoValues.sr.samplerate, blockSizeInv);
                 extendedLagM.snapTo(sourceNode.extendedModeM.value);
-                // N is unused in PHASE_REMAP / RESONANT_SWEEP — leave its lag uninitialized
+                // N is unused in all current extended modes — leave its lag uninitialized
                 // until a future mode that consumes N is added.
             }
         }
@@ -191,7 +194,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         using EM = Patch::SourceNode::ExtendedMode;
         auto em =
             static_cast<EM>(static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
-        if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP)
+        if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::PINK_NOISE)
             used = used || (sourceNode.lfoToExtendedModeM.value != 0);
 
         return used;
@@ -440,23 +443,49 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             }
             break;
         }
-        case EM::REDACTED_1:
-            // coming soon — falls through to the no-extension path for now
-            innerLoopImpl<EM::NONE>(onto, fbv, rf, dRF, phs);
+        case EM::PINK_NOISE:
+        {
+            using NM = Patch::SourceNode::NoiseMode;
+            auto nm =
+                static_cast<NM>(static_cast<uint32_t>(std::round(sourceNode.pinkNoiseMode.value)));
+            constexpr auto PMSAW = Patch::SourceNode::PhaseMapShape::SAW;
+            constexpr auto RWSAW = Patch::SourceNode::ResonantSweepWindow::SAW;
+            switch (nm)
+            {
+            case NM::ADD_TO_PHASE:
+                innerLoopImpl<EM::PINK_NOISE, PMSAW, RWSAW, NM::ADD_TO_PHASE>(onto, fbv, rf, dRF,
+                                                                              phs);
+                break;
+            case NM::ADD_TO_SIGNAL:
+                innerLoopImpl<EM::PINK_NOISE, PMSAW, RWSAW, NM::ADD_TO_SIGNAL>(onto, fbv, rf, dRF,
+                                                                               phs);
+                break;
+            case NM::MIX_WITH_SIGNAL:
+                innerLoopImpl<EM::PINK_NOISE, PMSAW, RWSAW, NM::MIX_WITH_SIGNAL>(onto, fbv, rf, dRF,
+                                                                                 phs);
+                break;
+            case NM::MUL_BY_SIGNAL:
+                innerLoopImpl<EM::PINK_NOISE, PMSAW, RWSAW, NM::MUL_BY_SIGNAL>(onto, fbv, rf, dRF,
+                                                                               phs);
+                break;
+            }
             break;
+        }
         }
     }
 
     template <
         Patch::SourceNode::ExtendedMode ET,
         Patch::SourceNode::PhaseMapShape S = Patch::SourceNode::PhaseMapShape::SAW,
-        Patch::SourceNode::ResonantSweepWindow R = Patch::SourceNode::ResonantSweepWindow::SAW>
+        Patch::SourceNode::ResonantSweepWindow R = Patch::SourceNode::ResonantSweepWindow::SAW,
+        Patch::SourceNode::NoiseMode NM = Patch::SourceNode::NoiseMode::ADD_TO_PHASE>
     void innerLoopImpl(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs,
                        float kScale = 1.0f)
     {
         using EM = Patch::SourceNode::ExtendedMode;
+        using NMode = Patch::SourceNode::NoiseMode;
         float nextM{0.f}, dM{0.f};
-        if constexpr (ET == EM::PHASE_REMAP || ET == EM::RESONANT_SWEEP)
+        if constexpr (ET == EM::PHASE_REMAP || ET == EM::RESONANT_SWEEP || ET == EM::PINK_NOISE)
         {
             // Raw target m for this block: patch value + external mod + env / lfo contributions.
             auto lfoFac = *lfoFacP;
@@ -530,6 +559,36 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                 uint32_t kmph = static_cast<uint32_t>(static_cast<float>(wph) * kFactor);
                 nextM += dM;
                 out = window * st.at(kmph);
+            }
+            else if constexpr (ET == EM::PINK_NOISE)
+            {
+                if (noisePos >= 16)
+                {
+                    pinkNoise.generate16(noiseBuf);
+                    noisePos = 0;
+                }
+                float noise = noiseBuf[noisePos++] * Patch::SourceNode::pinkNoiseScale;
+                float m = nextM;
+                nextM += dM;
+                if constexpr (NM == NMode::ADD_TO_PHASE)
+                {
+                    ph += static_cast<int32_t>(m * noise * phase::phaseMaxF *
+                                               Patch::SourceNode::pinkNoisePhaseScale);
+                    out = st.at(ph);
+                }
+                else if constexpr (NM == NMode::ADD_TO_SIGNAL)
+                {
+                    out = st.at(ph) + m * noise;
+                }
+                else if constexpr (NM == NMode::MUL_BY_SIGNAL)
+                {
+                    out = st.at(ph) * (1.f + m * noise);
+                }
+                else // MIX_WITH_SIGNAL
+                {
+                    auto base = st.at(ph);
+                    out = (1.f - m) * base + m * noise;
+                }
             }
             else
             {
@@ -614,6 +673,12 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     // Independent of `st` so the operator's main waveform stays selectable freely.
     SinTable stWindow;
     float fbVal[2]{0.f, 0.f};
+
+    // PinkNoise generates 16 samples at a time; blockSize is 8 so we drain the buffer
+    // across two blocks. Seeded once at construction; not re-seeded on note retrigger.
+    sst::basic_blocks::dsp::PinkNoise pinkNoise;
+    float noiseBuf alignas(16)[16]{};
+    int noisePos{16};
 };
 } // namespace baconpaul::six_sines
 

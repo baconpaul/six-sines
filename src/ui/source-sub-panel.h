@@ -100,6 +100,11 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::Label> resonantSweepDepthL;
     std::unique_ptr<juce::Component> resSweepPainter;
 
+    // Pink-noise body components
+    std::unique_ptr<jcmp::MultiSwitch> pinkNoiseMode;
+    std::unique_ptr<PatchDiscrete> pinkNoiseModeD;
+    std::unique_ptr<juce::Component> pinkNoisePainter;
+
     void setExtendedModeVisibility();
 
     std::unique_ptr<jcmp::HSliderFilled> keyTrackValue;
