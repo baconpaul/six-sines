@@ -62,6 +62,49 @@ enum ResamplerEngine
     ZOH
 };
 
+// Output signal-path stage settings (streamed)
+enum SaturationType
+{
+    SAT_NONE = 0,
+    SAT_SOFT = 1,
+    SAT_OJD = 2
+};
+
+enum LowpassMode
+{
+    LP_NONE = 0,
+    LP_7K5 = 1,
+    LP_10K = 2,
+    LP_13K = 3,
+    LP_16K = 4,
+    LP_20K = 5
+};
+
+enum BitRateMode
+{
+    BR_NONE = 0,
+    BR_16K_ZOH = 1,
+    BR_24K_ZOH = 2,
+    BR_32K_ZOH = 3,
+    BR_48K_ZOH = 4
+};
+
+enum BitDepthMode
+{
+    BD_NONE = 0,
+    BD_8 = 1,
+    BD_12 = 2,
+    BD_16 = 3
+};
+
+enum HighpassMode
+{
+    HP_NONE = 0,
+    HP_10HZ = 1,
+    HP_20HZ = 2,
+    HP_50HZ = 3
+};
+
 } // namespace baconpaul::six_sines
 
 inline std::string fileTrunc(const std::string &f)

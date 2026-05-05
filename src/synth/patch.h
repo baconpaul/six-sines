@@ -89,6 +89,8 @@ struct Patch : pats::PatchBase<Patch, Param>
     static constexpr uint64_t version_120c = 0x010203;
     // Fourth chunk of 1.2.0: resonant sweeps
     static constexpr uint64_t version_120d = 0x010204;
+    // Fifth chunk of 1.2.0: output signal-path stages
+    static constexpr uint64_t version_120e = 0x010205;
 
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
     static md_t floatMd(uint64_t version = version_110)
@@ -1662,6 +1664,83 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      {ResamplerEngine::LINTERP, "Linear Interp"},
                                      {ResamplerEngine::ZOH, "ZOH"},
                                  })),
+              saturationType(intMd(version_120e)
+                                 .withName(name() + " Saturation Type")
+                                 .withGroupName(name())
+                                 .withDefault(SaturationType::SAT_NONE)
+                                 .withRange(SaturationType::SAT_NONE, SaturationType::SAT_OJD)
+                                 .withID(id(50))
+                                 .withUnorderedMapFormatting({
+                                     {SaturationType::SAT_NONE, "None"},
+                                     {SaturationType::SAT_SOFT, "Soft"},
+                                     {SaturationType::SAT_OJD, "OJD"},
+                                 })),
+              saturationDrive(floatMd(version_120e)
+                                  .asCubicDecibelUpTo(0.f)
+                                  .withRange(1.f, 3.f)
+                                  .withDefault(1.f)
+                                  .withName(name() + " Saturation Drive")
+                                  .withGroupName(name())
+                                  .withID(id(51))),
+              lowpass(intMd(version_120e)
+                          .withName(name() + " Low Pass")
+                          .withGroupName(name())
+                          .withDefault(LowpassMode::LP_NONE)
+                          .withRange(LowpassMode::LP_NONE, LowpassMode::LP_20K)
+                          .withID(id(52))
+                          .withUnorderedMapFormatting({
+                              {LowpassMode::LP_NONE, "None"},
+                              {LowpassMode::LP_7K5, "7.5 kHz"},
+                              {LowpassMode::LP_10K, "10 kHz"},
+                              {LowpassMode::LP_13K, "13 kHz"},
+                              {LowpassMode::LP_16K, "16 kHz"},
+                              {LowpassMode::LP_20K, "20 kHz"},
+                          })),
+              bitRateAdjust(intMd(version_120e)
+                                .withName(name() + " Bit Rate Adjust")
+                                .withGroupName(name())
+                                .withDefault(BitRateMode::BR_NONE)
+                                .withRange(BitRateMode::BR_NONE, BitRateMode::BR_48K_ZOH)
+                                .withID(id(53))
+                                .withUnorderedMapFormatting({
+                                    {BitRateMode::BR_NONE, "None"},
+                                    {BitRateMode::BR_16K_ZOH, "16 kHz ZOH"},
+                                    {BitRateMode::BR_24K_ZOH, "24 kHz ZOH"},
+                                    {BitRateMode::BR_32K_ZOH, "32 kHz ZOH"},
+                                    {BitRateMode::BR_48K_ZOH, "48 kHz ZOH"},
+                                })),
+              bitDepthAdjust(intMd(version_120e)
+                                 .withName(name() + " Bit Depth Adjust")
+                                 .withGroupName(name())
+                                 .withDefault(BitDepthMode::BD_NONE)
+                                 .withRange(BitDepthMode::BD_NONE, BitDepthMode::BD_16)
+                                 .withID(id(54))
+                                 .withUnorderedMapFormatting({
+                                     {BitDepthMode::BD_NONE, "None"},
+                                     {BitDepthMode::BD_8, "8 bit"},
+                                     {BitDepthMode::BD_12, "12 bit"},
+                                     {BitDepthMode::BD_16, "16 bit"},
+                                 })),
+              highpass(intMd(version_120e)
+                           .withName(name() + " High Pass")
+                           .withGroupName(name())
+                           .withDefault(HighpassMode::HP_NONE)
+                           .withRange(HighpassMode::HP_NONE, HighpassMode::HP_50HZ)
+                           .withID(id(55))
+                           .withUnorderedMapFormatting({
+                               {HighpassMode::HP_NONE, "None"},
+                               {HighpassMode::HP_10HZ, "10 Hz"},
+                               {HighpassMode::HP_20HZ, "20 Hz"},
+                               {HighpassMode::HP_50HZ, "50 Hz"},
+                           })),
+              outputGain(floatMd(version_120e)
+                             .asCubicDecibelUpTo(0.f)
+                             .withRange(0.f, 2.f)
+                             .withDefault(1.f)
+                             .withPolarity(md_t::Polarity::BIPOLAR)
+                             .withName(name() + " Output Gain")
+                             .withGroupName(name())
+                             .withID(id(56))),
               unisonPan(floatMd()
                             .withName(name() + " Unison Stereo Field")
                             .asPercent()
@@ -1702,6 +1781,9 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param octTranspose, fineTune, pan, lfoDepth;
         Param attackFloorOnRetrig, rephaseOnRetrigger;
         Param sampleRateStrategy, resampleEngine;
+        Param saturationType, saturationDrive;
+        Param lowpass, bitRateAdjust, bitDepthAdjust, highpass;
+        Param outputGain;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -1730,7 +1812,14 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &attackFloorOnRetrig,
                                      &rephaseOnRetrigger,
                                      &sampleRateStrategy,
-                                     &resampleEngine};
+                                     &resampleEngine,
+                                     &saturationType,
+                                     &saturationDrive,
+                                     &lowpass,
+                                     &bitRateAdjust,
+                                     &bitDepthAdjust,
+                                     &highpass,
+                                     &outputGain};
             appendDAHDSRParams(res);
 
             for (int i = 0; i < numModsPer; ++i)

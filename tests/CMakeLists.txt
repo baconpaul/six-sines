@@ -4,6 +4,7 @@ add_executable(six-sines-test
 
 		structure.cpp
 		factory_patches.cpp
+		output_stage_dsp.cpp
 )
 
 target_link_libraries(six-sines-test

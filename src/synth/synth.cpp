@@ -230,6 +230,11 @@ void Synth::setSampleRate(double sampleRate)
 
     audioToUi.push(
         {AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)hostSampleRate, (float)engineSampleRate});
+
+    // Refresh anything keyed off engineSampleRate (filter coefs, ZOH ratio).
+    // Safe vs. recursion: reapplyControlSettings only re-enters setSampleRate
+    // when sampleRateStrategy diverges from the patch, which it doesn't here.
+    reapplyControlSettings();
 }
 
 template <bool multiOut> void Synth::processInternal(const clap_output_events_t *outq)
@@ -368,6 +373,10 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
             v->next = nullptr;
             assert(!v->next && !v->prior);
         }
+
+        // End-of-chain stages run on the main engine-rate stereo bus,
+        // before downsampling. Per-op buses in multiOut are not processed yet.
+        processEndOfBlock(lOutput[0], lOutput[1]);
 
         if (usesLanczos())
         {
@@ -693,7 +702,10 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
                 dest->meta.id == patch.output.pianoModeActive.meta.id ||
                 dest->meta.id == patch.output.mpeActive.meta.id ||
                 dest->meta.id == patch.output.sampleRateStrategy.meta.id ||
-                dest->meta.id == patch.output.resampleEngine.meta.id)
+                dest->meta.id == patch.output.resampleEngine.meta.id ||
+                dest->meta.id == patch.output.lowpass.meta.id ||
+                dest->meta.id == patch.output.highpass.meta.id ||
+                dest->meta.id == patch.output.bitRateAdjust.meta.id)
             {
                 reapplyControlSettings();
             }
@@ -883,6 +895,157 @@ void Synth::reapplyControlSettings()
     else
     {
         voiceManager->dialect = voiceManager_t::MIDI1Dialect::MIDI1;
+    }
+
+    // End-of-chain high/low cut. The "active" flags gate per-block work.
+    // Coefficient setup over-applies on every reapply for now.
+    auto sr = (float)engineSampleRate;
+
+    auto lpVal = (int)std::round(patch.output.lowpass.value);
+    lpActive = lpVal != LP_NONE;
+    if (lpActive && sr > 0)
+    {
+        float freq = 0;
+        switch (lpVal)
+        {
+        case LP_7K5:
+            freq = 7500.f;
+            break;
+        case LP_10K:
+            freq = 10000.f;
+            break;
+        case LP_13K:
+            freq = 13000.f;
+            break;
+        case LP_16K:
+            freq = 16000.f;
+            break;
+        case LP_20K:
+            freq = 20000.f;
+            break;
+        }
+        lpFilter.setCutoffAndSampleRate(freq, sr);
+        lpFilter.reset();
+    }
+
+    auto brVal = (int)std::round(patch.output.bitRateAdjust.value);
+    bitRateActive = brVal != BR_NONE;
+    if (bitRateActive && sr > 0)
+    {
+        float target = 0;
+        switch (brVal)
+        {
+        case BR_16K_ZOH:
+            target = 16000.f;
+            break;
+        case BR_24K_ZOH:
+            target = 24000.f;
+            break;
+        case BR_32K_ZOH:
+            target = 32000.f;
+            break;
+        case BR_48K_ZOH:
+            target = 48000.f;
+            break;
+        }
+        bitRateZOH.setRate(target, sr);
+        bitRateZOH.reset();
+    }
+
+    auto hpVal = (int)std::round(patch.output.highpass.value);
+    hpActive = hpVal != HP_NONE;
+    if (hpActive && sr > 0)
+    {
+        float freq = 0;
+        switch (hpVal)
+        {
+        case HP_10HZ:
+            freq = 10.f;
+            break;
+        case HP_20HZ:
+            freq = 20.f;
+            break;
+        case HP_50HZ:
+            freq = 50.f;
+            break;
+        }
+        hpFilter.setCutoffAndSampleRate(freq, sr);
+        hpFilter.reset();
+    }
+}
+
+void Synth::processEndOfBlock(float *L, float *R)
+{
+    auto satType = (int)std::round(patch.output.saturationType.value);
+    if (satType != SAT_NONE)
+    {
+        auto dv = patch.output.saturationDrive.value;
+        auto drive = dv * dv * dv;
+        if (satType == SAT_SOFT)
+        {
+            for (int i = 0; i < blockSize; ++i)
+            {
+                L[i] = softSaturator(L[i] * drive);
+                R[i] = softSaturator(R[i] * drive);
+            }
+        }
+        else if (satType == SAT_OJD)
+        {
+            for (int i = 0; i < blockSize; ++i)
+            {
+                L[i] = ojdSaturator(L[i] * drive);
+                R[i] = ojdSaturator(R[i] * drive);
+            }
+        }
+    }
+
+    if (bitRateActive)
+    {
+        for (int i = 0; i < blockSize; ++i)
+            bitRateZOH.step(L[i], R[i]);
+    }
+
+    auto bdVal = (int)std::round(patch.output.bitDepthAdjust.value);
+    if (bdVal != BD_NONE)
+    {
+        int bits = 0;
+        switch (bdVal)
+        {
+        case BD_8:
+            bits = 8;
+            break;
+        case BD_12:
+            bits = 12;
+            break;
+        case BD_16:
+            bits = 16;
+            break;
+        }
+        // bits levels span -1..1, so scale = 2^(bits-1) (e.g. 8 bit → 128 steps each side).
+        auto scale = (float)(1 << (bits - 1));
+        auto invScale = 1.f / scale;
+        for (int i = 0; i < blockSize; ++i)
+        {
+            L[i] = std::round(L[i] * scale) * invScale;
+            R[i] = std::round(R[i] * scale) * invScale;
+        }
+    }
+
+    if (lpActive)
+        lpFilter.processBlock(L, R, blockSize);
+    if (hpActive)
+        hpFilter.processBlock(L, R, blockSize);
+
+    // Output gain: param value v in [0, 2], applied gain = v^3 (display in dB).
+    auto v = patch.output.outputGain.value;
+    auto g = v * v * v;
+    if (g != 1.f)
+    {
+        for (int i = 0; i < blockSize; ++i)
+        {
+            L[i] *= g;
+            R[i] *= g;
+        }
     }
 }
 

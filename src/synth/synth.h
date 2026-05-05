@@ -18,9 +18,11 @@
 
 #include <memory>
 #include <array>
+#include <cassert>
 #include <string>
 
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
+#include "sst/filters/ButterworthLPHP.h"
 #include "samplerate.h"
 
 class TiXmlElement;
@@ -310,6 +312,87 @@ struct Synth
 
     void process(const clap_output_events_t *);
     void processUIQueue(const clap_output_events_t *);
+
+    // End-of-chain processing on the engine-rate stereo bus, in place.
+    // Runs the saturator / lowpass / decimator / bitcrush / highpass stages.
+    void processEndOfBlock(float *L, float *R);
+
+    // End-of-chain stage state. Coefficients are recomputed in
+    // reapplyControlSettings; the active flags gate the per-block work.
+    sst::filters::ButterworthLP<6> lpFilter;
+    sst::filters::ButterworthHP<6> hpFilter;
+    bool lpActive{false}, hpActive{false};
+
+    // ZOH-style bit-rate decimator. Runs at the engine (oversample) rate
+    // but only samples the input every engine_rate / target_rate ticks,
+    // emitting a stair-step (v1 v1 v1 v1 v5 v5 v5 v5 ...) which the SRC
+    // then resamples back up.
+    struct ZOHRateDownsampler
+    {
+        float phase{1.f};
+        float rate{0.f};
+        float lastL{0.f}, lastR{0.f};
+
+        void setRate(float targetRate, float engineRate)
+        {
+            rate = engineRate > 0 ? targetRate / engineRate : 0.f;
+            // step() consumes one phase>=1 per call; rate>1 would lose updates.
+            assert(rate <= 1.f);
+        }
+        void reset()
+        {
+            phase = 1.f;
+            lastL = 0.f;
+            lastR = 0.f;
+        }
+        inline void step(float &L, float &R)
+        {
+            if (phase >= 1.f)
+            {
+                phase -= 1.f;
+                lastL = L;
+                lastR = R;
+            }
+            else
+            {
+                L = lastL;
+                R = lastR;
+            }
+            phase += rate;
+        }
+    };
+    ZOHRateDownsampler bitRateZOH;
+    bool bitRateActive{false};
+
+    // Saturator scalar shapers. Cheap, stateless, per-session — kept
+    // out of sst-waveshapers since this isn't per-voice.
+    static inline float softSaturator(float x)
+    {
+        x = std::clamp(x, -4.f, 4.f);
+        return x * (27.f + x * x) / (27.f + 9.f * x * x);
+    }
+
+    static inline float ojdSaturator(float x)
+    {
+        constexpr float pm17 = -1.7f, p11 = 1.1f;
+        constexpr float pm03 = -0.3f, p09 = 0.9f;
+        constexpr float denLow = 1.f / (4.f * (1.f - 0.3f));
+        constexpr float denHigh = 1.f / (4.f * (1.f - 0.9f));
+
+        if (x <= pm17)
+            return -1.f;
+        if (x >= p11)
+            return 1.f;
+        if (x >= pm03 && x <= p09)
+            return x;
+        if (x < pm03)
+        {
+            auto xl = x - pm03;
+            return (xl + denLow * xl * xl) + pm03;
+        }
+        auto xh = x - p09;
+        return (xh - denHigh * xh * xh) + p09;
+    }
 
     void handleParamValue(Param *p, uint32_t pid, float value);
 

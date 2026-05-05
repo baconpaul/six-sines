@@ -106,6 +106,7 @@ target_link_libraries(${PROJECT_NAME}-impl PUBLIC  # PW change to public since w
         sst-plugininfra::strnatcmp
         sst-plugininfra::patchbase
         sst-plugininfra::version_information
+        sst-filters
         sst::clap_juce_shim sst::clap_juce_shim_headers
         juce::juce_dsp
         ${PROJECT_NAME}-patches

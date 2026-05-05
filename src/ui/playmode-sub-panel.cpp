@@ -185,16 +185,46 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     addAndMakeVisible(*panicTitle);
 
     outputControlTitle = std::make_unique<jcmp::RuledLabel>();
-    outputControlTitle->setText("Output Control");
+    outputControlTitle->setText("Output Stage (Main)");
     addAndMakeVisible(*outputControlTitle);
 
-    createComponent(editor, *this, editor.patchCopy.output.sampleRateStrategy, srStrat, srStratD);
+    auto &out = editor.patchCopy.output;
+    createComponent(editor, *this, out.sampleRateStrategy, srStrat, srStratD);
     addAndMakeVisible(*srStrat);
-    createComponent(editor, *this, editor.patchCopy.output.resampleEngine, rsEng, rsEngD);
+    createComponent(editor, *this, out.resampleEngine, rsEng, rsEngD);
     addAndMakeVisible(*rsEng);
-    srStratLab = std::make_unique<jcmp::RuledLabel>();
-    srStratLab->setText("Oversampling");
-    addAndMakeVisible(*srStratLab);
+
+    createComponent(editor, *this, out.saturationType, satType, satTypeD);
+    addAndMakeVisible(*satType);
+    createComponent(editor, *this, out.saturationDrive, satDrive, satDriveD);
+    addAndMakeVisible(*satDrive);
+    createComponent(editor, *this, out.lowpass, lowpass, lowpassD);
+    addAndMakeVisible(*lowpass);
+    createComponent(editor, *this, out.bitRateAdjust, bitRate, bitRateD);
+    addAndMakeVisible(*bitRate);
+    createComponent(editor, *this, out.bitDepthAdjust, bitDepth, bitDepthD);
+    addAndMakeVisible(*bitDepth);
+    createComponent(editor, *this, out.highpass, highpass, highpassD);
+    addAndMakeVisible(*highpass);
+    createComponent(editor, *this, out.outputGain, outGain, outGainD);
+    addAndMakeVisible(*outGain);
+
+    auto mkLabel = [this](auto &slot, const std::string &t,
+                          juce::Justification j = juce::Justification::centredRight)
+    {
+        slot = std::make_unique<jcmp::Label>();
+        slot->setText(t);
+        slot->setJustification(j);
+        addAndMakeVisible(*slot);
+    };
+    mkLabel(sampleRateLabel, "Sample Rate:");
+    mkLabel(saturationLabel, "Saturation:");
+    mkLabel(lowpassLabel, "Low Pass:");
+    mkLabel(bitRateLabel, "Bit Rate:");
+    mkLabel(bitDepthLabel, "Bit Depth:");
+    mkLabel(highpassLabel, "High Pass:");
+    mkLabel(outGainLabel, "Output:");
+    mkLabel(downsamplerLabel, "Downsampler:");
 
     setEnabledState();
 }
@@ -256,14 +286,43 @@ void PlayModeSubPanel::resized()
 
     outer.add(topRow);
 
-    auto bottomWidth = 4 * skinny + 3 * 2 * uicMargin;
-    outer.add(titleLabelGaplessLayout(outputControlTitle).withWidth(bottomWidth));
+    auto fullWidth = getWidth() - 2 * uicMargin;
+    outer.add(titleLabelGaplessLayout(outputControlTitle).withWidth(fullWidth));
 
-    auto rsl = jlo::VList().withWidth(bottomWidth).withAutoGap(uicMargin);
-    rsl.add(titleLabelGaplessLayout(srStratLab));
-    rsl.add(jlo::Component(*srStrat).withHeight(uicLabelHeight));
-    rsl.add(jlo::Component(*rsEng).withHeight(uicLabelHeight));
-    outer.add(rsl);
+    // Output signal path. Each row is "Label : [control(s)]". Saturation row also
+    // gets a drive HSlider following the type jog. Future revision will add
+    // arrow connectors between stages.
+    auto pathCol = jlo::VList().withWidth(fullWidth).withAutoGap(uicMargin);
+
+    int labelW = fullWidth / 3;
+
+    auto stageRow = [&](auto &lbl, auto &c1, juce::Component *c2 = nullptr)
+    {
+        auto row = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
+        row.add(jlo::Component(*lbl).withWidth(labelW));
+        if (c2)
+        {
+            // Split the right side: jog on the left (skinny), slider fills the rest
+            row.add(jlo::Component(*c1).withWidth(uicSubPanelColumnWidth * 1.5));
+            row.add(jlo::Component(*c2).expandToFill());
+        }
+        else
+        {
+            row.add(jlo::Component(*c1).expandToFill());
+        }
+        return row;
+    };
+
+    pathCol.add(stageRow(sampleRateLabel, srStrat));
+    pathCol.add(stageRow(saturationLabel, satType, satDrive.get()));
+    pathCol.add(stageRow(bitRateLabel, bitRate));
+    pathCol.add(stageRow(bitDepthLabel, bitDepth));
+    pathCol.add(stageRow(lowpassLabel, lowpass));
+    pathCol.add(stageRow(highpassLabel, highpass));
+    pathCol.add(stageRow(outGainLabel, outGain));
+    pathCol.add(stageRow(downsamplerLabel, rsEng));
+
+    outer.add(pathCol);
 
     outer.doLayout();
 }
