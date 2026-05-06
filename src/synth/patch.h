@@ -1734,8 +1734,13 @@ struct Patch : pats::PatchBase<Patch, Param>
                                 .withID(id(53))
                                 .withUnorderedMapFormatting({
                                     {BitRateMode::BR_NONE, "None"},
+                                    {BitRateMode::BR_12K_ZOH, "12 kHz ZOH"},
                                     {BitRateMode::BR_16K_ZOH, "16 kHz ZOH"},
+                                    {BitRateMode::BR_18K_ZOH, "18 kHz ZOH"},
+                                    {BitRateMode::BR_20K_ZOH, "20 kHz ZOH"},
+                                    {BitRateMode::BR_22K_ZOH, "22 kHz ZOH"},
                                     {BitRateMode::BR_24K_ZOH, "24 kHz ZOH"},
+                                    {BitRateMode::BR_28K_ZOH, "28 kHz ZOH"},
                                     {BitRateMode::BR_32K_ZOH, "32 kHz ZOH"},
                                     {BitRateMode::BR_48K_ZOH, "48 kHz ZOH"},
                                 })),

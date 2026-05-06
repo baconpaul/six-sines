@@ -935,11 +935,26 @@ void Synth::reapplyControlSettings()
         float target = 0;
         switch (brVal)
         {
+        case BR_12K_ZOH:
+            target = 12000.f;
+            break;
         case BR_16K_ZOH:
             target = 16000.f;
             break;
+        case BR_18K_ZOH:
+            target = 18000.f;
+            break;
+        case BR_20K_ZOH:
+            target = 20000.f;
+            break;
+        case BR_22K_ZOH:
+            target = 22000.f;
+            break;
         case BR_24K_ZOH:
             target = 24000.f;
+            break;
+        case BR_28K_ZOH:
+            target = 28000.f;
             break;
         case BR_32K_ZOH:
             target = 32000.f;

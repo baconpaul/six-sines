@@ -83,10 +83,15 @@ enum LowpassMode
 enum BitRateMode
 {
     BR_NONE = 0,
-    BR_16K_ZOH = 1,
-    BR_24K_ZOH = 2,
-    BR_32K_ZOH = 3,
-    BR_48K_ZOH = 4
+    BR_12K_ZOH = 1,
+    BR_16K_ZOH = 2,
+    BR_18K_ZOH = 3,
+    BR_20K_ZOH = 4,
+    BR_22K_ZOH = 5,
+    BR_24K_ZOH = 6,
+    BR_28K_ZOH = 7,
+    BR_32K_ZOH = 8,
+    BR_48K_ZOH = 9
 };
 
 enum BitDepthMode
