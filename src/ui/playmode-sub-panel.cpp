@@ -15,6 +15,7 @@
 
 #include "playmode-sub-panel.h"
 #include <sst/jucegui/layouts/ListLayout.h>
+#include "libMTSClient.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -175,6 +176,15 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     };
     addAndMakeVisible(*voiceLimit);
 
+    mtsTitle = std::make_unique<jcmp::RuledLabel>();
+    mtsTitle->setText("MTS");
+    addAndMakeVisible(*mtsTitle);
+    mtsStatusLabel = std::make_unique<jcmp::Label>();
+    mtsStatusLabel->setText("No MTS");
+    mtsStatusLabel->setJustification(juce::Justification::centred);
+    mtsStatusLabel->setEnabled(false);
+    addAndMakeVisible(*mtsStatusLabel);
+
     panicTitle = std::make_unique<jcmp::RuledLabel>();
     panicTitle->setText("Panic");
     panicButton = std::make_unique<jcmp::TextPushButton>();
@@ -280,6 +290,8 @@ void PlayModeSubPanel::resized()
     col4.add(jlo::Component(*mpeActiveButton).withHeight(uicLabelHeight));
     col4.add(jlo::Component(*mpeRange).withHeight(uicLabelHeight));
     col4.add(jlo::Component(*mpeRangeL).withHeight(uicLabelHeight));
+    col4.add(titleLabelGaplessLayout(mtsTitle));
+    col4.add(jlo::Component(*mtsStatusLabel).withHeight(uicLabelHeight));
     col4.add(titleLabelGaplessLayout(panicTitle));
     col4.add(jlo::Component(*panicButton).withHeight(uicLabelHeight));
     topRow.add(col4);
@@ -492,6 +504,33 @@ void PlayModeSubPanel::setPolyLimit(int plVal)
     voiceLimit->setLabelAndTitle(std::to_string(getPolyLimit()),
                                  "Voice Limit " + std::to_string(getPolyLimit()));
     voiceLimit->repaint();
+}
+
+void PlayModeSubPanel::updateMTSStatus()
+{
+    if (++mtsIdleCount < 50)
+        return;
+    mtsIdleCount = 0;
+
+    auto *cli = editor.mtsClient;
+    bool connected = cli && MTS_HasMaster(cli);
+    std::string text;
+    if (connected)
+    {
+        const char *name = MTS_GetScaleName(cli);
+        text = (name && *name) ? std::string(name) : std::string("Connected");
+    }
+    else
+    {
+        text = "No MTS";
+    }
+
+    if (connected != mtsConnected || text != mtsStatusLabel->getText())
+    {
+        mtsConnected = connected;
+        mtsStatusLabel->setEnabled(connected);
+        mtsStatusLabel->setText(text);
+    }
 }
 
 } // namespace baconpaul::six_sines::ui

@@ -425,7 +425,8 @@ struct Synth
 
             SEND_SAMPLE_RATE,
             SET_DAW_EXTRA_STATE,
-            SET_MACRO_NAME // paramId = macro index, patchNamePointer = name buffer
+            SET_MACRO_NAME, // paramId = macro index, patchNamePointer = name buffer
+            MTS_POINTER     // dawExtraStatePointer = MTSClient* (or nullptr)
         } action;
         uint32_t paramId{0};
         float value{0}, value2{0};
