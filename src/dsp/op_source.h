@@ -118,7 +118,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             using EM = Patch::SourceNode::ExtendedMode;
             auto em = static_cast<EM>(
                 static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
-            if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::PINK_NOISE)
+            if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::NOISE)
             {
                 extendedLagM.setRateInMilliseconds(10, monoValues.sr.samplerate, blockSizeInv);
                 extendedLagM.snapTo(sourceNode.extendedModeM.value);
@@ -194,7 +194,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         using EM = Patch::SourceNode::ExtendedMode;
         auto em =
             static_cast<EM>(static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
-        if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::PINK_NOISE)
+        if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::NOISE)
             used = used || (sourceNode.lfoToExtendedModeM.value != 0);
 
         return used;
@@ -443,30 +443,27 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             }
             break;
         }
-        case EM::PINK_NOISE:
+        case EM::NOISE:
         {
             using NM = Patch::SourceNode::NoiseMode;
             auto nm =
-                static_cast<NM>(static_cast<uint32_t>(std::round(sourceNode.pinkNoiseMode.value)));
+                static_cast<NM>(static_cast<uint32_t>(std::round(sourceNode.noiseMode.value)));
             constexpr auto PMSAW = Patch::SourceNode::PhaseMapShape::SAW;
             constexpr auto RWSAW = Patch::SourceNode::ResonantSweepWindow::SAW;
             switch (nm)
             {
             case NM::ADD_TO_PHASE:
-                innerLoopImpl<EM::PINK_NOISE, PMSAW, RWSAW, NM::ADD_TO_PHASE>(onto, fbv, rf, dRF,
-                                                                              phs);
+                innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::ADD_TO_PHASE>(onto, fbv, rf, dRF, phs);
                 break;
             case NM::ADD_TO_SIGNAL:
-                innerLoopImpl<EM::PINK_NOISE, PMSAW, RWSAW, NM::ADD_TO_SIGNAL>(onto, fbv, rf, dRF,
-                                                                               phs);
+                innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::ADD_TO_SIGNAL>(onto, fbv, rf, dRF, phs);
                 break;
             case NM::MIX_WITH_SIGNAL:
-                innerLoopImpl<EM::PINK_NOISE, PMSAW, RWSAW, NM::MIX_WITH_SIGNAL>(onto, fbv, rf, dRF,
-                                                                                 phs);
+                innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::MIX_WITH_SIGNAL>(onto, fbv, rf, dRF,
+                                                                            phs);
                 break;
             case NM::MUL_BY_SIGNAL:
-                innerLoopImpl<EM::PINK_NOISE, PMSAW, RWSAW, NM::MUL_BY_SIGNAL>(onto, fbv, rf, dRF,
-                                                                               phs);
+                innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_SIGNAL>(onto, fbv, rf, dRF, phs);
                 break;
             }
             break;
@@ -485,7 +482,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         using EM = Patch::SourceNode::ExtendedMode;
         using NMode = Patch::SourceNode::NoiseMode;
         float nextM{0.f}, dM{0.f};
-        if constexpr (ET == EM::PHASE_REMAP || ET == EM::RESONANT_SWEEP || ET == EM::PINK_NOISE)
+        if constexpr (ET == EM::PHASE_REMAP || ET == EM::RESONANT_SWEEP || ET == EM::NOISE)
         {
             // Raw target m for this block: patch value + external mod + env / lfo contributions.
             auto lfoFac = *lfoFacP;
@@ -560,20 +557,20 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                 nextM += dM;
                 out = window * st.at(kmph);
             }
-            else if constexpr (ET == EM::PINK_NOISE)
+            else if constexpr (ET == EM::NOISE)
             {
                 if (noisePos >= 16)
                 {
                     pinkNoise.generate16(noiseBuf);
                     noisePos = 0;
                 }
-                float noise = noiseBuf[noisePos++] * Patch::SourceNode::pinkNoiseScale;
+                float noise = noiseBuf[noisePos++] * Patch::SourceNode::noiseScale;
                 float m = nextM;
                 nextM += dM;
                 if constexpr (NM == NMode::ADD_TO_PHASE)
                 {
                     ph += static_cast<int32_t>(m * noise * phase::phaseMaxF *
-                                               Patch::SourceNode::pinkNoisePhaseScale);
+                                               Patch::SourceNode::noisePhaseScale);
                     out = st.at(ph);
                 }
                 else if constexpr (NM == NMode::ADD_TO_SIGNAL)

@@ -90,6 +90,9 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::Knob> extM, envToExtM, lfoToExtM;
     std::unique_ptr<PatchContinuous> extMD, envToExtMD, lfoToExtMD;
     std::unique_ptr<jcmp::Label> extML, envToExtML, lfoToExtML;
+    std::unique_ptr<jcmp::Knob> extN, envToExtN, lfoToExtN;
+    std::unique_ptr<PatchContinuous> extND, envToExtND, lfoToExtND;
+    std::unique_ptr<jcmp::Label> extNL, envToExtNL, lfoToExtNL;
     std::unique_ptr<juce::Component> pdWavPainter;
 
     // Resonant sweep body components
@@ -100,10 +103,14 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::Label> resonantSweepDepthL;
     std::unique_ptr<juce::Component> resSweepPainter;
 
-    // Pink-noise body components
-    std::unique_ptr<jcmp::MultiSwitch> pinkNoiseMode;
-    std::unique_ptr<PatchDiscrete> pinkNoiseModeD;
-    std::unique_ptr<juce::Component> pinkNoisePainter;
+    // Noise body components
+    std::unique_ptr<jcmp::JogUpDownButton> noiseMode;
+    std::unique_ptr<PatchDiscrete> noiseModeD;
+    std::unique_ptr<jcmp::Label> noiseModeL;
+    std::unique_ptr<jcmp::JogUpDownButton> noiseType;
+    std::unique_ptr<PatchDiscrete> noiseTypeD;
+    std::unique_ptr<jcmp::Label> noiseTypeL;
+    std::unique_ptr<juce::Component> noisePainter;
 
     void setExtendedModeVisibility();
 

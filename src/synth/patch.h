@@ -524,7 +524,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             NONE = 0,           // these value stream
             PHASE_REMAP = 1,    // CZ-style wave 1-4 wav(phase) -> wav(map(phase))
             RESONANT_SWEEP = 2, // CZ-style resonant sweep (5-9)
-            PINK_NOISE = 3      // pink noise injection
+            NOISE = 3           // noise injection
         };
 
         enum struct NoiseMode : uint32_t
@@ -535,11 +535,19 @@ struct Patch : pats::PatchBase<Patch, Param>
             MUL_BY_SIGNAL = 3,
         };
 
-        // Pink noise from PinkNoise.generate16 has roughly ±0.25 typical amplitude;
+        enum struct NoiseType : uint32_t
+        {
+            WHITE = 0,
+            PINK = 1,
+            TILT = 2,
+            CHIP_LFSR = 3,
+        };
+
+        // Noise from PinkNoise.generate16 has roughly ±0.25 typical amplitude;
         // scale up so M=1 reaches a useful range. ADD_TO_PHASE additionally needs
         // attenuation since one full cycle of phase jitter is too much.
-        static constexpr float pinkNoiseScale = 4.0f;
-        static constexpr float pinkNoisePhaseScale = 0.1f;
+        static constexpr float noiseScale = 3.0f;
+        static constexpr float noisePhaseScale = 0.1f;
 
         enum struct PhaseMapShape : uint32_t
         {
@@ -744,7 +752,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                        {(int)ExtendedMode::NONE, "None"},
                                        {(int)ExtendedMode::PHASE_REMAP, "Phase Map"},
                                        {(int)ExtendedMode::RESONANT_SWEEP, "Resonant Sweep"},
-                                       {(int)ExtendedMode::PINK_NOISE, "Pink Noise"},
+                                       {(int)ExtendedMode::NOISE, "Noise"},
                                    })),
               extendedModeM(floatMd(version_120b)
                                 .asPercent()
@@ -823,18 +831,30 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                   {(int)ResonantSweepFrequencyDepth::FOUR, "4 oct"},
                                                   {(int)ResonantSweepFrequencyDepth::TEN, "10 oct"},
                                               })),
-              pinkNoiseMode(intMd(version_120f)
-                                .withRange(0, 3)
-                                .withDefault(0)
-                                .withID(id(185, idx))
-                                .withName(name(idx) + " Pink Noise Mode")
-                                .withGroupName(name(idx))
-                                .withUnorderedMapFormatting({
-                                    {(int)NoiseMode::ADD_TO_PHASE, "Add to Phase"},
-                                    {(int)NoiseMode::ADD_TO_SIGNAL, "Add to Signal"},
-                                    {(int)NoiseMode::MIX_WITH_SIGNAL, "Mix"},
-                                    {(int)NoiseMode::MUL_BY_SIGNAL, "Mul by Signal"},
-                                }))
+              noiseMode(intMd(version_120f)
+                            .withRange(0, 3)
+                            .withDefault(0)
+                            .withID(id(185, idx))
+                            .withName(name(idx) + " Noise Mode")
+                            .withGroupName(name(idx))
+                            .withUnorderedMapFormatting({
+                                {(int)NoiseMode::ADD_TO_PHASE, "Add to Phase"},
+                                {(int)NoiseMode::ADD_TO_SIGNAL, "Add to Signal"},
+                                {(int)NoiseMode::MIX_WITH_SIGNAL, "Mix"},
+                                {(int)NoiseMode::MUL_BY_SIGNAL, "Mul by Signal"},
+                            })),
+              noiseType(intMd(version_120f)
+                            .withRange(0, 3)
+                            .withDefault((int)NoiseType::PINK)
+                            .withID(id(186, idx))
+                            .withName(name(idx) + " Noise Type")
+                            .withGroupName(name(idx))
+                            .withUnorderedMapFormatting({
+                                {(int)NoiseType::WHITE, "White"},
+                                {(int)NoiseType::PINK, "Pink"},
+                                {(int)NoiseType::TILT, "Tilt"},
+                                {(int)NoiseType::CHIP_LFSR, "Chip LFSR"},
+                            }))
 
         {
             index = idx;
@@ -877,7 +897,8 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param phaseMapModeShape;
         Param resonantSweepWindowShape;
         Param resonantSweepFrequencyDepth;
-        Param pinkNoiseMode;
+        Param noiseMode;
+        Param noiseType;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -909,7 +930,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &phaseMapModeShape,
                                      &resonantSweepWindowShape,
                                      &resonantSweepFrequencyDepth,
-                                     &pinkNoiseMode};
+                                     &noiseMode,
+                                     &noiseType};
             for (int i = 0; i < numModsPer; ++i)
                 res.push_back(&modtarget[i]);
             appendDAHDSRParams(res);

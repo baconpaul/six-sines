@@ -403,22 +403,22 @@ struct ResSweepPlotter : juce::Component
 };
 
 /*
- * PinkNoisePainter shows the result of applying the active NoiseMode to the current
+ * NoisePainter shows the result of applying the active NoiseMode to the current
  * waveform with a fixed-seed pink noise source so the picture is reproducible. We
  * draw the underlying waveform faintly behind, the noise sequence dotted, and the
  * combined result on top.
  */
-struct PinkNoisePainter : juce::Component
+struct NoisePainter : juce::Component
 {
     const Param &wf, &ph, &mp, &noiseMode;
     SixSinesEditor &editor;
     SinTable st;
 
-    static constexpr int numCycles{2};
+    static constexpr int numCycles{1};
     static constexpr uint32_t fixedSeed{0xDEC0DE42u};
 
-    PinkNoisePainter(const Param &w, const Param &p, const Param &mParam, const Param &nMode,
-                     SixSinesEditor &e)
+    NoisePainter(const Param &w, const Param &p, const Param &mParam, const Param &nMode,
+                 SixSinesEditor &e)
         : wf(w), ph(p), mp(mParam), noiseMode(nMode), editor(e)
     {
     }
@@ -487,7 +487,7 @@ struct PinkNoisePainter : juce::Component
                 rng.generate16(noiseBuf);
                 noisePos = 0;
             }
-            float n = noiseBuf[noisePos++] * Patch::SourceNode::pinkNoiseScale;
+            float n = noiseBuf[noisePos++] * Patch::SourceNode::noiseScale;
             float base = st.at(wph);
             float out;
             uint32_t modPh = wph;
@@ -496,7 +496,7 @@ struct PinkNoisePainter : juce::Component
             {
             case NM::ADD_TO_PHASE:
                 modPh = (wph + static_cast<int32_t>(m * n * phase::phaseMaxF *
-                                                    Patch::SourceNode::pinkNoisePhaseScale)) &
+                                                    Patch::SourceNode::noisePhaseScale)) &
                         phase::phaseMask;
                 out = st.at(modPh);
                 break;
@@ -546,9 +546,9 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
         auto em = static_cast<EM>(static_cast<int>(
             std::round(w->editor.patchCopy.sourceNodes[w->index].extendedModeMode.value)));
         if (tid == TID::EXTEND_M)
-            return em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::PINK_NOISE;
+            return em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::NOISE;
         if (tid == TID::EXTEND_N)
-            return false;
+            return em == EM::NOISE;
         return true;
     };
 
@@ -607,8 +607,8 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
             pdWavPainter->repaint();
         if (resSweepPainter)
             resSweepPainter->repaint();
-        if (pinkNoisePainter)
-            pinkNoisePainter->repaint();
+        if (noisePainter)
+            noisePainter->repaint();
         wavButton->repaint();
         setEnabledState();
     };
@@ -631,8 +631,8 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
             w->pdWavPainter->repaint();
         if (w->resSweepPainter)
             w->resSweepPainter->repaint();
-        if (w->pinkNoisePainter)
-            w->pinkNoisePainter->repaint();
+        if (w->noisePainter)
+            w->noisePainter->repaint();
     };
 
     startingPhaseL = std::make_unique<jcmp::Label>();
@@ -743,6 +743,27 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     lfoToExtML->setText(std::string() + "LFO" + u8"\U00002192" + "M");
     addChildComponent(*lfoToExtML);
 
+    createComponent(editor, *this, sn.extendedModeN, extN, extND);
+    addChildComponent(*extN);
+    traverse(extN);
+    extNL = std::make_unique<jcmp::Label>();
+    extNL->setText("N");
+    addChildComponent(*extNL);
+
+    createComponent(editor, *this, sn.envToExtendedModeN, envToExtN, envToExtND);
+    addChildComponent(*envToExtN);
+    traverse(envToExtN);
+    envToExtNL = std::make_unique<jcmp::Label>();
+    envToExtNL->setText(std::string() + "Env" + u8"\U00002192" + "N");
+    addChildComponent(*envToExtNL);
+
+    createComponent(editor, *this, sn.lfoToExtendedModeN, lfoToExtN, lfoToExtND);
+    addChildComponent(*lfoToExtN);
+    traverse(lfoToExtN);
+    lfoToExtNL = std::make_unique<jcmp::Label>();
+    lfoToExtNL->setText(std::string() + "LFO" + u8"\U00002192" + "N");
+    addChildComponent(*lfoToExtNL);
+
     pdWavPainter = std::make_unique<PDWavPainter>(sn.waveForm, sn.startingPhase, sn.extendedModeM,
                                                   sn.phaseMapModeShape, editor);
     addChildComponent(*pdWavPainter);
@@ -765,13 +786,23 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
         sn.resonantSweepFrequencyDepth, editor);
     addChildComponent(*resSweepPainter);
 
-    createComponent(editor, *this, sn.pinkNoiseMode, pinkNoiseMode, pinkNoiseModeD);
-    addChildComponent(*pinkNoiseMode);
-    traverse(pinkNoiseMode);
+    createComponent(editor, *this, sn.noiseMode, noiseMode, noiseModeD);
+    addChildComponent(*noiseMode);
+    traverse(noiseMode);
+    noiseModeL = std::make_unique<jcmp::Label>();
+    noiseModeL->setText("Mode");
+    addChildComponent(*noiseModeL);
 
-    pinkNoisePainter = std::make_unique<PinkNoisePainter>(
-        sn.waveForm, sn.startingPhase, sn.extendedModeM, sn.pinkNoiseMode, editor);
-    addChildComponent(*pinkNoisePainter);
+    createComponent(editor, *this, sn.noiseType, noiseType, noiseTypeD);
+    addChildComponent(*noiseType);
+    traverse(noiseType);
+    noiseTypeL = std::make_unique<jcmp::Label>();
+    noiseTypeL->setText("Type");
+    addChildComponent(*noiseTypeL);
+
+    noisePainter = std::make_unique<NoisePainter>(sn.waveForm, sn.startingPhase, sn.extendedModeM,
+                                                  sn.noiseMode, editor);
+    addChildComponent(*noisePainter);
 
     // Live-repaint extended-mode painters when any of their inputs change.
     auto repaintExt = [w = juce::Component::SafePointer(this)]()
@@ -782,19 +813,27 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
             w->pdWavPainter->repaint();
         if (w->resSweepPainter)
             w->resSweepPainter->repaint();
-        if (w->pinkNoisePainter)
-            w->pinkNoisePainter->repaint();
+        if (w->noisePainter)
+            w->noisePainter->repaint();
     };
     extMD->onGuiSetValue = repaintExt;
     phaseMapShapeD->onGuiSetValue = repaintExt;
     resonantWindowShapeD->onGuiSetValue = repaintExt;
     resonantSweepDepthD->onGuiSetValue = repaintExt;
-    pinkNoiseModeD->onGuiSetValue = repaintExt;
+    noiseModeD->onGuiSetValue = repaintExt;
+    auto noiseTypeChanged = [w = juce::Component::SafePointer(this)]()
+    {
+        if (!w)
+            return;
+        w->setEnabledState();
+    };
+    noiseTypeD->onGuiSetValue = noiseTypeChanged;
     editor.componentRefreshByID[sn.extendedModeM.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.phaseMapModeShape.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.resonantSweepWindowShape.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.resonantSweepFrequencyDepth.meta.id] = repaintExt;
-    editor.componentRefreshByID[sn.pinkNoiseMode.meta.id] = repaintExt;
+    editor.componentRefreshByID[sn.noiseMode.meta.id] = repaintExt;
+    editor.componentRefreshByID[sn.noiseType.meta.id] = noiseTypeChanged;
 
     setExtendedModeVisibility();
 
@@ -1007,15 +1046,18 @@ void SourceSubPanel::resized()
         bodyLo.add(rightCol.expandToFill());
         bodyLo.doLayout();
     }
-    else if (em == EM::PINK_NOISE)
+    else if (em == EM::NOISE)
     {
-        // Layout mirrors RESONANT_SWEEP:
-        //   [ noise-mode multi ] [ pink-noise painter spans                ]
-        //   [ noise-mode multi ] [ M ] [ Env->M ] [ LFO->M ]
-        constexpr int plotHeight = painterH - 15;
+        // Layout:
+        //   [ Mode : [ jog ] ]  [ noise painter spans       ]
+        //   [ Type : [ jog ] ]  [ noise painter spans       ]
+        //   [ M ] [ Env->M ] [ LFO->M ] [ N ] [ Env->N ] [ LFO->N ]
         constexpr int cellW = uicKnobSize;
         constexpr int row2H = uicLabeledKnobHeight;
+        constexpr int plotHeight = painterH - 15;
         constexpr int bodyH = plotHeight + uicMargin + row2H;
+        constexpr int leftColW = (cellW * 8) / 2;
+        constexpr int leftLabelW = 44;
         auto bodyRect = juce::Rectangle<int>(depx, bodyY, p.getWidth(), bodyH);
 
         auto knobCell = [](auto &k, auto &l)
@@ -1025,30 +1067,44 @@ void SourceSubPanel::resized()
             return cell;
         };
 
-        auto bodyLo = jlo::HList()
-                          .at(bodyRect.getX(), bodyRect.getY())
+        // Top section: left controls column + plot
+        auto topLo = jlo::HList()
+                         .at(bodyRect.getX(), bodyRect.getY())
+                         .withWidth(bodyRect.getWidth())
+                         .withHeight(plotHeight)
+                         .withAutoGap(uicMargin * 2);
+
+        auto labelJogRow = [](auto &lab, auto &jog)
+        {
+            auto row = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
+            row.add(jlo::Component(lab).withWidth(leftLabelW));
+            row.add(jlo::Component(jog).expandToFill());
+            return row;
+        };
+
+        auto leftStack = jlo::VList().withAutoGap(uicMargin);
+        leftStack.add(labelJogRow(*noiseModeL, *noiseMode));
+        leftStack.add(labelJogRow(*noiseTypeL, *noiseType));
+        auto leftCol = jlo::VList().withWidth(leftColW);
+        leftCol.add(leftStack.centerInParent());
+        topLo.add(leftCol);
+
+        topLo.add(jlo::Component(*noisePainter).withHeight(plotHeight).expandToFill());
+        topLo.doLayout();
+
+        // Knob row: M / Env->M / LFO->M / N / Env->N / LFO->N across the body width.
+        auto knobLo = jlo::HList()
+                          .at(bodyRect.getX(), bodyRect.getY() + plotHeight + uicMargin * 2)
                           .withWidth(bodyRect.getWidth())
-                          .withHeight(bodyRect.getHeight())
-                          .withAutoGap(uicMargin * 2);
-
-        // Left: multiswitch spans full body height
-        auto leftCol = jlo::VList().withWidth(2 * cellW);
-        leftCol.add(jlo::Component(*pinkNoiseMode).withHeight(bodyH));
-        bodyLo.add(leftCol);
-
-        // Right: painter on top, then M / Env->M / LFO->M
-        auto rightCol = jlo::VList().withAutoGap(uicMargin);
-        rightCol.add(jlo::Component(*pinkNoisePainter).withHeight(plotHeight));
-
-        auto knobRow = jlo::HList().withHeight(row2H).withAutoGap(uicMargin);
-        knobRow.add(knobCell(extM, extML));
-        knobRow.add(knobCell(envToExtM, envToExtML));
-        knobRow.add(knobCell(lfoToExtM, lfoToExtML));
-        rightCol.addGap(uicMargin);
-        rightCol.add(knobRow);
-
-        bodyLo.add(rightCol.expandToFill());
-        bodyLo.doLayout();
+                          .withHeight(row2H)
+                          .withAutoGap(uicMargin);
+        knobLo.add(knobCell(extM, extML).centerInParent().expandToFill());
+        knobLo.add(knobCell(envToExtM, envToExtML).centerInParent().expandToFill());
+        knobLo.add(knobCell(lfoToExtM, lfoToExtML).centerInParent().expandToFill());
+        knobLo.add(knobCell(extN, extNL).centerInParent().expandToFill());
+        knobLo.add(knobCell(envToExtN, envToExtNL).centerInParent().expandToFill());
+        knobLo.add(knobCell(lfoToExtN, lfoToExtNL).centerInParent().expandToFill());
+        knobLo.doLayout();
     }
 
     layoutModulation(p);
@@ -1061,8 +1117,8 @@ void SourceSubPanel::setExtendedModeVisibility()
 
     auto isPhaseRemap = (em == EM::PHASE_REMAP);
     auto isResonantSweep = (em == EM::RESONANT_SWEEP);
-    auto isPinkNoise = (em == EM::PINK_NOISE);
-    auto showsM = isPhaseRemap || isResonantSweep || isPinkNoise;
+    auto isNoise = (em == EM::NOISE);
+    auto showsM = isPhaseRemap || isResonantSweep || isNoise;
 
     comingSoonLabel->setVisible(false);
     phaseMapShape->setVisible(isPhaseRemap);
@@ -1072,6 +1128,12 @@ void SourceSubPanel::setExtendedModeVisibility()
     envToExtML->setVisible(showsM);
     lfoToExtM->setVisible(showsM);
     lfoToExtML->setVisible(showsM);
+    extN->setVisible(isNoise);
+    extNL->setVisible(isNoise);
+    envToExtN->setVisible(isNoise);
+    envToExtNL->setVisible(isNoise);
+    lfoToExtN->setVisible(isNoise);
+    lfoToExtNL->setVisible(isNoise);
     if (pdWavPainter)
         pdWavPainter->setVisible(isPhaseRemap);
     resonantWindowShape->setVisible(isResonantSweep);
@@ -1079,10 +1141,16 @@ void SourceSubPanel::setExtendedModeVisibility()
     resonantSweepDepthL->setVisible(isResonantSweep);
     if (resSweepPainter)
         resSweepPainter->setVisible(isResonantSweep);
-    if (pinkNoiseMode)
-        pinkNoiseMode->setVisible(isPinkNoise);
-    if (pinkNoisePainter)
-        pinkNoisePainter->setVisible(isPinkNoise);
+    if (noiseMode)
+        noiseMode->setVisible(isNoise);
+    if (noiseModeL)
+        noiseModeL->setVisible(isNoise);
+    if (noiseType)
+        noiseType->setVisible(isNoise);
+    if (noiseTypeL)
+        noiseTypeL->setVisible(isNoise);
+    if (noisePainter)
+        noisePainter->setVisible(isNoise);
 }
 
 void SourceSubPanel::setEnabledState()
@@ -1134,8 +1202,17 @@ void SourceSubPanel::setEnabledState()
     extM->setEnabled(!isAudioIn);
     envToExtM->setEnabled(!isAudioIn);
     lfoToExtM->setEnabled(!isAudioIn);
-    if (pinkNoiseMode)
-        pinkNoiseMode->setEnabled(!isAudioIn);
+    if (noiseMode)
+        noiseMode->setEnabled(!isAudioIn);
+    if (noiseType)
+        noiseType->setEnabled(!isAudioIn);
+
+    using NT = Patch::SourceNode::NoiseType;
+    auto nt = static_cast<NT>(static_cast<int>(std::round(sn.noiseType.value)));
+    auto nKnobsActive = !isAudioIn && (nt == NT::TILT || nt == NT::CHIP_LFSR);
+    extN->setEnabled(nKnobsActive);
+    envToExtN->setEnabled(nKnobsActive);
+    lfoToExtN->setEnabled(nKnobsActive);
 
     // Notify source/matrix panels to grey out ratio knob and feedback knob
     editor.sourcePanel->updateOpEnabledState(index);
