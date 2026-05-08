@@ -2,17 +2,36 @@
 
 I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatible. But expanded. Here's my rough list
 
-## Reset when automated memory for clap edge with output stage
+## THings which came in after mostly done
 
-## MPE Pitch Bend
+- Reset Controls when automated for clap edge for things like sample rate
 
-- basically in mpe mode interpolate between keys for mts tuning in voice.cpp
+## Modulation
+- Clamp targets
+- LFO -> M etc... depth as an additive and attenuation target
+
+## Noise Upgrades
+- Pink, and Tilt (with N for tilt)
+- Scale by 0.1 for finer control with modulation
+
+## Smaller Things from the crew
+- Unison retuning slider could cubic rescale
+- Mod target sliders scale matches display rescaling based on target (could be tricky)
+- Now we have DES move MPE to the instance
+   - if you load a stream which has it from the clap edge set the instance to that
+   - if you load a patch from an sxsnp ignore the patch setting
+   - move the mpe enabled param to be instance based (leave the param in to not break stuff but basically dont use it to drive mpe)
 
 ## Infrastructure
 
 - Clap Wrapper Standalone upgrades
   - windows ui open isn't right
   - jack on linux
+
+## MPE Pitch Bend **DONE**
+
+- basically in mpe mode interpolate between keys for mts tuning in voice.cpp
+
 
 ## CZ-style PD features **done**
 
