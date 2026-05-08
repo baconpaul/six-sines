@@ -479,6 +479,10 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
                 AudioToUIMsg msg3{AudioToUIMsg::UPDATE_CPU_USAGE, 0, (float)(cpuUsage * 100)};
                 audioToUi.push(msg3);
 
+                AudioToUIMsg msg4{AudioToUIMsg::MTS_POINTER, 0, 0, 0, nullptr,
+                                  monoValues.mtsClient};
+                audioToUi.push(msg4);
+
                 lastVuUpdate = 0;
             }
             else

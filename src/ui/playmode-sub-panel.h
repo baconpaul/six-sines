@@ -37,7 +37,12 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<jcmp::MultiSwitch> playMode;
     std::unique_ptr<PatchDiscrete> playModeD;
 
-    std::unique_ptr<jcmp::RuledLabel> bendTitle, uniTitle, mpeTitle, tsposeTitle, panicTitle;
+    std::unique_ptr<jcmp::RuledLabel> bendTitle, uniTitle, mpeTitle, tsposeTitle, panicTitle,
+        mtsTitle;
+    std::unique_ptr<jcmp::Label> mtsStatusLabel;
+    int mtsIdleCount{0};
+    bool mtsConnected{false};
+    void updateMTSStatus();
 
     std::unique_ptr<jcmp::Label> bUpL, bDnL;
     std::unique_ptr<PatchContinuous> bUpD, bDnD;

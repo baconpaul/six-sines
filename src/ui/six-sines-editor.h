@@ -244,6 +244,10 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
 
     std::unique_ptr<jcmp::VUMeter> vuMeter;
 
+    // Latest MTSClient pointer reported by the audio thread via MTS_POINTER messages.
+    // Read on the UI thread only; queried by PlayModeSubPanel for connection status.
+    struct MTSClient *mtsClient{nullptr};
+
     // To turn this on, recompile with it on in six-sines-editor.cpp
     void visibilityChanged() override;
     void parentHierarchyChanged() override;

@@ -392,12 +392,19 @@ void SixSinesEditor::idle()
         {
             settingsPanel->setCpuUsage(aum->value);
         }
+        else if (aum->action == Synth::AudioToUIMsg::MTS_POINTER)
+        {
+            mtsClient = static_cast<MTSClient *>(const_cast<void *>(aum->dawExtraStatePointer));
+        }
         else
         {
             SXSNLOG("Ignored patch message " << aum->action);
         }
         aum = audioToUI.pop();
     }
+
+    if (playModeSubPanel)
+        playModeSubPanel->updateMTSStatus();
 }
 
 void SixSinesEditor::paint(juce::Graphics &g)
