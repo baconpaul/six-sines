@@ -75,12 +75,35 @@ void Voice::renderBlock()
     float retuneKey = voiceValues.key;
     if (monoValues.mtsClient && MTS_HasMaster(monoValues.mtsClient))
     {
-        retuneKey +=
-            MTS_RetuningInSemitones(monoValues.mtsClient, voiceValues.key, voiceValues.channel);
+        const auto mpeActive = out.outputNode.mpeActive.value > 0.5f;
+        if (mpeActive)
+        {
+            // Interpolate the MTS retuning across the two semitones the
+            // bent key straddles, so MPE bend tracks the local scale slope.
+            float floatKey = (float)voiceValues.key + voiceValues.mpeBendInSemis;
+            int iFloatKey = (int)std::floor(floatKey);
+            int loKey = std::clamp(iFloatKey, 0, 126);
+            int hiKey = loKey + 1;
+            float frac = std::clamp(floatKey - (float)loKey, 0.f, 1.f);
+            float loRetune =
+                MTS_RetuningInSemitones(monoValues.mtsClient, loKey, voiceValues.channel);
+            float hiRetune =
+                MTS_RetuningInSemitones(monoValues.mtsClient, hiKey, voiceValues.channel);
+            retuneKey += voiceValues.mpeBendInSemis + (1.f - frac) * loRetune + frac * hiRetune;
+        }
+        else
+        {
+            retuneKey +=
+                MTS_RetuningInSemitones(monoValues.mtsClient, voiceValues.key, voiceValues.channel);
+        }
+    }
+    else
+    {
+        retuneKey += voiceValues.mpeBendInSemis;
     }
     retuneKey += ((monoValues.pitchBend >= 0) ? out.bendUp : out.bendDown) * monoValues.pitchBend;
-    retuneKey += voiceValues.portaDiff * voiceValues.portaSign + voiceValues.mpeBendInSemis +
-                 voiceValues.noteExpressionTuningInSemis;
+    retuneKey += voiceValues.portaDiff * voiceValues.portaSign;
+    retuneKey += voiceValues.noteExpressionTuningInSemis;
     retuneKey += out.fineTune * 0.01 + out.ftModNode.coarseTune + out.ftModNode.level * 2 +
                  out.ftModNode.coarseLevel;
 
