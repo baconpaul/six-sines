@@ -16,6 +16,7 @@
 #ifndef BACONPAUL_SIX_SINES_SYNTH_MONO_VALUES_H
 #define BACONPAUL_SIX_SINES_SYNTH_MONO_VALUES_H
 
+#include <sst/basic-blocks/tables/DbToLinearProvider.h>
 #include <sst/basic-blocks/tables/EqualTuningProvider.h>
 #include <sst/basic-blocks/tables/TwoToTheXProvider.h>
 #include <sst/basic-blocks/dsp/RNG.h>
@@ -53,6 +54,7 @@ struct MonoValues
     {
         tuningProvider.init();
         twoToTheX.init();
+        dbToLinear.init();
         std::fill(macroPtr.begin(), macroPtr.end(), nullptr);
     }
 
@@ -71,6 +73,7 @@ struct MonoValues
 
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
     sst::basic_blocks::tables::TwoToTheXProvider twoToTheX;
+    sst::basic_blocks::tables::DbToLinearProvider dbToLinear;
 
     sst::basic_blocks::dsp::RNG rng;
 

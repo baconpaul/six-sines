@@ -23,7 +23,7 @@
 #include "dsp/sintable.h" // for drawing
 #include "dsp/remap_functions.h"
 #include "dsp/resonant_window.h"
-#include "sst/basic-blocks/dsp/PinkNoise.h"
+#include "dsp/noise_helper.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -410,16 +410,29 @@ struct ResSweepPlotter : juce::Component
  */
 struct NoisePainter : juce::Component
 {
-    const Param &wf, &ph, &mp, &noiseMode;
+    const Param &wf, &ph, &mp, &np, &noiseMode, &noiseType;
     SixSinesEditor &editor;
     SinTable st;
 
     static constexpr int numCycles{1};
     static constexpr uint32_t fixedSeed{0xDEC0DE42u};
 
-    NoisePainter(const Param &w, const Param &p, const Param &mParam, const Param &nMode,
-                 SixSinesEditor &e)
-        : wf(w), ph(p), mp(mParam), noiseMode(nMode), editor(e)
+    // Tilt filter inside NoiseHelper needs a dbToLinear table; build one once
+    // for the painter rather than dragging the engine's MonoValues into the UI.
+    static const sst::basic_blocks::tables::DbToLinearProvider &paintDbProv()
+    {
+        static const auto p = []
+        {
+            sst::basic_blocks::tables::DbToLinearProvider t;
+            t.init();
+            return t;
+        }();
+        return p;
+    }
+
+    NoisePainter(const Param &w, const Param &p, const Param &mParam, const Param &nParam,
+                 const Param &nMode, const Param &nType, SixSinesEditor &e)
+        : wf(w), ph(p), mp(mParam), np(nParam), noiseMode(nMode), noiseType(nType), editor(e)
     {
     }
 
@@ -459,8 +472,11 @@ struct NoisePainter : juce::Component
         st.setWaveForm(wfVal);
 
         using NM = Patch::SourceNode::NoiseMode;
+        using NT = Patch::SourceNode::NoiseType;
         const auto nm = static_cast<NM>(static_cast<uint32_t>(std::round(noiseMode.value)));
+        const auto nt = static_cast<NT>(static_cast<uint32_t>(std::round(noiseType.value)));
         const float m = mp.value;
+        const float nVal = np.value;
 
         const uint32_t phStart = static_cast<uint32_t>((1u << 26) * ph.value) & phase::phaseMask;
         const int nPixels = getWidth();
@@ -468,9 +484,15 @@ struct NoisePainter : juce::Component
         const float ho = 1.f;
         auto toY = [h, ho](float v) { return (1.f - (v + 1.f) * 0.5f) * h + ho; };
 
-        // Fixed-seed pink noise, refilled into a 16-sample stack buffer as we walk.
-        sst::basic_blocks::dsp::PinkNoise rng(fixedSeed);
+        // Fixed-seed noise helper, refilled into a 16-sample stack buffer as we walk.
+        sst::basic_blocks::dsp::RNG paintRng(fixedSeed);
+        NoiseHelper helper(paintRng, paintDbProv());
+        helper.warmup();
         float noiseBuf alignas(16)[16]{};
+        // Burn the pink generator's startup transient so the picture matches
+        // the steady-state look of the engine output.
+        for (int i = 0; i < 64; ++i)
+            helper.pinkNoise.generate16(noiseBuf);
         int noisePos{16};
 
         juce::Path pOut;
@@ -484,10 +506,10 @@ struct NoisePainter : juce::Component
 
             if (noisePos >= 16)
             {
-                rng.generate16(noiseBuf);
+                helper.fill16(noiseBuf, nt, nVal);
                 noisePos = 0;
             }
-            float n = noiseBuf[noisePos++] * Patch::SourceNode::noiseScale;
+            float n = noiseBuf[noisePos++];
             float base = st.at(wph);
             float out;
             uint32_t modPh = wph;
@@ -506,6 +528,12 @@ struct NoisePainter : juce::Component
             case NM::MUL_BY_SIGNAL:
                 out = base * (1.f + m * n);
                 break;
+            case NM::MUL_BY_UNI_SIGNAL:
+            {
+                auto u = (base + 1.f) * 0.5f;
+                out = u * (1.f + m * n) * 2.f - 1.f;
+                break;
+            }
             case NM::MIX_WITH_SIGNAL:
                 out = (1.f - m) * base + m * n;
                 break;
@@ -800,8 +828,9 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     noiseTypeL->setText("Type");
     addChildComponent(*noiseTypeL);
 
-    noisePainter = std::make_unique<NoisePainter>(sn.waveForm, sn.startingPhase, sn.extendedModeM,
-                                                  sn.noiseMode, editor);
+    noisePainter =
+        std::make_unique<NoisePainter>(sn.waveForm, sn.startingPhase, sn.extendedModeM,
+                                       sn.extendedModeN, sn.noiseMode, sn.noiseType, editor);
     addChildComponent(*noisePainter);
 
     // Live-repaint extended-mode painters when any of their inputs change.
@@ -821,14 +850,18 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     resonantWindowShapeD->onGuiSetValue = repaintExt;
     resonantSweepDepthD->onGuiSetValue = repaintExt;
     noiseModeD->onGuiSetValue = repaintExt;
+    extND->onGuiSetValue = repaintExt;
     auto noiseTypeChanged = [w = juce::Component::SafePointer(this)]()
     {
         if (!w)
             return;
         w->setEnabledState();
+        if (w->noisePainter)
+            w->noisePainter->repaint();
     };
     noiseTypeD->onGuiSetValue = noiseTypeChanged;
     editor.componentRefreshByID[sn.extendedModeM.meta.id] = repaintExt;
+    editor.componentRefreshByID[sn.extendedModeN.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.phaseMapModeShape.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.resonantSweepWindowShape.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.resonantSweepFrequencyDepth.meta.id] = repaintExt;

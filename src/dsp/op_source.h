@@ -21,8 +21,6 @@
 
 #include "configuration.h"
 
-#include "sst/basic-blocks/dsp/PinkNoise.h"
-
 #include "dsp/sintable.h"
 #include "dsp/node_support.h"
 #include "synth/patch.h"
@@ -30,6 +28,7 @@
 #include "synth/voice_values.h"
 #include "remap_functions.h"
 #include "resonant_window.h"
+#include "noise_helper.h"
 
 namespace baconpaul::six_sines
 {
@@ -73,7 +72,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
           ktlo(sn.keyTrackValueIsLow), ktlov(sn.keyTrackLowFrequencyValue),
           startPhase(sn.startingPhase), octTranspose(sn.octTranspose),
           lfoToRatioFine(sn.lfoToRatioFine), envToRatioFine(sn.envToRatioFine),
-          pinkNoise(mv.rng.unifU32())
+          noiseHelper(mv.rng, mv.dbToLinear)
     {
         reset();
     }
@@ -122,10 +121,16 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             {
                 extendedLagM.setRateInMilliseconds(10, monoValues.sr.samplerate, blockSizeInv);
                 extendedLagM.snapTo(sourceNode.extendedModeM.value);
-                // N is unused in all current extended modes — leave its lag uninitialized
-                // until a future mode that consumes N is added.
+            }
+            if (em == EM::NOISE)
+            {
+                extendedLagN.setRateInMilliseconds(10, monoValues.sr.samplerate, blockSizeInv);
+                extendedLagN.snapTo(sourceNode.extendedModeN.value);
             }
         }
+        noiseHelper.setSampleRate(monoValues.sr.sampleRate);
+        noiseHelper.warmup();
+        noisePos = 16;
         zeroInputs();
         snapActive();
 
@@ -196,6 +201,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             static_cast<EM>(static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
         if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::NOISE)
             used = used || (sourceNode.lfoToExtendedModeM.value != 0);
+        if (em == EM::NOISE)
+            used = used || (sourceNode.lfoToExtendedModeN.value != 0);
 
         return used;
     }
@@ -465,6 +472,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             case NM::MUL_BY_SIGNAL:
                 innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_SIGNAL>(onto, fbv, rf, dRF, phs);
                 break;
+            case NM::MUL_BY_UNI_SIGNAL:
+                innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_UNI_SIGNAL>(onto, fbv, rf, dRF,
+                                                                              phs);
+                break;
             }
             break;
         }
@@ -481,7 +492,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     {
         using EM = Patch::SourceNode::ExtendedMode;
         using NMode = Patch::SourceNode::NoiseMode;
+        using NT = Patch::SourceNode::NoiseType;
         float nextM{0.f}, dM{0.f};
+        float nextN{0.f};
+        NT noiseType{NT::PINK};
         if constexpr (ET == EM::PHASE_REMAP || ET == EM::RESONANT_SWEEP || ET == EM::NOISE)
         {
             // Raw target m for this block: patch value + external mod + env / lfo contributions.
@@ -497,6 +511,18 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             nextM = extendedLagM.v;
             dM = (nextM - extendedMPrior) / blockSize;
             std::swap(nextM, extendedMPrior);
+        }
+        if constexpr (ET == EM::NOISE)
+        {
+            auto lfoFac = *lfoFacP;
+            float targetN = sourceNode.extendedModeN.value + extendedNMod +
+                            sourceNode.envToExtendedModeN.value * env.outputCache[blockSize - 1] +
+                            lfoFac * sourceNode.lfoToExtendedModeN.value * lfo.outputBlock[0];
+            extendedLagN.setTarget(targetN);
+            extendedLagN.process();
+            nextN = extendedLagN.v;
+            noiseType =
+                static_cast<NT>(static_cast<uint32_t>(std::round(sourceNode.noiseType.value)));
         }
 
         for (int i = 0; i < blockSize; ++i)
@@ -561,10 +587,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             {
                 if (noisePos >= 16)
                 {
-                    pinkNoise.generate16(noiseBuf);
+                    noiseHelper.fill16(noiseBuf, noiseType, nextN);
                     noisePos = 0;
                 }
-                float noise = noiseBuf[noisePos++] * Patch::SourceNode::noiseScale;
+                float noise = noiseBuf[noisePos++];
                 float m = nextM;
                 nextM += dM;
                 if constexpr (NM == NMode::ADD_TO_PHASE)
@@ -580,6 +606,11 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                 else if constexpr (NM == NMode::MUL_BY_SIGNAL)
                 {
                     out = st.at(ph) * (1.f + m * noise);
+                }
+                else if constexpr (NM == NMode::MUL_BY_UNI_SIGNAL)
+                {
+                    auto u = (st.at(ph) + 1.f) * 0.5f;
+                    out = u * (1.f + m * noise) * 2.f - 1.f;
                 }
                 else // MIX_WITH_SIGNAL
                 {
@@ -671,9 +702,9 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     SinTable stWindow;
     float fbVal[2]{0.f, 0.f};
 
-    // PinkNoise generates 16 samples at a time; blockSize is 8 so we drain the buffer
-    // across two blocks. Seeded once at construction; not re-seeded on note retrigger.
-    sst::basic_blocks::dsp::PinkNoise pinkNoise;
+    // 16-sample noise buffer drained across two blocks (blockSize = 8). NoiseHelper
+    // is seeded once at construction; not re-seeded on note retrigger.
+    NoiseHelper noiseHelper;
     float noiseBuf alignas(16)[16]{};
     int noisePos{16};
 };
