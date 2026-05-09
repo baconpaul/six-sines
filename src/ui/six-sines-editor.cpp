@@ -1353,7 +1353,7 @@ void SixSinesEditor::initializeBaseSkin()
                     "Unable to load Manrope-Regular from the embedded font resources. "
                     "Six Sines will fall back to the system default font, which has "
                     "different metrics and may render at the wrong size.");
-    style()->adjustFontHeight(2.0f);
+    style()->setFontHeightDelta(2.0f);
     style()->setFontExtraKerningFactor(0.03f);
 
     if (lnf)
