@@ -72,7 +72,8 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<PatchDiscrete> uniRPhaseDD;
 
     std::unique_ptr<jcmp::HSliderFilled> uniSpread, uniPan;
-    std::unique_ptr<PatchContinuous> uniSpreadD, uniPanD;
+    std::unique_ptr<PatchContinuous::cubic_t> uniSpreadD;
+    std::unique_ptr<PatchContinuous> uniPanD;
     std::unique_ptr<jcmp::GlyphPainter> uniSpreadG, uniPanG;
 
     std::unique_ptr<jcmp::ToggleButton> mpeActiveButton;

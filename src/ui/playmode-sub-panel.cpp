@@ -120,7 +120,7 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     uniRPhase->setLabel("Rand Phase");
     addAndMakeVisible(*uniRPhase);
 
-    createComponent(editor, *this, on.unisonSpread, uniSpread, uniSpreadD);
+    createRescaledComponent(editor, *this, on.unisonSpread, uniSpread, uniSpreadD);
     addAndMakeVisible(*uniSpread);
     uniSpreadG = std::make_unique<jcmp::GlyphPainter>(jcmp::GlyphPainter::TUNING);
     addAndMakeVisible(*uniSpreadG);

@@ -10,14 +10,15 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 - Clamp targets
 - LFO -> M etc... depth as an additive and attenuation target
 
-## Noise Upgrades
-- Pink, White, Tilt (with N for tilt) **DONE**
-- Old BaconPaul Chip LFSR 'semi-tuned' (with N for 'sequence')
+## MPE Smoothing
+
+Totally doable but wait until I'm with an MPE device
+
+Plan approved and saved to /Users/paul/.claude/plans/witty-toasting-hoare.md. Project memory updated: 
+new entry project_tests_harness.md records the Catch2 six-sines-test target, the two harness patterns (makePlugin vs direct class), and the rule
+to add new test files to tests/CMakeLists.txt explicitly. Noted your CLAUDE.md edit (line 32 now acknowledges tests).
 
 ## Smaller Things from the crew
-- Can we smooth MPE pitch bend with a lagger? (Or do we)
-- Unison retuning slider could cubic rescale
-- Mod target sliders scale matches display rescaling based on target (could be tricky)
 - Now we have DES move MPE to the instance
    - if you load a stream which has it from the clap edge set the instance to that
    - if you load a patch from an sxsnp ignore the patch setting
@@ -28,6 +29,10 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 - Clap Wrapper Standalone upgrades
   - windows ui open isn't right
   - jack on linux
+
+## Noise Upgrades **DONE**
+- Pink, White, Tilt (with N for tilt) **DONE**
+- Old BaconPaul Chip LFSR 'semi-tuned' (with N for 'sequence') **DONE**
 
 ## MPE Pitch Bend **DONE**
 
@@ -87,6 +92,12 @@ Want modes - like segmented float,
 
 
 # 1.3 Roadmap (pushed from 1.2)
+
+Write these up as issues when done
+
+## Small
+- Mod target sliders scale matches display rescaling based on target (defer - too tricky)
+
 
 ## Granular FM
 
