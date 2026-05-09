@@ -522,6 +522,7 @@ struct Synth
 
     void reapplyControlSettings();
     void resetSoloState();
+    void handleAudioThreadParamSideEffects(Param *dest);
 
     sst::cpputils::active_set_overlay<Param> paramLagSet;
 
