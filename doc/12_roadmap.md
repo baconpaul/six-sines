@@ -11,10 +11,11 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 - LFO -> M etc... depth as an additive and attenuation target
 
 ## Noise Upgrades
-- Pink, and Tilt (with N for tilt)
-- Scale by 0.1 for finer control with modulation
+- Pink, White, Tilt (with N for tilt) **DONE**
+- Old BaconPaul Chip LFSR 'semi-tuned' (with N for 'sequence')
 
 ## Smaller Things from the crew
+- Can we smooth MPE pitch bend with a lagger? (Or do we)
 - Unison retuning slider could cubic rescale
 - Mod target sliders scale matches display rescaling based on target (could be tricky)
 - Now we have DES move MPE to the instance

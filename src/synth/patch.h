@@ -543,11 +543,9 @@ struct Patch : pats::PatchBase<Patch, Param>
             CHIP_LFSR = 3,
         };
 
-        // Noise from PinkNoise.generate16 has roughly ±0.25 typical amplitude;
-        // scale up so M=1 reaches a useful range. ADD_TO_PHASE additionally needs
-        // attenuation since one full cycle of phase jitter is too much.
-        static constexpr float noiseScale = 3.0f;
-        static constexpr float noisePhaseScale = 0.1f;
+        // Noise samples come out of NoiseHelper normalized to ~±1. ADD_TO_PHASE
+        // attenuates further since one full cycle of phase jitter is too much.
+        static constexpr float noisePhaseScale = 0.33f;
 
         enum struct PhaseMapShape : uint32_t
         {
