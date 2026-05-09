@@ -698,26 +698,7 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
                 dest->value = uiM->value;
             }
 
-            /*
-             * Some params have other side effects
-             */
-            if (dest->meta.id == patch.output.playMode.meta.id ||
-                dest->meta.id == patch.output.polyLimit.meta.id ||
-                dest->meta.id == patch.output.pianoModeActive.meta.id ||
-                dest->meta.id == patch.output.mpeActive.meta.id ||
-                dest->meta.id == patch.output.sampleRateStrategy.meta.id ||
-                dest->meta.id == patch.output.resampleEngine.meta.id ||
-                dest->meta.id == patch.output.lowpass.meta.id ||
-                dest->meta.id == patch.output.highpass.meta.id ||
-                dest->meta.id == patch.output.bitRateAdjust.meta.id)
-            {
-                reapplyControlSettings();
-            }
-
-            if (dest->adhocFeatures & Param::AdHocFeatureValues::SOLO)
-            {
-                resetSoloState();
-            }
+            handleAudioThreadParamSideEffects(dest);
 
             auto d = patch.dirty;
             if (!d)
@@ -1075,12 +1056,43 @@ void Synth::handleParamValue(Param *p, uint32_t pid, float value)
         p = patch.paramMap.at(pid);
     }
 
-    // p->value = value;
-    p->lag.setTarget(value);
-    paramLagSet.addToActive(p);
+    // Mirror the UI path (SET_PARAM): only FLOATs lag; discrete params snap so
+    // that handleAudioThreadParamSideEffects sees the new value, not the old.
+    if (p->meta.type == md_t::FLOAT)
+    {
+        p->lag.setTarget(value);
+        paramLagSet.addToActive(p);
+    }
+    else
+    {
+        p->value = value;
+    }
+
+    handleAudioThreadParamSideEffects(p);
 
     AudioToUIMsg au = {AudioToUIMsg::UPDATE_PARAM, pid, value};
     audioToUi.push(au);
+}
+
+void Synth::handleAudioThreadParamSideEffects(Param *dest)
+{
+    if (dest->meta.id == patch.output.playMode.meta.id ||
+        dest->meta.id == patch.output.polyLimit.meta.id ||
+        dest->meta.id == patch.output.pianoModeActive.meta.id ||
+        dest->meta.id == patch.output.mpeActive.meta.id ||
+        dest->meta.id == patch.output.sampleRateStrategy.meta.id ||
+        dest->meta.id == patch.output.resampleEngine.meta.id ||
+        dest->meta.id == patch.output.lowpass.meta.id ||
+        dest->meta.id == patch.output.highpass.meta.id ||
+        dest->meta.id == patch.output.bitRateAdjust.meta.id)
+    {
+        reapplyControlSettings();
+    }
+
+    if (dest->adhocFeatures & Param::AdHocFeatureValues::SOLO)
+    {
+        resetSoloState();
+    }
 }
 
 void Synth::pushFullUIRefresh()

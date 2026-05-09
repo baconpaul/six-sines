@@ -2,10 +2,6 @@
 
 I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatible. But expanded. Here's my rough list
 
-## THings which came in after mostly done
-
-- Reset Controls when automated for clap edge for things like sample rate
-
 ## Modulation
 - Clamp targets
 - LFO -> M etc... depth as an additive and attenuation target
