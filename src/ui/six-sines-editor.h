@@ -169,6 +169,11 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     // typeface ownership outlived the JUCE shutdown sequence.
     juce::Typeface::Ptr typefaceFromResources(const std::string &relPath);
 
+    // Show a modal alert overlay with the given title and message. Display is
+    // deferred via the message manager so it is safe to call during editor
+    // construction (when bounds aren't yet set).
+    void reportError(const std::string &title, const std::string &msg);
+
   private:
     std::unordered_map<std::string, juce::Typeface::Ptr> typefaceCache;
 

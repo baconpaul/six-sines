@@ -1348,6 +1348,11 @@ void SixSinesEditor::initializeBaseSkin()
 
     if (auto manrope = typefaceFromResources("Manrope/static/Manrope-Regular.ttf"))
         style()->replaceFontsWithTypeface(manrope);
+    else
+        reportError("Font Load Failed",
+                    "Unable to load Manrope-Regular from the embedded font resources. "
+                    "Six Sines will fall back to the system default font, which has "
+                    "different metrics and may render at the wrong size.");
     style()->adjustFontHeight(2.0f);
     style()->setFontExtraKerningFactor(0.03f);
 
@@ -1379,6 +1384,19 @@ juce::Typeface::Ptr SixSinesEditor::typefaceFromResources(const std::string &rel
         typefaceCache[relPath] = nullptr;
         return nullptr;
     }
+}
+
+void SixSinesEditor::reportError(const std::string &title, const std::string &msg)
+{
+    SXSNLOG("[ERROR] " << title << ": " << msg);
+    juce::MessageManager::callAsync(
+        [w = juce::Component::SafePointer(this), title, msg]()
+        {
+            if (!w)
+                return;
+            auto prompt = sst::jucegui::screens::AlertOrPrompt::Alert(title, msg);
+            w->displayModalOverlay(std::move(prompt));
+        });
 }
 
 void SixSinesEditor::setZoomFactor(float zf)
