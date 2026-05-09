@@ -544,6 +544,14 @@ struct Patch : pats::PatchBase<Patch, Param>
             CHIP_LFSR = 3,
         };
 
+        enum struct LFSRMode : uint32_t
+        {
+            SHORT = 0,
+            SHORT_KEYTRACK = 1,
+            LONG = 2,
+            LONG_KEYTRACK = 3,
+        };
+
         // Noise samples come out of NoiseHelper normalized to ~±1. ADD_TO_PHASE
         // attenuates further since one full cycle of phase jitter is too much.
         static constexpr float noisePhaseScale = 0.33f;
@@ -761,6 +769,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                 .withID(id(176, idx))),
               extendedModeN(floatMd(version_120b)
                                 .asPercent()
+                                .withPolarity(md_t::Polarity::BIPOLAR)
                                 .withName(name(idx) + " Extended Mode N")
                                 .withGroupName(name(idx))
                                 .withDefault(0.5f)
@@ -854,7 +863,19 @@ struct Patch : pats::PatchBase<Patch, Param>
                                 {(int)NoiseType::PINK, "Pink"},
                                 {(int)NoiseType::TILT, "Tilt"},
                                 {(int)NoiseType::CHIP_LFSR, "Chip LFSR"},
-                            }))
+                            })),
+              lfsrMode(intMd(version_120f)
+                           .withRange(0, 3)
+                           .withDefault((int)LFSRMode::LONG_KEYTRACK)
+                           .withID(id(187, idx))
+                           .withName(name(idx) + " LFSR Mode")
+                           .withGroupName(name(idx))
+                           .withUnorderedMapFormatting({
+                               {(int)LFSRMode::SHORT, "Short"},
+                               {(int)LFSRMode::SHORT_KEYTRACK, "Short Keytrack"},
+                               {(int)LFSRMode::LONG, "Long"},
+                               {(int)LFSRMode::LONG_KEYTRACK, "Long Keytrack"},
+                           }))
 
         {
             index = idx;
@@ -899,6 +920,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param resonantSweepFrequencyDepth;
         Param noiseMode;
         Param noiseType;
+        Param lfsrMode;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -931,7 +953,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &resonantSweepWindowShape,
                                      &resonantSweepFrequencyDepth,
                                      &noiseMode,
-                                     &noiseType};
+                                     &noiseType,
+                                     &lfsrMode};
             for (int i = 0; i < numModsPer; ++i)
                 res.push_back(&modtarget[i]);
             appendDAHDSRParams(res);

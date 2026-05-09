@@ -110,6 +110,9 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::JogUpDownButton> noiseType;
     std::unique_ptr<PatchDiscrete> noiseTypeD;
     std::unique_ptr<jcmp::Label> noiseTypeL;
+    std::unique_ptr<jcmp::JogUpDownButton> lfsrMode;
+    std::unique_ptr<PatchDiscrete> lfsrModeD;
+    std::unique_ptr<jcmp::Label> lfsrModeL;
     std::unique_ptr<juce::Component> noisePainter;
 
     void setExtendedModeVisibility();

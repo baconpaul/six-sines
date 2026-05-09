@@ -32,6 +32,13 @@ namespace baconpaul::six_sines
 struct NoiseHelper
 {
     using NoiseType = Patch::SourceNode::NoiseType;
+    using LFSRMode = Patch::SourceNode::LFSRMode;
+
+    // This wierd constant is roughly the frequency at which the thing would turn over at 48khz in
+    // a CPU running at 1.789 mhz and a cycle length of 96 cpu cycles.
+    static constexpr float lfsrFreeReferenceHz{1.789 * 1000000 / 48000 * 96};
+
+    static constexpr float lfsrTuningRange{12.f};
 
     // Tilt filter takes ±tiltMaxDb across the bipolar N range.
     static constexpr float tiltMaxDb{6.f};
@@ -48,11 +55,17 @@ struct NoiseHelper
     sst::filters::FastTiltNoiseFilter<Host> tiltFilter;
     sst::basic_blocks::dsp::RNG &rng;
 
+    // 15-bit Galois LFSR shared by both chip modes. Seeded non-zero per helper
+    // so simultaneous voices don't lock-step.
+    uint16_t lfsrReg{0x0001};
+    double lfsrPhaseAcc{0.0};
+
     NoiseHelper(sst::basic_blocks::dsp::RNG &r,
                 const sst::basic_blocks::tables::DbToLinearProvider &dbProv)
         : pinkNoise(r.unifU32()), tiltFilter(host), rng(r)
     {
         host.db = &dbProv;
+        lfsrReg = static_cast<uint16_t>((r.unifU32() & 0x7FFFu) | 0x0001u);
     }
 
     void setSampleRate(double sr) { host.sri = 1.0 / sr; }
@@ -70,8 +83,9 @@ struct NoiseHelper
     }
 
     // Refill 16 samples of the chosen noise color into buf, normalized to ~±1.
-    // CHIP_LFSR is silent for now until the LFSR generator lands.
-    void fill16(float buf[16], NoiseType type, float nValue)
+    // baseFreq drives the LFSR shift clock when the mode is keytracked; otherwise
+    // a fixed reference (lfsrFreeReferenceHz) is used.
+    void fill16(float buf[16], NoiseType type, float nValue, float baseFreq, LFSRMode lfsrMode)
     {
         switch (type)
         {
@@ -98,9 +112,28 @@ struct NoiseHelper
             break;
         }
         case NoiseType::CHIP_LFSR:
+        {
+            const bool isShort =
+                (lfsrMode == LFSRMode::SHORT || lfsrMode == LFSRMode::SHORT_KEYTRACK);
+            const bool keytrack =
+                (lfsrMode == LFSRMode::SHORT_KEYTRACK || lfsrMode == LFSRMode::LONG_KEYTRACK);
+            const int xorBit = isShort ? 6 : 1;
+            const float refFreq = (keytrack ? baseFreq : 261.62) * lfsrFreeReferenceHz / 261.62;
+            const float shiftFreq = refFreq * std::exp2((nValue - 0.5f) * lfsrTuningRange);
+            const double dPhase = static_cast<double>(shiftFreq) * host.sri;
             for (int i = 0; i < 16; ++i)
-                buf[i] = 0.f;
+            {
+                lfsrPhaseAcc += dPhase;
+                while (lfsrPhaseAcc >= 1.0)
+                {
+                    uint16_t fb = ((lfsrReg >> 0) ^ (lfsrReg >> xorBit)) & 1u;
+                    lfsrReg = static_cast<uint16_t>((lfsrReg >> 1) | (fb << 14));
+                    lfsrPhaseAcc -= 1.0;
+                }
+                buf[i] = (lfsrReg & 1u) ? 1.f : -1.f;
+            }
             break;
+        }
         }
     }
 };
