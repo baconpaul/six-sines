@@ -410,7 +410,7 @@ struct ResSweepPlotter : juce::Component
  */
 struct NoisePainter : juce::Component
 {
-    const Param &wf, &ph, &mp, &np, &noiseMode, &noiseType;
+    const Param &wf, &ph, &mp, &np, &noiseMode, &noiseType, &lfsrMode;
     SixSinesEditor &editor;
     SinTable st;
 
@@ -431,8 +431,9 @@ struct NoisePainter : juce::Component
     }
 
     NoisePainter(const Param &w, const Param &p, const Param &mParam, const Param &nParam,
-                 const Param &nMode, const Param &nType, SixSinesEditor &e)
-        : wf(w), ph(p), mp(mParam), np(nParam), noiseMode(nMode), noiseType(nType), editor(e)
+                 const Param &nMode, const Param &nType, const Param &lMode, SixSinesEditor &e)
+        : wf(w), ph(p), mp(mParam), np(nParam), noiseMode(nMode), noiseType(nType), lfsrMode(lMode),
+          editor(e)
     {
     }
 
@@ -473,8 +474,10 @@ struct NoisePainter : juce::Component
 
         using NM = Patch::SourceNode::NoiseMode;
         using NT = Patch::SourceNode::NoiseType;
+        using LM = Patch::SourceNode::LFSRMode;
         const auto nm = static_cast<NM>(static_cast<uint32_t>(std::round(noiseMode.value)));
         const auto nt = static_cast<NT>(static_cast<uint32_t>(std::round(noiseType.value)));
+        const auto lm = static_cast<LM>(static_cast<uint32_t>(std::round(lfsrMode.value)));
         const float m = mp.value;
         const float nVal = np.value;
 
@@ -506,7 +509,7 @@ struct NoisePainter : juce::Component
 
             if (noisePos >= 16)
             {
-                helper.fill16(noiseBuf, nt, nVal);
+                helper.fill16(noiseBuf, nt, nVal, 220.f, lm);
                 noisePos = 0;
             }
             float n = noiseBuf[noisePos++];
@@ -828,9 +831,16 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     noiseTypeL->setText("Type");
     addChildComponent(*noiseTypeL);
 
-    noisePainter =
-        std::make_unique<NoisePainter>(sn.waveForm, sn.startingPhase, sn.extendedModeM,
-                                       sn.extendedModeN, sn.noiseMode, sn.noiseType, editor);
+    createComponent(editor, *this, sn.lfsrMode, lfsrMode, lfsrModeD);
+    addChildComponent(*lfsrMode);
+    traverse(lfsrMode);
+    lfsrModeL = std::make_unique<jcmp::Label>();
+    lfsrModeL->setText("LFSR");
+    addChildComponent(*lfsrModeL);
+
+    noisePainter = std::make_unique<NoisePainter>(sn.waveForm, sn.startingPhase, sn.extendedModeM,
+                                                  sn.extendedModeN, sn.noiseMode, sn.noiseType,
+                                                  sn.lfsrMode, editor);
     addChildComponent(*noisePainter);
 
     // Live-repaint extended-mode painters when any of their inputs change.
@@ -855,11 +865,14 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     {
         if (!w)
             return;
+        w->setExtendedModeVisibility();
         w->setEnabledState();
+        w->resized();
         if (w->noisePainter)
             w->noisePainter->repaint();
     };
     noiseTypeD->onGuiSetValue = noiseTypeChanged;
+    lfsrModeD->onGuiSetValue = repaintExt;
     editor.componentRefreshByID[sn.extendedModeM.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.extendedModeN.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.phaseMapModeShape.meta.id] = repaintExt;
@@ -867,6 +880,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     editor.componentRefreshByID[sn.resonantSweepFrequencyDepth.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.noiseMode.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.noiseType.meta.id] = noiseTypeChanged;
+    editor.componentRefreshByID[sn.lfsrMode.meta.id] = repaintExt;
 
     setExtendedModeVisibility();
 
@@ -1118,6 +1132,7 @@ void SourceSubPanel::resized()
         auto leftStack = jlo::VList().withAutoGap(uicMargin);
         leftStack.add(labelJogRow(*noiseModeL, *noiseMode));
         leftStack.add(labelJogRow(*noiseTypeL, *noiseType));
+        leftStack.add(labelJogRow(*lfsrModeL, *lfsrMode));
         auto leftCol = jlo::VList().withWidth(leftColW);
         leftCol.add(leftStack.centerInParent());
         topLo.add(leftCol);
@@ -1184,6 +1199,15 @@ void SourceSubPanel::setExtendedModeVisibility()
         noiseTypeL->setVisible(isNoise);
     if (noisePainter)
         noisePainter->setVisible(isNoise);
+
+    using NT = Patch::SourceNode::NoiseType;
+    auto &sn = editor.patchCopy.sourceNodes[index];
+    auto nt = static_cast<NT>(static_cast<int>(std::round(sn.noiseType.value)));
+    auto showLfsr = isNoise && (nt == NT::CHIP_LFSR);
+    if (lfsrMode)
+        lfsrMode->setVisible(showLfsr);
+    if (lfsrModeL)
+        lfsrModeL->setVisible(showLfsr);
 }
 
 void SourceSubPanel::setEnabledState()
@@ -1239,6 +1263,8 @@ void SourceSubPanel::setEnabledState()
         noiseMode->setEnabled(!isAudioIn);
     if (noiseType)
         noiseType->setEnabled(!isAudioIn);
+    if (lfsrMode)
+        lfsrMode->setEnabled(!isAudioIn);
 
     using NT = Patch::SourceNode::NoiseType;
     auto nt = static_cast<NT>(static_cast<int>(std::round(sn.noiseType.value)));

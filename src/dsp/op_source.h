@@ -493,9 +493,11 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         using EM = Patch::SourceNode::ExtendedMode;
         using NMode = Patch::SourceNode::NoiseMode;
         using NT = Patch::SourceNode::NoiseType;
+        using LM = Patch::SourceNode::LFSRMode;
         float nextM{0.f}, dM{0.f};
         float nextN{0.f};
         NT noiseType{NT::PINK};
+        LM lfsrMode{LM::LONG_KEYTRACK};
         if constexpr (ET == EM::PHASE_REMAP || ET == EM::RESONANT_SWEEP || ET == EM::NOISE)
         {
             // Raw target m for this block: patch value + external mod + env / lfo contributions.
@@ -523,6 +525,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             nextN = extendedLagN.v;
             noiseType =
                 static_cast<NT>(static_cast<uint32_t>(std::round(sourceNode.noiseType.value)));
+            lfsrMode =
+                static_cast<LM>(static_cast<uint32_t>(std::round(sourceNode.lfsrMode.value)));
         }
 
         for (int i = 0; i < blockSize; ++i)
@@ -587,7 +591,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             {
                 if (noisePos >= 16)
                 {
-                    noiseHelper.fill16(noiseBuf, noiseType, nextN);
+                    noiseHelper.fill16(noiseBuf, noiseType, nextN, baseFrequency, lfsrMode);
                     noisePos = 0;
                 }
                 float noise = noiseBuf[noisePos++];
