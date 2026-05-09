@@ -489,6 +489,10 @@ struct NoisePainter : juce::Component
         NoiseHelper helper(paintRng, paintDbProv());
         helper.warmup();
         float noiseBuf alignas(16)[16]{};
+        // Burn the pink generator's startup transient so the picture matches
+        // the steady-state look of the engine output.
+        for (int i = 0; i < 64; ++i)
+            helper.pinkNoise.generate16(noiseBuf);
         int noisePos{16};
 
         juce::Path pOut;
@@ -524,6 +528,12 @@ struct NoisePainter : juce::Component
             case NM::MUL_BY_SIGNAL:
                 out = base * (1.f + m * n);
                 break;
+            case NM::MUL_BY_UNI_SIGNAL:
+            {
+                auto u = (base + 1.f) * 0.5f;
+                out = u * (1.f + m * n) * 2.f - 1.f;
+                break;
+            }
             case NM::MIX_WITH_SIGNAL:
                 out = (1.f - m) * base + m * n;
                 break;

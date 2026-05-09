@@ -472,6 +472,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             case NM::MUL_BY_SIGNAL:
                 innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_SIGNAL>(onto, fbv, rf, dRF, phs);
                 break;
+            case NM::MUL_BY_UNI_SIGNAL:
+                innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_UNI_SIGNAL>(onto, fbv, rf, dRF,
+                                                                              phs);
+                break;
             }
             break;
         }
@@ -602,6 +606,11 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                 else if constexpr (NM == NMode::MUL_BY_SIGNAL)
                 {
                     out = st.at(ph) * (1.f + m * noise);
+                }
+                else if constexpr (NM == NMode::MUL_BY_UNI_SIGNAL)
+                {
+                    auto u = (st.at(ph) + 1.f) * 0.5f;
+                    out = u * (1.f + m * noise) * 2.f - 1.f;
                 }
                 else // MIX_WITH_SIGNAL
                 {

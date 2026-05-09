@@ -533,6 +533,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             ADD_TO_SIGNAL = 1,
             MIX_WITH_SIGNAL = 2,
             MUL_BY_SIGNAL = 3,
+            MUL_BY_UNI_SIGNAL = 4,
         };
 
         enum struct NoiseType : uint32_t
@@ -830,7 +831,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                   {(int)ResonantSweepFrequencyDepth::TEN, "10 oct"},
                                               })),
               noiseMode(intMd(version_120f)
-                            .withRange(0, 3)
+                            .withRange(0, 4)
                             .withDefault(0)
                             .withID(id(185, idx))
                             .withName(name(idx) + " Noise Mode")
@@ -840,6 +841,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                 {(int)NoiseMode::ADD_TO_SIGNAL, "Add to Signal"},
                                 {(int)NoiseMode::MIX_WITH_SIGNAL, "Mix"},
                                 {(int)NoiseMode::MUL_BY_SIGNAL, "Mul by Signal"},
+                                {(int)NoiseMode::MUL_BY_UNI_SIGNAL, "Mul by Uni Signal"},
                             })),
               noiseType(intMd(version_120f)
                             .withRange(0, 3)
