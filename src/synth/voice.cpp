@@ -72,6 +72,17 @@ void Voice::attack()
 
 void Voice::renderBlock()
 {
+    // Refresh unison-derived per-voice scalars from the (smoothed) mono hoists so
+    // unisonSpread / unisonPan track host automation and UI knob moves mid-note.
+    if (voiceValues.uniCount > 1)
+    {
+        const float prod = monoValues.unisonSpreadFactorMinus1 * voiceValues.uniPMScale;
+        voiceValues.uniRatioMul =
+            (voiceValues.uniPMScale >= 0.f) ? (1.f + prod) : (1.f / (1.f - prod));
+        voiceValues.uniPanShift =
+            std::clamp(monoValues.unisonPanScalar * voiceValues.uniPMScale, -1.f, 1.f);
+    }
+
     float retuneKey = voiceValues.key;
     if (monoValues.mtsClient && MTS_HasMaster(monoValues.mtsClient))
     {

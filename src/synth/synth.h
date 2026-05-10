@@ -158,33 +158,18 @@ struct Synth
             int made{0};
 
             int lastStart{0};
-            auto usp = synth.patch.output.unisonSpread.value;
-            usp = synth.monoValues.twoToTheX.twoToThe(usp);
-            float uniVal[5]{1.0};
-            float uniPan[5]{0.0};
-            float uniScale[5]{0.0};
             assert(ct <= 5);
-            if (ct > 1)
-            {
-                auto dUni = 2 * (usp - 1) / (ct - 1);
-                for (int i = 0; i < ct; ++i)
-                {
-                    auto val = (1.0 - (usp - 1)) + dUni * i;
-                    if (val < 1)
-                    {
-                        val = 1.0 / ((1.0 + (usp - 1)) - dUni * i);
-                    }
-                    uniVal[i] = val;
-                    uniScale[i] = 2 * (i - 1.0 * (ct - 1) / 2) / (ct - 1);
-                    uniPan[i] =
-                        std::clamp(synth.patch.output.unisonPan.value * uniScale[i], -1.f, 1.f);
-                }
-            }
+            const bool hasCenter = (ct > 1 && (ct % 2 == 1));
 
             auto upr = synth.patch.output.uniPhaseRand.value > 0.5;
             auto prt = synth.patch.output.rephaseOnRetrigger > 0.5;
             for (int vc = 0; vc < ct; ++vc)
             {
+                // Bipolar position −1..1 across the unison field; 0 when ct==1.
+                // uniRatioMul and uniPanShift are derived from this in Voice::renderBlock
+                // each block, so they track host smoothing on unisonSpread / unisonPan.
+                const float uniScale = (ct > 1) ? (2.f * (vc - 0.5f * (ct - 1)) / (ct - 1)) : 0.f;
+
                 if (ibuf[vc].instruction !=
                     sst::voicemanager::VoiceInitInstructionsEntry<
                         baconpaul::six_sines::Synth::VMConfig>::Instruction::SKIP)
@@ -202,12 +187,12 @@ struct Synth
                             synth.voices[i].voiceValues.releaseVelocity = 0;
                             synth.voices[i].voiceValues.uniCount = ct;
                             synth.voices[i].voiceValues.uniIndex = vc;
-                            synth.voices[i].voiceValues.hasCenterVoice = (ct > 1 && (ct % 2 == 1));
+                            synth.voices[i].voiceValues.hasCenterVoice = hasCenter;
                             synth.voices[i].voiceValues.isCenterVoice =
-                                (ct > 1 && (ct % 2 == 1)) && (std::fabs(uniScale[vc]) < 1e-4);
-                            synth.voices[i].voiceValues.uniRatioMul = uniVal[vc];
-                            synth.voices[i].voiceValues.uniPanShift = uniPan[vc];
-                            synth.voices[i].voiceValues.uniPMScale = uniScale[vc];
+                                hasCenter && (std::fabs(uniScale) < 1e-4f);
+                            synth.voices[i].voiceValues.uniRatioMul = 1.f;
+                            synth.voices[i].voiceValues.uniPanShift = 0.f;
+                            synth.voices[i].voiceValues.uniPMScale = uniScale;
                             synth.voices[i].voiceValues.phaseRandom = (vc > 0 && upr);
                             synth.voices[i].voiceValues.rephaseOnRetrigger = (!upr && prt);
                             synth.voices[i].voiceValues.noteExpressionTuningInSemis = 0;
