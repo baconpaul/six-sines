@@ -49,6 +49,11 @@ MacroPanel::MacroPanel(SixSinesEditor &e) : jcmp::NamedPanel("Macros"), HasEdito
                 editor.macroSubPanel->setEnabledState();
         };
         addAndMakeVisible(*power[i]);
+
+        usageButtons[i] = std::make_unique<jcmp::TextPushButton>();
+        usageButtons[i]->setLabel("0");
+        usageButtons[i]->setOnCallback([this, i]() { showUsageMenu(i); });
+        addAndMakeVisible(*usageButtons[i]);
     }
 
     highlight = std::make_unique<KnobHighlight>(editor);
@@ -64,7 +69,7 @@ void MacroPanel::resized()
     auto y = b.getY();
     for (auto i = 0U; i < numMacros; ++i)
     {
-        positionPowerKnobAndLabel(x, y, power[i], knobs[i], labels[i], true);
+        positionPowerKnobSwitchAndLabel(x, y, power[i], usageButtons[i], knobs[i], labels[i]);
         x += uicPowerKnobWidth + uicMargin;
     }
 }
@@ -90,6 +95,50 @@ void MacroPanel::mouseDown(const juce::MouseEvent &e)
             beginEdit(i);
         }
     }
+}
+
+void MacroPanel::refreshUsage(size_t idx)
+{
+    if (idx >= numMacros)
+        return;
+    auto count = editor.macroUsageCache[idx].size();
+    if (usageButtons[idx])
+    {
+        usageButtons[idx]->setLabel(std::to_string(count));
+        usageButtons[idx]->setEnabled(count > 0);
+        usageButtons[idx]->repaint();
+    }
+    if (labels[idx])
+    {
+        labels[idx]->setEnabled(count > 0);
+        labels[idx]->repaint();
+    }
+}
+
+void MacroPanel::showUsageMenu(size_t idx)
+{
+    if (idx >= numMacros)
+        return;
+    auto &uses = editor.macroUsageCache[idx];
+    if (uses.empty())
+        return;
+
+    auto p = juce::PopupMenu();
+    p.addSectionHeader(displayShortName(editor, idx));
+    p.addSeparator();
+    for (auto &u : uses)
+    {
+        auto label = u.nodeLabel + " — " + u.targetName + (u.modulated ? " (mod)" : "");
+        auto refCopy = u;
+        p.addItem(label,
+                  [w = juce::Component::SafePointer(this), refCopy]()
+                  {
+                      if (w && w->editor.macroSubPanel)
+                          w->editor.macroSubPanel->jumpTo(refCopy);
+                  });
+    }
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
+                    makeMenuAccessibleButtonCB(usageButtons[idx].get()));
 }
 
 void MacroPanel::refreshLabel(size_t idx)

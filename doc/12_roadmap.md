@@ -2,12 +2,6 @@
 
 I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatible. But expanded. Here's my rough list
 
-## SuperMacros
-
-- Make 'used' indicator not disabled but rather a glyph of some form
-- Rather than gray out, switch on in mod matrix when picked
-- 
-
 ## Modulation
 - Clamp targets
 - LFO -> M etc... depth as an additive and attenuation target
@@ -21,7 +15,7 @@ new entry project_tests_harness.md records the Catch2 six-sines-test target, the
 to add new test files to tests/CMakeLists.txt explicitly. Noted your CLAUDE.md edit (line 32 now acknowledges tests).
 
 ## Smaller Things from the crew
-- Reaper analyzer z order screwage (what does surge do)
+- Unison detune - snap at note on or continuous?
 - Now we have DES move MPE to the instance
    - if you load a stream which has it from the clap edge set the instance to that
    - if you load a patch from an sxsnp ignore the patch setting
