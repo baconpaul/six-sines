@@ -81,6 +81,12 @@ struct MonoValues
 
     SRProvider sr;
 
+    // Per-engine-block hoists of mono unison params, refreshed by Synth::processInternal
+    // so each Voice::renderBlock can derive uniRatioMul / uniPanShift without per-voice
+    // table lookups. unisonSpreadFactorMinus1 = 2^unisonSpread.value - 1.
+    float unisonSpreadFactorMinus1{0.f};
+    float unisonPanScalar{0.f};
+
     float audioInBlock alignas(16)[blockSize]{}; // engine-rate audio in, mono mix
 };
 }; // namespace baconpaul::six_sines

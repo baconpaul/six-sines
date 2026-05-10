@@ -289,6 +289,12 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
         loops++;
         lagHandler.process();
 
+        // Hoist mono unison params so per-voice renderBlock derives uniRatioMul / uniPanShift
+        // from the smoothed scalars without each voice repeating the twoToTheX lookup.
+        monoValues.unisonSpreadFactorMinus1 =
+            monoValues.twoToTheX.twoToThe(patch.output.unisonSpread.value) - 1.f;
+        monoValues.unisonPanScalar = patch.output.unisonPan.value;
+
         auto op1IsAudioIn =
             ((int)std::round(patch.sourceNodes[0].waveForm.value) == SinTable::AUDIO_IN);
         if (audioInResampler && op1IsAudioIn)
