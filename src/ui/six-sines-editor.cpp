@@ -48,6 +48,7 @@ CMRC_DECLARE(sixsines_fonts);
 #include "spectrum-analyzer.h"
 #include <sst/jucegui/components/GlyphButton.h>
 #include <sst/jucegui/components/ButtonPainter.h>
+#include <sst/jucegui/component-adapters/DiscreteToReference.h>
 #include "macro-sub-panel.h"
 #include "clipboard.h"
 #include "patch-data-bindings.h"
@@ -1883,6 +1884,12 @@ void SixSinesEditor::openColorEditor()
         std::unique_ptr<jscr::ColorEditor> colorEditor;
         std::unique_ptr<jcmp::TextPushButton> saveBtn, loadBtn, factoryBtn;
 
+        bool alwaysOnTopState{true};
+        std::unique_ptr<
+            sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::ToggleButton, bool>>
+            alwaysOnTopAdapter;
+        std::function<void(bool)> onAlwaysOnTopChanged;
+
         ColorEditorContent(std::unique_ptr<jscr::ColorEditor> ce,
                            std::unique_ptr<jcmp::TextPushButton> sb,
                            std::unique_ptr<jcmp::TextPushButton> lb,
@@ -1895,6 +1902,21 @@ void SixSinesEditor::openColorEditor()
             addAndMakeVisible(*saveBtn);
             addAndMakeVisible(*loadBtn);
             addAndMakeVisible(*factoryBtn);
+
+            alwaysOnTopAdapter =
+                std::make_unique<sst::jucegui::component_adapters::DiscreteToValueReference<
+                    jcmp::ToggleButton, bool>>(alwaysOnTopState);
+            auto *btn = alwaysOnTopAdapter->widget.get();
+            btn->setGlyph(jcmp::GlyphPainter::PIN);
+            btn->setOffGlyph(jcmp::GlyphPainter::UNPIN);
+            btn->setTitle("Always on Top");
+            addAndMakeVisible(*btn);
+            alwaysOnTopAdapter->onValueChanged = [this](bool b)
+            {
+                if (onAlwaysOnTopChanged)
+                    onAlwaysOnTopChanged(b);
+            };
+
             // setStyle propagates recursively to all StyleConsumer children.
             setStyle(ss);
         }
@@ -1905,6 +1927,10 @@ void SixSinesEditor::openColorEditor()
             auto strip = b.removeFromBottom(34);
             colorEditor->setBounds(b);
             strip = strip.reduced(6, 3);
+            // Always-on-top toggle on the right edge of the button strip.
+            auto pinSz = strip.getHeight();
+            alwaysOnTopAdapter->widget->setBounds(strip.removeFromRight(pinSz));
+            strip.removeFromRight(6);
             saveBtn->setBounds(strip.removeFromLeft(120));
             strip.removeFromLeft(6);
             loadBtn->setBounds(strip.removeFromLeft(120));
@@ -1921,6 +1947,11 @@ void SixSinesEditor::openColorEditor()
         {
             setUsingNativeTitleBar(true);
             setResizable(true, false);
+            // Default on-top so hosts (e.g. Reaper) that pin the plugin window above
+            // peers don't bury this. The pin toggle in the button strip lets the user
+            // opt out per session.
+            setAlwaysOnTop(true);
+            content->onAlwaysOnTopChanged = [this](bool b) { setAlwaysOnTop(b); };
             setContentOwned(content.release(), true);
             setSize(420, 560);
         }
