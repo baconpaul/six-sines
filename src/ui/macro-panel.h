@@ -19,6 +19,7 @@
 #include <sst/jucegui/components/Knob.h>
 #include <sst/jucegui/components/Label.h>
 #include <sst/jucegui/components/ToggleButton.h>
+#include <sst/jucegui/components/TextPushButton.h>
 #include <sst/jucegui/data/Continuous.h>
 #include "six-sines-editor.h"
 #include "patch-data-bindings.h"
@@ -38,6 +39,14 @@ struct MacroPanel : jcmp::NamedPanel, HasEditor
     void beginEdit(size_t idx);
 
     void refreshLabel(size_t idx);
+
+    // Refresh count button text + enabled state and label enabled state from
+    // editor.macroUsageCache. Called by SixSinesEditor::recomputeMacroUsage.
+    void refreshUsage(size_t idx);
+
+    // Open popup menu listing every consumer of macro idx; each item jumps to
+    // that node via macroSubPanel->jumpTo.
+    void showUsageMenu(size_t idx);
 
     // Single source of truth for macro display names. Short = knob label,
     // Full = sub-panel title. Both fall back to "Macro N" when unrenamed.
@@ -72,6 +81,8 @@ struct MacroPanel : jcmp::NamedPanel, HasEditor
 
     std::array<std::unique_ptr<jcmp::ToggleButton>, numMacros> power;
     std::array<std::unique_ptr<PatchDiscrete>, numMacros> powerD;
+
+    std::array<std::unique_ptr<jcmp::TextPushButton>, numMacros> usageButtons;
 };
 } // namespace baconpaul::six_sines::ui
 #endif // BACONPAUL_SIX_SINES_UI_MACRO_PANEL_H

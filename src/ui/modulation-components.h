@@ -232,6 +232,15 @@ template <typename Comp, typename Patch> struct ModulationComponents
                     SXSNLOG("GenSet action at " << lidx << " with " << sCopy);
                 if (sCopy == 2048)
                     SXSNLOG("ERROR: GENSET with sCopy=2048 " << lidx);
+                // Selecting a MACRO_MOD_k source while macro k is off auto-powers it.
+                if (sCopy >= ModMatrixConfig::MACRO_MOD_0 &&
+                    sCopy < (int)ModMatrixConfig::MACRO_MOD_0 + (int)numMacros)
+                {
+                    int k = sCopy - (int)ModMatrixConfig::MACRO_MOD_0;
+                    auto &mp = w->editor.patchCopy.macroNodes[k].macroPower;
+                    if (mp.value < 0.5f)
+                        w->editor.setAndSendParamValue(mp, 1.f);
+                }
                 w->editor.setAndSendParamValue(w->patchPtr->modsource[lidx], sCopy);
                 w->resetSourceLabel(lidx);
                 if (w->editor.onModulationRoutingChanged)
@@ -292,19 +301,10 @@ template <typename Comp, typename Patch> struct ModulationComponents
     // (e.g. EXTEND_M only available in PHASE_REMAP).
     std::function<bool(typename Patch::TargetID)> isTargetAvailable{[](auto) { return true; }};
 
-    // Universal source filter: greys MACRO_MOD_k when that macro's power is off.
-    // Panels overriding sourceFilter should fall through to this.
-    SourceFilterResult sharedSourceFilter(int sid)
-    {
-        if (sid >= ModMatrixConfig::MACRO_MOD_0 &&
-            sid < (int)ModMatrixConfig::MACRO_MOD_0 + (int)numMacros)
-        {
-            int k = sid - (int)ModMatrixConfig::MACRO_MOD_0;
-            if (asComp()->editor.patchCopy.macroNodes[k].macroPower.value < 0.5f)
-                return SourceFilterResult::Disabled;
-        }
-        return SourceFilterResult::Include;
-    }
+    // Universal source filter. MACRO_MOD_k is always Include even when macro k
+    // is off; selecting it auto-powers the macro on (see genSet above). Panels
+    // overriding sourceFilter should fall through to this.
+    SourceFilterResult sharedSourceFilter(int /*sid*/) { return SourceFilterResult::Include; }
 
     // Override per-panel to add extra rules; defaults to sharedSourceFilter.
     std::function<SourceFilterResult(int)> sourceFilter{[this](int sid)

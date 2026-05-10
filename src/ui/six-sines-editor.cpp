@@ -1102,11 +1102,7 @@ void SixSinesEditor::recomputeMacroUsage()
     if (macroPanel)
     {
         for (size_t i = 0; i < numMacros; ++i)
-        {
-            auto used = !macroUsageCache[i].empty();
-            if (macroPanel->knobs[i])
-                macroPanel->knobs[i]->setEnabled(used);
-        }
+            macroPanel->refreshUsage(i);
     }
     if (macroSubPanel && macroSubPanel->isVisible())
         macroSubPanel->refreshUsedByList();
