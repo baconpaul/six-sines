@@ -19,8 +19,13 @@
 #include <chrono>
 #include <cmath>
 
+#include <sst/jucegui/components/GlyphPainter.h>
+#include <sst/jucegui/style/StyleSheet.h>
+
 namespace baconpaul::six_sines::ui
 {
+
+namespace jcmp = sst::jucegui::components;
 
 namespace
 {
@@ -64,6 +69,25 @@ SpectrumAnalyzerComponent::SpectrumAnalyzerComponent(Synth::audioOutputQueue_t &
     if (hostSr > 0.f)
         hostSampleRate = hostSr;
     setOpaque(true);
+
+    alwaysOnTopAdapter = std::make_unique<
+        sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::ToggleButton, bool>>(
+        alwaysOnTopState);
+    auto *btn = alwaysOnTopAdapter->widget.get();
+    btn->setGlyph(jcmp::GlyphPainter::PIN);
+    btn->setOffGlyph(jcmp::GlyphPainter::UNPIN);
+    btn->setTitle("Always on Top");
+    addAndMakeVisible(*btn);
+    alwaysOnTopAdapter->onValueChanged = [this](bool b)
+    {
+        if (onAlwaysOnTopChanged)
+            onAlwaysOnTopChanged(b);
+    };
+
+    setStyle(sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
+        sst::jucegui::style::StyleSheet::DARK));
+
+    // setSize last so the resulting resized() positions the toggle.
     setSize(720, 690);
 
     int savedMode = defaultModeIdx;
@@ -103,7 +127,15 @@ SpectrumAnalyzerComponent::~SpectrumAnalyzerComponent()
     ring.clear();
 }
 
-void SpectrumAnalyzerComponent::resized() {}
+void SpectrumAnalyzerComponent::resized()
+{
+    if (alwaysOnTopAdapter)
+    {
+        constexpr int sz = 20;
+        constexpr int pad = 4;
+        alwaysOnTopAdapter->widget->setBounds(getWidth() - sz - pad, pad, sz, sz);
+    }
+}
 
 void SpectrumAnalyzerComponent::mouseDown(const juce::MouseEvent &e)
 {
@@ -587,6 +619,11 @@ SpectrumAnalyzerWindow::SpectrumAnalyzerWindow(std::unique_ptr<SpectrumAnalyzerC
 {
     setUsingNativeTitleBar(true);
     setResizable(true, false);
+    // Default on-top so the window isn't hidden by hosts (e.g. Reaper) that pin the
+    // plugin window above all peers. The toggle in the component's upper-right lets
+    // the user opt out per session.
+    setAlwaysOnTop(true);
+    content->onAlwaysOnTopChanged = [this](bool b) { setAlwaysOnTop(b); };
     setContentOwned(content.release(), true);
     setSize(720, 690);
 }

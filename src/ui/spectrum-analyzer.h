@@ -27,13 +27,17 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_dsp/juce_dsp.h>
 
+#include <sst/jucegui/components/WindowPanel.h>
+#include <sst/jucegui/components/ToggleButton.h>
+#include <sst/jucegui/component-adapters/DiscreteToReference.h>
+
 #include "synth/synth.h"
 #include "ui-defaults.h"
 
 namespace baconpaul::six_sines::ui
 {
 
-struct SpectrumAnalyzerComponent : juce::Component, private juce::AsyncUpdater
+struct SpectrumAnalyzerComponent : sst::jucegui::components::WindowPanel, private juce::AsyncUpdater
 {
     static constexpr int spectrogramColumns = 256;
 
@@ -64,6 +68,9 @@ struct SpectrumAnalyzerComponent : juce::Component, private juce::AsyncUpdater
 
     // Pushed by the editor when the host sample rate changes; rebuilds buffers if needed.
     void setHostSampleRate(float sr);
+
+    // Fired by the always-on-top toggle. The window wires this to setAlwaysOnTop().
+    std::function<void(bool)> onAlwaysOnTopChanged;
 
   private:
     void handleAsyncUpdate() override;
@@ -131,6 +138,13 @@ struct SpectrumAnalyzerComponent : juce::Component, private juce::AsyncUpdater
 
     std::thread analysisThread;
     std::atomic<bool> running{false};
+
+    // Always-on-top toggle. Declared after `alwaysOnTopState` so the adapter (and its
+    // owned widget) is destroyed before the bool it references.
+    bool alwaysOnTopState{true};
+    std::unique_ptr<sst::jucegui::component_adapters::DiscreteToValueReference<
+        sst::jucegui::components::ToggleButton, bool>>
+        alwaysOnTopAdapter;
 };
 
 struct SpectrumAnalyzerWindow : juce::DocumentWindow
