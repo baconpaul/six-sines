@@ -81,6 +81,13 @@ FineTuneSubPanel::FineTuneSubPanel(SixSinesEditor &e) : HasEditor(e)
     addAndMakeVisible(*fine);
     addAndMakeVisible(*fineL);
 
+    fineD->onGuiSetValue = [w = juce::Component::SafePointer(this)]()
+    {
+        if (!w)
+            return;
+        w->editor.mainPanel->repaint();
+    };
+
     resized();
     repaint();
 }

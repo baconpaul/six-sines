@@ -2,9 +2,17 @@
 
 I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatible. But expanded. Here's my rough list
 
+## Infrastructure
+
+- Clap Wrapper Standalone upgrades
+  - windows ui open isn't right
+  - jack on linux
+- A performance sweep and review 
+
 ## Modulation
 - Clamp targets
 - LFO -> M etc... depth as an additive and attenuation target
+- Lags, Vias, etc... do we want that (and the 'jacky pressure problem')
 
 ## MPE Smoothing
 
@@ -14,18 +22,16 @@ Plan approved and saved to /Users/paul/.claude/plans/witty-toasting-hoare.md. Pr
 new entry project_tests_harness.md records the Catch2 six-sines-test target, the two harness patterns (makePlugin vs direct class), and the rule
 to add new test files to tests/CMakeLists.txt explicitly. Noted your CLAUDE.md edit (line 32 now acknowledges tests).
 
-## Smaller Things from the crew
-- Unison detune - snap at note on or continuous?
+## Move MPE to per instance
 - Now we have DES move MPE to the instance
-   - if you load a stream which has it from the clap edge set the instance to that
-   - if you load a patch from an sxsnp ignore the patch setting
-   - move the mpe enabled param to be instance based (leave the param in to not break stuff but basically dont use it to drive mpe)
+  - if you load a stream which has it from the clap edge set the instance to that
+  - if you load a patch from an sxsnp ignore the patch setting
+  - move the mpe enabled param to be instance based (leave the param in to not break stuff but basically dont use it to drive mpe)
+  - for mpe bend range probably want a user param but that means move the user param manager back to engine
 
-## Infrastructure
+## Smaller Things from the crew
+- djTubig reports patch swapping kinda slow on windows. Look for profile?
 
-- Clap Wrapper Standalone upgrades
-  - windows ui open isn't right
-  - jack on linux
 
 ## Noise Upgrades **DONE**
 - Pink, White, Tilt (with N for tilt) **DONE**
