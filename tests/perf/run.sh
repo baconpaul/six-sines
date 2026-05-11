@@ -18,6 +18,13 @@
 #   PERF_SAMPLE_MS=N    wall-clock target per timed sample, passed to the
 #                       binary (default 30 in code). Use 5 for a fast smoke
 #                       check, 100+ for a long stable run.
+#
+# IMPORTANT: thermal drift on laptops makes cross-session comparisons
+# unreliable for sub-2% deltas. For meaningful before/after on a single
+# optimization, run both versions back-to-back within minutes of each
+# other and diff those CSVs — not against an older baseline. Baselines
+# committed to results/baseline-*.csv are useful for ROUGH sanity checks
+# only ("did we regress 10%?"), not for "is this 1% faster?".
 
 set -euo pipefail
 

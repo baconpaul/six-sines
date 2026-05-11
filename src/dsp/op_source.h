@@ -41,6 +41,12 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     float rmLevel alignas(16)[blockSize];
     float fmAmount alignas(16)[blockSize]; // in hz
     bool rmAssigned{false};
+    // Per-block signal from MatrixNodeSelf::applyBlock: true when self-feedback is
+    // active for this block (so feedbackLevel[] may be non-zero). The inner-loop
+    // dispatcher uses this to pick a no-FB template instantiation that skips the
+    // feedback math AND the fbv[] shift entirely — removing the per-sample
+    // backward dependency unlocks a lot more compiler reordering.
+    bool hasActiveFeedback{false};
     int opIndex{0}; // set by Voice constructor; 0 = op1 which can use AUDIO_IN
 
     float output alignas(16)[blockSize];
@@ -64,6 +70,70 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     static constexpr float centsScale{1.0 / (12 * 100)};
 
+    // Latch-at-attack cache. The dispatch in innerLoop() and the AUDIO_IN check
+    // in renderBlock() used to round+cast the patch .value every block. They
+    // read these typed members instead, which are populated by cacheEnums() in
+    // reset() and stay stable for the life of the note. Mid-note mode changes
+    // don't take effect until retrigger — same as the heavy state (stWindow,
+    // extendedLagM/N) already did.
+    SinTable::WaveForm waveFormCachedAtAttack{SinTable::SIN};
+    bool isAudioInCachedAtAttack{false};
+    Patch::SourceNode::ExtendedMode extendedModeCachedAtAttack{
+        Patch::SourceNode::ExtendedMode::NONE};
+    Patch::SourceNode::PhaseMapShape phaseMapShapeCachedAtAttack{
+        Patch::SourceNode::PhaseMapShape::SAW};
+    Patch::SourceNode::ResonantSweepWindow resonantSweepWindowCachedAtAttack{
+        Patch::SourceNode::ResonantSweepWindow::SAW};
+    Patch::SourceNode::NoiseMode noiseModeCachedAtAttack{
+        Patch::SourceNode::NoiseMode::ADD_TO_PHASE};
+    Patch::SourceNode::NoiseType noiseTypeCachedAtAttack{Patch::SourceNode::NoiseType::PINK};
+    Patch::SourceNode::LFSRMode lfsrModeCachedAtAttack{Patch::SourceNode::LFSRMode::LONG_KEYTRACK};
+    float resonantSweepKScaleCachedAtAttack{1.0f};
+
+    void cacheEnums()
+    {
+        using EM = Patch::SourceNode::ExtendedMode;
+        using PM = Patch::SourceNode::PhaseMapShape;
+        using RW = Patch::SourceNode::ResonantSweepWindow;
+        using RFD = Patch::SourceNode::ResonantSweepFrequencyDepth;
+        using NM = Patch::SourceNode::NoiseMode;
+        using NT = Patch::SourceNode::NoiseType;
+        using LM = Patch::SourceNode::LFSRMode;
+
+        waveFormCachedAtAttack =
+            static_cast<SinTable::WaveForm>(static_cast<uint32_t>(std::round(waveForm)));
+        isAudioInCachedAtAttack = (waveFormCachedAtAttack == SinTable::AUDIO_IN);
+
+        extendedModeCachedAtAttack =
+            static_cast<EM>(static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
+        phaseMapShapeCachedAtAttack =
+            static_cast<PM>(static_cast<uint32_t>(std::round(sourceNode.phaseMapModeShape.value)));
+        resonantSweepWindowCachedAtAttack = static_cast<RW>(
+            static_cast<uint32_t>(std::round(sourceNode.resonantSweepWindowShape.value)));
+
+        auto rfd = static_cast<RFD>(
+            static_cast<uint32_t>(std::round(sourceNode.resonantSweepFrequencyDepth.value)));
+        switch (rfd)
+        {
+        case RFD::TWO:
+            resonantSweepKScaleCachedAtAttack = 2.0f;
+            break;
+        case RFD::FOUR:
+            resonantSweepKScaleCachedAtAttack = 4.0f;
+            break;
+        case RFD::TEN:
+            resonantSweepKScaleCachedAtAttack = 10.0f;
+            break;
+        }
+
+        noiseModeCachedAtAttack =
+            static_cast<NM>(static_cast<uint32_t>(std::round(sourceNode.noiseMode.value)));
+        noiseTypeCachedAtAttack =
+            static_cast<NT>(static_cast<uint32_t>(std::round(sourceNode.noiseType.value)));
+        lfsrModeCachedAtAttack =
+            static_cast<LM>(static_cast<uint32_t>(std::round(sourceNode.lfsrMode.value)));
+    }
+
     OpSource(const Patch::SourceNode &sn, MonoValues &mv, const VoiceValues &vv)
         : sourceNode(sn), monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv),
           LFOSupport(sn, mv), ModulationSupport(sn, this, mv, vv), ratio(sn.ratio),
@@ -86,6 +156,10 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         envResetMod();
         lfoResetMod();
 
+        // Latch all mode/shape enums up front; reset() and renderBlock() / innerLoop()
+        // both read the cached typed members from here on.
+        cacheEnums();
+
         st.setSampleRate(monoValues.sr.sampleRate);
         stWindow.setSampleRate(monoValues.sr.sampleRate);
         // Pick the table for the resonant-sweep window. BLACKMAN_HARRIS and TUKEY pull
@@ -94,9 +168,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         // closed-form arms in the inner loop don't read stWindow at all.
         {
             using RW = Patch::SourceNode::ResonantSweepWindow;
-            auto rw = static_cast<RW>(
-                static_cast<uint32_t>(std::round(sourceNode.resonantSweepWindowShape.value)));
-            switch (rw)
+            switch (resonantSweepWindowCachedAtAttack)
             {
             case RW::BLACKMAN_HARRIS:
                 stWindow.setWaveForm(SinTable::BLACKMAN_HARRIS_WINDOW);
@@ -115,14 +187,14 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         // that consumes them. In NONE the lag members exist but are never touched.
         {
             using EM = Patch::SourceNode::ExtendedMode;
-            auto em = static_cast<EM>(
-                static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
-            if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::NOISE)
+            if (extendedModeCachedAtAttack == EM::PHASE_REMAP ||
+                extendedModeCachedAtAttack == EM::RESONANT_SWEEP ||
+                extendedModeCachedAtAttack == EM::NOISE)
             {
                 extendedLagM.setRateInMilliseconds(10, monoValues.sr.samplerate, blockSizeInv);
                 extendedLagM.snapTo(sourceNode.extendedModeM.value);
             }
-            if (em == EM::NOISE)
+            if (extendedModeCachedAtAttack == EM::NOISE)
             {
                 extendedLagN.setRateInMilliseconds(10, monoValues.sr.samplerate, blockSizeInv);
                 extendedLagN.snapTo(sourceNode.extendedModeN.value);
@@ -145,8 +217,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             resetPhaseOnly();
             fbVal[0] = 0.f;
             fbVal[1] = 0.f;
-            auto wf = (SinTable::WaveForm)std::round(waveForm);
-            st.setWaveForm(wf);
+            st.setWaveForm(waveFormCachedAtAttack);
 
             if (lfoIsEnveloped)
             {
@@ -197,11 +268,11 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
         // Extended-mode targets — only consume the LFO when the mode that uses them is active.
         using EM = Patch::SourceNode::ExtendedMode;
-        auto em =
-            static_cast<EM>(static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
-        if (em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::NOISE)
+        if (extendedModeCachedAtAttack == EM::PHASE_REMAP ||
+            extendedModeCachedAtAttack == EM::RESONANT_SWEEP ||
+            extendedModeCachedAtAttack == EM::NOISE)
             used = used || (sourceNode.lfoToExtendedModeM.value != 0);
-        if (em == EM::NOISE)
+        if (extendedModeCachedAtAttack == EM::NOISE)
             used = used || (sourceNode.lfoToExtendedModeN.value != 0);
 
         return used;
@@ -228,6 +299,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             fmAmount[i] = 0.f;
         }
         rmAssigned = false;
+        hasActiveFeedback = false;
     }
 
     void clearOutputs() { memset(output, 0, sizeof(output)); }
@@ -278,7 +350,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             return;
         }
 
-        if ((int)std::round(waveForm) == SinTable::AUDIO_IN)
+        if (isAudioInCachedAtAttack)
         {
             if (opIndex == 0)
             {
@@ -359,38 +431,48 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     void innerLoop(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs)
     {
+        // Split on per-block self-feedback so we pick the right template
+        // instantiation of innerLoopImpl. The flag is set by
+        // MatrixNodeSelf::applyBlock and stays false when self-FB is off for
+        // this op (the common case for modulator stacks) — the UsesFB=false
+        // path then skips the feedback math entirely.
+        if (hasActiveFeedback)
+            innerLoopDispatch<true>(onto, fbv, rf, dRF, phs);
+        else
+            innerLoopDispatch<false>(onto, fbv, rf, dRF, phs);
+    }
+
+    template <bool UsesFB>
+    void innerLoopDispatch(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs)
+    {
         using EM = Patch::SourceNode::ExtendedMode;
         using PM = Patch::SourceNode::PhaseMapShape;
-        auto em =
-            static_cast<EM>(static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
-        switch (em)
+        switch (extendedModeCachedAtAttack)
         {
         case EM::NONE:
-            innerLoopImpl<EM::NONE>(onto, fbv, rf, dRF, phs);
+            innerLoopImpl<UsesFB, EM::NONE>(onto, fbv, rf, dRF, phs);
             break;
         case EM::PHASE_REMAP:
         {
-            auto pm = static_cast<PM>(
-                static_cast<uint32_t>(std::round(sourceNode.phaseMapModeShape.value)));
-            switch (pm)
+            switch (phaseMapShapeCachedAtAttack)
             {
             case PM::SAW:
-                innerLoopImpl<EM::PHASE_REMAP, PM::SAW>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<UsesFB, EM::PHASE_REMAP, PM::SAW>(onto, fbv, rf, dRF, phs);
                 break;
             case PM::SQUARE:
-                innerLoopImpl<EM::PHASE_REMAP, PM::SQUARE>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<UsesFB, EM::PHASE_REMAP, PM::SQUARE>(onto, fbv, rf, dRF, phs);
                 break;
             case PM::PULSE:
-                innerLoopImpl<EM::PHASE_REMAP, PM::PULSE>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<UsesFB, EM::PHASE_REMAP, PM::PULSE>(onto, fbv, rf, dRF, phs);
                 break;
             case PM::DOUBLE:
-                innerLoopImpl<EM::PHASE_REMAP, PM::DOUBLE>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<UsesFB, EM::PHASE_REMAP, PM::DOUBLE>(onto, fbv, rf, dRF, phs);
                 break;
             case PM::SIN_TO_SQUARE:
-                innerLoopImpl<EM::PHASE_REMAP, PM::SIN_TO_SQUARE>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<UsesFB, EM::PHASE_REMAP, PM::SIN_TO_SQUARE>(onto, fbv, rf, dRF, phs);
                 break;
             case PM::DOUBLE_SAW:
-                innerLoopImpl<EM::PHASE_REMAP, PM::DOUBLE_SAW>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<UsesFB, EM::PHASE_REMAP, PM::DOUBLE_SAW>(onto, fbv, rf, dRF, phs);
                 break;
             }
             break;
@@ -398,54 +480,41 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         case EM::RESONANT_SWEEP:
         {
             using RW = Patch::SourceNode::ResonantSweepWindow;
-            using RFD = Patch::SourceNode::ResonantSweepFrequencyDepth;
-            auto rw = static_cast<RW>(
-                static_cast<uint32_t>(std::round(sourceNode.resonantSweepWindowShape.value)));
-            auto rfd = static_cast<RFD>(
-                static_cast<uint32_t>(std::round(sourceNode.resonantSweepFrequencyDepth.value)));
-            float kScale = 4.0f;
-            switch (rfd)
-            {
-            case RFD::TWO:
-                kScale = 2.0f;
-                break;
-            case RFD::FOUR:
-                kScale = 4.0f;
-                break;
-            case RFD::TEN:
-                kScale = 10.0f;
-                break;
-            }
             // The PhaseMapShape template arg is unused on this branch; leave it at default.
-            switch (rw)
+            switch (resonantSweepWindowCachedAtAttack)
             {
             case RW::SAW:
-                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW, RW::SAW>(
-                    onto, fbv, rf, dRF, phs, kScale);
+                innerLoopImpl<UsesFB, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::SAW>(onto, fbv, rf, dRF, phs, resonantSweepKScaleCachedAtAttack);
                 break;
             case RW::TRIANGLE:
-                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
-                              RW::TRIANGLE>(onto, fbv, rf, dRF, phs, kScale);
+                innerLoopImpl<UsesFB, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::TRIANGLE>(onto, fbv, rf, dRF, phs,
+                                            resonantSweepKScaleCachedAtAttack);
                 break;
             case RW::TRAPEZOID:
-                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
-                              RW::TRAPEZOID>(onto, fbv, rf, dRF, phs, kScale);
+                innerLoopImpl<UsesFB, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::TRAPEZOID>(onto, fbv, rf, dRF, phs,
+                                             resonantSweepKScaleCachedAtAttack);
                 break;
             case RW::FULLTRAP:
-                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
-                              RW::FULLTRAP>(onto, fbv, rf, dRF, phs, kScale);
+                innerLoopImpl<UsesFB, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::FULLTRAP>(onto, fbv, rf, dRF, phs,
+                                            resonantSweepKScaleCachedAtAttack);
                 break;
             case RW::HANN:
-                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW, RW::HANN>(
-                    onto, fbv, rf, dRF, phs, kScale);
+                innerLoopImpl<UsesFB, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::HANN>(onto, fbv, rf, dRF, phs, resonantSweepKScaleCachedAtAttack);
                 break;
             case RW::BLACKMAN_HARRIS:
-                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
-                              RW::BLACKMAN_HARRIS>(onto, fbv, rf, dRF, phs, kScale);
+                innerLoopImpl<UsesFB, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::BLACKMAN_HARRIS>(onto, fbv, rf, dRF, phs,
+                                                   resonantSweepKScaleCachedAtAttack);
                 break;
             case RW::TUKEY:
-                innerLoopImpl<EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW, RW::TUKEY>(
-                    onto, fbv, rf, dRF, phs, kScale);
+                innerLoopImpl<UsesFB, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::TUKEY>(onto, fbv, rf, dRF, phs,
+                                         resonantSweepKScaleCachedAtAttack);
                 break;
             }
             break;
@@ -453,28 +522,29 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         case EM::NOISE:
         {
             using NM = Patch::SourceNode::NoiseMode;
-            auto nm =
-                static_cast<NM>(static_cast<uint32_t>(std::round(sourceNode.noiseMode.value)));
             constexpr auto PMSAW = Patch::SourceNode::PhaseMapShape::SAW;
             constexpr auto RWSAW = Patch::SourceNode::ResonantSweepWindow::SAW;
-            switch (nm)
+            switch (noiseModeCachedAtAttack)
             {
             case NM::ADD_TO_PHASE:
-                innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::ADD_TO_PHASE>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<UsesFB, EM::NOISE, PMSAW, RWSAW, NM::ADD_TO_PHASE>(onto, fbv, rf, dRF,
+                                                                                 phs);
                 break;
             case NM::ADD_TO_SIGNAL:
-                innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::ADD_TO_SIGNAL>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<UsesFB, EM::NOISE, PMSAW, RWSAW, NM::ADD_TO_SIGNAL>(onto, fbv, rf,
+                                                                                  dRF, phs);
                 break;
             case NM::MIX_WITH_SIGNAL:
-                innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::MIX_WITH_SIGNAL>(onto, fbv, rf, dRF,
-                                                                            phs);
+                innerLoopImpl<UsesFB, EM::NOISE, PMSAW, RWSAW, NM::MIX_WITH_SIGNAL>(onto, fbv, rf,
+                                                                                    dRF, phs);
                 break;
             case NM::MUL_BY_SIGNAL:
-                innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_SIGNAL>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<UsesFB, EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_SIGNAL>(onto, fbv, rf,
+                                                                                  dRF, phs);
                 break;
             case NM::MUL_BY_UNI_SIGNAL:
-                innerLoopImpl<EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_UNI_SIGNAL>(onto, fbv, rf, dRF,
-                                                                              phs);
+                innerLoopImpl<UsesFB, EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_UNI_SIGNAL>(onto, fbv, rf,
+                                                                                      dRF, phs);
                 break;
             }
             break;
@@ -483,7 +553,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     }
 
     template <
-        Patch::SourceNode::ExtendedMode ET,
+        bool UsesFB, Patch::SourceNode::ExtendedMode ET,
         Patch::SourceNode::PhaseMapShape S = Patch::SourceNode::PhaseMapShape::SAW,
         Patch::SourceNode::ResonantSweepWindow R = Patch::SourceNode::ResonantSweepWindow::SAW,
         Patch::SourceNode::NoiseMode NM = Patch::SourceNode::NoiseMode::ADD_TO_PHASE>
@@ -523,10 +593,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             extendedLagN.setTarget(targetN);
             extendedLagN.process();
             nextN = extendedLagN.v;
-            noiseType =
-                static_cast<NT>(static_cast<uint32_t>(std::round(sourceNode.noiseType.value)));
-            lfsrMode =
-                static_cast<LM>(static_cast<uint32_t>(std::round(sourceNode.lfsrMode.value)));
+            noiseType = noiseTypeCachedAtAttack;
+            lfsrMode = lfsrModeCachedAtAttack;
         }
 
         for (int i = 0; i < blockSize; ++i)
@@ -535,15 +603,29 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             rf += dRF;
 
             phs += dPhase;
-            auto fb = 0.5 * (fbv[0] + fbv[1]);
-            auto sb = std::signbit(feedbackLevel[i]);
-            // fb = sb ? fb * fb : fb. Ugh a branch. but bool = 0/1, so
-            // (1-sb) * fb + sb * fb * fb - 3 mul, 2 add
-            // fb - sb * fb + sb * fb * fb - 3 nul 2 add
-            // fb * ( 1 - sb * ( 1 - fb)) - 2 mul 2 add
-            fb = fb * (1 - sb * (1 - fb));
-
-            auto ph = phs + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb);
+            // When self-feedback is inactive for this block, skip the fb math
+            // entirely (constexpr-out). When active, use an int compare for the
+            // sign bit instead of std::signbit on int32_t — std::signbit's
+            // integral overload promotes to double per C++11 [c.math.fpclass],
+            // which is implementation-defined cost. `ph` then feeds every
+            // extended-mode transform downstream, so this gating must be at the
+            // top of the per-sample loop, not around EM::NONE only.
+            uint32_t ph{0};
+            if constexpr (UsesFB)
+            {
+                auto fb = 0.5 * (fbv[0] + fbv[1]);
+                auto sb = (feedbackLevel[i] < 0);
+                // fb = sb ? fb * fb : fb. Ugh a branch. but bool = 0/1, so
+                // (1-sb) * fb + sb * fb * fb - 3 mul, 2 add
+                // fb - sb * fb + sb * fb * fb - 3 nul 2 add
+                // fb * ( 1 - sb * ( 1 - fb)) - 2 mul 2 add
+                fb = fb * (1 - sb * (1 - fb));
+                ph = phs + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb);
+            }
+            else
+            {
+                ph = phs + phaseInput[i];
+            }
 
             float out;
             if constexpr (ET == EM::PHASE_REMAP)
@@ -629,8 +711,11 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
             out = out * rmLevel[i];
             onto[i] = out;
-            fbv[1] = fbv[0];
-            fbv[0] = out;
+            if constexpr (UsesFB)
+            {
+                fbv[1] = fbv[0];
+                fbv[0] = out;
+            }
         }
     }
 
