@@ -87,7 +87,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         calculateModulation();
         envProcess();
         lfoProcess();
-        float modlev alignas(16)[blockSize], mod alignas(16)[blockSize];
+        float modlev alignas(16)[blockSize];
 
         // Construct the level which is lfo * lev + env * lev or + env * dept + lev
         if (lfoIsEnveloped)
@@ -119,6 +119,12 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             }
         }
 
+        // Fused mul + apply. Earlier this was a two-pass:
+        //   mul_block(modlev, from.output, mod);            // SIMD write to mod[8]
+        //   for j: onto.X[j] += f(overdriveFactor * mod[j]); // scalar read back
+        // The fused form computes `modlev[j] * from.output[j]` inline and never
+        // materializes `mod[]`. Parens kept so the multiply order matches the
+        // original (`overdriveFactor * (modlev * fromOut)`) — bit-exact output.
         if (modMode == 1)
         {
             // we want op * ( 1 - depth ) + op * rm * depth or
@@ -149,28 +155,27 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         else if (modMode == 2)
         {
             // linear FM. -1..1 with a 10x ocerdrivce
-            mech::mul_block<blockSize>(modlev, from.output, mod);
             for (int j = 0; j < blockSize; ++j)
             {
-                onto.fmAmount[j] += (overdriveFactor * mod[j]);
+                onto.fmAmount[j] += (overdriveFactor * (modlev[j] * from.output[j]));
             }
         }
         else if (modMode == 3)
         {
             // expoential fm. if mod is 0...1 the result is 2^mod - 1
-            mech::mul_block<blockSize>(modlev, from.output, mod);
             for (int j = 0; j < blockSize; ++j)
             {
-                onto.fmAmount[j] += monoValues.twoToTheX.twoToThe(overdriveFactor * mod[j]) - 1.0;
+                onto.fmAmount[j] +=
+                    monoValues.twoToTheX.twoToThe(overdriveFactor * (modlev[j] * from.output[j])) -
+                    1.0;
             }
         }
         else
         {
-            mech::mul_block<blockSize>(modlev, from.output, mod);
-
             for (int j = 0; j < blockSize; ++j)
             {
-                onto.phaseInput[j] += (int32_t)((1 << 27) * (overdriveFactor * mod[j]));
+                onto.phaseInput[j] +=
+                    (int32_t)((1 << 27) * (overdriveFactor * (modlev[j] * from.output[j])));
             }
         }
     }
@@ -307,6 +312,9 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
         {
             onto.feedbackLevel[j] = (int32_t)((1 << 24) * modlev[j] * overdriveFactor);
         }
+        // Tell the OpSource to take the UsesFB=true template path on this block
+        // — feedbackLevel may be non-zero.
+        onto.hasActiveFeedback = true;
     }
 
     float fbMod{0.f};

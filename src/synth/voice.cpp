@@ -174,7 +174,7 @@ void Voice::renderBlock()
             auto pos = MatrixIndex::positionForSourceTarget(j, i);
             matrixNode[pos].applyBlock();
         }
-        if ((int)std::round(src[i].waveForm) != SinTable::AUDIO_IN)
+        if (!src[i].isAudioInCachedAtAttack)
             selfNode[i].applyBlock();
         src[i].renderBlock();
         mixerNode[i].renderBlock();

@@ -31,6 +31,7 @@ to add new test files to tests/CMakeLists.txt explicitly. Noted your CLAUDE.md e
 
 ## Smaller Things from the crew
 - djTubig reports patch swapping kinda slow on windows. Look for profile?
+- Refresh patch browser
 
 
 ## Noise Upgrades **DONE**
