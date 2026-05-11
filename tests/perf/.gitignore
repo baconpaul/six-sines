@@ -1,0 +1,4 @@
+# Track the results/ dir (via .gitkeep) but ignore the per-run CSVs.
+# Commit a baseline manually as `baseline-<commit>.csv` if you want one.
+results/*.csv
+!results/baseline-*.csv
