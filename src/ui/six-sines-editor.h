@@ -138,6 +138,9 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     void setPatchNameDisplay();
     void setPatchNameTo(const std::string &);
     std::unique_ptr<juce::FileChooser> fileChooser;
+    // Remembers the directory of the most recent save so the next save
+    // dialog opens there. Reset to empty (use default) on editor construction.
+    fs::path lastUserSaveDirectory{};
     std::unique_ptr<juce::DocumentWindow> colorEditorWindow;
     std::unique_ptr<juce::FileChooser> colorThemeFileChooser;
 

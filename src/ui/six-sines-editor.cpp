@@ -712,6 +712,12 @@ void SixSinesEditor::showPresetPopup()
                   if (w)
                       w->startSavePatch();
               });
+    p.addItem("Refresh User Patches",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w && w->presetManager)
+                      w->presetManager->rescanUserPresets();
+              });
     p.addSeparator();
     std::string ap = "Set Author";
     if (!patchCopy.defaultAuthor.empty())
@@ -966,10 +972,18 @@ void SixSinesEditor::startSavePatch()
 
 void SixSinesEditor::finishSavePatch()
 {
-    auto svP = presetManager->userPatchesPath;
+    auto svDir =
+        lastUserSaveDirectory.empty() ? presetManager->userPatchesPath : lastUserSaveDirectory;
+    auto svP = svDir;
     if (strcmp(patchCopy.name, "Init") != 0)
     {
-        svP = (svP / patchCopy.name).replace_extension(".sxsnp");
+        // append .sxsnp rather than replace_extension: a patch name like
+        // "foo1.2.3.11" would otherwise have ".11" stripped as a fake extension.
+        std::string fn = patchCopy.name;
+        static constexpr std::string_view ext{".sxsnp"};
+        if (fn.size() < ext.size() || fn.compare(fn.size() - ext.size(), ext.size(), ext) != 0)
+            fn += ext;
+        svP = svDir / fn;
     }
     fileChooser =
         std::make_unique<juce::FileChooser>("Save Patch", juce::File(svP.u8string()), "*.sxsnp");
@@ -987,6 +1001,7 @@ void SixSinesEditor::finishSavePatch()
                                  }
                                  auto pn = fs::path{result[0].getFullPathName().toStdString()};
                                  w->setPatchNameTo(pn.filename().replace_extension("").u8string());
+                                 w->lastUserSaveDirectory = pn.parent_path();
 
 #if USE_WCHAR_PRESET
                                  w->presetManager->saveUserPresetDirect(
