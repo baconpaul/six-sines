@@ -248,7 +248,7 @@ struct Synth
         {
             auto stb = (b - 8192) * 1.0 / 8192;
             v->voiceValues.mpeBendNormalized = stb;
-            v->voiceValues.mpeBendInSemis = stb * synth.patch.output.mpeBendRange.value;
+            v->voiceValues.mpeBendInSemis = stb * synth.monoValues.mpeBendRange;
         }
         void setVoiceMIDIMPEChannelPressure(Voice *v, int8_t p)
         {
@@ -386,9 +386,17 @@ struct Synth
 
     // Daw-session-only state. Streamed into host state (clap state) but NOT into patches.
     // Holds non-parameter state that is specific to a session and editable only via the editor.
+    //
+    // mpeFromExtraState is a transient marker (not serialized): set true by fromDawExtraState
+    // when the incoming XML actually contained an <mpe> element. The SET_DAW_EXTRA_STATE
+    // handler uses it to decide whether to fall back to the legacy patch slots — only 1.1-era
+    // sessions that stored MPE inside the patch will have it false.
     struct DawExtraState
     {
         std::string colorMapXml;
+        bool mpeActive{false};
+        int mpeBendRange{24};
+        bool mpeFromExtraState{false};
     };
     DawExtraState dawExtraState;
 
@@ -438,7 +446,9 @@ struct Synth
             PANIC_STOP_VOICES,
             SET_DESIGN_MODE_RUN_ALL,
             SET_DAW_EXTRA_STATE,
-            SEND_MACRO_NAME // paramId = macro index, uiManagedPointer = name buffer
+            SET_MPE_ACTIVE,     // value = 0/1; engine-instance, not a patch param
+            SET_MPE_BEND_RANGE, // value = 1..96; engine-instance, not a patch param
+            SEND_MACRO_NAME     // paramId = macro index, uiManagedPointer = name buffer
         } action;
         uint32_t paramId{0};
         float value{0};
@@ -508,6 +518,11 @@ struct Synth
     void reapplyControlSettings();
     void resetSoloState();
     void handleAudioThreadParamSideEffects(Param *dest);
+
+    // Push the current monoValues mpe state into the voice manager (dialect setup).
+    // Called from message handlers when mpeActive / mpeBendRange change, and from the
+    // SET_DAW_EXTRA_STATE handler after dawExtraState is applied.
+    void applyMpeState();
 
     sst::cpputils::active_set_overlay<Param> paramLagSet;
 

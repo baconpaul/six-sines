@@ -132,7 +132,6 @@ void configureScenarioPatch(Patch &patch, const ScenarioSpec &spec)
     patch.output.polyLimit.value = (float)maxVoices;
     patch.output.unisonCount.value = 1.f;
     patch.output.pianoModeActive.value = 0.f;
-    patch.output.mpeActive.value = 0.f;
     patch.output.octTranspose.value = 0.f;
     patch.output.fineTune.value = 0.f;
     patch.output.pan.value = 0.f;

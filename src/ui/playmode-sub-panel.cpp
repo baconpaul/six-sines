@@ -19,6 +19,20 @@
 
 namespace baconpaul::six_sines::ui
 {
+// JogUpDownButton variant of DiscreteToValueReference with the 1..96 MPE bend range.
+struct PlayModeSubPanel::MpeBendRangeBinding
+    : sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::JogUpDownButton, int>
+{
+    using Base =
+        sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::JogUpDownButton, int>;
+    using Base::Base;
+    int getMin() const override { return 1; }
+    int getMax() const override { return 96; }
+    int getDefaultValue() const override { return 24; }
+};
+
+PlayModeSubPanel::~PlayModeSubPanel() = default;
+
 PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
 {
     auto &on = editor.patchCopy.output;
@@ -139,14 +153,46 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     mpeTitle->setText("MPE");
     addAndMakeVisible(*mpeTitle);
 
-    createComponent(editor, *this, on.mpeActive, mpeActiveButton, mpeActiveButtonD);
-    addAndMakeVisible(*mpeActiveButton);
-    mpeActiveButton->setLabel("MPE Active");
-    mpeActiveButtonD->onGuiSetValue = op;
-    editor.componentRefreshByID[on.mpeActive.meta.id] = op;
+    mpeActiveButtonD = std::make_unique<decltype(mpeActiveButtonD)::element_type>(
+        editor.editorDawExtraState.mpeActive);
+    mpeActiveButtonD->setLabel("MPE Active");
+    mpeActiveButtonD->widget->setLabel("MPE Active");
+    mpeActiveButtonD->onValueChanged = [w = juce::Component::SafePointer(this), op](bool v)
+    {
+        if (!w)
+            return;
+        Synth::MainToAudioMsg m{Synth::MainToAudioMsg::SET_MPE_ACTIVE};
+        m.value = v ? 1.f : 0.f;
+        w->editor.mainToAudio.push(m);
+        op();
+    };
+    addAndMakeVisible(*mpeActiveButtonD->widget);
 
-    createComponent(editor, *this, on.mpeBendRange, mpeRange, mpeRangeD);
-    addAndMakeVisible(*mpeRange);
+    mpeRangeD = std::make_unique<MpeBendRangeBinding>(editor.editorDawExtraState.mpeBendRange);
+    mpeRangeD->setLabel("MPE Bend Range");
+    mpeRangeD->onValueChanged = [w = juce::Component::SafePointer(this)](int v)
+    {
+        if (!w)
+            return;
+        Synth::MainToAudioMsg m{Synth::MainToAudioMsg::SET_MPE_BEND_RANGE};
+        m.value = (float)v;
+        w->editor.mainToAudio.push(m);
+    };
+    addAndMakeVisible(*mpeRangeD->widget);
+
+    // Refresh widget visuals + dependent enabled-state when the dawExtraState changes
+    // (e.g. CLAP host stateLoad echoes a SET_DAW_EXTRA_STATE back to the UI).
+    editor.dawExtraStateRefreshListeners.push_back(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (!w)
+                return;
+            if (w->mpeActiveButtonD && w->mpeActiveButtonD->widget)
+                w->mpeActiveButtonD->widget->repaint();
+            if (w->mpeRangeD && w->mpeRangeD->widget)
+                w->mpeRangeD->widget->repaint();
+            w->setEnabledState();
+        });
 
     mpeRangeL = std::make_unique<jcmp::Label>();
     mpeRangeL->setText("Bend");
@@ -287,8 +333,8 @@ void PlayModeSubPanel::resized()
 
     auto col4 = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
     col4.add(titleLabelGaplessLayout(mpeTitle));
-    col4.add(jlo::Component(*mpeActiveButton).withHeight(uicLabelHeight));
-    col4.add(jlo::Component(*mpeRange).withHeight(uicLabelHeight));
+    col4.add(jlo::Component(*mpeActiveButtonD->widget).withHeight(uicLabelHeight));
+    col4.add(jlo::Component(*mpeRangeD->widget).withHeight(uicLabelHeight));
     col4.add(jlo::Component(*mpeRangeL).withHeight(uicLabelHeight));
     col4.add(titleLabelGaplessLayout(mtsTitle));
     col4.add(jlo::Component(*mtsStatusLabel).withHeight(uicLabelHeight));
@@ -465,8 +511,8 @@ void PlayModeSubPanel::setEnabledState()
     else
         uniCtL->setText("Voices");
 
-    auto me = editor.patchCopy.output.mpeActive.value > 0.5;
-    mpeRange->setEnabled(me);
+    auto me = editor.editorDawExtraState.mpeActive;
+    mpeRangeD->widget->setEnabled(me);
     mpeRangeL->setEnabled(me);
 
     repaint();
