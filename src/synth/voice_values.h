@@ -67,6 +67,17 @@ struct VoiceValues
 
     sst::basic_blocks::dsp::OnePoleLag<float, false> velocityLag;
 
+    // Per-voice smoothing for MPE / note-expression values. Mod-matrix sources
+    // for MPE_* point at the corresponding lag's .v (see node_support.h).
+    sst::basic_blocks::dsp::OnePoleLag<float, false> mpeBendInSemisLag;
+    sst::basic_blocks::dsp::OnePoleLag<float, false> mpeTimbreLag;
+    sst::basic_blocks::dsp::OnePoleLag<float, false> mpePressureLag;
+    sst::basic_blocks::dsp::OnePoleLag<float, false> noteExpressionTuningInSemisLag;
+    sst::basic_blocks::dsp::OnePoleLag<float, false> noteExpressionPanBipolarLag;
+
+    // True for one renderBlock after attack(); see Voice::renderBlock for snap logic.
+    bool firstBlockAfterAttack{true};
+
     std::array<float, numMacros> macroOut{};
 
   private:
