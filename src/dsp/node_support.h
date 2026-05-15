@@ -591,13 +591,13 @@ template <typename Bundle, typename Node> struct ModulationSupport
             break;
 
         case ModMatrixConfig::Source::MPE_PRESSURE:
-            sourcePointers[which] = &voiceValues.mpePressure;
+            sourcePointers[which] = &voiceValues.mpePressureLag.v;
             break;
         case ModMatrixConfig::Source::MPE_TIMBRE:
-            sourcePointers[which] = &voiceValues.mpeTimbre;
+            sourcePointers[which] = &voiceValues.mpeTimbreLag.v;
             break;
         case ModMatrixConfig::Source::MPE_PITCHBEND:
-            sourcePointers[which] = &voiceValues.mpeBendInSemis;
+            sourcePointers[which] = &voiceValues.mpeBendInSemisLag.v;
             break;
 
         case ModMatrixConfig::Source::RANDOM_01:

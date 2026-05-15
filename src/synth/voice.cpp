@@ -55,6 +55,23 @@ void Voice::attack()
     voiceValues.velocityLag.snapTo(voiceValues.velocity);
     voiceValues.velocityLag.setRateInMilliseconds(10, monoValues.sr.sampleRate, 1.0 / blockSize);
 
+    // MPE / note-expression lags: configure rate here but defer the snap to the
+    // first renderBlock — voicemanager dispatches the initial MPE setters AFTER
+    // attack() but before the first audio block, so snapping here would capture
+    // stale values and audibly chirp into the real ones.
+    constexpr float mpeLagMs = 5.f;
+    voiceValues.mpeBendInSemisLag.setRateInMilliseconds(mpeLagMs, monoValues.sr.sampleRate,
+                                                        1.0 / blockSize);
+    voiceValues.mpeTimbreLag.setRateInMilliseconds(mpeLagMs, monoValues.sr.sampleRate,
+                                                   1.0 / blockSize);
+    voiceValues.mpePressureLag.setRateInMilliseconds(mpeLagMs, monoValues.sr.sampleRate,
+                                                     1.0 / blockSize);
+    voiceValues.noteExpressionTuningInSemisLag.setRateInMilliseconds(
+        mpeLagMs, monoValues.sr.sampleRate, 1.0 / blockSize);
+    voiceValues.noteExpressionPanBipolarLag.setRateInMilliseconds(
+        mpeLagMs, monoValues.sr.sampleRate, 1.0 / blockSize);
+    voiceValues.firstBlockAfterAttack = true;
+
     for (auto &n : macroNode)
         n.attack();
     out.attack();
@@ -72,6 +89,26 @@ void Voice::attack()
 
 void Voice::renderBlock()
 {
+    // Advance MPE / note-expression lags before any pitch math or per-node mod
+    // matrix evaluation. On the first block after attack, snap (voicemanager
+    // has already pushed initial setter values into voiceValues at this point);
+    // afterwards smooth.
+    auto stepLag = [g = voiceValues.firstBlockAfterAttack](auto &lag, float target)
+    {
+        if (g)
+            lag.snapTo(target);
+        else
+        {
+            lag.setTarget(target);
+            lag.process();
+        }
+    };
+    stepLag(voiceValues.mpeBendInSemisLag, voiceValues.mpeBendInSemis);
+    stepLag(voiceValues.mpeTimbreLag, voiceValues.mpeTimbre);
+    stepLag(voiceValues.mpePressureLag, voiceValues.mpePressure);
+    stepLag(voiceValues.noteExpressionTuningInSemisLag, voiceValues.noteExpressionTuningInSemis);
+    stepLag(voiceValues.noteExpressionPanBipolarLag, voiceValues.noteExpressionPanBipolar);
+
     // Refresh unison-derived per-voice scalars from the (smoothed) mono hoists so
     // unisonSpread / unisonPan track host automation and UI knob moves mid-note.
     if (voiceValues.uniCount > 1)
@@ -90,7 +127,8 @@ void Voice::renderBlock()
         {
             // Interpolate the MTS retuning across the two semitones the
             // bent key straddles, so MPE bend tracks the local scale slope.
-            float floatKey = (float)voiceValues.key + voiceValues.mpeBendInSemis;
+            const float bend = voiceValues.mpeBendInSemisLag.v;
+            float floatKey = (float)voiceValues.key + bend;
             int iFloatKey = (int)std::floor(floatKey);
             int loKey = std::clamp(iFloatKey, 0, 126);
             int hiKey = loKey + 1;
@@ -99,7 +137,7 @@ void Voice::renderBlock()
                 MTS_RetuningInSemitones(monoValues.mtsClient, loKey, voiceValues.channel);
             float hiRetune =
                 MTS_RetuningInSemitones(monoValues.mtsClient, hiKey, voiceValues.channel);
-            retuneKey += voiceValues.mpeBendInSemis + (1.f - frac) * loRetune + frac * hiRetune;
+            retuneKey += bend + (1.f - frac) * loRetune + frac * hiRetune;
         }
         else
         {
@@ -109,11 +147,11 @@ void Voice::renderBlock()
     }
     else
     {
-        retuneKey += voiceValues.mpeBendInSemis;
+        retuneKey += voiceValues.mpeBendInSemisLag.v;
     }
     retuneKey += ((monoValues.pitchBend >= 0) ? out.bendUp : out.bendDown) * monoValues.pitchBend;
     retuneKey += voiceValues.portaDiff * voiceValues.portaSign;
-    retuneKey += voiceValues.noteExpressionTuningInSemis;
+    retuneKey += voiceValues.noteExpressionTuningInSemisLag.v;
     retuneKey += out.fineTune * 0.01 + out.ftModNode.coarseTune + out.ftModNode.level * 2 +
                  out.ftModNode.coarseLevel;
 
@@ -193,6 +231,8 @@ void Voice::renderBlock()
         }
         fadeBlocks--;
     }
+
+    voiceValues.firstBlockAfterAttack = false;
 }
 
 static_assert(numOps == 6, "Rebuild this table if not");
@@ -312,6 +352,11 @@ void Voice::cleanup()
     voiceValues.dPorta = 0;
     voiceValues.dPortaFrac = 0;
     voiceValues.mpeBendInSemis = 0;
+    voiceValues.mpeBendNormalized = 0;
+    voiceValues.mpeTimbre = 0;
+    voiceValues.mpePressure = 0;
+    voiceValues.noteExpressionTuningInSemis = 0;
+    voiceValues.noteExpressionPanBipolar = 0;
 
     for (auto &m : macroNode)
         m.envCleanup();

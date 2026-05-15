@@ -14,21 +14,6 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 - LFO -> M etc... depth as an additive and attenuation target
 - Lags, Vias, etc... do we want that (and the 'jacky pressure problem')
 
-## MPE Smoothing
-
-Totally doable but wait until I'm with an MPE device
-
-Plan approved and saved to /Users/paul/.claude/plans/witty-toasting-hoare.md. Project memory updated: 
-new entry project_tests_harness.md records the Catch2 six-sines-test target, the two harness patterns (makePlugin vs direct class), and the rule
-to add new test files to tests/CMakeLists.txt explicitly. Noted your CLAUDE.md edit (line 32 now acknowledges tests).
-
-## Move MPE to per instance
-- Now we have DES move MPE to the instance
-  - if you load a stream which has it from the clap edge set the instance to that
-  - if you load a patch from an sxsnp ignore the patch setting
-  - move the mpe enabled param to be instance based (leave the param in to not break stuff but basically dont use it to drive mpe)
-  - for mpe bend range probably want a user param but that means move the user param manager back to engine
-
 ## Smaller Things from the crew
 - djTubig reports patch swapping kinda slow on windows. Look for profile?
 
