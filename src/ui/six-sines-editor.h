@@ -158,8 +158,14 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     void scheduleDawExtraStatePush();
     void pushDawExtraStateToAudio();
     // Apply a newly-received DES (from the audio thread) to the editor: if it carries a
-    // colour map, parse it and applyTheme().
+    // colour map, parse it and applyTheme(). Also fans out to dawExtraStateRefreshListeners
+    // so widgets bound to non-patch session state (e.g. MPE controls) can refresh.
     void applyDawExtraStateFromAudio();
+
+    // Listeners called whenever editorDawExtraState is replaced by a SET_DAW_EXTRA_STATE
+    // echo from the audio thread. Panels with widgets backed by dawExtraState register here
+    // (e.g. PlayModeSubPanel's MPE active toggle and bend-range jog).
+    std::vector<std::function<void()>> dawExtraStateRefreshListeners;
     // Install the dark base stylesheet + dark skin.  Called once during construction
     // before lnf exists; setThemeFromPreference() then overlays the user's saved theme.
     void initializeBaseSkin();

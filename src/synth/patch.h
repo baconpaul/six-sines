@@ -74,7 +74,7 @@ struct Param : pats::ParamBase, sst::cpputils::active_set_overlay<Param>::partic
 
 struct Patch : pats::PatchBase<Patch, Param>
 {
-    static constexpr uint32_t patchVersion{9};
+    static constexpr uint32_t patchVersion{10};
     static constexpr const char *id{"org.baconpaul.six-sines"};
 
     static constexpr uint32_t floatFlags{CLAP_PARAM_IS_AUTOMATABLE};
@@ -1669,17 +1669,21 @@ struct Patch : pats::PatchBase<Patch, Param>
                                .withGroupName(name())
                                .withDefault(true)
                                .withID(id(32))),
-              mpeActive(boolMd()
-                            .withName(name() + " MPE Active")
-                            .withGroupName(name())
-                            .withDefault(false)
-                            .withID(id(33))),
-              mpeBendRange(intMd()
-                               .withName(name() + " MPE Bend Range")
-                               .withGroupName(name())
-                               .withRange(1, 96)
-                               .withDefault(24)
-                               .withID(id(34))),
+              // Legacy in 1.1 these stored per-patch MPE config. Now lives on the engine
+              // (MonoValues + DawExtraState). Kept as id-stable slots so 1.1 sessions
+              // still deserialize; the value is only read as a fallback in
+              // Synth::handleSetDawExtraState when the incoming DES has no MPE entries.
+              legacyMpeActive(boolMd()
+                                  .withName(name() + " Unused (was MPE Active)")
+                                  .withGroupName(name())
+                                  .withDefault(false)
+                                  .withID(id(33))),
+              legacyMpeBendRange(intMd()
+                                     .withName(name() + " Unused (was MPE Bend Range)")
+                                     .withGroupName(name())
+                                     .withRange(1, 96)
+                                     .withDefault(24)
+                                     .withID(id(34))),
               octTranspose(intMd()
                                .withName(name() + " Octave Transpose")
                                .withGroupName(name())
@@ -1857,7 +1861,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param bendUp, bendDown, polyLimit, defaultTrigger, portaTime, portaContMode,
             pianoModeActive;
         Param unisonCount, unisonSpread, uniPhaseRand, unisonPan;
-        Param mpeActive, mpeBendRange;
+        Param legacyMpeActive, legacyMpeBendRange;
         Param octTranspose, fineTune, pan, lfoDepth;
         Param attackFloorOnRetrig, rephaseOnRetrigger;
         Param sampleRateStrategy, resampleEngine;
@@ -1883,8 +1887,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &unisonSpread,
                                      &unisonPan,
                                      &uniPhaseRand,
-                                     &mpeActive,
-                                     &mpeBendRange,
+                                     &legacyMpeActive,
+                                     &legacyMpeBendRange,
                                      &octTranspose,
                                      &pan,
                                      &fineTune,

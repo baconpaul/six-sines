@@ -88,6 +88,11 @@ struct MonoValues
     float unisonPanScalar{0.f};
 
     float audioInBlock alignas(16)[blockSize]{}; // engine-rate audio in, mono mix
+
+    // Instance-scoped MPE config — lives on the engine, NOT in the patch. Persisted
+    // via Synth::DawExtraState so DAW sessions round-trip without polluting patches.
+    bool mpeActive{false};
+    int mpeBendRange{24};
 };
 }; // namespace baconpaul::six_sines
 #endif // MONO_VALUES_H

@@ -86,8 +86,7 @@ void Voice::renderBlock()
     float retuneKey = voiceValues.key;
     if (monoValues.mtsClient && MTS_HasMaster(monoValues.mtsClient))
     {
-        const auto mpeActive = out.outputNode.mpeActive.value > 0.5f;
-        if (mpeActive)
+        if (monoValues.mpeActive)
         {
             // Interpolate the MTS retuning across the two semitones the
             // bent key straddles, so MPE bend tracks the local scale slope.

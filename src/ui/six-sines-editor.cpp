@@ -1631,13 +1631,17 @@ void SixSinesEditor::pushDawExtraStateToAudio()
 
 void SixSinesEditor::applyDawExtraStateFromAudio()
 {
-    if (editorDawExtraState.colorMapXml.empty())
-        return;
-    // Apply without writing to the themePath user default: the session's colour map
-    // takes precedence over the user's per-installation preference only within this
-    // session.
-    auto skin = SixSinesSkin::fromXmlString(editorDawExtraState.colorMapXml);
-    applyTheme(skin);
+    if (!editorDawExtraState.colorMapXml.empty())
+    {
+        // Apply without writing to the themePath user default: the session's colour map
+        // takes precedence over the user's per-installation preference only within this
+        // session.
+        auto skin = SixSinesSkin::fromXmlString(editorDawExtraState.colorMapXml);
+        applyTheme(skin);
+    }
+    for (auto &l : dawExtraStateRefreshListeners)
+        if (l)
+            l();
 }
 
 void SixSinesEditor::applyTheme(const SixSinesSkin &skin, const std::string &preference)

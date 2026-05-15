@@ -17,6 +17,7 @@
 #define BACONPAUL_SIX_SINES_UI_PLAYMODE_SUB_PANEL_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <sst/jucegui/component-adapters/DiscreteToReference.h>
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
 #include "lfo-components.h"
@@ -27,7 +28,7 @@ namespace baconpaul::six_sines::ui
 struct PlayModeSubPanel : juce::Component, HasEditor
 {
     PlayModeSubPanel(SixSinesEditor &e);
-    ~PlayModeSubPanel() = default;
+    ~PlayModeSubPanel();
 
     void resized() override;
 
@@ -76,11 +77,15 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<PatchContinuous> uniPanD;
     std::unique_ptr<jcmp::GlyphPainter> uniSpreadG, uniPanG;
 
-    std::unique_ptr<jcmp::ToggleButton> mpeActiveButton;
-    std::unique_ptr<PatchDiscrete> mpeActiveButtonD;
+    // MPE controls bind to engine-instance state (Synth::DawExtraState mirror on the editor),
+    // not to patch params. DiscreteToValueReference owns the widget pointer; the JogUpDown
+    // variant is subclassed in the .cpp to set its 1..96 range.
+    std::unique_ptr<
+        sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::ToggleButton, bool>>
+        mpeActiveButtonD;
 
-    std::unique_ptr<jcmp::JogUpDownButton> mpeRange;
-    std::unique_ptr<PatchDiscrete> mpeRangeD;
+    struct MpeBendRangeBinding;
+    std::unique_ptr<MpeBendRangeBinding> mpeRangeD;
     std::unique_ptr<jcmp::Label> mpeRangeL;
 
     std::unique_ptr<jcmp::JogUpDownButton> tsposeButton;

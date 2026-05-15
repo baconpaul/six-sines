@@ -99,20 +99,41 @@ void Synth::toDawExtraState(TiXmlElement &e) const
         cm.InsertEndChild(t);
     }
     e.InsertEndChild(cm);
+
+    // Always emit current engine-instance MPE state; this is what flips 1.1→1.2 sessions
+    // to "the new way" once a re-save has happened.
+    TiXmlElement mpe("mpe");
+    mpe.SetAttribute("active", monoValues.mpeActive ? 1 : 0);
+    mpe.SetAttribute("bendRange", monoValues.mpeBendRange);
+    e.InsertEndChild(mpe);
 }
 
 void Synth::fromDawExtraState(TiXmlElement &e, DawExtraState &out)
 {
     out = DawExtraState{};
     auto *cm = e.FirstChildElement("colorMap");
-    if (!cm)
-        return;
-    auto *n = cm->FirstChild();
-    if (n)
+    if (cm)
     {
-        auto *txt = n->ToText();
-        if (txt && txt->Value())
-            out.colorMapXml = txt->Value();
+        auto *n = cm->FirstChild();
+        if (n)
+        {
+            auto *txt = n->ToText();
+            if (txt && txt->Value())
+                out.colorMapXml = txt->Value();
+        }
+    }
+
+    // The mpe element is only present in 1.2+ saves. Flag drives the 1.1 fallback.
+    auto *mpe = e.FirstChildElement("mpe");
+    if (mpe)
+    {
+        out.mpeFromExtraState = true;
+        int active{0};
+        if (mpe->QueryIntAttribute("active", &active) == TIXML_SUCCESS)
+            out.mpeActive = (active != 0);
+        int bendRange{24};
+        if (mpe->QueryIntAttribute("bendRange", &bendRange) == TIXML_SUCCESS)
+            out.mpeBendRange = bendRange;
     }
 }
 
@@ -824,10 +845,44 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             if (p)
             {
                 dawExtraState = *p;
+                // If the incoming DES had no <mpe> element (1.1-era session), fall back
+                // to the legacy patch slots — patch swap messages are queued before this
+                // one in CLAP stateLoad, so legacy values are already in place. Resolved
+                // state is echoed back so future host saves are written in the new form.
+                if (!dawExtraState.mpeFromExtraState)
+                {
+                    dawExtraState.mpeActive = patch.output.legacyMpeActive.value > 0.5f;
+                    dawExtraState.mpeBendRange =
+                        (int)std::round(patch.output.legacyMpeBendRange.value);
+                }
+                monoValues.mpeActive = dawExtraState.mpeActive;
+                monoValues.mpeBendRange = dawExtraState.mpeBendRange;
+                applyMpeState();
+
                 AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
                 au.dawExtraStatePointer = &dawExtraState;
                 audioToUi.push(au);
             }
+        }
+        break;
+        case MainToAudioMsg::SET_MPE_ACTIVE:
+        {
+            monoValues.mpeActive = uiM->value > 0.5f;
+            dawExtraState.mpeActive = monoValues.mpeActive;
+            applyMpeState();
+            AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
+            au.dawExtraStatePointer = &dawExtraState;
+            audioToUi.push(au);
+        }
+        break;
+        case MainToAudioMsg::SET_MPE_BEND_RANGE:
+        {
+            monoValues.mpeBendRange = std::clamp((int)std::round(uiM->value), 1, 96);
+            dawExtraState.mpeBendRange = monoValues.mpeBendRange;
+            applyMpeState();
+            AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
+            au.dawExtraStatePointer = &dawExtraState;
+            audioToUi.push(au);
         }
         break;
         }
@@ -878,15 +933,7 @@ void Synth::reapplyControlSettings()
     lim = std::clamp(lim, 1, (int)maxVoices);
     voiceManager->setPolyphonyGroupVoiceLimit(0, lim);
 
-    auto mpe = (bool)std::round(patch.output.mpeActive.value);
-    if (mpe)
-    {
-        voiceManager->dialect = voiceManager_t::MIDI1Dialect::MIDI1_MPE;
-    }
-    else
-    {
-        voiceManager->dialect = voiceManager_t::MIDI1Dialect::MIDI1;
-    }
+    applyMpeState();
 
     // End-of-chain high/low cut. The "active" flags gate per-block work.
     // Coefficient setup over-applies on every reapply for now.
@@ -978,6 +1025,12 @@ void Synth::reapplyControlSettings()
         hpFilter.setCutoffAndSampleRate(freq, sr);
         hpFilter.reset();
     }
+}
+
+void Synth::applyMpeState()
+{
+    voiceManager->dialect = monoValues.mpeActive ? voiceManager_t::MIDI1Dialect::MIDI1_MPE
+                                                 : voiceManager_t::MIDI1Dialect::MIDI1;
 }
 
 void Synth::processEndOfBlock(float *L, float *R)
@@ -1085,7 +1138,6 @@ void Synth::handleAudioThreadParamSideEffects(Param *dest)
     if (dest->meta.id == patch.output.playMode.meta.id ||
         dest->meta.id == patch.output.polyLimit.meta.id ||
         dest->meta.id == patch.output.pianoModeActive.meta.id ||
-        dest->meta.id == patch.output.mpeActive.meta.id ||
         dest->meta.id == patch.output.sampleRateStrategy.meta.id ||
         dest->meta.id == patch.output.resampleEngine.meta.id ||
         dest->meta.id == patch.output.lowpass.meta.id ||
