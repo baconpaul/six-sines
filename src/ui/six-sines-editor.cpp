@@ -1834,6 +1834,20 @@ void SixSinesEditor::openColorEditor()
                 });
         });
 
+    auto setDefaultBtn = makeBtn("Set as Default");
+    setDefaultBtn->setOnCallback(
+        [w = wp]()
+        {
+            if (!w || !w->uiThemeManager)
+                return;
+            auto path = w->uiThemeManager->userThemesPath / "UserDefault.sixtheme";
+            w->uiThemeManager->saveThemeToPath(w->currentSkin, path);
+            w->uiThemeManager->rescanUserThemes();
+            // Apply with the file path as preference so themePath user default is
+            // updated; future sessions will load UserDefault.sixtheme on startup.
+            w->applyTheme(w->currentSkin, path.u8string());
+        });
+
     auto factoryBtn = makeBtn("Saved Themes");
     // Capture a raw pointer to the button before unique_ptr ownership moves into
     // ColorEditorContent.  Used as the popup target so the menu attaches to the
@@ -1897,7 +1911,7 @@ void SixSinesEditor::openColorEditor()
     struct ColorEditorContent : jcmp::WindowPanel
     {
         std::unique_ptr<jscr::ColorEditor> colorEditor;
-        std::unique_ptr<jcmp::TextPushButton> saveBtn, loadBtn, factoryBtn;
+        std::unique_ptr<jcmp::TextPushButton> saveBtn, loadBtn, setDefaultBtn, factoryBtn;
 
         bool alwaysOnTopState{true};
         std::unique_ptr<
@@ -1908,14 +1922,16 @@ void SixSinesEditor::openColorEditor()
         ColorEditorContent(std::unique_ptr<jscr::ColorEditor> ce,
                            std::unique_ptr<jcmp::TextPushButton> sb,
                            std::unique_ptr<jcmp::TextPushButton> lb,
+                           std::unique_ptr<jcmp::TextPushButton> sdb,
                            std::unique_ptr<jcmp::TextPushButton> fb,
                            sst::jucegui::style::StyleSheet::ptr_t ss)
             : jcmp::WindowPanel(), colorEditor(std::move(ce)), saveBtn(std::move(sb)),
-              loadBtn(std::move(lb)), factoryBtn(std::move(fb))
+              loadBtn(std::move(lb)), setDefaultBtn(std::move(sdb)), factoryBtn(std::move(fb))
         {
             addAndMakeVisible(*colorEditor);
             addAndMakeVisible(*saveBtn);
             addAndMakeVisible(*loadBtn);
+            addAndMakeVisible(*setDefaultBtn);
             addAndMakeVisible(*factoryBtn);
 
             alwaysOnTopAdapter =
@@ -1946,11 +1962,13 @@ void SixSinesEditor::openColorEditor()
             auto pinSz = strip.getHeight();
             alwaysOnTopAdapter->widget->setBounds(strip.removeFromRight(pinSz));
             strip.removeFromRight(6);
-            saveBtn->setBounds(strip.removeFromLeft(120));
+            saveBtn->setBounds(strip.removeFromLeft(110));
             strip.removeFromLeft(6);
-            loadBtn->setBounds(strip.removeFromLeft(120));
+            loadBtn->setBounds(strip.removeFromLeft(110));
             strip.removeFromLeft(6);
-            factoryBtn->setBounds(strip.removeFromLeft(120));
+            setDefaultBtn->setBounds(strip.removeFromLeft(110));
+            strip.removeFromLeft(6);
+            factoryBtn->setBounds(strip.removeFromLeft(110));
         }
     };
 
@@ -1968,13 +1986,14 @@ void SixSinesEditor::openColorEditor()
             setAlwaysOnTop(true);
             content->onAlwaysOnTopChanged = [this](bool b) { setAlwaysOnTop(b); };
             setContentOwned(content.release(), true);
-            setSize(420, 560);
+            setSize(540, 560);
         }
         void closeButtonPressed() override { setVisible(false); }
     };
 
     auto content = std::make_unique<ColorEditorContent>(
-        std::move(ce), std::move(saveBtn), std::move(loadBtn), std::move(factoryBtn), style());
+        std::move(ce), std::move(saveBtn), std::move(loadBtn), std::move(setDefaultBtn),
+        std::move(factoryBtn), style());
     // Store a safe pointer to the content so onStyleChanged() can propagate style
     // updates to this separate top-level window.
     colorEditorContent = content.get();
