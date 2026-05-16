@@ -397,6 +397,12 @@ struct Synth
         bool mpeActive{false};
         int mpeBendRange{24};
         bool mpeFromExtraState{false};
+
+        // Engine-wide smoothing times, in milliseconds.
+        // midiCCSmoothingTimeMs: MIDI CC + MPE + note-expression lags.
+        // paramAutomationSmoothingTimeMs: per-param host-automation lag.
+        float midiCCSmoothingTimeMs{25.f};
+        float paramAutomationSmoothingTimeMs{2.f};
     };
     DawExtraState dawExtraState;
 
@@ -446,9 +452,11 @@ struct Synth
             PANIC_STOP_VOICES,
             SET_DESIGN_MODE_RUN_ALL,
             SET_DAW_EXTRA_STATE,
-            SET_MPE_ACTIVE,     // value = 0/1; engine-instance, not a patch param
-            SET_MPE_BEND_RANGE, // value = 1..96; engine-instance, not a patch param
-            SEND_MACRO_NAME     // paramId = macro index, uiManagedPointer = name buffer
+            SET_MPE_ACTIVE,                // value = 0/1; engine-instance, not a patch param
+            SET_MPE_BEND_RANGE,            // value = 1..96; engine-instance, not a patch param
+            SET_MIDI_CC_SMOOTHING_TIME_MS, // value = ms; engine-instance
+            SET_PARAM_AUTOMATION_SMOOTHING_TIME_MS, // value = ms; engine-instance
+            SEND_MACRO_NAME // paramId = macro index, uiManagedPointer = name buffer
         } action;
         uint32_t paramId{0};
         float value{0};
@@ -523,6 +531,10 @@ struct Synth
     // Called from message handlers when mpeActive / mpeBendRange change, and from the
     // SET_DAW_EXTRA_STATE handler after dawExtraState is applied.
     void applyMpeState();
+
+    // Re-rates the engine-wide MIDI CC lag and per-param-map lags from monoValues smoothing
+    // times. Active voices keep their attack-time MPE/NE rates — those refresh on next attack.
+    void applySmoothingTimes();
 
     sst::cpputils::active_set_overlay<Param> paramLagSet;
 

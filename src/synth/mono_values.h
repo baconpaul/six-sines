@@ -93,6 +93,13 @@ struct MonoValues
     // via Synth::DawExtraState so DAW sessions round-trip without polluting patches.
     bool mpeActive{false};
     int mpeBendRange{24};
+
+    // Engine-wide smoothing times, in milliseconds. Mirrored from Synth::DawExtraState.
+    // midiCCSmoothingTimeMs governs MIDI CC, MPE (bend/pressure/timbre), and per-voice
+    // note-expression lags. paramAutomationSmoothingTimeMs governs the per-param lag
+    // applied to host parameter automation.
+    float midiCCSmoothingTimeMs{25.f};
+    float paramAutomationSmoothingTimeMs{2.f};
 };
 }; // namespace baconpaul::six_sines
 #endif // MONO_VALUES_H

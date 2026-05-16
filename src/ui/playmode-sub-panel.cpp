@@ -14,23 +14,13 @@
  */
 
 #include "playmode-sub-panel.h"
+#include <array>
+#include <sstream>
 #include <sst/jucegui/layouts/ListLayout.h>
 #include "libMTSClient.h"
 
 namespace baconpaul::six_sines::ui
 {
-// JogUpDownButton variant of DiscreteToValueReference with the 1..96 MPE bend range.
-struct PlayModeSubPanel::MpeBendRangeBinding
-    : sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::JogUpDownButton, int>
-{
-    using Base =
-        sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::JogUpDownButton, int>;
-    using Base::Base;
-    int getMin() const override { return 1; }
-    int getMax() const override { return 96; }
-    int getDefaultValue() const override { return 24; }
-};
-
 PlayModeSubPanel::~PlayModeSubPanel() = default;
 
 PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
@@ -149,14 +139,19 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     addAndMakeVisible(*uniTitle);
     editor.componentRefreshByID[on.unisonCount.meta.id] = op;
 
-    mpeTitle = std::make_unique<jcmp::RuledLabel>();
-    mpeTitle->setText("MPE");
-    addAndMakeVisible(*mpeTitle);
+    smoothingSectionTitle = std::make_unique<jcmp::RuledLabel>();
+    smoothingSectionTitle->setText("MPE + Smoothing");
+    addAndMakeVisible(*smoothingSectionTitle);
+
+    mpeRowLabel = std::make_unique<jcmp::Label>();
+    mpeRowLabel->setText("MPE");
+    mpeRowLabel->setJustification(juce::Justification::centredRight);
+    addAndMakeVisible(*mpeRowLabel);
 
     mpeActiveButtonD = std::make_unique<decltype(mpeActiveButtonD)::element_type>(
         editor.editorDawExtraState.mpeActive);
     mpeActiveButtonD->setLabel("MPE Active");
-    mpeActiveButtonD->widget->setLabel("MPE Active");
+    mpeActiveButtonD->widget->setLabel("Active");
     mpeActiveButtonD->onValueChanged = [w = juce::Component::SafePointer(this), op](bool v)
     {
         if (!w)
@@ -168,17 +163,25 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     };
     addAndMakeVisible(*mpeActiveButtonD->widget);
 
-    mpeRangeD = std::make_unique<MpeBendRangeBinding>(editor.editorDawExtraState.mpeBendRange);
-    mpeRangeD->setLabel("MPE Bend Range");
-    mpeRangeD->onValueChanged = [w = juce::Component::SafePointer(this)](int v)
+    mpeRangeEditor = std::make_unique<jcmp::TextEditor>();
+    mpeRangeEditor->setMultiLine(false);
+    mpeRangeEditor->setReturnKeyStartsNewLine(false);
+    mpeRangeEditor->setJustification(juce::Justification::centred);
+    mpeRangeEditor->setIndents(3, 1);
+    mpeRangeEditor->setInputRestrictions(3, "0123456789");
+    mpeRangeEditor->setTitle("MPE Bend Range");
+    mpeRangeEditor->onReturnKey = [w = juce::Component::SafePointer(this)]()
     {
-        if (!w)
-            return;
-        Synth::MainToAudioMsg m{Synth::MainToAudioMsg::SET_MPE_BEND_RANGE};
-        m.value = (float)v;
-        w->editor.mainToAudio.push(m);
+        if (w)
+            w->commitMpeRangeEditor();
     };
-    addAndMakeVisible(*mpeRangeD->widget);
+    mpeRangeEditor->onFocusLost = [w = juce::Component::SafePointer(this)]()
+    {
+        if (w)
+            w->commitMpeRangeEditor();
+    };
+    refreshMpeRangeEditor();
+    addAndMakeVisible(*mpeRangeEditor);
 
     // Refresh widget visuals + dependent enabled-state when the dawExtraState changes
     // (e.g. CLAP host stateLoad echoes a SET_DAW_EXTRA_STATE back to the UI).
@@ -189,14 +192,46 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
                 return;
             if (w->mpeActiveButtonD && w->mpeActiveButtonD->widget)
                 w->mpeActiveButtonD->widget->repaint();
-            if (w->mpeRangeD && w->mpeRangeD->widget)
-                w->mpeRangeD->widget->repaint();
+            w->refreshMpeRangeEditor();
+            w->refreshMidiSmoothingButton();
+            w->refreshParamSmoothingButton();
             w->setEnabledState();
         });
 
     mpeRangeL = std::make_unique<jcmp::Label>();
     mpeRangeL->setText("Bend");
+    mpeRangeL->setJustification(juce::Justification::centredRight);
     addAndMakeVisible(*mpeRangeL);
+
+    smoothingRowLabel = std::make_unique<jcmp::Label>();
+    smoothingRowLabel->setText("MIDI Smoothing");
+    smoothingRowLabel->setJustification(juce::Justification::centredRight);
+    addAndMakeVisible(*smoothingRowLabel);
+
+    midiSmoothingButton = std::make_unique<jcmp::MenuButton>();
+    midiSmoothingButton->setOnCallback(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->showMidiSmoothingMenu();
+        });
+    refreshMidiSmoothingButton();
+    addAndMakeVisible(*midiSmoothingButton);
+
+    paramSmoothingRowLabel = std::make_unique<jcmp::Label>();
+    paramSmoothingRowLabel->setText("Param Smoothing");
+    paramSmoothingRowLabel->setJustification(juce::Justification::centredRight);
+    addAndMakeVisible(*paramSmoothingRowLabel);
+
+    paramSmoothingButton = std::make_unique<jcmp::MenuButton>();
+    paramSmoothingButton->setOnCallback(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->showParamSmoothingMenu();
+        });
+    refreshParamSmoothingButton();
+    addAndMakeVisible(*paramSmoothingButton);
 
     tsposeTitle = std::make_unique<jcmp::RuledLabel>();
     tsposeTitle->setText("Octave");
@@ -294,7 +329,7 @@ void PlayModeSubPanel::resized()
     //   col1: Voices / Unison
     //   col2: Play (mode + triggers + porta)
     //   col3: Bend / Octave
-    //   col4: MPE / Panic
+    //   col4: MTS / Panic
     // The two tallest columns (1 and 2) drive the row height.
     auto topRowHeight = uicTitleLabelInnerBox + 7 * uicLabelHeight + 7 * uicMargin;
 
@@ -332,10 +367,6 @@ void PlayModeSubPanel::resized()
     topRow.add(col3);
 
     auto col4 = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
-    col4.add(titleLabelGaplessLayout(mpeTitle));
-    col4.add(jlo::Component(*mpeActiveButtonD->widget).withHeight(uicLabelHeight));
-    col4.add(jlo::Component(*mpeRangeD->widget).withHeight(uicLabelHeight));
-    col4.add(jlo::Component(*mpeRangeL).withHeight(uicLabelHeight));
     col4.add(titleLabelGaplessLayout(mtsTitle));
     col4.add(jlo::Component(*mtsStatusLabel).withHeight(uicLabelHeight));
     col4.add(titleLabelGaplessLayout(panicTitle));
@@ -345,14 +376,40 @@ void PlayModeSubPanel::resized()
     outer.add(topRow);
 
     auto fullWidth = getWidth() - 2 * uicMargin;
+
+    // "MPE + Smoothing" section: full-width title with three rows underneath.
+    outer.add(titleLabelGaplessLayout(smoothingSectionTitle).withWidth(fullWidth));
+
+    auto smoothingColHeight = 3 * uicLabelHeight + 2 * uicMargin;
+    auto smoothingCol =
+        jlo::VList().withWidth(fullWidth).withHeight(smoothingColHeight).withAutoGap(uicMargin);
+    int labelW = fullWidth / 3;
+
+    auto mpeRow = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
+    mpeRow.add(jlo::Component(*mpeRowLabel).withWidth(labelW));
+    mpeRow.add(jlo::Component(*mpeActiveButtonD->widget).withWidth(uicSubPanelColumnWidth * 1.5));
+    mpeRow.add(jlo::Component(*mpeRangeL).withWidth(uicLabelHeight * 2));
+    mpeRow.add(jlo::Component(*mpeRangeEditor).expandToFill());
+    smoothingCol.add(mpeRow);
+
+    auto smRow = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
+    smRow.add(jlo::Component(*smoothingRowLabel).withWidth(labelW));
+    smRow.add(jlo::Component(*midiSmoothingButton).expandToFill());
+    smoothingCol.add(smRow);
+
+    auto psRow = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
+    psRow.add(jlo::Component(*paramSmoothingRowLabel).withWidth(labelW));
+    psRow.add(jlo::Component(*paramSmoothingButton).expandToFill());
+    smoothingCol.add(psRow);
+
+    outer.add(smoothingCol);
+
     outer.add(titleLabelGaplessLayout(outputControlTitle).withWidth(fullWidth));
 
     // Output signal path. Each row is "Label : [control(s)]". Saturation row also
     // gets a drive HSlider following the type jog. Future revision will add
     // arrow connectors between stages.
     auto pathCol = jlo::VList().withWidth(fullWidth).withAutoGap(uicMargin);
-
-    int labelW = fullWidth / 3;
 
     auto stageRow = [&](auto &lbl, auto &c1, juce::Component *c2 = nullptr)
     {
@@ -512,7 +569,7 @@ void PlayModeSubPanel::setEnabledState()
         uniCtL->setText("Voices");
 
     auto me = editor.editorDawExtraState.mpeActive;
-    mpeRangeD->widget->setEnabled(me);
+    mpeRangeEditor->setEnabled(me);
     mpeRangeL->setEnabled(me);
 
     repaint();
@@ -577,6 +634,104 @@ void PlayModeSubPanel::updateMTSStatus()
         mtsStatusLabel->setEnabled(connected);
         mtsStatusLabel->setText(text);
     }
+}
+
+void PlayModeSubPanel::refreshMpeRangeEditor()
+{
+    auto v = editor.editorDawExtraState.mpeBendRange;
+    mpeRangeEditor->setAllText(std::to_string(v));
+}
+
+void PlayModeSubPanel::commitMpeRangeEditor()
+{
+    auto txt = mpeRangeEditor->getText().trim();
+    int v = txt.isEmpty() ? editor.editorDawExtraState.mpeBendRange : txt.getIntValue();
+    v = std::clamp(v, 1, 96);
+    editor.editorDawExtraState.mpeBendRange = v;
+    Synth::MainToAudioMsg m{Synth::MainToAudioMsg::SET_MPE_BEND_RANGE};
+    m.value = (float)v;
+    editor.mainToAudio.push(m);
+    refreshMpeRangeEditor();
+}
+
+// User-selectable smoothing values, in ms. Engine accepts any float; these are
+// just convenient presets surfaced in the menus.
+static constexpr std::array<float, 5> midiSmoothingChoicesMs{5.f, 10.f, 25.f, 50.f, 100.f};
+static constexpr std::array<float, 4> paramSmoothingChoicesMs{2.f, 5.f, 10.f, 25.f};
+
+static std::string formatSmoothingMs(float v)
+{
+    std::ostringstream oss;
+    if (v == (int)v)
+        oss << (int)v << "ms";
+    else
+        oss << v << "ms";
+    return oss.str();
+}
+
+void PlayModeSubPanel::refreshMidiSmoothingButton()
+{
+    auto text = formatSmoothingMs(editor.editorDawExtraState.midiCCSmoothingTimeMs);
+    midiSmoothingButton->setLabelAndTitle(text, "MIDI Smoothing " + text);
+    midiSmoothingButton->repaint();
+}
+
+void PlayModeSubPanel::showMidiSmoothingMenu()
+{
+    auto current = editor.editorDawExtraState.midiCCSmoothingTimeMs;
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("MIDI Smoothing");
+    p.addSeparator();
+    for (auto ms : midiSmoothingChoicesMs)
+    {
+        bool ticked = std::abs(current - ms) < 0.001f;
+        p.addItem(formatSmoothingMs(ms), true, ticked,
+                  [w = juce::Component::SafePointer(this), ms]()
+                  {
+                      if (!w)
+                          return;
+                      w->editor.editorDawExtraState.midiCCSmoothingTimeMs = ms;
+                      Synth::MainToAudioMsg m{Synth::MainToAudioMsg::SET_MIDI_CC_SMOOTHING_TIME_MS};
+                      m.value = ms;
+                      w->editor.mainToAudio.push(m);
+                      w->refreshMidiSmoothingButton();
+                  });
+    }
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
+                    makeMenuAccessibleButtonCB(midiSmoothingButton.get()));
+}
+
+void PlayModeSubPanel::refreshParamSmoothingButton()
+{
+    auto text = formatSmoothingMs(editor.editorDawExtraState.paramAutomationSmoothingTimeMs);
+    paramSmoothingButton->setLabelAndTitle(text, "Param Smoothing " + text);
+    paramSmoothingButton->repaint();
+}
+
+void PlayModeSubPanel::showParamSmoothingMenu()
+{
+    auto current = editor.editorDawExtraState.paramAutomationSmoothingTimeMs;
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("Param Smoothing");
+    p.addSeparator();
+    for (auto ms : paramSmoothingChoicesMs)
+    {
+        bool ticked = std::abs(current - ms) < 0.001f;
+        p.addItem(formatSmoothingMs(ms), true, ticked,
+                  [w = juce::Component::SafePointer(this), ms]()
+                  {
+                      if (!w)
+                          return;
+                      w->editor.editorDawExtraState.paramAutomationSmoothingTimeMs = ms;
+                      Synth::MainToAudioMsg m{
+                          Synth::MainToAudioMsg::SET_PARAM_AUTOMATION_SMOOTHING_TIME_MS};
+                      m.value = ms;
+                      w->editor.mainToAudio.push(m);
+                      w->refreshParamSmoothingButton();
+                  });
+    }
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
+                    makeMenuAccessibleButtonCB(paramSmoothingButton.get()));
 }
 
 } // namespace baconpaul::six_sines::ui
