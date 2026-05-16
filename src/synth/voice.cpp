@@ -59,7 +59,8 @@ void Voice::attack()
     // first renderBlock — voicemanager dispatches the initial MPE setters AFTER
     // attack() but before the first audio block, so snapping here would capture
     // stale values and audibly chirp into the real ones.
-    constexpr float mpeLagMs = 5.f;
+    // Engine-wide smoothing time, in milliseconds, shared with the MIDI CC lag.
+    const float mpeLagMs = monoValues.midiCCSmoothingTimeMs;
     voiceValues.mpeBendInSemisLag.setRateInMilliseconds(mpeLagMs, monoValues.sr.sampleRate,
                                                         1.0 / blockSize);
     voiceValues.mpeTimbreLag.setRateInMilliseconds(mpeLagMs, monoValues.sr.sampleRate,

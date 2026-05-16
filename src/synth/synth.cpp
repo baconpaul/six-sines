@@ -106,6 +106,12 @@ void Synth::toDawExtraState(TiXmlElement &e) const
     mpe.SetAttribute("active", monoValues.mpeActive ? 1 : 0);
     mpe.SetAttribute("bendRange", monoValues.mpeBendRange);
     e.InsertEndChild(mpe);
+
+    // Engine-wide smoothing times (ms). Absent in pre-1.x saves; defaults in DawExtraState apply.
+    TiXmlElement sm("smoothing");
+    sm.SetDoubleAttribute("midiCCMs", dawExtraState.midiCCSmoothingTimeMs);
+    sm.SetDoubleAttribute("paramAutomationMs", dawExtraState.paramAutomationSmoothingTimeMs);
+    e.InsertEndChild(sm);
 }
 
 void Synth::fromDawExtraState(TiXmlElement &e, DawExtraState &out)
@@ -134,6 +140,17 @@ void Synth::fromDawExtraState(TiXmlElement &e, DawExtraState &out)
         int bendRange{24};
         if (mpe->QueryIntAttribute("bendRange", &bendRange) == TIXML_SUCCESS)
             out.mpeBendRange = bendRange;
+    }
+
+    // Smoothing element absent in older saves; struct defaults stand.
+    auto *sm = e.FirstChildElement("smoothing");
+    if (sm)
+    {
+        double v{0.0};
+        if (sm->QueryDoubleAttribute("midiCCMs", &v) == TIXML_SUCCESS)
+            out.midiCCSmoothingTimeMs = (float)v;
+        if (sm->QueryDoubleAttribute("paramAutomationMs", &v) == TIXML_SUCCESS)
+            out.paramAutomationSmoothingTimeMs = (float)v;
     }
 }
 
@@ -239,13 +256,16 @@ void Synth::setSampleRate(double sampleRate)
 
     for (auto &[i, p] : patch.paramMap)
     {
-        p->lag.setRateInMilliseconds(1000.0 * 64.0 / 48000.0, engineSampleRate, 1.0 / blockSize);
+        // paramAutomationSmoothingTimeMs is in milliseconds.
+        p->lag.setRateInMilliseconds(monoValues.paramAutomationSmoothingTimeMs, engineSampleRate,
+                                     1.0 / blockSize);
         p->lag.snapTo(p->value);
     }
     paramLagSet.removeAll();
 
-    // midi is a bit less frequent than param automation so a slightly slower smooth
-    midiCCLagCollection.setRateInMilliseconds(1000.0 * 128.0 / 48000.0, engineSampleRate,
+    // midiCCSmoothingTimeMs is in milliseconds; also applies to MPE / note-expression lags
+    // configured per-voice on attack.
+    midiCCLagCollection.setRateInMilliseconds(monoValues.midiCCSmoothingTimeMs, engineSampleRate,
                                               1.0 / blockSize);
     midiCCLagCollection.snapAllActiveToTarget();
 
@@ -857,7 +877,11 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
                 }
                 monoValues.mpeActive = dawExtraState.mpeActive;
                 monoValues.mpeBendRange = dawExtraState.mpeBendRange;
+                monoValues.midiCCSmoothingTimeMs = dawExtraState.midiCCSmoothingTimeMs;
+                monoValues.paramAutomationSmoothingTimeMs =
+                    dawExtraState.paramAutomationSmoothingTimeMs;
                 applyMpeState();
+                applySmoothingTimes();
 
                 AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
                 au.dawExtraStatePointer = &dawExtraState;
@@ -880,6 +904,27 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             monoValues.mpeBendRange = std::clamp((int)std::round(uiM->value), 1, 96);
             dawExtraState.mpeBendRange = monoValues.mpeBendRange;
             applyMpeState();
+            AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
+            au.dawExtraStatePointer = &dawExtraState;
+            audioToUi.push(au);
+        }
+        break;
+        case MainToAudioMsg::SET_MIDI_CC_SMOOTHING_TIME_MS:
+        {
+            monoValues.midiCCSmoothingTimeMs = std::max(0.f, uiM->value);
+            dawExtraState.midiCCSmoothingTimeMs = monoValues.midiCCSmoothingTimeMs;
+            applySmoothingTimes();
+            AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
+            au.dawExtraStatePointer = &dawExtraState;
+            audioToUi.push(au);
+        }
+        break;
+        case MainToAudioMsg::SET_PARAM_AUTOMATION_SMOOTHING_TIME_MS:
+        {
+            monoValues.paramAutomationSmoothingTimeMs = std::max(0.f, uiM->value);
+            dawExtraState.paramAutomationSmoothingTimeMs =
+                monoValues.paramAutomationSmoothingTimeMs;
+            applySmoothingTimes();
             AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
             au.dawExtraStatePointer = &dawExtraState;
             audioToUi.push(au);
@@ -1031,6 +1076,19 @@ void Synth::applyMpeState()
 {
     voiceManager->dialect = monoValues.mpeActive ? voiceManager_t::MIDI1Dialect::MIDI1_MPE
                                                  : voiceManager_t::MIDI1Dialect::MIDI1;
+}
+
+void Synth::applySmoothingTimes()
+{
+    if (engineSampleRate <= 0)
+        return;
+    midiCCLagCollection.setRateInMilliseconds(monoValues.midiCCSmoothingTimeMs, engineSampleRate,
+                                              1.0 / blockSize);
+    for (auto &[i, p] : patch.paramMap)
+    {
+        p->lag.setRateInMilliseconds(monoValues.paramAutomationSmoothingTimeMs, engineSampleRate,
+                                     1.0 / blockSize);
+    }
 }
 
 void Synth::processEndOfBlock(float *L, float *R)

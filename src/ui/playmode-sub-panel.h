@@ -18,6 +18,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <sst/jucegui/component-adapters/DiscreteToReference.h>
+#include <sst/jucegui/components/TextEditor.h>
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
 #include "lfo-components.h"
@@ -38,8 +39,7 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<jcmp::MultiSwitch> playMode;
     std::unique_ptr<PatchDiscrete> playModeD;
 
-    std::unique_ptr<jcmp::RuledLabel> bendTitle, uniTitle, mpeTitle, tsposeTitle, panicTitle,
-        mtsTitle;
+    std::unique_ptr<jcmp::RuledLabel> bendTitle, uniTitle, tsposeTitle, panicTitle, mtsTitle;
     std::unique_ptr<jcmp::Label> mtsStatusLabel;
     int mtsIdleCount{0};
     bool mtsConnected{false};
@@ -84,9 +84,19 @@ struct PlayModeSubPanel : juce::Component, HasEditor
         sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::ToggleButton, bool>>
         mpeActiveButtonD;
 
-    struct MpeBendRangeBinding;
-    std::unique_ptr<MpeBendRangeBinding> mpeRangeD;
+    std::unique_ptr<jcmp::TextEditor> mpeRangeEditor;
     std::unique_ptr<jcmp::Label> mpeRangeL;
+    void refreshMpeRangeEditor();
+    void commitMpeRangeEditor();
+
+    // "MPE + Smoothing" settings section below the top row.
+    std::unique_ptr<jcmp::RuledLabel> smoothingSectionTitle;
+    std::unique_ptr<jcmp::Label> mpeRowLabel, smoothingRowLabel, paramSmoothingRowLabel;
+    std::unique_ptr<jcmp::MenuButton> midiSmoothingButton, paramSmoothingButton;
+    void refreshMidiSmoothingButton();
+    void showMidiSmoothingMenu();
+    void refreshParamSmoothingButton();
+    void showParamSmoothingMenu();
 
     std::unique_ptr<jcmp::JogUpDownButton> tsposeButton;
     std::unique_ptr<PatchDiscrete> tsposeButtonD;
