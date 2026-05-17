@@ -855,8 +855,9 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
         break;
         case MainToAudioMsg::SET_DESIGN_MODE_RUN_ALL:
         {
+            // Latched into each voice's active flag at attack(); in-flight voices keep
+            // their state, the next attack picks up the new mode.
             monoValues.designModeRunAll = uiM->value > 0.5;
-            voiceManager->allSoundsOff();
         }
         break;
         case MainToAudioMsg::SET_DAW_EXTRA_STATE:

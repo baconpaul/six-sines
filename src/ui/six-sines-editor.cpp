@@ -282,7 +282,8 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
         defaultsProvider->getUserDefaultValue(Defaults::defaultAuthor, std::string{});
 
     mainToAudio.push({Synth::MainToAudioMsg::EDITOR_ATTACH_DETATCH, true});
-    sendDesignModeToAudio();
+    if (sessionRunAllNodes)
+        sendDesignModeToAudio();
     mainToAudio.push({Synth::MainToAudioMsg::REQUEST_REFRESH, true});
     requestParamsFlush();
 
@@ -306,8 +307,11 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
 }
 SixSinesEditor::~SixSinesEditor()
 {
-    sessionRunAllNodes = false;
-    mainToAudio.push({Synth::MainToAudioMsg::SET_DESIGN_MODE_RUN_ALL, 0, 0.f});
+    if (sessionRunAllNodes)
+    {
+        sessionRunAllNodes = false;
+        mainToAudio.push({Synth::MainToAudioMsg::SET_DESIGN_MODE_RUN_ALL, 0, 0.f});
+    }
     mainToAudio.push({Synth::MainToAudioMsg::EDITOR_ATTACH_DETATCH, false});
     idleTimer->stopTimer();
     setLookAndFeel(nullptr);
