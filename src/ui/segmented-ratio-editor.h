@@ -87,6 +87,11 @@ struct SegmentedRatioEditor : sst::jucegui::components::ContinuousParamEditor
     mutable int cachedT1{1}, cachedT2{0}, cachedT3{0};
     mutable bool digitsValid{false};
 
+    // Disambiguates the ±1 boundary: log2(1)==log2(-1)==0 so the stored float
+    // can't tell +1 from -1. This flag rides through refreshFromExternal so a
+    // DAW echo of the just-written value (val==0) doesn't snap -1 back to +1.
+    bool negativeSide{false};
+
     // Set by the inner editor's drag start/end so writeDigits skips its own
     // BEGIN/END pair while a drag gesture is open.
     bool inOuterGesture{false};

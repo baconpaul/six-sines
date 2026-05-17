@@ -27,6 +27,11 @@ namespace baconpaul::six_sines::ui
 
 namespace jcmp = sst::jucegui::components;
 
+// Window around log2==0 where ±1 cannot be distinguished from the float — at
+// |val| below this the integer slot is treated as ambiguous and negativeSide
+// is consulted (or, in the jog/drag paths, set explicitly across the crossing).
+static constexpr float zeroThreshold = 1e-5f;
+
 struct SegmentedRatioEditor::RatioDTE : jcmp::DraggableTextEditableValue
 {
     // Layout: monospace text laid out as if every value had max width (e.g.
@@ -236,8 +241,14 @@ struct SegmentedRatioEditor::RatioDTE : jcmp::DraggableTextEditableValue
             int v = t1 + delta;
             // Skip 0 in the same direction as the jog buttons: dragging from a
             // positive value down past 0 lands on -1; up past 0 lands on +1.
+            // Mark negativeSide explicitly across the crossing; the float
+            // doesn't move at this boundary so writeDigits' sign inference is
+            // correct but stating it here matches the jog-button code path.
             if (v == 0)
+            {
                 v = (delta > 0) ? 1 : -1;
+                parent->negativeSide = (v < 0);
+            }
             t1 = std::clamp(v, parent->t1Min(), parent->t1Max());
         }
         else if (activeSlot == 1)
@@ -310,6 +321,15 @@ struct SegmentedRatioEditor::RatioDTE : jcmp::DraggableTextEditableValue
         else
             continuous()->setValueAsString(text);
         onEndEdit();
+        // refreshFromExternal only resyncs negativeSide when the value is
+        // unambiguous. If the user just typed something that resolves to ±1,
+        // the text itself is our only signal — "-1" or "1/N" means negative
+        // side, anything else means positive.
+        if (std::fabs(continuous()->getValue()) < zeroThreshold)
+        {
+            auto trimmed = juce::String(text).trim();
+            parent->negativeSide = trimmed.startsWithChar('-') || trimmed.contains("/");
+        }
         parent->refreshFromExternal();
     }
 };
@@ -374,7 +394,12 @@ void SegmentedRatioEditor::readDigits(int &t1, int &t2, int &t3) const
         t3 = 0;
         return;
     }
-    decompose(c->getValue(), t1, t2, t3);
+    auto v = c->getValue();
+    decompose(v, t1, t2, t3);
+    // log2(1)==log2(-1)==0 collapses the sign in the float; if a prior jog
+    // landed us on the negative side, restore that sign here.
+    if (negativeSide && std::fabs(v) < zeroThreshold && t1 > 0)
+        t1 = -t1;
     cachedT1 = t1;
     cachedT2 = t2;
     cachedT3 = t3;
@@ -425,6 +450,9 @@ void SegmentedRatioEditor::writeDigits(int t1, int t2, int t3)
     }
 
     auto v = recompose(t1, t2, t3);
+    // Track the side BEFORE the GUI set so the synchronous refreshFromExternal
+    // it triggers can see the new orientation.
+    negativeSide = (t1 < 0);
     if (inOuterGesture)
     {
         // a drag gesture is already open; just set the value
@@ -438,9 +466,9 @@ void SegmentedRatioEditor::writeDigits(int t1, int t2, int t3)
         onEndEdit();
     }
     // Restore the cache after setValueFromGUI: the panel wires onGuiSetValue →
-    // refreshFromExternal, which invalidates digits. +1 and -1 both encode to
-    // log2(1)=0 in the float, so decompose can't tell them apart; the cache is
-    // the only thing that keeps the sign at that boundary.
+    // refreshFromExternal, which invalidates digits. negativeSide handles the
+    // ±1 ambiguity persistently, but resetting the cache here still saves a
+    // redundant decompose on the next paint.
     cachedT1 = t1;
     cachedT2 = t2;
     cachedT3 = t3;
@@ -457,10 +485,20 @@ void SegmentedRatioEditor::jogSlot(int slot, bool up)
     int delta = up ? 1 : -1;
     if (slot == 0)
     {
+        // Crossing the ±1 boundary doesn't move the underlying float (both
+        // sides encode to log2(1)=0), so set negativeSide here at the source —
+        // writeDigits would also infer it, but stating it explicitly at the
+        // crossing keeps the intent obvious.
         if (t1 == 1 && !up)
+        {
             t1 = -1;
+            negativeSide = true;
+        }
         else if (t1 == -1 && up)
+        {
             t1 = 1;
+            negativeSide = false;
+        }
         else
             t1 += delta;
     }
@@ -482,6 +520,7 @@ void SegmentedRatioEditor::finalizeSetup(SixSinesEditor &e)
     digitsValid = false;
     if (auto c = continuous())
     {
+        negativeSide = (c->getValue() < 0);
         decompose(c->getValue(), cachedT1, cachedT2, cachedT3);
         digitsValid = true;
     }
@@ -544,6 +583,16 @@ void SegmentedRatioEditor::resized()
 void SegmentedRatioEditor::refreshFromExternal()
 {
     digitsValid = false;
+    // Re-sync the persistent sign flag from the float when the value is
+    // unambiguous. At |v|<eps the float can't tell ±1 apart, so we leave
+    // negativeSide alone — that way a DAW echo of a just-set 0.0 doesn't
+    // snap a user-jogged -1 back to +1.
+    if (auto c = continuous())
+    {
+        auto v = c->getValue();
+        if (std::fabs(v) >= zeroThreshold)
+            negativeSide = (v < 0);
+    }
     if (editor)
         editor->repaint();
     repaint();
