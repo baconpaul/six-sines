@@ -7,7 +7,6 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 - Clap Wrapper Standalone upgrades
   - windows ui open isn't right
   - jack on linux
-- A performance sweep and review 
 
 ## Modulation
 - Clamp targets
@@ -20,6 +19,8 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 - smoothing time as sliders
 - Smoothing and bend to engine side default (so move ui defaults to engine side)
 - why are voices and unison different widgets?
+- Oblisck: Unfortunately I ran into a crash. I clicked on "settings" in the macro window (the three dots)
+  And it instantly killed reaper.
 
 ## Noise Upgrades **DONE**
 - Pink, White, Tilt (with N for tilt) **DONE**

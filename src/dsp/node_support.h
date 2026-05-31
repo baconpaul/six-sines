@@ -75,6 +75,7 @@ template <typename T> struct EnvelopeSupport
 
     float delayMod{0.f}, attackMod{0.f}, holdMod{0.f}, decayMod{0.f}, sustainMod{0.f},
         releaseMod{0.f};
+    float aShapeMod{0.f}, dShapeMod{0.f}, rShapeMod{0.f};
     bool releaseEnvStarted{false}, releaseEnvUngated{false};
     bool envIsMult{true};
 
@@ -189,12 +190,13 @@ template <typename T> struct EnvelopeSupport
                     releaseEnvUngated = false;
                 }
             }
-            env.processBlockWithDelay(std::clamp(delay + delayMod, 0.f, 1.f),
-                                      std::clamp(attackv + attackMod, minAttack, 1.f),
-                                      std::clamp(hold + holdMod, 0.f, 1.f),
-                                      std::clamp(decay + decayMod, 0.f, 1.f), sustain + sustainMod,
-                                      std::clamp(release + releaseMod, 0.f, 1.f), ash, dsh, rsh,
-                                      !voiceValues.gated, needsCurve);
+            env.processBlockWithDelay(
+                std::clamp(delay + delayMod, 0.f, 1.f),
+                std::clamp(attackv + attackMod, minAttack, 1.f),
+                std::clamp(hold + holdMod, 0.f, 1.f), std::clamp(decay + decayMod, 0.f, 1.f),
+                sustain + sustainMod, std::clamp(release + releaseMod, 0.f, 1.f),
+                std::clamp(ash + aShapeMod, -1.f, 1.f), std::clamp(dsh + dShapeMod, -1.f, 1.f),
+                std::clamp(rsh + rShapeMod, -1.f, 1.f), !voiceValues.gated, needsCurve);
         }
         else
         {
@@ -208,12 +210,13 @@ template <typename T> struct EnvelopeSupport
             }
 
             auto gate = envIsOneShot ? env.stage < env_t::s_sustain : voiceValues.gated;
-            env.processBlockWithDelay(std::clamp(delay + delayMod, 0.f, 1.f),
-                                      std::clamp(attackv + attackMod, minAttack, 1.f),
-                                      std::clamp(hold + holdMod, 0.f, 1.f),
-                                      std::clamp(decay + decayMod, 0.f, 1.f), sustain + sustainMod,
-                                      std::clamp(release + releaseMod, 0.f, 1.f), ash, dsh, rsh,
-                                      gate, needsCurve);
+            env.processBlockWithDelay(
+                std::clamp(delay + delayMod, 0.f, 1.f),
+                std::clamp(attackv + attackMod, minAttack, 1.f),
+                std::clamp(hold + holdMod, 0.f, 1.f), std::clamp(decay + decayMod, 0.f, 1.f),
+                sustain + sustainMod, std::clamp(release + releaseMod, 0.f, 1.f),
+                std::clamp(ash + aShapeMod, -1.f, 1.f), std::clamp(dsh + dShapeMod, -1.f, 1.f),
+                std::clamp(rsh + rShapeMod, -1.f, 1.f), gate, needsCurve);
         }
     }
 
@@ -232,6 +235,9 @@ template <typename T> struct EnvelopeSupport
         decayMod = 0.f;
         sustainMod = 0.f;
         releaseMod = 0.f;
+        aShapeMod = 0.f;
+        dShapeMod = 0.f;
+        rShapeMod = 0.f;
     }
 
     bool envHandleModulationValue(int target, const float depth, const float *source)
@@ -255,6 +261,15 @@ template <typename T> struct EnvelopeSupport
             return true;
         case Patch::DAHDSRMixin::ENV_RELEASE:
             releaseMod = depth * *source;
+            return true;
+        case Patch::DAHDSRMixin::ENV_ASHAPE:
+            aShapeMod = depth * *source;
+            return true;
+        case Patch::DAHDSRMixin::ENV_DSHAPE:
+            dShapeMod = depth * *source;
+            return true;
+        case Patch::DAHDSRMixin::ENV_RSHAPE:
+            rShapeMod = depth * *source;
             return true;
         }
         return false;

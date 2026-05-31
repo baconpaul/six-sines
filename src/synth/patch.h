@@ -435,7 +435,10 @@ struct Patch : pats::PatchBase<Patch, Param>
             ENV_HOLD = 41,
             ENV_DECAY = 42,
             ENV_SUSTAIN = 43,
-            ENV_RELEASE = 44
+            ENV_RELEASE = 44,
+            ENV_ASHAPE = 46,
+            ENV_DSHAPE = 47,
+            ENV_RSHAPE = 48
         };
 
         void appendDAHDSRTargetName(std::vector<std::pair<int32_t, std::string>> &res)
@@ -447,6 +450,10 @@ struct Patch : pats::PatchBase<Patch, Param>
             res.emplace_back(ENV_DECAY, "Env Decay");
             res.emplace_back(ENV_SUSTAIN, "Env Sustain");
             res.emplace_back(ENV_RELEASE, "Env Release");
+            res.emplace_back(-1, "");
+            res.emplace_back(ENV_ASHAPE, "Env Attack Shape");
+            res.emplace_back(ENV_DSHAPE, "Env Decay Shape");
+            res.emplace_back(ENV_RSHAPE, "Env Release Shape");
         }
     };
 
