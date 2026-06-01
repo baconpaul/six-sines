@@ -21,6 +21,7 @@
 #include <sst/jucegui/components/HSliderFilled.h>
 #include <sst/jucegui/components/Label.h>
 #include <sst/jucegui/components/MultiSwitch.h>
+#include <sst/jucegui/components/MenuButton.h>
 #include <sst/jucegui/components/JogUpDownButton.h>
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
@@ -251,13 +252,32 @@ template <typename Comp, typename Patch> struct LFOComponents
 
         createComponent(e, *c, v.lfoBipolar, bipolar, bipolarD);
         bipolar->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
-        bipolar->setLabel("Bipolar");
+        bipolar->setLabel("bip");
         c->addAndMakeVisible(*bipolar);
 
         createComponent(e, *c, v.lfoIsEnveloped, isEnv, isEnvD);
         isEnv->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
-        isEnv->setLabel("* Env");
+        isEnv->setLabel("*env");
         c->addAndMakeVisible(*isEnv);
+
+        // Short text ("retrig"/"song") on the button face, long names in the popup, so
+        // the button stays compact while the menu reads clearly.
+        runModeD = std::make_unique<PatchDiscrete>(e, v.runMode.meta.id);
+        runModeId = v.runMode.meta.id;
+        runMode = std::make_unique<jcmp::MenuButton>();
+        resetRunModeLabel();
+        runMode->setOnCallback(
+            [w = juce::Component::SafePointer(c)]()
+            {
+                if (w)
+                    w->showRunModeMenu();
+            });
+        c->addAndMakeVisible(*runMode);
+        e.componentRefreshByID[v.runMode.meta.id] = [w = juce::Component::SafePointer(c)]()
+        {
+            if (w)
+                w->resetRunModeLabel();
+        };
 
         stepEditor = std::make_unique<StepEditor>(e, v);
         c->addAndMakeVisible(*stepEditor);
@@ -291,6 +311,7 @@ template <typename Comp, typename Patch> struct LFOComponents
         sst::jucegui::component_adapters::setTraversalId(rate.get(), 203);
         sst::jucegui::component_adapters::setTraversalId(deform.get(), 205);
         sst::jucegui::component_adapters::setTraversalId(isEnv.get(), 211);
+        sst::jucegui::component_adapters::setTraversalId(runMode.get(), 212);
 
         lfoSetEnabledState(true);
     }
@@ -308,10 +329,47 @@ template <typename Comp, typename Patch> struct LFOComponents
         tempoSync->setEnabled(globallyEnabled);
         bipolar->setEnabled(globallyEnabled && !isStep);
         isEnv->setEnabled(globallyEnabled);
+        runMode->setEnabled(globallyEnabled);
         stepCount->setEnabled(globallyEnabled && isStep);
         cycleMode->setEnabled(globallyEnabled && isStep);
         stepEditor->setEnabled(globallyEnabled && isStep);
         asComp()->repaint();
+    }
+
+    void resetRunModeLabel()
+    {
+        if (runMode && runModeD)
+            runMode->setLabel(runModeD->getValueAsString());
+    }
+
+    void showRunModeMenu()
+    {
+        auto &editor = asComp()->editor;
+        auto cur = (int)std::round(runModeD->getValue());
+
+        auto p = juce::PopupMenu();
+        p.addSectionHeader("LFO Run Mode");
+        p.addSeparator();
+        p.addItem("Retrigger on Attack", true, cur == Patch::VOICE_TRIGGER,
+                  [w = juce::Component::SafePointer(asComp())]()
+                  {
+                      if (w)
+                          w->setRunMode(Patch::VOICE_TRIGGER);
+                  });
+        p.addItem("Song Position", true, cur == Patch::SONGPOS,
+                  [w = juce::Component::SafePointer(asComp())]()
+                  {
+                      if (w)
+                          w->setRunMode(Patch::SONGPOS);
+                  });
+        p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
+                        makeMenuAccessibleButtonCB(runMode.get()));
+    }
+
+    void setRunMode(int v)
+    {
+        asComp()->editor.setAndSendParamValue(runModeId, v);
+        resetRunModeLabel();
     }
 
     juce::Rectangle<int> layoutLFOAt(int x, int y, int width = -1)
@@ -333,14 +391,17 @@ template <typename Comp, typename Patch> struct LFOComponents
         auto col1 = jlo::VList().withWidth(uicKnobSize * 1.5).withAutoGap(uicMargin);
         col1.add(jlo::Component(*shape).withHeight(uicLabeledKnobHeight + 3 * uicMargin +
                                                    3 * uicLabelHeight));
-        col1.add(jlo::Component(*bipolar).withHeight(uicLabelHeight));
+        auto toggleRow = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
+        toggleRow.add(jlo::Component(*bipolar).expandToFill());
+        toggleRow.add(jlo::Component(*isEnv).expandToFill());
+        col1.add(toggleRow);
 
         auto col2 = jlo::VList().withWidth(uicKnobSize * 1.25).withAutoGap(uicMargin);
         col2.add(labelKnobLayout(rate, rateL).centerInParent());
         col2.add(jlo::Component(*tempoSync).withHeight(uicLabelHeight));
         col2.add(sideLabelSlider(deformL, deform));
         col2.add(sideLabelSlider(phaseL, phase));
-        col2.add(jlo::Component(*isEnv).withHeight(uicLabelHeight));
+        col2.add(jlo::Component(*runMode).withHeight(uicLabelHeight));
 
         auto col3 = jlo::VList().expandToFill().withAutoGap(0);
         col3.add(jlo::Component(*stepEditor).expandToFill());
@@ -378,6 +439,10 @@ template <typename Comp, typename Patch> struct LFOComponents
 
     std::unique_ptr<jcmp::ToggleButton> isEnv;
     std::unique_ptr<PatchDiscrete> isEnvD;
+
+    std::unique_ptr<jcmp::MenuButton> runMode;
+    std::unique_ptr<PatchDiscrete> runModeD;
+    uint32_t runModeId{0};
 
     std::unique_ptr<StepEditor> stepEditor;
 

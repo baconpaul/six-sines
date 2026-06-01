@@ -59,6 +59,19 @@ struct MonoValues
     }
 
     float tempoSyncRatio{1};
+
+    // Transport state, refreshed each host buffer from the CLAP transport. songPosSeconds
+    // re-anchors to hostSongPosSeconds at the top of each buffer (songPosNeedsResync) and
+    // then advances by blockSize/hostSampleRate per engine block, so it stays sample-locked
+    // to the host across wide buffers. When the host is stopped, gives no seconds timeline,
+    // or supplies no transport at all, isPlayingAndHasSecondsTimeline is false and the clock
+    // simply free-runs by the same per-block advance, a monotonic clock for the life of the
+    // engine.
+    bool isPlayingAndHasSecondsTimeline{false};
+    bool songPosNeedsResync{false};
+    double hostSongPosSeconds{0.0};
+    double songPosSeconds{0.0};
+
     float pitchBend{0.f};
     std::array<int8_t, 128> midiCC;
     std::array<float, 128> midiCCFloat; // 0...1 normed

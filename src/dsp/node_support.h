@@ -282,7 +282,7 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
     MonoValues &monoValues; // non-const so we can read the RNG
 
     const float &lfoRate, &lfoDeform, &lfoShape, &lfoActiveV, &tempoSyncV, &bipolarV,
-        &lfoIsEnvelopedV, &lfoStartPhase;
+        &lfoIsEnvelopedV, &lfoStartPhase, &runModeV;
     bool active, doSmooth{false};
     using lfo_t = sst::basic_blocks::modulators::SimpleLFO<SRProvider, blockSize>;
     lfo_t lfo;
@@ -300,7 +300,7 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
         : paramBundle(mn), lfo(&mv.sr, mv.rng), stepLFO(mv.tuningProvider), lfoRate(mn.lfoRate),
           lfoDeform(mn.lfoDeform), lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive),
           tempoSyncV(mn.tempoSync), monoValues(mv), bipolarV(mn.lfoBipolar),
-          lfoIsEnvelopedV(mn.lfoIsEnveloped), lfoStartPhase(mn.lfoStartPhase),
+          lfoIsEnvelopedV(mn.lfoIsEnveloped), lfoStartPhase(mn.lfoStartPhase), runModeV(mn.runMode),
           stepValues(sst::cpputils::make_array_lambda<const float *, numSeqSteps>(
               [&mn](int i) { return &mn.lfoSeqSteps[i].value; })),
           stepCountValue(&mn.lfoStepCount.value), stepCycleModeValue(&mn.lfoCycleMode.value)
@@ -326,6 +326,19 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
     bool tempoSync{false};
     bool bipolar{true};
     bool lfoIsEnveloped{false};
+    int runMode{Patch::LFOMixin::VOICE_TRIGGER};
+
+    // Map the engine song position onto an LFO phase in [0,1) for SONGPOS run mode.
+    // rate is the log2 LFO frequency; the instantaneous frequency is tsScale * 2^rate Hz
+    // (tsScale = tempoSyncRatio under temposync, matching SimpleLFO::process_block), so the
+    // phase at songPosSeconds is (songPosSeconds * tsScale * 2^rate) wrapped to one cycle.
+    float songPosToPhase(float rate, double tsScale = 1.0) const
+    {
+        auto freqHz = monoValues.twoToTheX.twoToThe(rate) * tsScale;
+        auto phase = monoValues.songPosSeconds * freqHz;
+        phase -= std::floor(phase);
+        return (float)phase;
+    }
 
     bool runLfo{false};
     int32_t runLfoCheck{0};
@@ -339,6 +352,7 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
         bipolar = bipolarV > 0.5;
         lfoIsEnveloped = lfoIsEnvelopedV > 0.5;
         shape = static_cast<int>(std::round(lfoShape));
+        runMode = static_cast<int>(std::round(runModeV));
 
         // Shape is latched at attack time; lfoProcess assumes the matching
         // oscillator was initialized here. If shape is ever allowed to change
@@ -348,19 +362,56 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
             snapStepStorageFromParams();
             stepLFO.setSampleRate(monoValues.sr.sampleRate, monoValues.sr.sampleRateInv);
             stepTransport.tempo = monoValues.tempoSyncRatio * 120.0;
-            auto useRate = std::clamp(lfoRate + lfoRateMod, paramBundle.lfoRate.meta.minVal,
+            // Snap to temposync as lfoProcess does, so the song-position lock and the
+            // free-run increment use the same rate.
+            auto snapRate = lfoRate;
+            if (tempoSync)
+                snapRate = -paramBundle.lfoRate.meta.snapToTemposync(-snapRate);
+            auto useRate = std::clamp(snapRate + lfoRateMod, paramBundle.lfoRate.meta.minVal,
                                       paramBundle.lfoRate.meta.maxVal);
             stepLFO.assign(&stepStorage, useRate, &stepTransport, monoValues.rng, tempoSync);
 
-            double phase0 =
+            // Start position expressed as a continuous step index (integer part = step,
+            // fractional part = phase within the step). The user start phase is a fraction
+            // of the whole sequence.
+            double total =
                 std::clamp(lfoStartPhase + lfoStartMod, 0.f, 0.999f) * stepStorage.repeat;
-            double phaseFr = phase0 - std::floor(phase0);
-            stepLFO.setPhaseTo((int)std::floor(phase0), (float)phaseFr);
+            if (runMode == Patch::LFOMixin::SONGPOS)
+            {
+                // Steps advance at 2^rate per second, scaled by the whole-sequence length
+                // in cycle mode (rateIsForSingleStep == false) and by tempo when synced,
+                // matching StepLFO::UpdatePhaseIncrement.
+                double stepsPerSec =
+                    monoValues.twoToTheX.twoToThe(useRate) *
+                    (stepStorage.rateIsForSingleStep ? 1.0 : (double)stepStorage.repeat);
+                if (tempoSync)
+                    stepsPerSec *= monoValues.tempoSyncRatio;
+                total += monoValues.songPosSeconds * stepsPerSec;
+            }
+            long totalFloor = (long)std::floor(total);
+            double phaseFr = total - (double)totalFloor;
+            int step = (int)(((totalFloor % stepStorage.repeat) + stepStorage.repeat) %
+                             stepStorage.repeat);
+            stepLFO.setPhaseTo(step, (float)phaseFr);
         }
         else
         {
             lfo.attack(shape);
-            lfo.applyPhaseOffset(lfoStartPhase + lfoStartMod);
+            float phaseOffset = lfoStartPhase + lfoStartMod;
+            if (runMode == Patch::LFOMixin::SONGPOS)
+            {
+                // Derive the start phase from the song position rather than the note
+                // attack. Mirror the effective rate lfoProcess uses so the locked phase
+                // matches the free-run frequency.
+                auto effRate = lfoRate;
+                if (tempoSync)
+                    effRate = -paramBundle.lfoRate.meta.snapToTemposync(-effRate);
+                effRate = std::clamp(effRate + lfoRateMod, paramBundle.lfoRate.meta.minVal,
+                                     paramBundle.lfoRate.meta.maxVal);
+                phaseOffset += songPosToPhase(effRate, tempoSync ? monoValues.tempoSyncRatio : 1.0);
+                phaseOffset -= std::floor(phaseOffset);
+            }
+            lfo.applyPhaseOffset(phaseOffset);
         }
         if (needsSmoothing)
         {
