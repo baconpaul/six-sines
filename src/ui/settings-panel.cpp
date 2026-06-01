@@ -73,6 +73,11 @@ void SettingsPanel::beginEdit()
 
     editor.playModeSubPanel->setVisible(true);
     editor.singlePanel->setName("Settings");
+
+    // Light the button when entered via the nav menu (a direct click already
+    // sets the toggle before firing onValueChanged).
+    if (playScreenD)
+        playScreenD->setValueFromModel(true);
 }
 
 void SettingsPanel::clearHighlight()
