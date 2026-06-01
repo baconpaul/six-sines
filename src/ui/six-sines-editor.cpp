@@ -1213,6 +1213,7 @@ void SixSinesEditor::showNavigationMenu()
                    {
                        if (w)
                        {
+                           w->macroPanel->beginEdit(i);
                            w->macroPanel->knobs[i]->grabKeyboardFocus();
                        }
                    });
@@ -1238,9 +1239,20 @@ void SixSinesEditor::showNavigationMenu()
 
     p.addSeparator();
 
-    auto enam = std::string("Edit Area");
+    p.addItem("Settings",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                  {
+                      w->settingsPanel->beginEdit();
+                      w->singlePanel->grabKeyboardFocus();
+                  }
+              });
+
+    p.addSeparator();
+    auto enam = std::string("Focus in Edit Area");
     if (!singlePanel->getName().isEmpty())
-        enam = "Edit " + singlePanel->getName().toStdString();
+        enam = "Focus " + singlePanel->getName().toStdString() + " Editor";
     p.addItem(enam,
               [w = juce::Component::SafePointer(this)]()
               {
@@ -1249,17 +1261,6 @@ void SixSinesEditor::showNavigationMenu()
                       w->singlePanel->grabKeyboardFocus();
                   }
               });
-
-    p.addItem("Settings",
-              [w = juce::Component::SafePointer(this)]()
-              {
-                  if (w)
-                  {
-                      w->mainPanel->beginEdit(3);
-                      w->singlePanel->grabKeyboardFocus();
-                  }
-              });
-
     p.addSeparator();
     p.addItem(spectrumWindow ? "Hide Analyzer" : "Show Analyzer",
               [w = juce::Component::SafePointer(this)]()
