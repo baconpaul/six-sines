@@ -1049,6 +1049,13 @@ void Synth::reapplyControlSettings()
         }
         bitRateZOH.setRate(target, sr);
         bitRateZOH.reset();
+        // Band-limit the per-voice noise to the crusher Nyquist so the ZOH has
+        // nothing above its Nyquist to fold (which would whiten the tilt).
+        monoValues.noiseBandLimitHz = target * 0.5f;
+    }
+    else
+    {
+        monoValues.noiseBandLimitHz = 0.f;
     }
 
     auto hpVal = (int)std::round(patch.output.highpass.value);

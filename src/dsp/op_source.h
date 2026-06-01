@@ -673,7 +673,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             {
                 if (noisePos >= 16)
                 {
-                    noiseHelper.fill16(noiseBuf, noiseType, nextN, baseFrequency, lfsrMode);
+                    noiseHelper.fill16(noiseBuf, noiseType, nextN, baseFrequency, lfsrMode,
+                                       monoValues.noiseBandLimitHz);
                     noisePos = 0;
                 }
                 float noise = noiseBuf[noisePos++];
