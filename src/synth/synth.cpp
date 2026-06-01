@@ -310,6 +310,16 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
 
     monoValues.attackFloorOnRetrig = patch.output.attackFloorOnRetrig > 0.5;
 
+    // Advance the song-position clock once per host block. On the first block of a host
+    // buffer, re-anchor to the host position (when playing with a seconds timeline); every
+    // other block — and the whole free-run case — advances by the real elapsed block time.
+    // This keeps us sample-locked to the host even across wide (e.g. 4096) buffers.
+    if (monoValues.isPlayingAndHasSecondsTimeline && monoValues.songPosNeedsResync)
+        monoValues.songPosSeconds = monoValues.hostSongPosSeconds;
+    else
+        monoValues.songPosSeconds += (double)blockSize / hostSampleRate;
+    monoValues.songPosNeedsResync = false;
+
     int loops{0};
 
     SRC_DATA d;

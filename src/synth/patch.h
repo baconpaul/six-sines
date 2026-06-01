@@ -93,6 +93,8 @@ struct Patch : pats::PatchBase<Patch, Param>
     static constexpr uint64_t version_120e = 0x010205;
     // Sixth chunk of 1.2.0: pink-noise extended mode
     static constexpr uint64_t version_120f = 0x010206;
+    // Seventh chunk of 1.2.0: LFO song-position run mode
+    static constexpr uint64_t version_120g = 0x010207;
 
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
     static md_t floatMd(uint64_t version = version_110)
@@ -192,6 +194,12 @@ struct Patch : pats::PatchBase<Patch, Param>
             Step
         };
 
+        enum LfoRunMode
+        {
+            VOICE_TRIGGER = 0,
+            SONGPOS
+        };
+
         LFOMixin(const std::string name, int id0, int stepid0 = -1, uint64_t version = version_110)
             : lfoRate(floatMd(version)
                           .asLfoRate(-7, 11)
@@ -269,13 +277,21 @@ struct Patch : pats::PatchBase<Patch, Param>
                                .withName(name + " Cycle")
                                .withDefault(0)
                                .withGroupName(name)
-                               .withID(((stepid0 > 0 ? (stepid0) : (id0 + 9)) + 17)))
+                               .withID(((stepid0 > 0 ? (stepid0) : (id0 + 9)) + 17))),
+              runMode(intMd(version_120g)
+                          .withName(name + " LFO Run Mode")
+                          .withGroupName(name)
+                          .withRange(LfoRunMode::VOICE_TRIGGER, LfoRunMode::SONGPOS)
+                          .withDefault(LfoRunMode::VOICE_TRIGGER)
+                          .withID(stepid0 > 0 ? (id0 + 9) : (id0 + 27))
+                          .withUnorderedMapFormatting({{LfoRunMode::VOICE_TRIGGER, "retrig"},
+                                                       {LfoRunMode::SONGPOS, "song"}}))
         {
             lfoRate.tempoSyncPartner = &tempoSync;
         }
 
         Param lfoRate, lfoDeform, lfoShape, lfoActive, tempoSync, lfoBipolar, lfoIsEnveloped,
-            lfoStartPhase, lfoStepCount, lfoCycleMode;
+            lfoStartPhase, lfoStepCount, lfoCycleMode, runMode;
         std::array<Param, numSeqSteps> lfoSeqSteps;
 
         void appendLFOParams(std::vector<Param *> &res)
@@ -293,6 +309,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             }
             res.push_back(&lfoStepCount);
             res.push_back(&lfoCycleMode);
+            res.push_back(&runMode);
         }
 
         enum LFOTargets

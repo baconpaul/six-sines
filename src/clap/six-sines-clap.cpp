@@ -165,11 +165,24 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         if (process->transport)
         {
             engine->monoValues.tempoSyncRatio = process->transport->tempo / 120.0;
+            auto tflags = process->transport->flags;
+            // Only trust the song position when the host is both playing and exposes a
+            // seconds timeline; otherwise free-run our own clock.
+            engine->monoValues.isPlayingAndHasSecondsTimeline =
+                (tflags & CLAP_TRANSPORT_IS_PLAYING) &&
+                (tflags & CLAP_TRANSPORT_HAS_SECONDS_TIMELINE);
+            if (engine->monoValues.isPlayingAndHasSecondsTimeline)
+                engine->monoValues.hostSongPosSeconds =
+                    process->transport->song_pos_seconds / (double)CLAP_SECTIME_FACTOR;
         }
         else
         {
             engine->monoValues.tempoSyncRatio = 1.f;
+            engine->monoValues.isPlayingAndHasSecondsTimeline = false;
         }
+        // Re-anchor songPosSeconds to the host position on the first engine block of this
+        // buffer; subsequent blocks advance from there.
+        engine->monoValues.songPosNeedsResync = true;
 
         static constexpr int outBus{multiOut ? 1 + numOps : 1};
         static constexpr int outChan{multiOut ? (1 + numOps) * 2 : 2};
