@@ -89,6 +89,11 @@ struct MonoValues
 
     float audioInBlock alignas(16)[blockSize]{}; // engine-rate audio in, mono mix
 
+    // Anti-alias ceiling for the per-voice noise source = active bit-rate-crusher
+    // Nyquist (f_z/2), or 0 when the crusher is off (no limit). Derived in
+    // Synth::reapplyControlSettings so it can never drift from bitRateZOH's rate.
+    float noiseBandLimitHz{0.f};
+
     // Instance-scoped MPE config — lives on the engine, NOT in the patch. Persisted
     // via Synth::DawExtraState so DAW sessions round-trip without polluting patches.
     bool mpeActive{false};

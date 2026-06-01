@@ -509,7 +509,7 @@ struct NoisePainter : juce::Component
 
             if (noisePos >= 16)
             {
-                helper.fill16(noiseBuf, nt, nVal, 220.f, lm);
+                helper.fill16(noiseBuf, nt, nVal, 220.f, lm, 0.f);
                 noisePos = 0;
             }
             float n = noiseBuf[noisePos++];
