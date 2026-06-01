@@ -18,7 +18,10 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <sst/jucegui/component-adapters/DiscreteToReference.h>
+#include <sst/jucegui/component-adapters/ContinuousToReference.h>
 #include <sst/jucegui/components/TextEditor.h>
+#include <sst/jucegui/components/JogUpDownButton.h>
+#include <sst/jucegui/components/HSliderFilled.h>
 #include "six-sines-editor.h"
 #include "dahdsr-components.h"
 #include "lfo-components.h"
@@ -26,6 +29,13 @@
 
 namespace baconpaul::six_sines::ui
 {
+// A JogUpDownButton whose arrows / wheel / menu step through a fixed set of values (the
+// voice-limit choices) rather than every integer in the range. Defined in the .cpp.
+struct SteppedJogButton;
+
+// As with the base JogUpDownButton, the value is shown in the label so a tooltip is redundant.
+template <> constexpr bool suppressTooltipByWidget<SteppedJogButton>() { return true; }
+
 struct PlayModeSubPanel : juce::Component, HasEditor
 {
     PlayModeSubPanel(SixSinesEditor &e);
@@ -92,16 +102,17 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     // "MPE + Smoothing" settings section below the top row.
     std::unique_ptr<jcmp::RuledLabel> smoothingSectionTitle;
     std::unique_ptr<jcmp::Label> mpeRowLabel, smoothingRowLabel, paramSmoothingRowLabel;
-    std::unique_ptr<jcmp::MenuButton> midiSmoothingButton, paramSmoothingButton;
-    void refreshMidiSmoothingButton();
-    void showMidiSmoothingMenu();
-    void refreshParamSmoothingButton();
-    void showParamSmoothingMenu();
+    // ContinuousToValueReference owns the HSliderFilled (access via ->widget) and binds it to
+    // the ms smoothing floats in editorDawExtraState, which are not patch params.
+    std::unique_ptr<
+        sst::jucegui::component_adapters::ContinuousToValueReference<jcmp::HSliderFilled>>
+        midiSmoothingSliderD, paramSmoothingSliderD;
 
     std::unique_ptr<jcmp::JogUpDownButton> tsposeButton;
     std::unique_ptr<PatchDiscrete> tsposeButtonD;
 
-    std::unique_ptr<jcmp::MenuButton> voiceLimit;
+    std::unique_ptr<SteppedJogButton> voiceLimit;
+    std::unique_ptr<PatchDiscrete> voiceLimitD;
     std::unique_ptr<jcmp::RuledLabel> voiceLimitL;
 
     std::unique_ptr<jcmp::TextPushButton> panicButton;
@@ -128,8 +139,6 @@ struct PlayModeSubPanel : juce::Component, HasEditor
         highpassLabel;
 
     void showPolyLimitMenu();
-    int getPolyLimit();
-    void setPolyLimit(int pl);
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MIXER_SUB_PANE_H

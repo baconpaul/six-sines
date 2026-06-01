@@ -14,13 +14,84 @@
  */
 
 #include "playmode-sub-panel.h"
-#include <array>
-#include <sstream>
+#include <cstdio>
 #include <sst/jucegui/layouts/ListLayout.h>
 #include "libMTSClient.h"
 
 namespace baconpaul::six_sines::ui
 {
+// A JogUpDownButton whose arrows / wheel step through a fixed set of values rather than
+// every integer in the range. The popup menu is delegated to onShowPopup so the host panel
+// can present just those choices.
+struct SteppedJogButton : jcmp::JogUpDownButton
+{
+    std::vector<int> steps;
+    std::function<void(const juce::ModifierKeys &)> onShowPopup{nullptr};
+
+    int steppedJog(int cur, int dir) const
+    {
+        if (steps.empty())
+            return cur;
+        if (dir > 0)
+        {
+            for (auto s : steps)
+                if (s > cur)
+                    return s;
+            return steps.back();
+        }
+        for (auto it = steps.rbegin(); it != steps.rend(); ++it)
+            if (*it < cur)
+                return *it;
+        return steps.front();
+    }
+
+    void applyJog(int dir)
+    {
+        if (!data)
+            return;
+        onBeginEdit();
+        data->setValueFromGUI(steppedJog(data->getValue(), dir));
+        repaint();
+        onEndEdit();
+    }
+
+    void mouseUp(const juce::MouseEvent &e) override
+    {
+        if (e.mods.isPopupMenu())
+            return;
+        int dir = 0;
+        if (leftButtonBound().contains(e.position.toInt()))
+            dir = -1;
+        if (rightButtonBound().contains(e.position.toInt()))
+            dir = 1;
+        if (dir != 0)
+            applyJog(dir);
+    }
+
+    void mouseWheelMove(const juce::MouseEvent &, const juce::MouseWheelDetails &w) override
+    {
+        auto thresh = 0.05;
+        wheel0 += w.deltaY;
+        if (wheel0 > thresh)
+        {
+            applyJog(-1);
+            wheel0 = 0;
+        }
+        if (wheel0 < -thresh)
+        {
+            applyJog(1);
+            wheel0 = 0;
+        }
+        onWheelEditOccurred();
+    }
+
+    void showPopup(const juce::ModifierKeys &m) override
+    {
+        if (onShowPopup)
+            onShowPopup(m);
+    }
+};
+
 PlayModeSubPanel::~PlayModeSubPanel() = default;
 
 PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
@@ -193,8 +264,10 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
             if (w->mpeActiveButtonD && w->mpeActiveButtonD->widget)
                 w->mpeActiveButtonD->widget->repaint();
             w->refreshMpeRangeEditor();
-            w->refreshMidiSmoothingButton();
-            w->refreshParamSmoothingButton();
+            if (w->midiSmoothingSliderD && w->midiSmoothingSliderD->widget)
+                w->midiSmoothingSliderD->widget->repaint();
+            if (w->paramSmoothingSliderD && w->paramSmoothingSliderD->widget)
+                w->paramSmoothingSliderD->widget->repaint();
             w->setEnabledState();
         });
 
@@ -203,35 +276,81 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     mpeRangeL->setJustification(juce::Justification::centredRight);
     addAndMakeVisible(*mpeRangeL);
 
+    // Builds a smoothing slider bound to a float in editorDawExtraState. The slider is a real
+    // HSliderFilled (fill + RMB value typein + set-to-default) reading/writing the float; every
+    // GUI change pushes the matching SET_*_SMOOTHING_TIME_MS message to the audio thread.
+    auto makeSmoothingSlider =
+        [this](std::unique_ptr<sst::jucegui::component_adapters::ContinuousToValueReference<
+                   jcmp::HSliderFilled>> &slot,
+               float &under, float mx, float def, const std::string &label,
+               Synth::MainToAudioMsg::Action act)
+    {
+        slot = std::make_unique<typename std::decay_t<decltype(slot)>::element_type>(under);
+        slot->setLabel(label);
+        slot->setRange(0.f, mx, def);
+        slot->valueToString = [](float v)
+        {
+            char b[32];
+            if (v == (int)v)
+                snprintf(b, sizeof(b), "%d ms", (int)v);
+            else
+                snprintf(b, sizeof(b), "%.1f ms", v);
+            return std::string(b);
+        };
+        auto *wid = slot->widget.get();
+        jdat::Continuous *src = slot.get();
+        slot->onValueChanged = [w = juce::Component::SafePointer(this), act, src](float v)
+        {
+            if (!w)
+                return;
+            Synth::MainToAudioMsg m{act};
+            m.value = v;
+            w->editor.mainToAudio.push(m);
+            // Keep the live tooltip in sync while dragging.
+            w->editor.updateTooltip(src);
+        };
+        wid->onPopupMenu = [w = juce::Component::SafePointer(this), wid](const juce::ModifierKeys &)
+        {
+            if (w)
+                w->editor.popupMenuForContinuous(wid);
+        };
+        // Tooltip plumbing, mirroring createComponent: show on hover/drag, hide when done.
+        auto showTip = [w = juce::Component::SafePointer(this), wid, src]()
+        {
+            if (!w)
+                return;
+            w->editor.updateTooltip(src);
+            w->editor.showTooltipOn(wid);
+        };
+        auto hideTip = [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->editor.hideTooltip();
+        };
+        wid->onIdleHover = showTip;
+        wid->onBeginEdit = showTip;
+        wid->onIdleHoverEnd = hideTip;
+        wid->onEndEdit = hideTip;
+        addAndMakeVisible(*wid);
+    };
+
     smoothingRowLabel = std::make_unique<jcmp::Label>();
     smoothingRowLabel->setText("MIDI Smoothing");
     smoothingRowLabel->setJustification(juce::Justification::centredRight);
     addAndMakeVisible(*smoothingRowLabel);
 
-    midiSmoothingButton = std::make_unique<jcmp::MenuButton>();
-    midiSmoothingButton->setOnCallback(
-        [w = juce::Component::SafePointer(this)]()
-        {
-            if (w)
-                w->showMidiSmoothingMenu();
-        });
-    refreshMidiSmoothingButton();
-    addAndMakeVisible(*midiSmoothingButton);
+    makeSmoothingSlider(midiSmoothingSliderD, editor.editorDawExtraState.midiCCSmoothingTimeMs,
+                        100.f, 25.f, "MIDI Smoothing",
+                        Synth::MainToAudioMsg::SET_MIDI_CC_SMOOTHING_TIME_MS);
 
     paramSmoothingRowLabel = std::make_unique<jcmp::Label>();
     paramSmoothingRowLabel->setText("Param Smoothing");
     paramSmoothingRowLabel->setJustification(juce::Justification::centredRight);
     addAndMakeVisible(*paramSmoothingRowLabel);
 
-    paramSmoothingButton = std::make_unique<jcmp::MenuButton>();
-    paramSmoothingButton->setOnCallback(
-        [w = juce::Component::SafePointer(this)]()
-        {
-            if (w)
-                w->showParamSmoothingMenu();
-        });
-    refreshParamSmoothingButton();
-    addAndMakeVisible(*paramSmoothingButton);
+    makeSmoothingSlider(
+        paramSmoothingSliderD, editor.editorDawExtraState.paramAutomationSmoothingTimeMs, 25.f, 2.f,
+        "Param Smoothing", Synth::MainToAudioMsg::SET_PARAM_AUTOMATION_SMOOTHING_TIME_MS);
 
     tsposeTitle = std::make_unique<jcmp::RuledLabel>();
     tsposeTitle->setText("Octave");
@@ -243,17 +362,12 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     voiceLimitL = std::make_unique<jcmp::RuledLabel>();
     voiceLimitL->setText("Voices");
     addAndMakeVisible(*voiceLimitL);
-    voiceLimit = std::make_unique<jcmp::MenuButton>();
-    voiceLimit->setLabelAndTitle(std::to_string(getPolyLimit()),
-                                 "Voice Limit " + std::to_string(getPolyLimit()));
-    voiceLimit->setOnCallback([this]() { showPolyLimitMenu(); });
-    editor.componentRefreshByID[editor.patchCopy.output.polyLimit.meta.id] =
-        [w = juce::Component::SafePointer(this)]()
+    createComponent(editor, *this, on.polyLimit, voiceLimit, voiceLimitD);
+    voiceLimit->steps = {4, 6, 8, 12, 16, 24, 32, 48, 64};
+    voiceLimit->onShowPopup = [w = juce::Component::SafePointer(this)](const juce::ModifierKeys &)
     {
-        if (!w)
-            return;
-        w->voiceLimit->setLabelAndTitle(std::to_string(w->getPolyLimit()),
-                                        "Voice Limit " + std::to_string(w->getPolyLimit()));
+        if (w)
+            w->showPolyLimitMenu();
     };
     addAndMakeVisible(*voiceLimit);
 
@@ -311,7 +425,7 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     mkLabel(sampleRateLabel, "Sample Rate:");
     mkLabel(saturationLabel, "Saturation:");
     mkLabel(lowpassLabel, "Low Pass:");
-    mkLabel(bitRateLabel, "Bit Rate:");
+    mkLabel(bitRateLabel, "Sample Rate ZOH:");
     mkLabel(bitDepthLabel, "Bit Depth:");
     mkLabel(highpassLabel, "High Pass:");
     mkLabel(outGainLabel, "Output:");
@@ -394,12 +508,12 @@ void PlayModeSubPanel::resized()
 
     auto smRow = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
     smRow.add(jlo::Component(*smoothingRowLabel).withWidth(labelW));
-    smRow.add(jlo::Component(*midiSmoothingButton).expandToFill());
+    smRow.add(jlo::Component(*midiSmoothingSliderD->widget).expandToFill().insetBy(0, 2));
     smoothingCol.add(smRow);
 
     auto psRow = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
     psRow.add(jlo::Component(*paramSmoothingRowLabel).withWidth(labelW));
-    psRow.add(jlo::Component(*paramSmoothingButton).expandToFill());
+    psRow.add(jlo::Component(*paramSmoothingSliderD->widget).expandToFill().insetBy(0, 2));
     smoothingCol.add(psRow);
 
     outer.add(smoothingCol);
@@ -580,33 +694,19 @@ void PlayModeSubPanel::showPolyLimitMenu()
     auto p = juce::PopupMenu();
     p.addSectionHeader("Voice Limit");
     p.addSeparator();
-    auto currentLimit = getPolyLimit();
-    for (auto lim : {4, 6, 8, 12, 16, 24, 32, 48, 64})
+    auto currentLimit = (int)std::round(editor.patchCopy.output.polyLimit.value);
+    for (auto lim : voiceLimit->steps)
     {
         p.addItem(std::to_string(lim), true, lim == currentLimit,
                   [w = juce::Component::SafePointer(this), lim]()
                   {
                       if (!w)
                           return;
-                      w->setPolyLimit(lim);
+                      w->editor.setAndSendParamValue(w->editor.patchCopy.output.polyLimit, lim,
+                                                     true, true);
                   });
     }
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
-}
-
-int PlayModeSubPanel::getPolyLimit()
-{
-    return (int)std::round(editor.patchCopy.output.polyLimit.value);
-}
-void PlayModeSubPanel::setPolyLimit(int plVal)
-{
-    SXSNLOG("Setting val to " << plVal);
-    auto &pl = editor.patchCopy.output.polyLimit;
-    editor.setAndSendParamValue(pl, plVal);
-
-    voiceLimit->setLabelAndTitle(std::to_string(getPolyLimit()),
-                                 "Voice Limit " + std::to_string(getPolyLimit()));
-    voiceLimit->repaint();
 }
 
 void PlayModeSubPanel::updateMTSStatus()
@@ -652,86 +752,6 @@ void PlayModeSubPanel::commitMpeRangeEditor()
     m.value = (float)v;
     editor.mainToAudio.push(m);
     refreshMpeRangeEditor();
-}
-
-// User-selectable smoothing values, in ms. Engine accepts any float; these are
-// just convenient presets surfaced in the menus.
-static constexpr std::array<float, 5> midiSmoothingChoicesMs{5.f, 10.f, 25.f, 50.f, 100.f};
-static constexpr std::array<float, 4> paramSmoothingChoicesMs{2.f, 5.f, 10.f, 25.f};
-
-static std::string formatSmoothingMs(float v)
-{
-    std::ostringstream oss;
-    if (v == (int)v)
-        oss << (int)v << "ms";
-    else
-        oss << v << "ms";
-    return oss.str();
-}
-
-void PlayModeSubPanel::refreshMidiSmoothingButton()
-{
-    auto text = formatSmoothingMs(editor.editorDawExtraState.midiCCSmoothingTimeMs);
-    midiSmoothingButton->setLabelAndTitle(text, "MIDI Smoothing " + text);
-    midiSmoothingButton->repaint();
-}
-
-void PlayModeSubPanel::showMidiSmoothingMenu()
-{
-    auto current = editor.editorDawExtraState.midiCCSmoothingTimeMs;
-    auto p = juce::PopupMenu();
-    p.addSectionHeader("MIDI Smoothing");
-    p.addSeparator();
-    for (auto ms : midiSmoothingChoicesMs)
-    {
-        bool ticked = std::abs(current - ms) < 0.001f;
-        p.addItem(formatSmoothingMs(ms), true, ticked,
-                  [w = juce::Component::SafePointer(this), ms]()
-                  {
-                      if (!w)
-                          return;
-                      w->editor.editorDawExtraState.midiCCSmoothingTimeMs = ms;
-                      Synth::MainToAudioMsg m{Synth::MainToAudioMsg::SET_MIDI_CC_SMOOTHING_TIME_MS};
-                      m.value = ms;
-                      w->editor.mainToAudio.push(m);
-                      w->refreshMidiSmoothingButton();
-                  });
-    }
-    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
-                    makeMenuAccessibleButtonCB(midiSmoothingButton.get()));
-}
-
-void PlayModeSubPanel::refreshParamSmoothingButton()
-{
-    auto text = formatSmoothingMs(editor.editorDawExtraState.paramAutomationSmoothingTimeMs);
-    paramSmoothingButton->setLabelAndTitle(text, "Param Smoothing " + text);
-    paramSmoothingButton->repaint();
-}
-
-void PlayModeSubPanel::showParamSmoothingMenu()
-{
-    auto current = editor.editorDawExtraState.paramAutomationSmoothingTimeMs;
-    auto p = juce::PopupMenu();
-    p.addSectionHeader("Param Smoothing");
-    p.addSeparator();
-    for (auto ms : paramSmoothingChoicesMs)
-    {
-        bool ticked = std::abs(current - ms) < 0.001f;
-        p.addItem(formatSmoothingMs(ms), true, ticked,
-                  [w = juce::Component::SafePointer(this), ms]()
-                  {
-                      if (!w)
-                          return;
-                      w->editor.editorDawExtraState.paramAutomationSmoothingTimeMs = ms;
-                      Synth::MainToAudioMsg m{
-                          Synth::MainToAudioMsg::SET_PARAM_AUTOMATION_SMOOTHING_TIME_MS};
-                      m.value = ms;
-                      w->editor.mainToAudio.push(m);
-                      w->refreshParamSmoothingButton();
-                  });
-    }
-    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
-                    makeMenuAccessibleButtonCB(paramSmoothingButton.get()));
 }
 
 } // namespace baconpaul::six_sines::ui

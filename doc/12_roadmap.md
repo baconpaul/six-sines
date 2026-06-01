@@ -15,9 +15,7 @@ I have a lot of ideas for a '1.2' version of six sines. Not 2.0. Still compatibl
 
 ## Smaller Things from the crew
 - djTubig reports patch swapping kinda slow on windows. Look for profile?
-- smoothing time as sliders
 - Smoothing and bend to engine side default (so move ui defaults to engine side)
-- why are voices and unison different widgets?
 - Songpos phase for LFO
 - Engine- vs Voice- level for Macro LFOs
 
