@@ -65,6 +65,8 @@ void Voice::attack()
                                                         1.0 / blockSize);
     voiceValues.mpeTimbreLag.setRateInMilliseconds(mpeLagMs, monoValues.sr.sampleRate,
                                                    1.0 / blockSize);
+    voiceValues.mpeTimbreBipolarLag.setRateInMilliseconds(mpeLagMs, monoValues.sr.sampleRate,
+                                                          1.0 / blockSize);
     voiceValues.mpePressureLag.setRateInMilliseconds(mpeLagMs, monoValues.sr.sampleRate,
                                                      1.0 / blockSize);
     voiceValues.noteExpressionTuningInSemisLag.setRateInMilliseconds(
@@ -106,6 +108,7 @@ void Voice::renderBlock()
     };
     stepLag(voiceValues.mpeBendInSemisLag, voiceValues.mpeBendInSemis);
     stepLag(voiceValues.mpeTimbreLag, voiceValues.mpeTimbre);
+    stepLag(voiceValues.mpeTimbreBipolarLag, voiceValues.mpeTimbreBipolar);
     stepLag(voiceValues.mpePressureLag, voiceValues.mpePressure);
     stepLag(voiceValues.noteExpressionTuningInSemisLag, voiceValues.noteExpressionTuningInSemis);
     stepLag(voiceValues.noteExpressionPanBipolarLag, voiceValues.noteExpressionPanBipolar);
@@ -355,6 +358,7 @@ void Voice::cleanup()
     voiceValues.mpeBendInSemis = 0;
     voiceValues.mpeBendNormalized = 0;
     voiceValues.mpeTimbre = 0;
+    voiceValues.mpeTimbreBipolar = 0;
     voiceValues.mpePressure = 0;
     voiceValues.noteExpressionTuningInSemis = 0;
     voiceValues.noteExpressionPanBipolar = 0;
