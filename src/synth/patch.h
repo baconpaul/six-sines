@@ -1527,7 +1527,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             COARSE = 11
         };
         FineTuneNode()
-            : ModulationOnlyNode("Fine Tune Mod", "Fine Tune", 0),
+            : ModulationOnlyNode("Main Tune", "Main Tune", 0),
               coarseTune(floatMd()
                              .withName(name() + " Coarse Tuning")
                              .withGroupName(name())
@@ -1715,7 +1715,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                .withDefault(0)
                                .withID(id(35))),
               fineTune(floatMd()
-                           .withName(name() + " Fine Tuning")
+                           .withName(name() + " Tune Fine Tuning")
                            .withGroupName(name())
                            .withRange(-200, 200)
                            .withDefault(0)
