@@ -53,7 +53,8 @@ struct VoiceValues
     float portaDiff{0}, dPorta{0}, portaFrac{0}, dPortaFrac{0};
     int portaSign{0};
 
-    float mpeBendInSemis{0}, mpeBendNormalized{0}, mpeTimbre{0}, mpePressure{0};
+    float mpeBendInSemis{0}, mpeBendNormalized{0}, mpeTimbre{0}, mpeTimbreBipolar{0},
+        mpePressure{0};
 
     float noteExpressionTuningInSemis{0}, noteExpressionPanBipolar{0};
 
@@ -71,6 +72,7 @@ struct VoiceValues
     // for MPE_* point at the corresponding lag's .v (see node_support.h).
     sst::basic_blocks::dsp::OnePoleLag<float, false> mpeBendInSemisLag;
     sst::basic_blocks::dsp::OnePoleLag<float, false> mpeTimbreLag;
+    sst::basic_blocks::dsp::OnePoleLag<float, false> mpeTimbreBipolarLag;
     sst::basic_blocks::dsp::OnePoleLag<float, false> mpePressureLag;
     sst::basic_blocks::dsp::OnePoleLag<float, false> noteExpressionTuningInSemisLag;
     sst::basic_blocks::dsp::OnePoleLag<float, false> noteExpressionPanBipolarLag;

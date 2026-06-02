@@ -59,6 +59,7 @@ ModMatrixConfig::ModMatrixConfig()
 
     add(MPE_PRESSURE, "MPE", "Pressure");
     add(MPE_TIMBRE, "MPE", "Timbre");
+    add(MPE_TIMBRE_BIPOLAR, "MPE", "Timbre (Bipolar)");
 
     add(RANDOM_01, "Random", "Rand Unif 01");
     add(RANDOM_PM1, "Random", "Rand Unif Bi");

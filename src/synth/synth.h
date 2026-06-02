@@ -254,7 +254,13 @@ struct Synth
         {
             v->voiceValues.mpePressure = p / 127.0;
         }
-        void setVoiceMIDIMPETimbre(Voice *v, int8_t t) { v->voiceValues.mpeTimbre = t / 127.0; }
+        void setVoiceMIDIMPETimbre(Voice *v, int8_t t)
+        {
+            v->voiceValues.mpeTimbre = t / 127.0;
+            // Bipolar: 64 -> 0, 0 -> -1, 127 -> +1. The lower half has one extra
+            // tick (0..63 vs 65..127), so the bottom tick clamps to -1.
+            v->voiceValues.mpeTimbreBipolar = std::clamp((t - 64) / 63.0, -1.0, 1.0);
+        }
     };
     struct VMMonoResponder
     {

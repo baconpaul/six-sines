@@ -55,6 +55,7 @@ struct ModMatrixConfig
         MPE_PRESSURE = voiceLevel + 100,
         MPE_TIMBRE = voiceLevel + 101,
         MPE_PITCHBEND = voiceLevel + 102,
+        MPE_TIMBRE_BIPOLAR = voiceLevel + 103,
 
         RANDOM_01 = voiceLevel + 200,
         RANDOM_PM1 = voiceLevel + 201,
