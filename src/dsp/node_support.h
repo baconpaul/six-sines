@@ -77,6 +77,9 @@ template <typename T> struct EnvelopeSupport
     float delayMod{0.f}, attackMod{0.f}, holdMod{0.f}, decayMod{0.f}, sustainMod{0.f},
         releaseMod{0.f};
     float aShapeMod{0.f}, dShapeMod{0.f}, rShapeMod{0.f};
+    // Multiplier on env phase advance; 1.0 = unmodulated. The 2^(3*x) is folded
+    // into the mod handler so the unmodulated path costs nothing.
+    float envRateMul{1.f};
     bool releaseEnvStarted{false}, releaseEnvUngated{false};
     bool envIsMult{true};
     bool temposync{false};
@@ -193,14 +196,14 @@ template <typename T> struct EnvelopeSupport
                     releaseEnvUngated = false;
                 }
             }
-            env.processBlockWithDelay(
+            env.processBlockWithDelayAndRateMul(
                 std::clamp(delay + delayMod, 0.f, 1.f),
                 std::clamp(attackv + attackMod, minAttack, 1.f),
                 std::clamp(hold + holdMod, 0.f, 1.f), std::clamp(decay + decayMod, 0.f, 1.f),
                 sustain + sustainMod, std::clamp(release + releaseMod, 0.f, 1.f),
                 std::clamp(ash + aShapeMod, -1.f, 1.f), std::clamp(dsh + dShapeMod, -1.f, 1.f),
-                std::clamp(rsh + rShapeMod, -1.f, 1.f), !voiceValues.gated, needsCurve, temposync,
-                monoValues.tempoSyncRatio);
+                std::clamp(rsh + rShapeMod, -1.f, 1.f), envRateMul, !voiceValues.gated, needsCurve,
+                temposync, monoValues.tempoSyncRatio);
         }
         else
         {
@@ -214,13 +217,13 @@ template <typename T> struct EnvelopeSupport
             }
 
             auto gate = envIsOneShot ? env.stage < env_t::s_sustain : voiceValues.gated;
-            env.processBlockWithDelay(
+            env.processBlockWithDelayAndRateMul(
                 std::clamp(delay + delayMod, 0.f, 1.f),
                 std::clamp(attackv + attackMod, minAttack, 1.f),
                 std::clamp(hold + holdMod, 0.f, 1.f), std::clamp(decay + decayMod, 0.f, 1.f),
                 sustain + sustainMod, std::clamp(release + releaseMod, 0.f, 1.f),
                 std::clamp(ash + aShapeMod, -1.f, 1.f), std::clamp(dsh + dShapeMod, -1.f, 1.f),
-                std::clamp(rsh + rShapeMod, -1.f, 1.f), gate, needsCurve, temposync,
+                std::clamp(rsh + rShapeMod, -1.f, 1.f), envRateMul, gate, needsCurve, temposync,
                 monoValues.tempoSyncRatio);
         }
     }
@@ -243,6 +246,7 @@ template <typename T> struct EnvelopeSupport
         aShapeMod = 0.f;
         dShapeMod = 0.f;
         rShapeMod = 0.f;
+        envRateMul = 1.f;
     }
 
     bool envHandleModulationValue(int target, const float depth, const float *source)
@@ -275,6 +279,11 @@ template <typename T> struct EnvelopeSupport
             return true;
         case Patch::DAHDSRMixin::ENV_RSHAPE:
             rShapeMod = depth * *source;
+            return true;
+        case Patch::DAHDSRMixin::ENV_RATE:
+            // 2^(3*x): +1 -> 8x faster, -1 -> 8x slower. Computed here (per bound
+            // route) so the unmodulated env pays nothing.
+            envRateMul = monoValues.twoToTheX.twoToThe(3.f * depth * *source);
             return true;
         }
         return false;

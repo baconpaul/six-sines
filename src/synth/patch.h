@@ -469,7 +469,8 @@ struct Patch : pats::PatchBase<Patch, Param>
             ENV_RELEASE = 44,
             ENV_ASHAPE = 46,
             ENV_DSHAPE = 47,
-            ENV_RSHAPE = 48
+            ENV_RSHAPE = 48,
+            ENV_RATE = 49
         };
 
         void appendDAHDSRTargetName(std::vector<std::pair<int32_t, std::string>> &res)
@@ -485,6 +486,8 @@ struct Patch : pats::PatchBase<Patch, Param>
             res.emplace_back(ENV_ASHAPE, "Env Attack Shape");
             res.emplace_back(ENV_DSHAPE, "Env Decay Shape");
             res.emplace_back(ENV_RSHAPE, "Env Release Shape");
+            res.emplace_back(-1, "");
+            res.emplace_back(ENV_RATE, "Env Rate");
         }
     };
 
@@ -1034,7 +1037,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                          .withGroupName(name(idx))
                          .withDefault(false)
                          .withID(id(1, idx))),
-              DAHDSRMixin(name(idx), id(2, idx), false, false, id (90, idx)),
+              DAHDSRMixin(name(idx), id(2, idx), false, false, id(90, idx)),
               LFOMixin(name(idx), id(15, idx), id(60, idx)),
               lfoToFB(floatMd()
                           .asPercentBipolar()
