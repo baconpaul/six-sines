@@ -20,6 +20,8 @@
 #include <sst/jucegui/components/VSlider.h>
 #include <sst/jucegui/components/Label.h>
 #include <sst/jucegui/components/TextPushButton.h>
+#include <sst/jucegui/components/ToggleButton.h>
+#include <sst/jucegui/components/GlyphPainter.h>
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
 #include "sst/jucegui/components/RuledLabel.h"
@@ -69,6 +71,16 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         envTitleLab->setText("Envelope");
         asComp()->addAndMakeVisible(*envTitleLab);
 
+        createComponent(e, *c, v.envTempoSync, envTempoSync, envTempoSyncD);
+        envTempoSync->setDrawMode(jcmp::ToggleButton::DrawMode::GLYPH);
+        envTempoSync->setGlyph(jcmp::GlyphPainter::METRONOME);
+        c->addAndMakeVisible(*envTempoSync);
+
+        // Display the rate sliders in beat fractions when temposync is engaged.
+        for (int i = 0; i < nels; ++i)
+            if (i != 4) // sustain is a level, not a rate
+                sliderD[i]->setTemposyncPowerPartner(envTempoSyncD.get());
+
         triggerButton = std::make_unique<jcmp::TextPushButton>();
         triggerButton->setOnCallback(
             [w = juce::Component::SafePointer(asComp())]()
@@ -88,6 +100,7 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         setTriggerLabel();
 
         sst::jucegui::component_adapters::setTraversalId(triggerButton.get(), 40);
+        sst::jucegui::component_adapters::setTraversalId(envTempoSync.get(), 41);
         for (int i = 0; i < nels; ++i)
             sst::jucegui::component_adapters::setTraversalId(slider[i].get(), 10 + i);
         for (int i = 0; i < 3; ++i)
@@ -104,7 +117,13 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
         auto lo =
             jlo::VList().at(x, y).withHeight(180 - uicMargin).withWidth(nels * uicSliderWidth);
 
-        lo.add(titleLabelLayout(envTitleLab));
+        auto titleRow = jlo::HList().withHeight(uicTitleLabelHeight);
+        titleRow.add(titleLabelLayout(envTitleLab).expandToFill());
+        titleRow.add(jlo::Component(*envTempoSync)
+                         .withWidth(uicTitleLabelInnerBox - 1)
+                         .withHeight(uicTitleLabelInnerBox - 1));
+        lo.add(titleRow);
+
         auto sliders = jlo::HList().expandToFill();
 
         for (int i = 0; i < nels; ++i)
@@ -140,6 +159,8 @@ template <typename Comp, typename PatchPart> struct DAHDSRComponents
     std::array<std::unique_ptr<PatchContinuous>, nShape> shapesD;
     std::array<std::unique_ptr<jcmp::Label>, nels> lab;
     std::unique_ptr<jcmp::RuledLabel> envTitleLab;
+    std::unique_ptr<jcmp::ToggleButton> envTempoSync;
+    std::unique_ptr<PatchDiscrete> envTempoSyncD;
 
     std::unique_ptr<jcmp::TextPushButton> triggerButton;
     void setTriggerLabel()

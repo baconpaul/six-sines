@@ -103,7 +103,7 @@ struct Patch : pats::PatchBase<Patch, Param>
     }
     static md_t floatEnvRateMd(uint64_t version = version_110)
     {
-        return baseMd(version).asFloat().withFlags(floatFlags).as25SecondExpTime();
+        return baseMd(version).asFloat().withFlags(floatFlags).as25SecondTemposyncableExpTime();
     }
     static md_t boolMd(uint64_t version = version_110)
     {
@@ -281,11 +281,12 @@ struct Patch : pats::PatchBase<Patch, Param>
               runMode(intMd(version_120g)
                           .withName(name + " LFO Run Mode")
                           .withGroupName(name)
+                          .withGroupName(name)
                           .withRange(LfoRunMode::VOICE_TRIGGER, LfoRunMode::SONGPOS)
                           .withDefault(LfoRunMode::VOICE_TRIGGER)
                           .withID(stepid0 > 0 ? (id0 + 9) : (id0 + 27))
-                          .withUnorderedMapFormatting({{LfoRunMode::VOICE_TRIGGER, "retrig"},
-                                                       {LfoRunMode::SONGPOS, "song"}}))
+                          .withUnorderedMapFormatting({{LfoRunMode::VOICE_TRIGGER, "Retrig"},
+                                                       {LfoRunMode::SONGPOS, "Song"}}))
         {
             lfoRate.tempoSyncPartner = &tempoSync;
         }
@@ -412,7 +413,13 @@ struct Patch : pats::PatchBase<Patch, Param>
                                       .withName(name + " Triggers from Zero")
                                       .withGroupName(name)
                                       .withDefault(false)
-                                      .withID((id1 > 0 ? id1 : (id0 + 13)) + 0))
+                                      .withID((id1 > 0 ? id1 : (id0 + 13)) + 0)),
+              envTempoSync(baseMd(version_120g) // non-automatable
+                               .asBool()
+                               .withName(name + " Env Temposync")
+                               .withGroupName(name)
+                               .withDefault(false)
+                               .withID((id1 > 0 ? id1 : (id0 + 13)) + 1))
         {
             delay.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
             attack.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
@@ -421,11 +428,17 @@ struct Patch : pats::PatchBase<Patch, Param>
             release.adhocFeatures = Param::AdHocFeatureValues::ENVTIME;
 
             triggerMode.adhocFeatures = Param::AdHocFeatureValues::TRIGGERMODE;
+
+            delay.tempoSyncPartner = &envTempoSync;
+            attack.tempoSyncPartner = &envTempoSync;
+            hold.tempoSyncPartner = &envTempoSync;
+            decay.tempoSyncPartner = &envTempoSync;
+            release.tempoSyncPartner = &envTempoSync;
         }
 
         Param delay, attack, hold, decay, sustain, release, envPower;
         Param aShape, dShape, rShape, triggerMode, envIsMultiplcative, envIsOneShot,
-            envTriggersFromZero;
+            envTriggersFromZero, envTempoSync;
 
         void appendDAHDSRParams(std::vector<Param *> &res)
         {
@@ -443,6 +456,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             res.push_back(&envIsMultiplcative);
             res.push_back(&envIsOneShot);
             res.push_back(&envTriggersFromZero);
+            res.push_back(&envTempoSync);
         }
 
         enum DAHDSRTargets
@@ -1020,7 +1034,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                          .withGroupName(name(idx))
                          .withDefault(false)
                          .withID(id(1, idx))),
-              DAHDSRMixin(name(idx), id(2, idx), false),
+              DAHDSRMixin(name(idx), id(2, idx), false, false, id (90, idx)),
               LFOMixin(name(idx), id(15, idx), id(60, idx)),
               lfoToFB(floatMd()
                           .asPercentBipolar()

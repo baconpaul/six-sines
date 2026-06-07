@@ -54,13 +54,14 @@ template <typename T> struct EnvelopeSupport
     const VoiceValues &voiceValues;
 
     const float &delay, &attackv, &hold, &decay, &sustain, &release, &powerV, &tmV, &emV, &oneShV,
-        &fromZV;
+        &fromZV, &tmSyncV;
     const float &ash, &dsh, &rsh;
     EnvelopeSupport(const T &mn, const MonoValues &mv, const VoiceValues &vv)
         : monoValues(mv), voiceValues(vv), env(&mv.sr), delay(mn.delay), attackv(mn.attack),
           hold(mn.hold), decay(mn.decay), sustain(mn.sustain), release(mn.release),
           powerV(mn.envPower), ash(mn.aShape), dsh(mn.dShape), rsh(mn.rShape), tmV(mn.triggerMode),
-          emV(mn.envIsMultiplcative), oneShV(mn.envIsOneShot), fromZV(mn.envTriggersFromZero)
+          emV(mn.envIsMultiplcative), oneShV(mn.envIsOneShot), fromZV(mn.envTriggersFromZero),
+          tmSyncV(mn.envTempoSync)
     {
     }
 
@@ -78,6 +79,7 @@ template <typename T> struct EnvelopeSupport
     float aShapeMod{0.f}, dShapeMod{0.f}, rShapeMod{0.f};
     bool releaseEnvStarted{false}, releaseEnvUngated{false};
     bool envIsMult{true};
+    bool temposync{false};
 
     static constexpr float minAttackOnRetrig{0.05}; // the main dahdsr default
     float minAttack{0.f};
@@ -88,6 +90,7 @@ template <typename T> struct EnvelopeSupport
         triggerMode = (TriggerMode)std::round(tmV);
         envIsMult = emV > 0.5;
         envIsOneShot = oneShV > 0.5;
+        temposync = tmSyncV > 0.5;
         if (triggerMode == NEW_VOICE && !allowVoiceTrigger)
             triggerMode = NEW_GATE;
 
@@ -196,7 +199,8 @@ template <typename T> struct EnvelopeSupport
                 std::clamp(hold + holdMod, 0.f, 1.f), std::clamp(decay + decayMod, 0.f, 1.f),
                 sustain + sustainMod, std::clamp(release + releaseMod, 0.f, 1.f),
                 std::clamp(ash + aShapeMod, -1.f, 1.f), std::clamp(dsh + dShapeMod, -1.f, 1.f),
-                std::clamp(rsh + rShapeMod, -1.f, 1.f), !voiceValues.gated, needsCurve);
+                std::clamp(rsh + rShapeMod, -1.f, 1.f), !voiceValues.gated, needsCurve, temposync,
+                monoValues.tempoSyncRatio);
         }
         else
         {
@@ -216,7 +220,8 @@ template <typename T> struct EnvelopeSupport
                 std::clamp(hold + holdMod, 0.f, 1.f), std::clamp(decay + decayMod, 0.f, 1.f),
                 sustain + sustainMod, std::clamp(release + releaseMod, 0.f, 1.f),
                 std::clamp(ash + aShapeMod, -1.f, 1.f), std::clamp(dsh + dShapeMod, -1.f, 1.f),
-                std::clamp(rsh + rShapeMod, -1.f, 1.f), gate, needsCurve);
+                std::clamp(rsh + rShapeMod, -1.f, 1.f), gate, needsCurve, temposync,
+                monoValues.tempoSyncRatio);
         }
     }
 

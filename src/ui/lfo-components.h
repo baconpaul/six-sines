@@ -23,6 +23,8 @@
 #include <sst/jucegui/components/MultiSwitch.h>
 #include <sst/jucegui/components/MenuButton.h>
 #include <sst/jucegui/components/JogUpDownButton.h>
+#include <sst/jucegui/components/ToggleButton.h>
+#include <sst/jucegui/components/GlyphPainter.h>
 #include "patch-data-bindings.h"
 #include "ui-constants.h"
 #include "sst/jucegui/components/RuledLabel.h"
@@ -246,18 +248,18 @@ template <typename Comp, typename Patch> struct LFOComponents
         c->addAndMakeVisible(*lfoTitleLab);
 
         createComponent(e, *c, v.tempoSync, tempoSync, tempoSyncD);
-        tempoSync->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
-        tempoSync->setLabel("Sync");
+        tempoSync->setDrawMode(jcmp::ToggleButton::DrawMode::GLYPH);
+        tempoSync->setGlyph(jcmp::GlyphPainter::METRONOME);
         c->addAndMakeVisible(*tempoSync);
 
         createComponent(e, *c, v.lfoBipolar, bipolar, bipolarD);
         bipolar->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
-        bipolar->setLabel("bip");
+        bipolar->setLabel("Bipolar");
         c->addAndMakeVisible(*bipolar);
 
         createComponent(e, *c, v.lfoIsEnveloped, isEnv, isEnvD);
         isEnv->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
-        isEnv->setLabel("*env");
+        isEnv->setLabel("* Env");
         c->addAndMakeVisible(*isEnv);
 
         // Short text ("retrig"/"song") on the button face, long names in the popup, so
@@ -384,23 +386,25 @@ template <typename Comp, typename Patch> struct LFOComponents
 
         auto lo = jlo::VList().at(x, y).withHeight(h).withWidth(w);
 
-        lo.add(titleLabelLayout(lfoTitleLab));
+        auto titleRow = jlo::HList().withHeight(uicTitleLabelHeight);
+        titleRow.add(titleLabelLayout(lfoTitleLab).expandToFill());
+        titleRow.add(jlo::Component(*tempoSync)
+                         .withWidth(uicTitleLabelInnerBox - 1)
+                         .withHeight(uicTitleLabelInnerBox - 1));
+        lo.add(titleRow);
 
         auto columns = jlo::HList().expandToFill().withAutoGap(uicMargin);
 
         auto col1 = jlo::VList().withWidth(uicKnobSize * 1.5).withAutoGap(uicMargin);
         col1.add(jlo::Component(*shape).withHeight(uicLabeledKnobHeight + 3 * uicMargin +
                                                    3 * uicLabelHeight));
-        auto toggleRow = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
-        toggleRow.add(jlo::Component(*bipolar).expandToFill());
-        toggleRow.add(jlo::Component(*isEnv).expandToFill());
-        col1.add(toggleRow);
+        col1.add(jlo::Component(*bipolar).withHeight(uicLabelHeight));
 
         auto col2 = jlo::VList().withWidth(uicKnobSize * 1.25).withAutoGap(uicMargin);
         col2.add(labelKnobLayout(rate, rateL).centerInParent());
-        col2.add(jlo::Component(*tempoSync).withHeight(uicLabelHeight));
         col2.add(sideLabelSlider(deformL, deform));
         col2.add(sideLabelSlider(phaseL, phase));
+        col2.add(jlo::Component(*isEnv).withHeight(uicLabelHeight));
         col2.add(jlo::Component(*runMode).withHeight(uicLabelHeight));
 
         auto col3 = jlo::VList().expandToFill().withAutoGap(0);
