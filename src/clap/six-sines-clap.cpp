@@ -172,8 +172,15 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 (tflags & CLAP_TRANSPORT_IS_PLAYING) &&
                 (tflags & CLAP_TRANSPORT_HAS_SECONDS_TIMELINE);
             if (engine->monoValues.isPlayingAndHasSecondsTimeline)
+            {
                 engine->monoValues.hostSongPosSeconds =
                     process->transport->song_pos_seconds / (double)CLAP_SECTIME_FACTOR;
+                // Anchor here, before any events are dispatched. A note-on at frame 0 of
+                // this buffer attacks (and snapshots its SONGPOS LFO phase) before the first
+                // engine->process() runs, so the resync inside processInternal would land too
+                // late and the LFO would read the stale free-run value.
+                engine->monoValues.songPosSeconds = engine->monoValues.hostSongPosSeconds;
+            }
         }
         else
         {
@@ -181,7 +188,8 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             engine->monoValues.isPlayingAndHasSecondsTimeline = false;
         }
         // Re-anchor songPosSeconds to the host position on the first engine block of this
-        // buffer; subsequent blocks advance from there.
+        // buffer; subsequent blocks advance from there. (Also done above so frame-0 note-ons
+        // see the anchored value; this suppresses the per-block advance on the first block.)
         engine->monoValues.songPosNeedsResync = true;
 
         static constexpr int outBus{multiOut ? 1 + numOps : 1};
