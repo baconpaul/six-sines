@@ -130,13 +130,21 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<jcmp::HSliderFilled> satDrive;
     std::unique_ptr<PatchContinuous> satDriveD;
 
+    std::unique_ptr<jcmp::ToggleButton> zohPreFilter;
+    std::unique_ptr<PatchDiscrete> zohPreFilterD;
+    std::unique_ptr<jcmp::Label> zohPreFilterLabel;
+
+    std::unique_ptr<jcmp::ToggleButton> ultrasonicFilter;
+    std::unique_ptr<PatchDiscrete> ultrasonicFilterD;
+    void setUltrasonicLabel();
+
     std::unique_ptr<jcmp::HSliderFilled> outGain;
     std::unique_ptr<PatchContinuous> outGainD;
     std::unique_ptr<jcmp::Label> outGainLabel;
 
     std::unique_ptr<jcmp::Label> sampleRateLabel, downsamplerLabel;
     std::unique_ptr<jcmp::Label> saturationLabel, lowpassLabel, bitRateLabel, bitDepthLabel,
-        highpassLabel;
+        highpassLabel, ultrasonicLabel;
 
     void showPolyLimitMenu();
 };

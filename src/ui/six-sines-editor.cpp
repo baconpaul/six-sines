@@ -382,6 +382,9 @@ void SixSinesEditor::idle()
                 if (auto *c = dynamic_cast<SpectrumAnalyzerComponent *>(
                         spectrumWindow->getContentComponent()))
                     c->setHostSampleRate(hostSR);
+            for (auto &cb : onSampleRateChanged)
+                if (cb)
+                    cb();
             repaint();
         }
         else if (aum->action == Synth::AudioToUIMsg::SET_DAW_EXTRA_STATE)

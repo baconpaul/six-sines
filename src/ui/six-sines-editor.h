@@ -270,6 +270,9 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     std::unordered_map<juce::Component *, std::function<void()>> panelSelectGestureFor;
 
     float engineSR{0}, hostSR{0};
+    // Fired on the UI thread whenever hostSR/engineSR change (panels needing the
+    // rate in their display register here).
+    std::vector<std::function<void()>> onSampleRateChanged;
 
     bool sessionRunAllNodes{false};
     bool sessionAllSoundsOffOnToggle{false};

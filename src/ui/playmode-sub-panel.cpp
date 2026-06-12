@@ -407,12 +407,31 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     addAndMakeVisible(*lowpass);
     createComponent(editor, *this, out.bitRateAdjust, bitRate, bitRateD);
     addAndMakeVisible(*bitRate);
+    createComponent(editor, *this, out.zohPreFilter, zohPreFilter, zohPreFilterD);
+    zohPreFilter->setDrawMode(jcmp::ToggleButton::DrawMode::GLYPH);
+    zohPreFilter->setGlyph(jcmp::GlyphPainter::POWER);
+    addAndMakeVisible(*zohPreFilter);
+    // Pre-Filter only applies when a ZOH rate is selected; grey it out otherwise.
+    editor.componentRefreshByID[out.bitRateAdjust.meta.id] = op;
+    bitRateD->onGuiSetValue = op;
     createComponent(editor, *this, out.bitDepthAdjust, bitDepth, bitDepthD);
     addAndMakeVisible(*bitDepth);
     createComponent(editor, *this, out.highpass, highpass, highpassD);
     addAndMakeVisible(*highpass);
     createComponent(editor, *this, out.outputGain, outGain, outGainD);
     addAndMakeVisible(*outGain);
+
+    createComponent(editor, *this, out.ultrasonicFilter, ultrasonicFilter, ultrasonicFilterD);
+    ultrasonicFilter->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
+    addAndMakeVisible(*ultrasonicFilter);
+    setUltrasonicLabel();
+    // The toggle text shows the host Nyquist, so refresh it when the rate changes.
+    editor.onSampleRateChanged.push_back(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->setUltrasonicLabel();
+        });
 
     auto mkLabel = [this](auto &slot, const std::string &t,
                           juce::Justification j = juce::Justification::centredRight)
@@ -423,9 +442,11 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
         addAndMakeVisible(*slot);
     };
     mkLabel(sampleRateLabel, "Sample Rate:");
+    mkLabel(ultrasonicLabel, "Ultrasonic Filter:");
     mkLabel(saturationLabel, "Saturation:");
     mkLabel(lowpassLabel, "Low Pass:");
     mkLabel(bitRateLabel, "Sample Rate ZOH:");
+    mkLabel(zohPreFilterLabel, "Pre-Filter", juce::Justification::centredLeft);
     mkLabel(bitDepthLabel, "Bit Depth:");
     mkLabel(highpassLabel, "High Pass:");
     mkLabel(outGainLabel, "Output:");
@@ -543,8 +564,17 @@ void PlayModeSubPanel::resized()
     };
 
     pathCol.add(stageRow(sampleRateLabel, srStrat));
+    pathCol.add(stageRow(ultrasonicLabel, ultrasonicFilter));
     pathCol.add(stageRow(saturationLabel, satType, satDrive.get()));
-    pathCol.add(stageRow(bitRateLabel, bitRate));
+    {
+        // Sample Rate ZOH row: jog on the left, then a checkbox toggle + label.
+        auto row = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
+        row.add(jlo::Component(*bitRateLabel).withWidth(labelW));
+        row.add(jlo::Component(*bitRate).withWidth(uicSubPanelColumnWidth * 1.5));
+        row.add(jlo::Component(*zohPreFilter).withWidth(uicLabelHeight));
+        row.add(jlo::Component(*zohPreFilterLabel).expandToFill());
+        pathCol.add(row);
+    }
     pathCol.add(stageRow(bitDepthLabel, bitDepth));
     pathCol.add(stageRow(lowpassLabel, lowpass));
     pathCol.add(stageRow(highpassLabel, highpass));
@@ -554,6 +584,18 @@ void PlayModeSubPanel::resized()
     outer.add(pathCol);
 
     outer.doLayout();
+}
+
+void PlayModeSubPanel::setUltrasonicLabel()
+{
+    auto nyq = editor.hostSR * 0.5f;
+    char txt[32];
+    if (nyq > 0)
+        snprintf(txt, sizeof(txt), "@ %g kHz", nyq / 1000.f);
+    else
+        snprintf(txt, sizeof(txt), "On");
+    ultrasonicFilter->setLabel(txt);
+    ultrasonicFilter->repaint();
 }
 
 void PlayModeSubPanel::setTriggerButtonLabel()
@@ -681,6 +723,10 @@ void PlayModeSubPanel::setEnabledState()
         uniCtL->setText("Voice");
     else
         uniCtL->setText("Voices");
+
+    auto brOn = editor.patchCopy.output.bitRateAdjust.value > 0.5;
+    zohPreFilter->setEnabled(brOn);
+    zohPreFilterLabel->setEnabled(brOn);
 
     auto me = editor.editorDawExtraState.mpeActive;
     mpeRangeEditor->setEnabled(me);

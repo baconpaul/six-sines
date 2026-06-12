@@ -74,7 +74,7 @@ struct Param : pats::ParamBase, sst::cpputils::active_set_overlay<Param>::partic
 
 struct Patch : pats::PatchBase<Patch, Param>
 {
-    static constexpr uint32_t patchVersion{10};
+    static constexpr uint32_t patchVersion{11};
     static constexpr const char *id{"org.baconpaul.six-sines"};
 
     static constexpr uint32_t floatFlags{CLAP_PARAM_IS_AUTOMATABLE};
@@ -1842,6 +1842,16 @@ struct Patch : pats::PatchBase<Patch, Param>
                                     {BitRateMode::BR_32K_ZOH, "32 kHz ZOH"},
                                     {BitRateMode::BR_48K_ZOH, "48 kHz ZOH"},
                                 })),
+              zohPreFilter(boolMd(version_120g)
+                               .withName(name() + " ZOH Pre-Filter")
+                               .withGroupName(name())
+                               .withDefault(true)
+                               .withID(id(57))),
+              ultrasonicFilter(boolMd(version_120g)
+                                   .withName(name() + " Ultrasonic Filter")
+                                   .withGroupName(name())
+                                   .withDefault(false)
+                                   .withID(id(58))),
               bitDepthAdjust(intMd(version_120e)
                                  .withName(name() + " Bit Depth Adjust")
                                  .withGroupName(name())
@@ -1915,7 +1925,8 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param attackFloorOnRetrig, rephaseOnRetrigger;
         Param sampleRateStrategy, resampleEngine;
         Param saturationType, saturationDrive;
-        Param lowpass, bitRateAdjust, bitDepthAdjust, highpass;
+        Param lowpass, bitRateAdjust, zohPreFilter, bitDepthAdjust, highpass;
+        Param ultrasonicFilter;
         Param outputGain;
 
         std::array<Param, numModsPer> modtarget;
@@ -1948,8 +1959,10 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &resampleEngine,
                                      &saturationType,
                                      &saturationDrive,
+                                     &ultrasonicFilter,
                                      &lowpass,
                                      &bitRateAdjust,
+                                     &zohPreFilter,
                                      &bitDepthAdjust,
                                      &highpass,
                                      &outputGain};

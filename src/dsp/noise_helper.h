@@ -60,7 +60,7 @@ struct NoiseHelper
     // Anti-alias LP applied to the continuous noise colors (white/pink/tilt) ahead of
     // the global bit-rate ZOH, so the ZOH has nothing above f_z/2 to fold (which would
     // whiten the tilt). Cutoff tracks MonoValues::noiseBandLimitHz; 0 = no limit.
-    sst::filters::ButterworthLP<6> bandLimitFilter;
+    sst::filters::ButterworthLP<8> bandLimitFilter;
     float lastBandLimitHz{-1.f};
 
     // 15-bit Galois LFSR shared by both chip modes. Seeded non-zero per helper

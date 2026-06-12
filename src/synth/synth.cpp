@@ -995,6 +995,15 @@ void Synth::reapplyControlSettings()
     // Coefficient setup over-applies on every reapply for now.
     auto sr = (float)engineSampleRate;
 
+    // Head-of-chain ultrasonic brickwall: steep Butterworth at host Nyquist,
+    // run at the engine (oversample) rate ahead of every other output stage.
+    ultrasonicActive = patch.output.ultrasonicFilter.value > 0.5;
+    if (ultrasonicActive && sr > 0 && hostSampleRate > 0)
+    {
+        ultrasonicFilter.setCutoffAndSampleRate((float)hostSampleRate * 0.5f, sr);
+        ultrasonicFilter.reset();
+    }
+
     auto lpVal = (int)std::round(patch.output.lowpass.value);
     lpActive = lpVal != LP_NONE;
     if (lpActive && sr > 0)
@@ -1024,8 +1033,10 @@ void Synth::reapplyControlSettings()
 
     auto brVal = (int)std::round(patch.output.bitRateAdjust.value);
     bitRateActive = brVal != BR_NONE;
+    bitRatePreFilterActive = false;
     if (bitRateActive && sr > 0)
     {
+        bool prefilter = patch.output.zohPreFilter.value > 0.5;
         float target = 0;
         switch (brVal)
         {
@@ -1062,6 +1073,15 @@ void Synth::reapplyControlSettings()
         // Band-limit the per-voice noise to the crusher Nyquist so the ZOH has
         // nothing above its Nyquist to fold (which would whiten the tilt).
         monoValues.noiseBandLimitHz = target * 0.5f;
+        if (prefilter)
+        {
+            bitRatePreFilterActive = true;
+            // Match the tilt-noise pre-filter: steep Butterworth at the crusher
+            // Nyquist, scootched to 20k since the SRC back up still reflects.
+            auto cutoff = std::min(target * 0.5f, 20000.f);
+            bitRatePreFilter.setCutoffAndSampleRate(cutoff, sr);
+            bitRatePreFilter.reset();
+        }
     }
     else
     {
@@ -1111,6 +1131,9 @@ void Synth::applySmoothingTimes()
 
 void Synth::processEndOfBlock(float *L, float *R)
 {
+    if (ultrasonicActive)
+        ultrasonicFilter.processBlock(L, R, blockSize);
+
     auto satType = (int)std::round(patch.output.saturationType.value);
     if (satType != SAT_NONE)
     {
@@ -1134,6 +1157,10 @@ void Synth::processEndOfBlock(float *L, float *R)
         }
     }
 
+    if (bitRatePreFilterActive)
+    {
+        bitRatePreFilter.processBlock(L, R, blockSize);
+    }
     if (bitRateActive)
     {
         for (int i = 0; i < blockSize; ++i)
@@ -1218,7 +1245,9 @@ void Synth::handleAudioThreadParamSideEffects(Param *dest)
         dest->meta.id == patch.output.resampleEngine.meta.id ||
         dest->meta.id == patch.output.lowpass.meta.id ||
         dest->meta.id == patch.output.highpass.meta.id ||
-        dest->meta.id == patch.output.bitRateAdjust.meta.id)
+        dest->meta.id == patch.output.bitRateAdjust.meta.id ||
+        dest->meta.id == patch.output.zohPreFilter.meta.id ||
+        dest->meta.id == patch.output.ultrasonicFilter.meta.id)
     {
         reapplyControlSettings();
     }

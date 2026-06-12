@@ -212,6 +212,13 @@ void Patch::migratePatchFromVersion(uint32_t version)
         fixTrigMod(fineTuneMod);
         fixTrigMod(mainPanMod);
     }
+
+    // zohPreFilter was added in version 11 and defaults on for new patches; pre-11
+    // patches predate it (and its sound), so keep them as they were: filter off.
+    if (version <= 10)
+    {
+        output.zohPreFilter.value = 0;
+    }
 }
 
 } // namespace baconpaul::six_sines

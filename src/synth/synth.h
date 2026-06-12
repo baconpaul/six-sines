@@ -355,6 +355,16 @@ struct Synth
     ZOHRateDownsampler bitRateZOH;
     bool bitRateActive{false};
 
+    // Optional steep anti-alias LP ahead of the ZOH (the "+ Pre-Filter" modes),
+    // cutoff at the crusher Nyquist so the ZOH has nothing above it to fold.
+    sst::filters::ButterworthLP<8> bitRatePreFilter;
+    bool bitRatePreFilterActive{false};
+
+    // Optional steep brickwall at host Nyquist, applied at the very head of the
+    // output chain (before saturation) so nothing ultrasonic feeds the stages.
+    sst::filters::ButterworthLP<16> ultrasonicFilter;
+    bool ultrasonicActive{false};
+
     // Saturator scalar shapers. Cheap, stateless, per-session — kept
     // out of sst-waveshapers since this isn't per-voice.
     static inline float softSaturator(float x)
