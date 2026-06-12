@@ -53,6 +53,10 @@ void MatrixSubPanel::setSelectedIndex(int idx)
     addAndMakeVisible(*envMul);
     traverse(envMul);
 
+    createComponent(editor, *this, m.lfoDepthMode, lfoMode, lfoModeD);
+    addAndMakeVisible(*lfoMode);
+    traverse(lfoMode);
+
     modLabelE = std::make_unique<jcmp::RuledLabel>();
     modLabelE->setText(std::string() + "Env" + u8"\U00002192");
     addAndMakeVisible(*modLabelE);
@@ -106,6 +110,11 @@ void MatrixSubPanel::resized()
     auto ll = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
     ll.add(titleLabelGaplessLayout(modLabelL));
     ll.add(labelKnobLayout(lfoToDepth, lfoToDepthL).centerInParent());
+
+    auto sl = jlo::HList().withHeight(3 * uicLabelHeight + uicMargin).withAutoGap(uicMargin);
+    sl.add(jlo::Component(*lfoMode).withWidth(uicSubPanelColumnWidth));
+    ll.add(sl);
+
     lo.add(ll);
 
     auto od = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);

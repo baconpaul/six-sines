@@ -108,7 +108,10 @@ void MixerSubPanel::resized()
     auto ll = jlo::VList().withWidth(2 * uicSubPanelColumnWidth + uicMargin).withAutoGap(uicMargin);
     ll.add(titleLabelGaplessLayout(modLabelL));
 
-    auto kl = jlo::HList().withHeight(uicLabeledKnobHeight).withAutoGap(uicMargin);
+    // Space the Pan knob a full column pitch from Level so it aligns to the second column.
+    auto kl = jlo::HList()
+                  .withHeight(uicLabeledKnobHeight)
+                  .withAutoGap(uicSubPanelColumnWidth - uicKnobSize);
     kl.add(labelKnobLayout(lfoToLevel, lfoToLevelL).centerInParent());
     kl.add(labelKnobLayout(lfoToPan, lfoToPanL).centerInParent());
     ll.add(kl);

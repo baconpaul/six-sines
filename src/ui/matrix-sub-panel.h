@@ -54,6 +54,9 @@ struct MatrixSubPanel : juce::Component,
     std::unique_ptr<jcmp::MultiSwitch> envMul;
     std::unique_ptr<PatchDiscrete> envMulD;
 
+    std::unique_ptr<jcmp::MultiSwitch> lfoMode;
+    std::unique_ptr<PatchDiscrete> lfoModeD;
+
     std::unique_ptr<jcmp::ToggleButton> overdrive;
     std::unique_ptr<PatchDiscrete> overdriveD;
     std::unique_ptr<jcmp::RuledLabel> overdriveTitle;

@@ -102,6 +102,9 @@ void MacroSubPanel::setSelectedIndex(size_t i)
     createComponent(editor, *this, mn.envIsMultiplcative, envMul, envMulD);
     addAndMakeVisible(*envMul);
 
+    createComponent(editor, *this, mn.lfoLevelMode, lfoMode, lfoModeD);
+    addAndMakeVisible(*lfoMode);
+
     auto refreshEnabled = [w = juce::Component::SafePointer(this)]()
     {
         if (w)
@@ -129,10 +132,10 @@ void MacroSubPanel::resized()
     auto r = layoutLFOAt(pn.getX() + uicMargin, p.getY());
     layoutModulation(p);
 
-    // Env-→ row spans two columns (depth knob + add/scale switch); LFO-→ stays one column.
+    // Env-→ and LFO-→ rows each span two columns (depth knob + add/scale/atten switch).
     auto depY = std::max(pn.getBottom(), r.getBottom()) + uicMargin;
     auto envColW = 2 * uicSubPanelColumnWidth + uicMargin;
-    auto lfoColW = uicSubPanelColumnWidth;
+    auto lfoColW = 2 * uicSubPanelColumnWidth + uicMargin;
     auto envX = p.getX();
     auto lfoX = envX + envColW + 2 * uicMargin;
 
@@ -154,7 +157,11 @@ void MacroSubPanel::resized()
 
     auto lfoDepthKnobX = lfoX + (int)(uicSubPanelColumnWidth - uicKnobSize) / 2;
     lfoDepthKnob->setBounds(lfoDepthKnobX, bodyY, uicKnobSize, uicKnobSize);
-    lfoDepthLab->setBounds(lfoX, bodyY + uicKnobSize + uicLabelGap, lfoColW, uicLabelHeight);
+    lfoDepthLab->setBounds(lfoX, bodyY + uicKnobSize + uicLabelGap, uicSubPanelColumnWidth,
+                           uicLabelHeight);
+
+    auto lfoSwitchX = lfoX + uicSubPanelColumnWidth + uicMargin;
+    lfoMode->setBounds(lfoSwitchX, switchY - switchH * .2, uicSubPanelColumnWidth, switchH * 1.4);
 
     auto nameY = bodyY + uicLabeledKnobHeight + uicMargin;
     nameTitle->setBounds(p.getX(), nameY, p.getWidth(), uicTitleLabelInnerBox);
@@ -249,6 +256,8 @@ void MacroSubPanel::setEnabledState()
         lfoDepthKnob->setEnabled(on);
     if (lfoDepthLab)
         lfoDepthLab->setEnabled(on);
+    if (lfoMode)
+        lfoMode->setEnabled(on);
 
     // nameEditor, powerToggle stay enabled regardless
     if (nameEditor)

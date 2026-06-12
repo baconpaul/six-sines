@@ -43,6 +43,7 @@ struct MacroVoiceNode : EnvelopeSupport<Patch::MacroNode>,
     const float &macroPowerV; // mn.macroPower — distinct from EnvelopeSupport::powerV (envPower)
     const float &envDepth;
     const float &lfoDepth;
+    const float &lfoLevelMode;
 
     float out{0.f};
     bool macroPowerOn{false};
@@ -51,7 +52,8 @@ struct MacroVoiceNode : EnvelopeSupport<Patch::MacroNode>,
     MacroVoiceNode(const Patch::MacroNode &mn, MonoValues &mv, const VoiceValues &vv)
         : macroNode(mn), monoValues(mv), voiceValues(vv), level(mn.level),
           macroPowerV(mn.macroPower), envDepth(mn.envDepth), lfoDepth(mn.lfoDepth),
-          ModulationSupport(mn, this, mv, vv), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv)
+          lfoLevelMode(mn.lfoLevelMode), ModulationSupport(mn, this, mv, vv),
+          EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv)
     {
     }
 
@@ -88,13 +90,31 @@ struct MacroVoiceNode : EnvelopeSupport<Patch::MacroNode>,
         if (lfoIsEnveloped)
             lfoOut *= envOut;
         auto amp = std::clamp(level + levMod, -1.f, 1.f);
-        auto lfoContrib = lfoOut * lfoDepth * lfoAtten;
-        float result;
+        // LFO->Level mode applied as base*lfoMul + lfoAdd (see MixerNode for the derivation),
+        // with depth d = lfoDepth*lfoAtten. base is the non-LFO macro level.
+        auto d = lfoDepth * lfoAtten;
+        float lfoMul, lfoAdd;
+        if (lfoLevelMode < 0.5f) // Add
+        {
+            lfoMul = 1.f;
+            lfoAdd = d * lfoOut;
+        }
+        else if (lfoLevelMode < 1.5f) // Scale
+        {
+            lfoMul = 1.f - d + d * lfoOut;
+            lfoAdd = 0.f;
+        }
+        else // Atten
+        {
+            lfoMul = 1.f - d * lfoOut;
+            lfoAdd = 0.f;
+        }
+        float base;
         if (envIsMult)
-            result = amp * envOut * depthAtten + lfoContrib;
+            base = amp * envOut * depthAtten;
         else
-            result = amp + envDepth * envOut * depthAtten + lfoContrib;
-        out = std::clamp(result, -1.f, 1.f);
+            base = amp + envDepth * envOut * depthAtten;
+        out = std::clamp(base * lfoMul + lfoAdd, -1.f, 1.f);
     }
 
     float levMod{0.f};

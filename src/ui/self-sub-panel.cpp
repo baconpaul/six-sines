@@ -55,6 +55,10 @@ void SelfSubPanel::setSelectedIndex(int idx)
     addAndMakeVisible(*envMul);
     traverse(envMul);
 
+    createComponent(editor, *this, n.lfoFBMode, lfoMode, lfoModeD);
+    addAndMakeVisible(*lfoMode);
+    traverse(lfoMode);
+
     modLabelE = std::make_unique<jcmp::RuledLabel>();
     modLabelE->setText(std::string() + "Env" + u8"\U00002192");
     addAndMakeVisible(*modLabelE);
@@ -106,6 +110,11 @@ void SelfSubPanel::resized()
     auto ll = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
     ll.add(titleLabelGaplessLayout(modLabelL));
     ll.add(labelKnobLayout(lfoToFb, lfoToFbL).centerInParent());
+
+    auto sl = jlo::HList().withHeight(3 * uicLabelHeight + uicMargin).withAutoGap(uicMargin);
+    sl.add(jlo::Component(*lfoMode).withWidth(uicSubPanelColumnWidth));
+    ll.add(sl);
+
     lo.add(ll);
 
     auto od = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);

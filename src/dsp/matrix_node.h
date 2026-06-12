@@ -39,14 +39,15 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
     const Patch::MatrixNode &matrixNode;
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
-    const float &level, &activeV, &modmodeV, &rmScaleV, &lfoToDepth, &envToLevel, &overdriveV;
+    const float &level, &activeV, &modmodeV, &rmScaleV, &lfoToDepth, &envToLevel, &overdriveV,
+        &lfoDepthMode;
     MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr, MonoValues &mv,
                    const VoiceValues &vv)
         : matrixNode(mn), monoValues(mv), voiceValues(vv), onto(on), from(fr), level(mn.level),
           modmodeV(mn.modulationMode), activeV(mn.active), EnvelopeSupport(mn, mv, vv),
           LFOSupport(mn, mv), lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel),
-          overdriveV(mn.overdrive), ModulationSupport(mn, this, mv, vv),
-          rmScaleV(mn.modulationScale)
+          overdriveV(mn.overdrive), lfoDepthMode(mn.lfoDepthMode),
+          ModulationSupport(mn, this, mv, vv), rmScaleV(mn.modulationScale)
     {
     }
 
@@ -95,11 +96,33 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             mech::scale_by<blockSize>(env.outputCache, lfo.outputBlock);
         }
 
-        auto l2d = lfoToDepth * lfoAtten;
-        static float la{-1111};
-        if (la != lfoAtten)
+        // LFO->Depth mode applied as base*lfoMul + lfoAdd (see MixerNode for the derivation),
+        // with depth d = lfoToDepth*lfoAtten. base is the non-LFO modulation depth.
+        auto d = lfoToDepth * lfoAtten;
+        float lfoMul alignas(16)[blockSize], lfoAdd alignas(16)[blockSize];
+        if (lfoDepthMode < 0.5f) // Add
         {
-            la = lfoAtten;
+            for (int j = 0; j < blockSize; ++j)
+            {
+                lfoMul[j] = 1.f;
+                lfoAdd[j] = d * lfo.outputBlock[j];
+            }
+        }
+        else if (lfoDepthMode < 1.5f) // Scale
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                lfoMul[j] = 1.f - d + d * lfo.outputBlock[j];
+                lfoAdd[j] = 0.f;
+            }
+        }
+        else // Atten
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                lfoMul[j] = 1.f - d * lfo.outputBlock[j];
+                lfoAdd[j] = 0.f;
+            }
         }
 
         if (envIsMult)
@@ -107,7 +130,8 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             auto e2d = level * depthAtten;
             for (int i = 0; i < blockSize; ++i)
             {
-                modlev[i] = applyMod + l2d * lfo.outputBlock[i] + e2d * env.outputCache[i];
+                auto base = applyMod + e2d * env.outputCache[i];
+                modlev[i] = base * lfoMul[i] + lfoAdd[i];
             }
         }
         else
@@ -115,7 +139,8 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
             auto e2d = envToLevel * depthAtten;
             for (int i = 0; i < blockSize; ++i)
             {
-                modlev[i] = applyMod + level + l2d * lfo.outputBlock[i] + e2d * env.outputCache[i];
+                auto base = applyMod + level + e2d * env.outputCache[i];
+                modlev[i] = base * lfoMul[i] + lfoAdd[i];
             }
         }
 
@@ -249,11 +274,12 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &fbBase, &lfoToFB, &activeV, &envToFB, &overdriveV;
+    const float &fbBase, &lfoToFB, &activeV, &envToFB, &overdriveV, &lfoFBMode;
     MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, MonoValues &mv, const VoiceValues &vv)
         : selfNode(sn), monoValues(mv), voiceValues(vv), onto(on), fbBase(sn.fbLevel),
           lfoToFB(sn.lfoToFB), activeV(sn.active), envToFB(sn.envToFB), overdriveV(sn.overdrive),
-          EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv), ModulationSupport(sn, this, mv, vv) {};
+          lfoFBMode(sn.lfoFBMode), EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv),
+          ModulationSupport(sn, this, mv, vv) {};
     bool active{true}, lfoMul{false};
     float overdriveFactor{1.0};
 
@@ -288,7 +314,34 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
 
         float modlev alignas(16)[blockSize];
 
-        auto l2f = lfoToFB * lfoAtten;
+        // LFO->FB mode applied as base*lfoMul + lfoAdd (see MixerNode for the derivation),
+        // with depth d = lfoToFB*lfoAtten. base is the non-LFO feedback level.
+        auto d = lfoToFB * lfoAtten;
+        float lfoMul alignas(16)[blockSize], lfoAdd alignas(16)[blockSize];
+        if (lfoFBMode < 0.5f) // Add
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                lfoMul[j] = 1.f;
+                lfoAdd[j] = d * lfo.outputBlock[j];
+            }
+        }
+        else if (lfoFBMode < 1.5f) // Scale
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                lfoMul[j] = 1.f - d + d * lfo.outputBlock[j];
+                lfoAdd[j] = 0.f;
+            }
+        }
+        else // Atten
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                lfoMul[j] = 1.f - d * lfo.outputBlock[j];
+                lfoAdd[j] = 0.f;
+            }
+        }
 
         if (envIsMult)
         {
@@ -296,7 +349,8 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
 
             for (int i = 0; i < blockSize; ++i)
             {
-                modlev[i] = l2f * lfo.outputBlock[i] + e2f * env.outputCache[i] + fbMod;
+                auto base = e2f * env.outputCache[i] + fbMod;
+                modlev[i] = base * lfoMul[i] + lfoAdd[i];
             }
         }
         else
@@ -305,7 +359,8 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
 
             for (int i = 0; i < blockSize; ++i)
             {
-                modlev[i] = fbBase + l2f * lfo.outputBlock[i] + e2f * env.outputCache[i] + fbMod;
+                auto base = fbBase + e2f * env.outputCache[i] + fbMod;
+                modlev[i] = base * lfoMul[i] + lfoAdd[i];
             }
         }
         for (int j = 0; j < blockSize; ++j)

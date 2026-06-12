@@ -95,6 +95,7 @@ struct Patch : pats::PatchBase<Patch, Param>
     static constexpr uint64_t version_120f = 0x010206;
     // Seventh chunk of 1.2.0: LFO song-position run mode
     static constexpr uint64_t version_120g = 0x010207;
+    static constexpr uint64_t version_120h = 0x010208;
 
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
     static md_t floatMd(uint64_t version = version_110)
@@ -1056,6 +1057,13 @@ struct Patch : pats::PatchBase<Patch, Param>
                             .withGroupName(name(idx))
                             .withDefault(false)
                             .withID(id(28, idx))),
+              lfoFBMode(intMd(version_120h)
+                            .withName(name(idx) + " LFO FB Mode")
+                            .withGroupName(name(idx))
+                            .withRange(0, 2)
+                            .withDefault(0)
+                            .withID(id(29, idx))
+                            .withUnorderedMapFormatting({{0, "Add"}, {1, "Scale"}, {2, "Atten"}})),
               ModulationMixin(name(idx), id(40, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
@@ -1084,14 +1092,14 @@ struct Patch : pats::PatchBase<Patch, Param>
             return name(index);
         }
 
-        Param fbLevel, lfoToFB, envToFB, overdrive;
+        Param fbLevel, lfoToFB, envToFB, overdrive, lfoFBMode;
         Param active;
 
         std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&fbLevel, &active, &lfoToFB, &envToFB, &overdrive};
+            std::vector<Param *> res{&fbLevel, &active, &lfoToFB, &envToFB, &overdrive, &lfoFBMode};
             appendDAHDSRParams(res);
             appendLFOParams(res);
 
@@ -1174,6 +1182,14 @@ struct Patch : pats::PatchBase<Patch, Param>
                             .withGroupName(name(idx))
                             .withDefault(false)
                             .withID(id(28, idx))),
+              lfoDepthMode(
+                  intMd(version_120h)
+                      .withName(name(idx) + " LFO Depth Mode")
+                      .withGroupName(name(idx))
+                      .withRange(0, 2)
+                      .withDefault(0)
+                      .withID(id(29, idx))
+                      .withUnorderedMapFormatting({{0, "Add"}, {1, "Scale"}, {2, "Atten"}})),
 
               ModulationMixin(name(idx), id(70, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
@@ -1199,6 +1215,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param lfoToDepth;
         Param envToLevel;
         Param overdrive;
+        Param lfoDepthMode;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -1221,7 +1238,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         std::vector<Param *> params()
         {
             std::vector<Param *> res{&level,      &active,     &modulationMode, &modulationScale,
-                                     &lfoToDepth, &envToLevel, &overdrive};
+                                     &lfoToDepth, &envToLevel, &overdrive,      &lfoDepthMode};
             appendDAHDSRParams(res);
             appendLFOParams(res);
 
@@ -1405,6 +1422,14 @@ struct Patch : pats::PatchBase<Patch, Param>
                            .withName(name(idx) + " LFO Depth")
                            .withID(id(16, idx))
                            .withDefault(1)),
+              lfoLevelMode(
+                  intMd(version_120h)
+                      .withName(name(idx) + " LFO Level Mode")
+                      .withGroupName(name(idx))
+                      .withRange(0, 2)
+                      .withDefault(0)
+                      .withID(id(17, idx))
+                      .withUnorderedMapFormatting({{0, "Add"}, {1, "Scale"}, {2, "Atten"}})),
               DAHDSRMixin(name(idx), id(2, idx), false, false, id(20, idx), version_120c),
               LFOMixin(name(idx), id(30, idx), id(65, idx), version_120c),
               ModulationMixin(name(idx), id(50, idx), version_120c),
@@ -1441,12 +1466,12 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         Param level;
         Param macroPower;
-        Param envDepth, lfoDepth;
+        Param envDepth, lfoDepth, lfoLevelMode;
         std::array<Param, numModsPer> modtarget;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level, &macroPower, &envDepth, &lfoDepth};
+            std::vector<Param *> res{&level, &macroPower, &envDepth, &lfoDepth, &lfoLevelMode};
             appendDAHDSRParams(res);
             appendLFOParams(res);
 
