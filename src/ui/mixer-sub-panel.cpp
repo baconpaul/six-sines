@@ -61,6 +61,10 @@ void MixerSubPanel::setSelectedIndex(int idx)
     addAndMakeVisible(*envMul);
     traverse(envMul);
 
+    createComponent(editor, *this, sn.lfoLevelMode, lfoMode, lfoModeD);
+    addAndMakeVisible(*lfoMode);
+    traverse(lfoMode);
+
     modLabelE = std::make_unique<jcmp::RuledLabel>();
     modLabelE->setText(std::string() + "Env" + u8"\U00002192");
     addAndMakeVisible(*modLabelE);
@@ -101,10 +105,19 @@ void MixerSubPanel::resized()
     el.add(jlo::Component(*envMul).withHeight(2 * uicLabelHeight + uicMargin));
     lo.add(el);
 
-    auto ll = jlo::VList().withWidth(uicSubPanelColumnWidth).withAutoGap(uicMargin);
+    auto ll = jlo::VList().withWidth(2 * uicSubPanelColumnWidth + uicMargin).withAutoGap(uicMargin);
     ll.add(titleLabelGaplessLayout(modLabelL));
-    ll.add(labelKnobLayout(lfoToLevel, lfoToLevelL).centerInParent());
-    ll.add(labelKnobLayout(lfoToPan, lfoToPanL).centerInParent());
+
+    auto kl = jlo::HList().withHeight(uicLabeledKnobHeight).withAutoGap(uicMargin);
+    kl.add(labelKnobLayout(lfoToLevel, lfoToLevelL).centerInParent());
+    kl.add(labelKnobLayout(lfoToPan, lfoToPanL).centerInParent());
+    ll.add(kl);
+
+    // mode switch sits under the level knob (left column only)
+    auto sl = jlo::HList().withHeight(3 * uicLabelHeight + uicMargin).withAutoGap(uicMargin);
+    sl.add(jlo::Component(*lfoMode).withWidth(uicSubPanelColumnWidth));
+    ll.add(sl);
+
     lo.add(ll);
 
     lo.doLayout();

@@ -1304,6 +1304,14 @@ struct Patch : pats::PatchBase<Patch, Param>
                        .withGroupName(name(idx))
                        .withID(id(43, idx))
                        .withDefault(false)),
+              lfoLevelMode(
+                  intMd(version_120g)
+                      .withName(name(idx) + " LFO Level Mode")
+                      .withGroupName(name(idx))
+                      .withRange(0, 2)
+                      .withDefault(0)
+                      .withID(id(44, idx))
+                      .withUnorderedMapFormatting({{0, "Add"}, {1, "Scale"}, {2, "Atten"}})),
               ModulationMixin(name(idx), id(50, idx)),
               modtarget(scpu::make_array_lambda<Param, numModsPer>(
                   [this, idx](int i)
@@ -1334,15 +1342,15 @@ struct Patch : pats::PatchBase<Patch, Param>
             return name(index);
         }
 
-        Param level, pan, lfoToLevel, lfoToPan, envToLevel, solo;
+        Param level, pan, lfoToLevel, lfoToPan, envToLevel, solo, lfoLevelMode;
         Param active;
         std::array<Param, numModsPer> modtarget;
         bool isMutedDueToSoloAway{false};
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&level,    &active,     &pan, &lfoToLevel,
-                                     &lfoToPan, &envToLevel, &solo};
+            std::vector<Param *> res{&level,    &active,     &pan,  &lfoToLevel,
+                                     &lfoToPan, &envToLevel, &solo, &lfoLevelMode};
             appendDAHDSRParams(res);
             appendLFOParams(res);
 

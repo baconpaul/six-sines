@@ -387,14 +387,14 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
-    const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan, &envToLevel;
+    const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan, &envToLevel, &lfoLevelMode;
     bool active{false};
 
     MixerNode(const Patch::MixerNode &mn, OpSource &f, MonoValues &mv, const VoiceValues &vv)
         : mixerNode(mn), monoValues(mv), voiceValues(vv), from(f), pan(mn.pan), level(mn.level),
           activeF(mn.active), lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan),
-          envToLevel(mn.envToLevel), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
-          ModulationSupport(mn, this, mv, vv)
+          envToLevel(mn.envToLevel), lfoLevelMode(mn.lfoLevelMode), EnvelopeSupport(mn, mv, vv),
+          LFOSupport(mn, mv), ModulationSupport(mn, this, mv, vv)
     {
         memset(output, 0, sizeof(output));
     }
@@ -471,24 +471,54 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
 
         auto lv = std::clamp(level + levMod, 0.f, 1.f) * depthAtten;
 
+        // Precompute the LFO->Level contribution once (mode is constant across the block) so the
+        // sample loop is branch-free. Express every mode as amp * lfoMul[j] + lfoAdd[j], with
+        // depth d = lfoAtten*lfoToLevel:
+        //   Add:   amp + d*l            -> mul = 1,           add = d*l
+        //   Scale: amp * (1 - d + d*l)  -> mul = 1 - d + d*l, add = 0   (amp at l=+1, (1-d)amp at
+        //   l=0) Atten: amp * (1 - d*l)      -> mul = 1 - d*l,     add = 0   (amp at l=0,  (1-d)amp
+        //   at l=+1)
+        auto d = lfoAtten * lfoToLevel;
+        float lfoMul alignas(16)[blockSize], lfoAdd alignas(16)[blockSize];
+        if (lfoLevelMode < 0.5f) // Add
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                lfoMul[j] = 1.f;
+                lfoAdd[j] = d * lfo.outputBlock[j];
+            }
+        }
+        else if (lfoLevelMode < 1.5f) // Scale
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                lfoMul[j] = 1.f - d + d * lfo.outputBlock[j];
+                lfoAdd[j] = 0.f;
+            }
+        }
+        else // Atten
+        {
+            for (int j = 0; j < blockSize; ++j)
+            {
+                lfoMul[j] = 1.f - d * lfo.outputBlock[j];
+                lfoAdd[j] = 0.f;
+            }
+        }
+
         if (envIsMult)
         {
             for (int j = 0; j < blockSize; ++j)
             {
-                // use mech blah
                 auto amp = lv * env.outputCache[j];
-                amp += lfoAtten * lfoToLevel * lfo.outputBlock[j];
-                vSum[j] = amp * useOut[j];
+                vSum[j] = (amp * lfoMul[j] + lfoAdd[j]) * useOut[j];
             }
         }
         else
         {
             for (int j = 0; j < blockSize; ++j)
             {
-                // use mech blah
                 auto amp = lv + envToLevel * env.outputCache[j];
-                amp += lfoAtten * lfoToLevel * lfo.outputBlock[j];
-                vSum[j] = amp * useOut[j];
+                vSum[j] = (amp * lfoMul[j] + lfoAdd[j]) * useOut[j];
             }
         }
 
