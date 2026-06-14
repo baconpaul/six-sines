@@ -42,6 +42,7 @@ class TiXmlElement;
 #include "synth/patch.h"
 #include "mono_values.h"
 #include "mod_matrix.h"
+#include "ui/ui-defaults.h"
 #include "sst/basic-blocks/dsp/LagCollection.h"
 
 namespace baconpaul::six_sines
@@ -421,6 +422,15 @@ struct Synth
         float paramAutomationSmoothingTimeMs{2.f};
     };
     DawExtraState dawExtraState;
+
+    // User-defaults reader, owned by the engine so non-UI startup can seed DawExtraState
+    // from saved preferences. Shared with the editor (by pointer) for read/write.
+    std::unique_ptr<ui::defaultsProvder_t> defaultsProvider;
+
+    // Resolve the Six Sines user documents folder. Prefers the legacy ~/Documents/SixSines when
+    // it already exists; otherwise uses (and creates) the vendored BaconPaul/SixSines path. The
+    // single source of truth for presets, themes, and user defaults. Empty on filesystem error.
+    static fs::path userDocumentsPath();
 
     void toDawExtraState(TiXmlElement &e) const;
     static void fromDawExtraState(TiXmlElement &e, DawExtraState &out);

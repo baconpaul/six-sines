@@ -19,6 +19,7 @@
 #include "sst/basic-blocks/dsp/PanLaws.h"
 
 #include "tinyxml/tinyxml.h"
+#include "sst/plugininfra/paths.h"
 
 #include "libMTSClient.h"
 
@@ -47,6 +48,31 @@ Synth::Synth(bool mo)
 
     std::fill(lState.begin(), lState.end(), nullptr);
     std::fill(rState.begin(), rState.end(), nullptr);
+
+    // User-defaults reader. Uses the same path/product name as the editor so both share the
+    // one preferences file. Construction only reads it; nothing is written here.
+    auto docPath = userDocumentsPath();
+    SXSNLOG("Six Sines user documents path: '" << docPath.u8string() << "'");
+    defaultsProvider = std::make_unique<ui::defaultsProvder_t>(
+        docPath, "SixSinesUI", ui::defaultName,
+        [](auto e, auto b) { SXSNLOG("[ERROR]" << e << " " << b); });
+
+    // Seed the session (DawExtraState) and live mono values from saved defaults, falling back
+    // to the struct defaults when a preference is absent. A fresh patch then starts from the
+    // user's preferred MPE bend range and smoothing times.
+    dawExtraState.mpeBendRange =
+        defaultsProvider->getUserDefaultValue(ui::defaultMPEBend, dawExtraState.mpeBendRange);
+    {
+        auto ms = defaultsProvider->getUserDefaultValue(ui::defaultMIDISmoothing, std::string{});
+        if (!ms.empty())
+            dawExtraState.midiCCSmoothingTimeMs = std::stof(ms);
+        auto ps = defaultsProvider->getUserDefaultValue(ui::defaultParamSmoothing, std::string{});
+        if (!ps.empty())
+            dawExtraState.paramAutomationSmoothingTimeMs = std::stof(ps);
+    }
+    monoValues.mpeBendRange = dawExtraState.mpeBendRange;
+    monoValues.midiCCSmoothingTimeMs = dawExtraState.midiCCSmoothingTimeMs;
+    monoValues.paramAutomationSmoothingTimeMs = dawExtraState.paramAutomationSmoothingTimeMs;
 
     reapplyControlSettings();
     resetSoloState();
@@ -87,6 +113,30 @@ Synth::~Synth()
     for (auto rs : rState)
         if (rs)
             src_delete(rs);
+}
+
+fs::path Synth::userDocumentsPath()
+{
+    try
+    {
+        // Prefer the legacy ~/Documents/SixSines folder if a prior install created it, so we
+        // don't strand existing presets/themes/defaults.
+        auto legacy = sst::plugininfra::paths::bestDocumentsFolderPathFor("SixSines");
+        if (fs::exists(legacy))
+            return legacy;
+
+        // Otherwise use the vendored BaconPaul/SixSines location, creating it if needed.
+        auto vendor =
+            sst::plugininfra::paths::bestDocumentsVendorFolderPathFor("BaconPaul", "SixSines");
+        if (!fs::exists(vendor))
+            fs::create_directories(vendor);
+        return vendor;
+    }
+    catch (const fs::filesystem_error &e)
+    {
+        SXSNLOG("Unable to resolve user documents path: " << e.what());
+    }
+    return {};
 }
 
 void Synth::toDawExtraState(TiXmlElement &e) const

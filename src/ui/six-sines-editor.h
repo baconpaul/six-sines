@@ -86,7 +86,8 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     const clap_host_t *clapHost{nullptr};
 
     SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudioQueue_T &utoa,
-                   Synth::audioOutputQueue_t &aor, const clap_host_t *ch);
+                   Synth::audioOutputQueue_t &aor, defaultsProvder_t &defaults,
+                   const clap_host_t *ch);
     virtual ~SixSinesEditor();
 
     std::unique_ptr<sst::jucegui::style::LookAndFeelManager> lnf;
@@ -144,7 +145,8 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     std::unique_ptr<juce::DocumentWindow> colorEditorWindow;
     std::unique_ptr<juce::FileChooser> colorThemeFileChooser;
 
-    std::unique_ptr<defaultsProvder_t> defaultsProvider;
+    // Owned by the Synth; the editor only borrows it.
+    defaultsProvder_t *defaultsProvider{nullptr};
 
     SixSinesSkin currentSkin;
 

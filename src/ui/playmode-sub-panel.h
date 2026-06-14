@@ -107,6 +107,8 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<
         sst::jucegui::component_adapters::ContinuousToValueReference<jcmp::HSliderFilled>>
         midiSmoothingSliderD, paramSmoothingSliderD;
+    // Section hamburger: persist the current MPE bend range + smoothing times as user defaults.
+    void showSmoothingDefaultsMenu();
 
     std::unique_ptr<jcmp::JogUpDownButton> tsposeButton;
     std::unique_ptr<PatchDiscrete> tsposeButtonD;

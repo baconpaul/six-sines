@@ -14,6 +14,7 @@
  */
 
 #include "ui-theme-manager.h"
+#include "synth/synth.h"
 #include <cmrc/cmrc.hpp>
 
 CMRC_DECLARE(sixsines_themes);
@@ -25,7 +26,7 @@ UIThemeManager::UIThemeManager()
 {
     try
     {
-        userPath = sst::plugininfra::paths::bestDocumentsFolderPathFor("SixSines");
+        userPath = Synth::userDocumentsPath();
         userThemesPath = userPath / "Themes";
         fs::create_directories(userThemesPath);
     }

@@ -14,9 +14,9 @@
  */
 
 #include "preset-manager.h"
+#include "synth/synth.h"
 #include <sstream>
 #include <fstream>
-#include "sst/plugininfra/paths.h"
 
 #include "sst/plugininfra/strnatcmp.h"
 
@@ -31,7 +31,7 @@ PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
 {
     try
     {
-        userPath = sst::plugininfra::paths::bestDocumentsFolderPathFor("SixSines");
+        userPath = Synth::userDocumentsPath();
         if (clapHost)
             fs::create_directories(userPath);
         userPatchesPath = userPath / "Patches";

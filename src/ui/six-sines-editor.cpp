@@ -115,8 +115,10 @@ using sheet_t = jstl::StyleSheet;
 static constexpr sheet_t::Class PatchMenu("six-sines.patch-menu");
 
 SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudioQueue_T &utoa,
-                               Synth::audioOutputQueue_t &aor, const clap_host_t *h)
-    : jcmp::WindowPanel(true), audioToUI(atou), mainToAudio(utoa), audioOutputRing(aor), clapHost(h)
+                               Synth::audioOutputQueue_t &aor, defaultsProvder_t &defaults,
+                               const clap_host_t *h)
+    : jcmp::WindowPanel(true), audioToUI(atou), mainToAudio(utoa), audioOutputRing(aor),
+      defaultsProvider(&defaults), clapHost(h)
 {
     setTitle("Six Sines - an Audio Rate Modulation Synthesizer");
     setAccessible(true);
@@ -130,10 +132,6 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     };
 
     uiThemeManager = std::make_unique<presets::UIThemeManager>();
-
-    defaultsProvider = std::make_unique<defaultsProvder_t>(
-        presetManager->userPath, "SixSinesUI", defaultName,
-        [](auto e, auto b) { SXSNLOG("[ERROR]" << e << " " << b); });
 
     sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
 
@@ -1282,8 +1280,8 @@ void SixSinesEditor::showSpectrumAnalyzer()
         spectrumWindow->toFront(true);
         return;
     }
-    auto comp = std::make_unique<SpectrumAnalyzerComponent>(audioOutputRing, hostSR,
-                                                            defaultsProvider.get());
+    auto comp =
+        std::make_unique<SpectrumAnalyzerComponent>(audioOutputRing, hostSR, defaultsProvider);
     spectrumWindow = std::make_unique<SpectrumAnalyzerWindow>(std::move(comp));
     spectrumWindow->onCloseRequested = [w = juce::Component::SafePointer(this)]()
     {

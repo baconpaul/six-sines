@@ -212,6 +212,12 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
 
     smoothingSectionTitle = std::make_unique<jcmp::RuledLabel>();
     smoothingSectionTitle->setText("MPE + Smoothing");
+    smoothingSectionTitle->hasHamburger = true;
+    smoothingSectionTitle->onHamburger = [w = juce::Component::SafePointer(this)]()
+    {
+        if (w)
+            w->showSmoothingDefaultsMenu();
+    };
     addAndMakeVisible(*smoothingSectionTitle);
 
     mpeRowLabel = std::make_unique<jcmp::Label>();
@@ -702,6 +708,27 @@ void PlayModeSubPanel::showPortaContinuationMenu()
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&this->editor),
                     makeMenuAccessibleButtonCB(portaContinuationButton.get()));
+}
+
+void PlayModeSubPanel::showSmoothingDefaultsMenu()
+{
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("MPE + Smoothing");
+    p.addSeparator();
+    p.addItem("Save as MPE/Smoothing Defaults",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (!w || !w->editor.defaultsProvider)
+                      return;
+                  auto &des = w->editor.editorDawExtraState;
+                  auto *dp = w->editor.defaultsProvider;
+                  dp->updateUserDefaultValue(Defaults::defaultMPEBend, des.mpeBendRange);
+                  dp->updateUserDefaultValue(Defaults::defaultMIDISmoothing,
+                                             std::to_string(des.midiCCSmoothingTimeMs));
+                  dp->updateUserDefaultValue(Defaults::defaultParamSmoothing,
+                                             std::to_string(des.paramAutomationSmoothingTimeMs));
+              });
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&this->editor));
 }
 
 void PlayModeSubPanel::setEnabledState()

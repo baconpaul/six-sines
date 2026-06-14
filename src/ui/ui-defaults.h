@@ -34,6 +34,9 @@ enum Defaults
     spectrumAnalysisMode,
     spectrumScopeScale,
     sourceEditorType,
+    defaultMPEBend,        // int semitones; seeds DawExtraState.mpeBendRange on engine init
+    defaultMIDISmoothing,  // ms, stored as string; seeds midiCCSmoothingTimeMs
+    defaultParamSmoothing, // ms, stored as string; seeds paramAutomationSmoothingTimeMs
     numDefaults
 };
 
@@ -67,6 +70,12 @@ inline std::string defaultName(Defaults d)
         return "spectrumScopeScale";
     case sourceEditorType:
         return "sourceEditorType";
+    case defaultMPEBend:
+        return "defaultMPEBend";
+    case defaultMIDISmoothing:
+        return "defaultMIDISmoothing";
+    case defaultParamSmoothing:
+        return "defaultParamSmoothing";
     case numDefaults:
     {
         SXSNLOG("Software Error - defaults found");
