@@ -123,6 +123,10 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::HSliderFilled> keyTrackLowValue;
     std::unique_ptr<PatchContinuous::cubic_t> keyTrackLowValueD;
 
+    std::unique_ptr<jcmp::HSliderFilled> absoluteOffset;
+    std::unique_ptr<PatchContinuous::cubic_t> absoluteOffsetD;
+    std::unique_ptr<jcmp::Label> absoluteOffsetL;
+
     std::unique_ptr<jcmp::HSliderFilled> startingPhase;
     std::unique_ptr<PatchContinuous> startingPhaseD;
     std::unique_ptr<jcmp::Label> startingPhaseL;

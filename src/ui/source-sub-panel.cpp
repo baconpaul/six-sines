@@ -692,6 +692,13 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
                             keyTrackLowValueD);
     addChildComponent(*keyTrackLowValue);
 
+    createRescaledComponent(editor, *this, sn.absoluteOffset, absoluteOffset, absoluteOffsetD);
+    addAndMakeVisible(*absoluteOffset);
+    traverse(absoluteOffset);
+    absoluteOffsetL = std::make_unique<jcmp::Label>();
+    absoluteOffsetL->setText("Abs");
+    addAndMakeVisible(*absoluteOffsetL);
+
     auto op = [w = juce::Component::SafePointer(this)]()
     {
         if (w)
@@ -935,12 +942,18 @@ void SourceSubPanel::resized()
 
     // Row 3: [Lo toggle] [keytrack value slider]
     auto pRow3 = jlo::HList().withHeight(pitchRowH);
-    pRow3.add(jlo::Component(*keyTrackLow).withWidth(20));
+    pRow3.add(jlo::Component(*keyTrackLow).withWidth(21));
     pRow3.addGap(1);
     pRow3.add(jlo::Component(*keyTrackValue).insetBy(0, 2).expandToFill());
     pitchCol.add(pRow3);
 
-    // Row 4: full-width Unison button
+    // Row 4: [abs label] [absolute offset slider]
+    auto pRow4 = jlo::HList().withHeight(pitchRowH);
+    pRow4.add(jlo::Component(*absoluteOffsetL).withWidth(22));
+    pRow4.add(jlo::Component(*absoluteOffset).insetBy(0, 2).expandToFill());
+    pitchCol.add(pRow4);
+
+    // Row 5: full-width Unison button
     pitchCol.add(jlo::Component(*unisonBehaviorB).withHeight(pitchRowH));
 
     lo.add(pitchCol);

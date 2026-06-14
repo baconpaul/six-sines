@@ -59,6 +59,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     const float &ratio, &activeV, &envToRatio, &lfoToRatio, &envToRatioFine,
         &lfoToRatioFine; // in  frequency multiple
     const float &waveForm, &kt, &ktv, &ktlo, &ktlov, &startPhase, &octTranspose; // in octaves;
+    const float &absOffset;                                                      // in Hz
     bool active{false};
     bool unisonParticipatesPan{true}, unisonParticipatesTune{true};
     bool operatorOutputsToMain{true}, operatorOutputsToOp{true};
@@ -140,7 +141,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
           activeV(sn.active), envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio),
           waveForm(sn.waveForm), kt(sn.keyTrack), ktv(sn.keyTrackValue),
           ktlo(sn.keyTrackValueIsLow), ktlov(sn.keyTrackLowFrequencyValue),
-          startPhase(sn.startingPhase), octTranspose(sn.octTranspose),
+          startPhase(sn.startingPhase), octTranspose(sn.octTranspose), absOffset(sn.absoluteOffset),
           lfoToRatioFine(sn.lfoToRatioFine), envToRatioFine(sn.envToRatioFine),
           noiseHelper(mv.rng, mv.dbToLinear)
     {
@@ -599,7 +600,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
         for (int i = 0; i < blockSize; ++i)
         {
-            dPhase = st.dPhase((baseFrequency * (1.0 + fmAmount[i])) * rf);
+            dPhase = st.dPhase((baseFrequency * (1.0 + fmAmount[i])) * rf + absOffset);
             rf += dRF;
 
             phs += dPhase;

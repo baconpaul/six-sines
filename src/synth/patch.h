@@ -747,6 +747,13 @@ struct Patch : pats::PatchBase<Patch, Param>
                                .withRange(-3, 3)
                                .withDefault(0)
                                .withID(id(9, idx))),
+              absoluteOffset(floatMd(version_120h)
+                                 .withName(name(idx) + " Absolute Offset")
+                                 .withGroupName(name(idx))
+                                 .withRange(-50, 50)
+                                 .withLinearScaleFormatting("Hz")
+                                 .withDefault(0)
+                                 .withID(id(12, idx))),
               unisonParticipation(intMd()
                                       .withRange(0, 3)
                                       .withDefault(3)
@@ -947,7 +954,7 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         Param keyTrack, keyTrackValue, keyTrackLowFrequencyValue, keyTrackValueIsLow;
 
-        Param startingPhase, octTranspose;
+        Param startingPhase, octTranspose, absoluteOffset;
 
         Param unisonParticipation, unisonToMain, unisonToOpOut;
 
@@ -979,6 +986,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &keyTrackValue,
                                      &startingPhase,
                                      &octTranspose,
+                                     &absoluteOffset,
                                      &envToRatioFine,
                                      &lfoToRatioFine,
                                      &unisonParticipation,
