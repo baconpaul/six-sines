@@ -33,6 +33,8 @@
 
 #include "ui/six-sines-editor.h"
 
+#include <sst/cpputils/rtsan_support.h>
+
 #include <clapwrapper/vst3.h>
 #include <clapwrapper/auv2.h>
 #include <numeric>
@@ -148,6 +150,11 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     }
 
     clap_process_status process(const clap_process *process) noexcept override
+    {
+        return process_nonblocking(process);
+    }
+
+    clap_process_status process_nonblocking(const clap_process *process) SST_CPPUTILS_NONBLOCKING
     {
         auto fpuguard = sst::plugininfra::cpufeatures::FPUStateGuard();
 
