@@ -20,6 +20,10 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 # Compiler specific choices
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     add_compile_options(
+            # not technically rtsan but llvm mac requires it
+            $<$<BOOL:${USE_RTSAN}>:-Wno-elaborated-enum-base>
+            $<$<BOOL:${USE_RTSAN}>:-fsanitize=realtime>
+
             $<$<BOOL:${USE_SANITIZER}>:-fsanitize=address>
             $<$<BOOL:${USE_SANITIZER}>:-fsanitize=undefined>
             $<$<BOOL:${USE_SANITIZER}>:-fno-sanitize-recover=undefined>
@@ -36,6 +40,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
             $<$<BOOL:${USE_SANITIZER}>:-fsanitize=address>
             $<$<BOOL:${USE_SANITIZER}>:-fsanitize=undefined>
             $<$<BOOL:${USE_SANITIZER}>:-fno-sanitize-recover=undefined>
+            $<$<BOOL:${USE_RTSAN}>:-fsanitize=realtime>
     )
     if (NOT APPLE)
         add_compile_options($<IF:$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},aarch64>,-march=armv8-a,-march=nehalem>)

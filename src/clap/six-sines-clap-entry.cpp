@@ -15,6 +15,8 @@
 
 #include <clap/clap.h>
 #include "six-sines-clap-entry-impl.h"
+#include "sst/cpputils/rtsan_support.h"
+#include <stdio.h>
 
 extern "C"
 {
@@ -36,3 +38,12 @@ extern "C"
 #pragma GCC diagnostic pop
 #endif
 }
+
+#if SST_CPPUTILS_HAS_RTSAN
+#define SST_RTSAN_EXPORT __attribute__((visibility("default"), used))
+extern "C" SST_RTSAN_EXPORT const char *__rtsan_default_options() { return "halt_on_error=false"; }
+extern "C" SST_RTSAN_EXPORT void __sanitizer_report_error_summary(const char *error_summary)
+{
+    fprintf(stderr, "%s\n", error_summary);
+}
+#endif
