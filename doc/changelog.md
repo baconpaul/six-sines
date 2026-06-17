@@ -13,7 +13,7 @@ sources, support audio input, and more
 
 - Extended mode: phase remap allows distortion of the phase
 - Extended mode: resonant sweep allows underlying pitch sweeps with windows
-- Extended mode: Noise proviides pinl, white, tilt, and LFSR/Chip-style noise in a node
+- Extended mode: Noise provides pink, white, tilt, and LFSR/Chip-style noise in a node
 - Operator 1 can set its source to audio sidechain input
 - Each node has an absolute hz offset
 
@@ -21,11 +21,11 @@ sources, support audio input, and more
 
 - All envelopes support temposync
 - All nodes with LFOs get a step sequencer as well as curve-style LFOs
-- LFOs on amplityde-like nodes get an add, scale and attenuate mode similar to the envelope
-- Add a song-position run mode for LFOs — lock phase to the host timeline instead of note attack (#381)
-- SuperMacro: macros become per-voice mod sources with their own DAHDSR + LFO + 3-slot mod matrix (#347)
+- LFOs on amplitude-like nodes get an add, scale and attenuate mode similar to the envelope
+- Add a song-position run mode for LFOs — lock phase to the host timeline instead of note attack 
+- SuperMacro: macros become per-voice mod sources with their own DAHDSR + LFO + 3-slot mod matrix
 - Add envelope rate as a modulation target (exponential, ±8x)
-- Add MPE Timbre (bipolar) as a modulation source (#382)
+- Add MPE Timbre (bipolar) as a modulation source
 - Make AShape, RShape, and DShape modulatable in the matrix
 
 ### The Output Stage
@@ -37,11 +37,11 @@ sources, support audio input, and more
 
 ### Other DSP
 
-- Engine-wide MIDI/MPE/note-expression (25 ms) and param-automation (2 ms) smoothing times (#376)
-- Smooth per-voice MPE and CLAP note-expression values with a 5 ms one-pole lag (#375)
+- Engine-wide MIDI/MPE/note-expression (25 ms) and param-automation (2 ms) smoothing times 
+- Smooth per-voice MPE and CLAP note-expression values with a 5 ms one-pole lag 
 - Move MPE active/bend range out of the patch onto the engine so preset changes no longer wipe MPE config (#374)
-- Track unison spread and pan continuously while a voice is playing (#370)
-- Implement MTS-ESP-aware MPE pitch bends (#362)
+- Track unison spread and pan continuously while a voice is playing
+- Implement MTS-ESP-aware MPE pitch bends
 
 ### UI
 
@@ -49,10 +49,9 @@ sources, support audio input, and more
 - The UI has a color theme editor so you can re-color the UI to your hearts content
 - The synth has an analyzer showing playing spectrum and waveform. Press the button next to the VU meter
 - The ratio editor has a new segmented widget in addition to a knob. Press the '...' in the source area to swap
-- Add a patch AUTHOR field plus the workflow to set/default it (#348)
-- Add CPU usage to the main panel (#339)
-- Add a per-op VU meter (#338)
-- Add design mode helpers for patch editing (run all nodes independent of power; all-sounds-off on power toggle) (#331)
+- Add a patch AUTHOR field plus the workflow to set/default it
+- Add a per-op VU meter
+- Add design mode helpers for patch editing (run all nodes independent of power; all-sounds-off on power toggle)
 
 ### Infrastructure
 
@@ -60,14 +59,12 @@ sources, support audio input, and more
 - Save MPE bend range and smoothing times as user defaults that seed the engine on startup
 - Add an error reporting path
 - Update the param rescan mechanism to use onMainThread and be more parsimonious (#350)
-- Allow AUv2 versioned params; add tests (#329)
-- Various workflow & installer fixes (#326)
-- Build on Linux ARM (#323)
-- Implement preset discovery (tested against REAPER dev) (#322)
-- Library dependency upgrades (#321)
-- Linux native file-dialog support; JUCE 8.0.10; ClangFormat (#318)
-- Add a Windows installer and better CMake targets (#316)
-- Move to C++20 and latest libraries (#313)
+- Allow AUv2 versioned params; add tests
+- Various workflow & installer fixes
+- Build on Linux ARM 
+- Implement preset discovery (tested against REAPER dev)
+- Add a Windows installer and better CMake targets
+- Move to C++20 and latest libraries 
 
 ### Patches
 
