@@ -119,17 +119,16 @@ fs::path Synth::userDocumentsPath()
 {
     try
     {
-        // Prefer the legacy ~/Documents/SixSines folder if a prior install created it, so we
-        // don't strand existing presets/themes/defaults.
+        // 1.1 uses unvendor and 1.2 uses legacy. Since this is 1.2 if both exist use vendor.
         auto legacy = sst::plugininfra::paths::bestDocumentsFolderPathFor("SixSines");
+        auto vendor =
+            sst::plugininfra::paths::bestDocumentsVendorFolderPathFor("BaconPaul", "SixSines");
+        if (fs::exists(vendor))
+            return vendor;
         if (fs::exists(legacy))
             return legacy;
 
-        // Otherwise use the vendored BaconPaul/SixSines location, creating it if needed.
-        auto vendor =
-            sst::plugininfra::paths::bestDocumentsVendorFolderPathFor("BaconPaul", "SixSines");
-        if (!fs::exists(vendor))
-            fs::create_directories(vendor);
+        fs::create_directories(vendor);
         return vendor;
     }
     catch (const fs::filesystem_error &e)
