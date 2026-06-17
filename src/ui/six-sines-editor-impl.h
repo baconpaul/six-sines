@@ -119,7 +119,8 @@ struct MenuValueTypein : HasEditor, juce::PopupMenu::CustomComponent, juce::Text
 
 template <typename T>
     requires HasContinuous<T>
-void SixSinesEditor::popupMenuForContinuous(T *e)
+void SixSinesEditor::popupMenuForContinuous(T *e,
+                                            const std::function<void(juce::PopupMenu &)> &addToMenu)
 {
     auto data = e->continuous();
     if (!data)
@@ -153,6 +154,12 @@ void SixSinesEditor::popupMenuForContinuous(T *e)
     if (pid.has_value())
     {
         sst::clap_juce_shim::populateMenuForClapParam(p, *pid, clapHost);
+    }
+
+    if (addToMenu)
+    {
+        p.addSeparator();
+        addToMenu(p);
     }
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));

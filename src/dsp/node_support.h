@@ -331,7 +331,10 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
         stepStorage.repeat = (int16_t)std::clamp(count, 1, (int)numSeqSteps);
         auto cycleOn = stepCycleModeValue && *stepCycleModeValue > 0.5f;
         stepStorage.rateIsForSingleStep = !cycleOn;
-        stepStorage.smooth = std::clamp(lfoDeform + lfoDeformMod, -1.f, 1.f);
+        // StepLFO smooth spans -2..2 (df = smooth/2), so map the -1..1 deform onto the
+        // full range. Pre-v12 patches stored deform at half this scale and are migrated
+        // on load (see Patch::migratePatchFromVersion).
+        stepStorage.smooth = std::clamp(2.f * (lfoDeform + lfoDeformMod), -2.f, 2.f);
     }
 
     float lfoRateMod{0.f}, lfoDeformMod{0.f}, lfoStartMod{0.f};

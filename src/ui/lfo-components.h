@@ -29,10 +29,13 @@
 #include "ui-constants.h"
 #include "sst/jucegui/components/RuledLabel.h"
 #include "sst/jucegui/layouts/ListLayout.h"
+#include "sst/basic-blocks/modulators/StepLFO.h"
+#include <vector>
 
 namespace baconpaul::six_sines::ui
 {
 namespace jcmp = sst::jucegui::components;
+
 template <typename Comp, typename Patch> struct LFOComponents
 {
     Comp *asComp() { return static_cast<Comp *>(this); }
@@ -43,10 +46,21 @@ template <typename Comp, typename Patch> struct LFOComponents
         SixSinesEditor &editor;
         const Patch &patch;
         std::array<std::unique_ptr<PatchContinuous>, numSeqSteps> stepD;
-        StepEditor(SixSinesEditor &e, const Patch &p) : editor(e), patch(p)
+
+        // Step shape index, matching Patch::LFOMixin::Shape
+        static constexpr int shapeStep{7};
+
+        StepEditor(SixSinesEditor &e, const Patch &p) : editor(e), patch(p), stepLFO(stepTuning)
         {
             for (size_t i = 0; i < numSeqSteps; ++i)
+            {
                 stepD[i] = std::make_unique<PatchContinuous>(e, p.lfoSeqSteps[i].meta.id);
+                stepD[i]->onGuiSetValue = [this]()
+                {
+                    if (!suppressRecompute)
+                        recomputeCurve();
+                };
+            }
 
             // These are JUST for the menu callback. The other begin/end we do internally
             onBeginEdit = [this]()
@@ -59,6 +73,8 @@ template <typename Comp, typename Patch> struct LFOComponents
                 if (menuContinuousIndex >= 0)
                     editGuard(menuContinuousIndex, false);
             };
+
+            recomputeCurve();
         }
 
         // HasContinuous concept surface
@@ -73,6 +89,76 @@ template <typename Comp, typename Patch> struct LFOComponents
         // Stub: the menu typein calls this after a value change; the StepEditor
         // doesn't expose per-row accessibility events yet, so nothing to announce.
         void notifyAccessibleChange() {}
+
+        // Cached smoothed-sequencer overlay, recomputed (only) on param change: the
+        // StepLFO output over one full sequence, sampled top-to-bottom.
+        std::vector<float> curveSamples;
+        bool suppressRecompute{false};
+
+        // A UI-thread copy of the engine's step LFO, run purely to render the overlay
+        // so the displayed shape always matches what the voice produces. Declaration
+        // order matters: stepTuning must precede stepLFO (constructed from it).
+        using stepLfo_t = sst::basic_blocks::modulators::StepLFO<blockSize>;
+        sst::basic_blocks::tables::EqualTuningProvider stepTuning;
+        sst::basic_blocks::modulators::Transport stepTransport;
+        sst::basic_blocks::dsp::RNG stepRng;
+        typename stepLfo_t::Storage stepStorage;
+        stepLfo_t stepLFO;
+
+        void recomputeCurve()
+        {
+            curveSamples.clear();
+            auto shp = (int)std::round(patch.lfoShape.value);
+
+            if (shp == shapeStep)
+            {
+                auto n = (int)stepCount();
+                if (n > 0)
+                {
+                    // Mirror node_support.h's snapStepStorageFromParams. Cycle mode only
+                    // affects the playback rate, not the shape, so we force single-step
+                    // rate and a base rate of 0 to get a clean 1/pointsPerStep phase
+                    // increment and sweep exactly one sequence.
+                    for (size_t i = 0; i < numSeqSteps; ++i)
+                        stepStorage.data[i] = std::clamp((float)stepD[i]->getValue(), -1.f, 1.f);
+                    for (size_t i = numSeqSteps; i < stepLfo_t::Storage::stepLfoSteps; ++i)
+                        stepStorage.data[i] = 0.f;
+                    stepStorage.repeat = (int16_t)n;
+                    // Match snapStepStorageFromParams: deform maps onto the full -2..2
+                    // StepLFO smooth range.
+                    stepStorage.smooth = std::clamp(2.f * (float)patch.lfoDeform.value, -2.f, 2.f);
+                    stepStorage.rateIsForSingleStep = true;
+
+                    constexpr int pointsPerStep = 24;
+                    double sr = (double)pointsPerStep * blockSize;
+                    stepLFO.setSampleRate(sr, 1.0 / sr);
+                    stepLFO.assign(&stepStorage, 0.f, &stepTransport, stepRng, false);
+
+                    int total = n * pointsPerStep;
+                    curveSamples.reserve(total);
+                    for (int j = 0; j < total; ++j)
+                    {
+                        stepLFO.process(0.f, 0, false, false, blockSize);
+                        curveSamples.push_back(std::clamp(stepLFO.output, -1.f, 1.f));
+                    }
+                }
+            }
+            repaint();
+        }
+
+        void clearAllSteps()
+        {
+            suppressRecompute = true;
+            for (size_t i = 0; i < numSeqSteps; ++i)
+            {
+                editGuard((int)i, true);
+                stepD[i]->setValueFromGUI(0.f);
+                editGuard((int)i, false);
+            }
+            suppressRecompute = false;
+            recomputeCurve();
+        }
+
         void paint(juce::Graphics &g) override
         {
             auto bg = editor.style()->getColour(jcmp::base_styles::PushButton::styleClass,
@@ -110,10 +196,13 @@ template <typename Comp, typename Patch> struct LFOComponents
                 g.setColour(val);
                 g.fillRect(juce::Rectangle<float>(left, y, right - left, rowH));
 
-                constexpr float handleThickness = 2.0f;
-                g.setColour(handleCol);
-                g.fillRect(juce::Rectangle<float>(valX - handleThickness * 0.5f, y, handleThickness,
-                                                  rowH));
+                if (!isEnabled())
+                {
+                    constexpr float handleThickness = 1.0f;
+                    g.setColour(handleCol);
+                    g.fillRect(juce::Rectangle<float>(valX - handleThickness * 0.5f, y,
+                                                      handleThickness, rowH));
+                }
             }
 
             g.setColour(handleCol.withAlpha(0.3f));
@@ -121,6 +210,25 @@ template <typename Comp, typename Patch> struct LFOComponents
             {
                 float y = bounds.getY() + i * rowH;
                 g.drawHorizontalLine((int)y, bounds.getX(), bounds.getRight());
+            }
+
+            // Overlay the smoothed sequencer output so the deform effect is visible.
+            // Runs top-to-bottom (time) with value mapped horizontally, matching bars.
+            if (isEnabled() && curveSamples.size() > 1)
+            {
+                juce::Path path;
+                auto np = curveSamples.size();
+                for (size_t j = 0; j < np; ++j)
+                {
+                    float yy = bounds.getY() + (j / (float)(np - 1)) * bounds.getHeight();
+                    float xx = midX + std::clamp(curveSamples[j], -1.f, 1.f) * halfW;
+                    if (j == 0)
+                        path.startNewSubPath(xx, yy);
+                    else
+                        path.lineTo(xx, yy);
+                }
+                g.setColour(handleCol);
+                g.strokePath(path, juce::PathStrokeType(2.f));
             }
         }
 
@@ -150,7 +258,17 @@ template <typename Comp, typename Patch> struct LFOComponents
                 menuContinuousIndex = rowIdx;
                 sst::jucegui::component_adapters::setClapParamId(this,
                                                                  patch.lfoSeqSteps[rowIdx].meta.id);
-                editor.popupMenuForContinuous(this);
+                editor.popupMenuForContinuous(
+                    this,
+                    [w = juce::Component::SafePointer(this)](juce::PopupMenu &menu)
+                    {
+                        menu.addItem("Clear All Steps",
+                                     [w]()
+                                     {
+                                         if (w)
+                                             w->clearAllSteps();
+                                     });
+                    });
                 return;
             }
 
@@ -305,6 +423,18 @@ template <typename Comp, typename Patch> struct LFOComponents
         e.componentRefreshByID[v.lfoShape.meta.id] = updateStep;
         e.componentRefreshByID[v.lfoStepCount.meta.id] = updateStep;
 
+        // The step overlay also depends on deform (the smoothing amount) and the step
+        // values, so refresh it (only) when any of those change, from the GUI or host.
+        auto refreshCurve = [this]()
+        {
+            if (stepEditor)
+                stepEditor->recomputeCurve();
+        };
+        deformD->onGuiSetValue = refreshCurve;
+        e.componentRefreshByID[v.lfoDeform.meta.id] = refreshCurve;
+        for (size_t i = 0; i < numSeqSteps; ++i)
+            e.componentRefreshByID[v.lfoSeqSteps[i].meta.id] = refreshCurve;
+
         rateD->setTemposyncPowerPartner(tempoSyncD.get());
 
         sst::jucegui::component_adapters::setTraversalId(shape.get(), 200);
@@ -335,6 +465,7 @@ template <typename Comp, typename Patch> struct LFOComponents
         stepCount->setEnabled(globallyEnabled && isStep);
         cycleMode->setEnabled(globallyEnabled && isStep);
         stepEditor->setEnabled(globallyEnabled && isStep);
+        stepEditor->recomputeCurve();
         asComp()->repaint();
     }
 

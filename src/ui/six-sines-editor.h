@@ -225,7 +225,7 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
 
     template <typename T>
         requires HasContinuous<T>
-    void popupMenuForContinuous(T *e);
+    void popupMenuForContinuous(T *e, const std::function<void(juce::PopupMenu &)> &addToMenu = {});
 
     void hideAllSubPanels();
     std::unordered_map<uint32_t, juce::Component::SafePointer<juce::Component>> componentByID;

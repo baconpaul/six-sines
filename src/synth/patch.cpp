@@ -219,6 +219,31 @@ void Patch::migratePatchFromVersion(uint32_t version)
     {
         output.zohPreFilter.value = 0;
     }
+
+    // v12 maps the LFO deform onto the StepLFO's full -2..2 smooth range (deform*2).
+    // Pre-12 step-sequencer patches stored deform at half that scale, so halve it back
+    // for any node currently in Step shape to preserve the original smoothing.
+    if (version <= 11)
+    {
+        auto halveStepDeform = [](auto &n)
+        {
+            if ((int)std::round(n.lfoShape.value) == LFOMixin::Shape::Step)
+                n.lfoDeform.value *= 0.5f;
+        };
+        for (auto &s : sourceNodes)
+            halveStepDeform(s);
+        for (auto &s : selfNodes)
+            halveStepDeform(s);
+        for (auto &s : matrixNodes)
+            halveStepDeform(s);
+        for (auto &s : mixerNodes)
+            halveStepDeform(s);
+        for (auto &s : macroNodes)
+            halveStepDeform(s);
+        halveStepDeform(output);
+        halveStepDeform(fineTuneMod);
+        halveStepDeform(mainPanMod);
+    }
 }
 
 } // namespace baconpaul::six_sines
