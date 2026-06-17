@@ -51,7 +51,10 @@ struct SegmentedRatioEditor : sst::jucegui::components::ContinuousParamEditor
     // value changed (automation, preset load, knob edit). PatchContinuous doesn't
     // fan its data listeners on writes, so dataChanged() can't carry this for us
     // and the SourcePanel routes external updates through this method directly.
-    void refreshFromExternal();
+    // resetSign=true re-derives the ±1 sign purely from the float (an ambiguous
+    // ±1 resolves to +1) — used on patch load / reset-to-init so leftover
+    // negativeSide state from the previous patch doesn't carry over.
+    void refreshFromExternal(bool resetSign = false);
 
     // call after createComponent has set the source
     void finalizeSetup(SixSinesEditor &e);

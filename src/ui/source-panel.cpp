@@ -130,8 +130,8 @@ SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEdi
             w->showHamburgerMenu();
     };
 
-    auto stored = editor.defaultsProvider->getUserDefaultValue(Defaults::sourceEditorType,
-                                                               static_cast<int>(SourceEditor_Knob));
+    auto stored = editor.defaultsProvider->getUserDefaultValue(
+        Defaults::sourceEditorType, static_cast<int>(SourceEditor_SegmentedDecimal));
     // Sanitize: if the persisted value isn't one of the editor types we know about
     // (e.g. left over from an earlier build with extra enumerators), fall back to Knob.
     if (stored != SourceEditor_Knob && stored != SourceEditor_SegmentedDecimal)
@@ -309,6 +309,13 @@ void SourcePanel::adjustRatio(int idx, bool up)
     knobsData[idx]->setValueFromGUI(newValue);
     knobs[idx]->onEndEdit();
     repaint();
+}
+
+void SourcePanel::resetSegmentedSignState()
+{
+    for (auto &se : segmentedEditors)
+        if (se)
+            se->refreshFromExternal(true);
 }
 
 void SourcePanel::updateOpEnabledState(int idx)

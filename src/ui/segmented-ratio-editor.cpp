@@ -580,17 +580,19 @@ void SegmentedRatioEditor::resized()
     }
 }
 
-void SegmentedRatioEditor::refreshFromExternal()
+void SegmentedRatioEditor::refreshFromExternal(bool resetSign)
 {
     digitsValid = false;
     // Re-sync the persistent sign flag from the float when the value is
-    // unambiguous. At |v|<eps the float can't tell ±1 apart, so we leave
-    // negativeSide alone — that way a DAW echo of a just-set 0.0 doesn't
-    // snap a user-jogged -1 back to +1.
+    // unambiguous. At |v|<eps the float can't tell ±1 apart, so we normally
+    // leave negativeSide alone — that way a DAW echo of a just-set 0.0 doesn't
+    // snap a user-jogged -1 back to +1. On a patch load / reset-to-init
+    // (resetSign) there's no in-flight jog to protect, so derive the sign purely
+    // from the value: an ambiguous ±1 resolves to +1.
     if (auto c = continuous())
     {
         auto v = c->getValue();
-        if (std::fabs(v) >= zeroThreshold)
+        if (resetSign || std::fabs(v) >= zeroThreshold)
             negativeSide = (v < 0);
     }
     if (editor)

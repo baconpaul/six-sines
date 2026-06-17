@@ -61,6 +61,10 @@ struct SourcePanel : jcmp::NamedPanel, HasEditor
 
     void adjustRatio(int idx, bool up);
     void updateOpEnabledState(int idx);
+
+    // On patch load / reset-to-init, re-derive each segmented editor's ±1 sign
+    // from the loaded value so a previous patch's negative-side state doesn't stick.
+    void resetSegmentedSignState();
 };
 } // namespace baconpaul::six_sines::ui
 #endif // MAIN_PANEL_H

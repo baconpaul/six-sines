@@ -1112,6 +1112,12 @@ void SixSinesEditor::postPatchChange(const std::string &s)
     for (auto [id, f] : componentRefreshByID)
         f();
 
+    // A patch load / reset-to-init can land an op ratio on the ±1 boundary,
+    // which is float-ambiguous; force the segmented editors back to the positive
+    // side rather than inheriting the previous patch's sign.
+    if (sourcePanel)
+        sourcePanel->resetSegmentedSignState();
+
     recomputeMacroUsage();
     repaint();
 }
