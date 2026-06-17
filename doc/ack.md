@@ -22,6 +22,14 @@ user taron gave us the amazing videos in the manual and
 a bug report so good I added this paragraph when I merged
 the fix to say thanks! 
 
+## As we headed to 1.2
+
+The same team was engaged, with new interesting contributions
+from (t/k) around the CZ design. 
+
+The cool new six sines icon was provided by discord user MrkRnbrd
+
+
 ## Factory Patches
 
 The Factory Patch bank was a result of contributions
