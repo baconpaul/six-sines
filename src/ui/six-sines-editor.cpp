@@ -151,6 +151,7 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     mixerPanel = std::make_unique<MixerPanel>(*this);
     macroPanel = std::make_unique<MacroPanel>(*this);
     singlePanel = std::make_unique<jcmp::NamedPanel>("Edit");
+    singlePanel->centeredHeader = true;
     singlePanel->hasHamburger = false;
     singlePanel->onHamburger = [w = juce::Component::SafePointer(this)]()
     {

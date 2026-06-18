@@ -148,6 +148,15 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<jcmp::Label> saturationLabel, lowpassLabel, bitRateLabel, bitDepthLabel,
         highpassLabel, ultrasonicLabel;
 
+    // "User Interface" section: zoom + theme selectors, plus a button to open the theme editor.
+    std::unique_ptr<jcmp::RuledLabel> uiSectionTitle;
+    std::unique_ptr<jcmp::Label> zoomLabel, themeLabel;
+    std::unique_ptr<jcmp::TextPushButton> zoomButton, themeButton, editThemeButton;
+    void setZoomButtonLabel();
+    void showZoomMenu();
+    void setThemeButtonLabel();
+    void showThemeMenu();
+
     void showPolyLimitMenu();
 };
 } // namespace baconpaul::six_sines::ui

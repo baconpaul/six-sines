@@ -7,3 +7,4 @@ ignore/
 minst*.sh
 BUILD_VERSION
 CLAUDE.md
+*Thumbs.db

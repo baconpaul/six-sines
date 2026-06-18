@@ -458,6 +458,50 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     mkLabel(outGainLabel, "Output:");
     mkLabel(downsamplerLabel, "Downsampler:");
 
+    uiSectionTitle = std::make_unique<jcmp::RuledLabel>();
+    uiSectionTitle->setText("User Interface");
+    addAndMakeVisible(*uiSectionTitle);
+
+    mkLabel(zoomLabel, "Zoom:");
+    mkLabel(themeLabel, "Theme:");
+
+    zoomButton = std::make_unique<jcmp::TextPushButton>();
+    zoomButton->setOnCallback(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->showZoomMenu();
+        });
+    setZoomButtonLabel();
+    addAndMakeVisible(*zoomButton);
+
+    themeButton = std::make_unique<jcmp::TextPushButton>();
+    themeButton->setOnCallback(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->showThemeMenu();
+        });
+    setThemeButtonLabel();
+    addAndMakeVisible(*themeButton);
+
+    editThemeButton = std::make_unique<jcmp::TextPushButton>();
+    editThemeButton->setLabel("Edit");
+    editThemeButton->setOnCallback(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (!w)
+                return;
+            auto &ed = w->editor;
+            if (ed.colorEditorWindow && ed.colorEditorWindow->isVisible())
+            {
+                ed.colorEditorWindow->toFront(true);
+                return;
+            }
+            ed.openColorEditor();
+        });
+    addAndMakeVisible(*editThemeButton);
+
     setEnabledState();
 }
 
@@ -550,7 +594,11 @@ void PlayModeSubPanel::resized()
     // Output signal path. Each row is "Label : [control(s)]". Saturation row also
     // gets a drive HSlider following the type jog. Future revision will add
     // arrow connectors between stages.
-    auto pathCol = jlo::VList().withWidth(fullWidth).withAutoGap(uicMargin);
+    // Explicit height (9 rows) so the outer VList reserves space and the section below
+    // is placed beneath it rather than overlapping.
+    auto pathColHeight = 9 * uicLabelHeight + 8 * uicMargin;
+    auto pathCol =
+        jlo::VList().withWidth(fullWidth).withHeight(pathColHeight).withAutoGap(uicMargin);
 
     auto stageRow = [&](auto &lbl, auto &c1, juce::Component *c2 = nullptr)
     {
@@ -588,6 +636,27 @@ void PlayModeSubPanel::resized()
     pathCol.add(stageRow(downsamplerLabel, rsEng));
 
     outer.add(pathCol);
+
+    // "User Interface" section: zoom selector stacked above a theme selector + theme-editor button.
+    outer.add(titleLabelGaplessLayout(uiSectionTitle).withWidth(fullWidth));
+
+    auto uiCol = jlo::VList()
+                     .withWidth(fullWidth)
+                     .withHeight(2 * uicLabelHeight + uicMargin)
+                     .withAutoGap(uicMargin);
+
+    auto zoomRow = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
+    zoomRow.add(jlo::Component(*zoomLabel).withWidth(labelW));
+    zoomRow.add(jlo::Component(*zoomButton).expandToFill());
+    uiCol.add(zoomRow);
+
+    auto themeRow = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
+    themeRow.add(jlo::Component(*themeLabel).withWidth(labelW));
+    themeRow.add(jlo::Component(*themeButton).expandToFill());
+    themeRow.add(jlo::Component(*editThemeButton).withWidth(uicSubPanelColumnWidth));
+    uiCol.add(themeRow);
+
+    outer.add(uiCol);
 
     outer.doLayout();
 }
@@ -729,6 +798,98 @@ void PlayModeSubPanel::showSmoothingDefaultsMenu()
                                              std::to_string(des.paramAutomationSmoothingTimeMs));
               });
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&this->editor));
+}
+
+void PlayModeSubPanel::setZoomButtonLabel()
+{
+    auto pct = (int)std::round(editor.zoomFactor * 100);
+    zoomButton->setLabel(std::to_string(pct) + "%");
+}
+
+void PlayModeSubPanel::showZoomMenu()
+{
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("Zoom Level");
+    p.addSeparator();
+    for (auto scale : {75, 90, 100, 110, 125, 150})
+    {
+        auto isCur = std::fabs(editor.zoomFactor * 100 - scale) < 2;
+        p.addItem("Zoom " + std::to_string(scale) + "%", true, isCur,
+                  [s = scale, w = juce::Component::SafePointer(this)]()
+                  {
+                      if (!w)
+                          return;
+                      w->editor.setZoomFactor(s * 0.01);
+                      w->setZoomButtonLabel();
+                  });
+    }
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&this->editor),
+                    makeMenuAccessibleButtonCB(zoomButton.get()));
+}
+
+void PlayModeSubPanel::setThemeButtonLabel()
+{
+    std::string disp{"Dark"};
+    if (editor.defaultsProvider)
+    {
+        auto stored = editor.defaultsProvider->getUserDefaultValue(Defaults::themePath,
+                                                                   std::string("factory:Dark"));
+        auto sentinel = std::string(SixSinesEditor::factoryThemeSentinel);
+        if (stored.rfind(sentinel, 0) == 0)
+            disp = stored.substr(sentinel.size());
+        else
+            disp = juce::File(stored).getFileNameWithoutExtension().toStdString();
+    }
+    themeButton->setLabel(disp);
+}
+
+void PlayModeSubPanel::showThemeMenu()
+{
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("Theme");
+    p.addSeparator();
+    if (editor.uiThemeManager && editor.defaultsProvider)
+    {
+        auto stored = editor.defaultsProvider->getUserDefaultValue(Defaults::themePath,
+                                                                   std::string("factory:Dark"));
+        auto sentinel = std::string(SixSinesEditor::factoryThemeSentinel);
+        for (auto &ft : editor.uiThemeManager->factoryThemes)
+        {
+            auto isCur = (stored == sentinel + ft.name);
+            p.addItem(ft.name, true, isCur,
+                      [w = juce::Component::SafePointer(this), skin = ft.skin, name = ft.name]()
+                      {
+                          if (!w)
+                              return;
+                          w->editor.applyTheme(
+                              skin, std::string(SixSinesEditor::factoryThemeSentinel) + name);
+                          w->setThemeButtonLabel();
+                      });
+        }
+
+        editor.uiThemeManager->rescanUserThemes();
+        if (!editor.uiThemeManager->userThemes.empty())
+        {
+            p.addSeparator();
+            for (auto &path : editor.uiThemeManager->userThemes)
+            {
+                auto name = path.stem().u8string();
+                auto isCur = (stored == path.u8string());
+                p.addItem(name, true, isCur,
+                          [w = juce::Component::SafePointer(this), path]()
+                          {
+                              if (!w || !w->editor.uiThemeManager)
+                                  return;
+                              w->editor.applyTheme(
+                                  w->editor.uiThemeManager->loadThemeFromPath(path),
+                                  path.u8string());
+                              w->setThemeButtonLabel();
+                          });
+            }
+        }
+    }
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&this->editor),
+                    makeMenuAccessibleButtonCB(themeButton.get()));
 }
 
 void PlayModeSubPanel::setEnabledState()

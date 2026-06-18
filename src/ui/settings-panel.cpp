@@ -72,7 +72,7 @@ void SettingsPanel::beginEdit()
     suppressPowerOff = false;
 
     editor.playModeSubPanel->setVisible(true);
-    editor.singlePanel->setName("Settings");
+    editor.singlePanel->setName("Voicing");
 
     // Light the button when entered via the nav menu (a direct click already
     // sets the toggle before firing onValueChanged).
