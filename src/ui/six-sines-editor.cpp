@@ -1436,7 +1436,7 @@ void SixSinesEditor::setZoomFactor(float zf)
 
 void SixSinesEditor::doSinglePanelHamburger()
 {
-    juce::Component *vis;
+    juce::Component *vis{nullptr};
     for (auto c : singlePanel->getChildren())
     {
         if (c->isVisible())
@@ -1708,7 +1708,7 @@ void SixSinesEditor::setThemeFromPreference()
     else
     {
         // User theme file: apply if it still exists on disk.
-        fs::path path(stored);
+        fs::path path = string_to_path(stored);
         if (fs::exists(path))
         {
             applyTheme(uiThemeManager->loadThemeFromPath(path)); // no preference write
@@ -1816,7 +1816,7 @@ void SixSinesEditor::openColorEditor()
                     if (f.getFullPathName().isEmpty())
                         return;
                     w->uiThemeManager->saveThemeToPath(w->currentSkin,
-                                                       fs::path(f.getFullPathName().toStdString()));
+                                                       string_to_path(f.getFullPathName().toStdString()));
                     w->uiThemeManager->rescanUserThemes();
                 });
         });
@@ -1839,7 +1839,7 @@ void SixSinesEditor::openColorEditor()
                     auto f = fc.getResult();
                     if (f.getFullPathName().isEmpty())
                         return;
-                    auto themeFSPath = fs::path(f.getFullPathName().toStdString());
+                    auto themeFSPath = string_to_path(f.getFullPathName().toStdString());
                     w->applyTheme(w->uiThemeManager->loadThemeFromPath(themeFSPath),
                                   themeFSPath.u8string());
                     w->colorEditorWindow.reset();

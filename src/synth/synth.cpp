@@ -65,10 +65,30 @@ Synth::Synth(bool mo)
     {
         auto ms = defaultsProvider->getUserDefaultValue(ui::defaultMIDISmoothing, std::string{});
         if (!ms.empty())
-            dawExtraState.midiCCSmoothingTimeMs = std::stof(ms);
+        {
+            try
+            {
+                auto f = std::stof(ms);
+                dawExtraState.midiCCSmoothingTimeMs = f;
+            }
+            catch (const std::exception &e)
+            {
+                SXSNLOG("[ERROR]" << e.what() << " " << ui::defaultMIDISmoothing);
+            }
+        }
         auto ps = defaultsProvider->getUserDefaultValue(ui::defaultParamSmoothing, std::string{});
         if (!ps.empty())
-            dawExtraState.paramAutomationSmoothingTimeMs = std::stof(ps);
+        {
+            try
+            {
+                auto f = std::stof(ps);
+                dawExtraState.paramAutomationSmoothingTimeMs = f;
+            }
+            catch (const std::exception &e)
+            {
+                SXSNLOG("[ERROR]" << e.what() << " " << ui::defaultParamSmoothing);
+            }
+        }
     }
     monoValues.mpeBendRange = dawExtraState.mpeBendRange;
     monoValues.midiCCSmoothingTimeMs = dawExtraState.midiCCSmoothingTimeMs;

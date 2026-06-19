@@ -41,6 +41,11 @@ struct NoiseHelper
 
     static constexpr float lfsrTuningRange{12.f};
 
+    // Cap the shift clock. Without this, modulating N high drives shiftFreq into the
+    // gigahertz (exp2 of an unbounded N), making the per-sample shift loop iterate
+    // effectively forever and hang the audio thread. 20kHz also keeps it musical.
+    static constexpr float lfsrMaxShiftHz{20000.f};
+
     // Tilt filter takes ±tiltMaxDb across the bipolar N range.
     static constexpr float tiltMaxDb{6.f};
 
@@ -155,7 +160,8 @@ struct NoiseHelper
                 (lfsrMode == LFSRMode::SHORT_KEYTRACK || lfsrMode == LFSRMode::LONG_KEYTRACK);
             const int xorBit = isShort ? 6 : 1;
             const float refFreq = (keytrack ? baseFreq : 261.62) * lfsrFreeReferenceHz / 261.62;
-            const float shiftFreq = refFreq * std::exp2((nValue - 0.5f) * lfsrTuningRange);
+            const float shiftFreq =
+                std::min(refFreq * std::exp2((nValue - 0.5f) * lfsrTuningRange), lfsrMaxShiftHz);
             const double dPhase = static_cast<double>(shiftFreq) * config.sri;
             for (int i = 0; i < 16; ++i)
             {

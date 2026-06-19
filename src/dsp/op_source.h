@@ -665,7 +665,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                 // Inner phase runs at k(m)x the fundamental and natural-wraps at the
                 // fundamental boundary via uint32 multiplication (mod phaseMax).
                 // kScale is the patch-selected sweep depth (2 / 4 / 10).
-                auto kFactor = kScale * nextM + 1.0f;
+                auto kFactor = std::max(kScale * nextM + 1.0f, 0.f);
                 uint32_t kmph = static_cast<uint32_t>(static_cast<float>(wph) * kFactor);
                 nextM += dM;
                 out = window * st.at(kmph);
