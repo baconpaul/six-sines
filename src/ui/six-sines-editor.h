@@ -250,6 +250,7 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     bool keyPressed(const juce::KeyPress &key) override;
 
     void showNavigationMenu();
+    void showAboutScreen();
 
     void setZoomFactor(float zf);
     float zoomFactor{1.0f};

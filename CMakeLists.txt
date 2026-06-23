@@ -31,7 +31,12 @@ cmrc_add_resource_library(${PROJECT_NAME}-themes NAMESPACE sixsines_themes ${THE
 file(GLOB FONTS
         "resources/fonts/Manrope/static/*.ttf"
         "resources/fonts/Anonymous_Pro/*.ttf")
-cmrc_add_resource_library(${PROJECT_NAME}-fonts NAMESPACE sixsines_fonts ${FONTS})
+# The fonts library also carries the about-screen assets (icon + acknowledgements)
+# so we don't need a separate cmrc target for two files.
+cmrc_add_resource_library(${PROJECT_NAME}-fonts NAMESPACE sixsines_fonts
+        ${FONTS}
+        resources/icon/SixSinesIcon.png
+        doc/ack.md)
 
 set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
 add_subdirectory(libs)
@@ -42,6 +47,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/clap/preset-discovery-impl.cpp
 
         src/ui/six-sines-editor.cpp
+        src/ui/about-screen.cpp
         src/ui/spectrum-analyzer.cpp
 
         src/ui/clipboard.cpp

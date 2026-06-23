@@ -46,6 +46,7 @@ CMRC_DECLARE(sixsines_fonts);
 #include "presets/preset-manager.h"
 #include "macro-panel.h"
 #include "spectrum-analyzer.h"
+#include "about-screen.h"
 #include <sst/jucegui/components/GlyphButton.h>
 #include <sst/jucegui/components/ButtonPainter.h>
 #include <sst/jucegui/component-adapters/DiscreteToReference.h>
@@ -923,11 +924,12 @@ void SixSinesEditor::showPresetPopup()
               });
     p.addItem("Get the Source", []()
               { juce::URL("https://github.com/baconpaul/six-sines/").launchInDefaultBrowser(); });
-    p.addItem("Acknowledgements",
-              []()
+    p.addSeparator();
+    p.addItem("About Six Sines",
+              [w = juce::Component::SafePointer(this)]()
               {
-                  juce::URL("https://github.com/baconpaul/six-sines/blob/main/doc/ack.md")
-                      .launchInDefaultBrowser();
+                  if (w)
+                      w->showAboutScreen();
               });
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
 }
@@ -1277,6 +1279,14 @@ void SixSinesEditor::showNavigationMenu()
                       w->toggleSpectrumAnalyzer();
               });
 
+    p.addSeparator();
+    p.addItem("About Six Sines",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                      w->showAboutScreen();
+              });
+
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
 }
 
@@ -1422,6 +1432,13 @@ void SixSinesEditor::reportError(const std::string &title, const std::string &ms
             auto prompt = sst::jucegui::screens::AlertOrPrompt::Alert(title, msg);
             w->displayModalOverlay(std::move(prompt));
         });
+}
+
+void SixSinesEditor::showAboutScreen()
+{
+    if (searchForOverlay<AboutScreen>())
+        return;
+    displayModalOverlay(std::make_unique<AboutScreen>(*this));
 }
 
 void SixSinesEditor::setZoomFactor(float zf)
@@ -1815,8 +1832,8 @@ void SixSinesEditor::openColorEditor()
                     auto f = fc.getResult();
                     if (f.getFullPathName().isEmpty())
                         return;
-                    w->uiThemeManager->saveThemeToPath(w->currentSkin,
-                                                       string_to_path(f.getFullPathName().toStdString()));
+                    w->uiThemeManager->saveThemeToPath(
+                        w->currentSkin, string_to_path(f.getFullPathName().toStdString()));
                     w->uiThemeManager->rescanUserThemes();
                 });
         });

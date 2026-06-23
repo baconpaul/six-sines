@@ -52,7 +52,6 @@ Synth::Synth(bool mo)
     // User-defaults reader. Uses the same path/product name as the editor so both share the
     // one preferences file. Construction only reads it; nothing is written here.
     auto docPath = userDocumentsPath();
-    SXSNLOG("Six Sines user documents path: '" << docPath.u8string() << "'");
     defaultsProvider = std::make_unique<ui::defaultsProvder_t>(
         docPath, "SixSinesUI", ui::defaultName,
         [](auto e, auto b) { SXSNLOG("[ERROR]" << e << " " << b); });
