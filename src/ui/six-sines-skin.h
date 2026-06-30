@@ -27,6 +27,7 @@
 #include <sst/jucegui/components/NamedPanel.h>
 #include <sst/jucegui/components/WindowPanel.h>
 #include <sst/jucegui/components/VUMeter.h>
+#include <sst/jucegui/components/TextEditor.h>
 
 namespace baconpaul::six_sines::ui
 {
@@ -56,10 +57,18 @@ struct SixSinesSkin
         VUGradStart,             // VU meter gradient start (bottom of range)
         VUGradEnd,               // VU meter gradient end (top of range)
         VUOverload,              // VU meter overload indicator
+        VUGutter,                // VU meter unlit background / ticks / outline
         PatchSelectorBackground, // preset browser jog fill — distinct from other jogs
         PatchSelectorText,       // preset browser jog label text
         MatrixGridOverlay,       // alternating row/col highlight in the matrix panel
         KnobBody,                // knob body (circle) fill colour
+        PanelOutline,            // bright outline drawn around panels and widgets
+        AnalyzerCurve,           // spectrum analyzer line + scope trace
+        AnalyzerStop0,           // spectrogram colormap stops, low → high magnitude
+        AnalyzerStop1,
+        AnalyzerStop2,
+        AnalyzerStop3,
+        AnalyzerStop4,
         COUNT
     };
 
@@ -117,6 +126,22 @@ struct SixSinesSkin
             return "Matrix Grid Overlay";
         case LogicalColor::KnobBody:
             return "Knob Body";
+        case LogicalColor::VUGutter:
+            return "VU Gutter";
+        case LogicalColor::PanelOutline:
+            return "Panel Outline";
+        case LogicalColor::AnalyzerCurve:
+            return "Analyzer Curve";
+        case LogicalColor::AnalyzerStop0:
+            return "Analyzer Stop 0";
+        case LogicalColor::AnalyzerStop1:
+            return "Analyzer Stop 1";
+        case LogicalColor::AnalyzerStop2:
+            return "Analyzer Stop 2";
+        case LogicalColor::AnalyzerStop3:
+            return "Analyzer Stop 3";
+        case LogicalColor::AnalyzerStop4:
+            return "Analyzer Stop 4";
         default:
             return "Unknown";
         }
@@ -144,6 +169,16 @@ struct SixSinesSkin
         s.set(LogicalColor::PatchSelectorText, juce::Colour(0xEE, 0xEE, 0xEE));
         s.set(LogicalColor::MatrixGridOverlay, s.get(LogicalColor::Background).brighter(0.1f));
         s.set(LogicalColor::KnobBody, juce::Colour(82, 82, 82));
+        s.set(LogicalColor::VUGutter, juce::Colour(0, 0, 0));
+        // Matches the legacy outline methodology: Border brightened by 0.25 (adj() on dark).
+        s.set(LogicalColor::PanelOutline, s.get(LogicalColor::Border).brighter(0.25f));
+        s.set(LogicalColor::AnalyzerCurve, s.get(LogicalColor::Value));
+        // Magma-ish 5-stop spectrogram gradient (was hardcoded in spectrum-analyzer.cpp).
+        s.set(LogicalColor::AnalyzerStop0, juce::Colour(0, 0, 4));
+        s.set(LogicalColor::AnalyzerStop1, juce::Colour(40, 11, 84));
+        s.set(LogicalColor::AnalyzerStop2, juce::Colour(140, 41, 129));
+        s.set(LogicalColor::AnalyzerStop3, juce::Colour(241, 96, 93));
+        s.set(LogicalColor::AnalyzerStop4, juce::Colour(252, 253, 191));
         return s;
     }
 
@@ -173,11 +208,13 @@ struct SixSinesSkin
         // ---- Border ----
         auto border = get(LogicalColor::Border);
         sheet->setColour(jbs::Outlined::styleClass, jbs::Outlined::outline, border);
-        sheet->setColour(jbs::Outlined::styleClass, jbs::Outlined::brightoutline,
-                         adj(border, 0.25f));
-        // NamedPanel rule/divider line is slightly brighter than the base border
+        // Bright outline (panel borders, header rules, toggle/tooltip/ruled-label outlines).
+        // Driven by the editable PanelOutline colour; its default is adj(border, 0.25f) so the
+        // out-of-the-box look is unchanged.
+        auto panelOutline = get(LogicalColor::PanelOutline);
+        sheet->setColour(jbs::Outlined::styleClass, jbs::Outlined::brightoutline, panelOutline);
         sheet->setColour(jcmp::NamedPanel::Styles::styleClass, jcmp::NamedPanel::Styles::labelrule,
-                         adj(border, 0.25f));
+                         panelOutline);
 
         // ---- Label (general text) ----
         auto label = get(LogicalColor::Label);
@@ -263,6 +300,20 @@ struct SixSinesSkin
         sheet->setColour(jcmp::MenuButton::Styles::styleClass, jbs::BaseLabel::labelcolor_hover,
                          adj(label));
 
+        // ---- TextEditor (name fields, MPE bend-range entry) ----
+        // Themed to match MenuButton / JogUpDownButton: background = ButtonFill, text = Label.
+        // jcmp::TextEditor sources its background from the gutter property (see its
+        // onStyleChanged), so override gutter on the texteditor class specifically.
+        sheet->setColour(jcmp::TextEditor::Styles::styleClass, jbs::ValueGutter::gutter, btnFill);
+        sheet->setColour(jcmp::TextEditor::Styles::styleClass, jbs::ValueGutter::gutter_hover,
+                         adj(btnFill));
+        sheet->setColour(jcmp::TextEditor::Styles::styleClass, jbs::BaseLabel::labelcolor, label);
+        sheet->setColour(jcmp::TextEditor::Styles::styleClass, jbs::BaseLabel::labelcolor_hover,
+                         adj(label));
+        sheet->setColour(jcmp::TextEditor::Styles::styleClass, jbs::Outlined::outline, border);
+        sheet->setColour(jcmp::TextEditor::Styles::styleClass, jbs::Outlined::brightoutline,
+                         panelOutline);
+
         // ---- MultiSwitch ----
         // The built-in theme sets per-class overrides on the multiswitch styleClass for
         // valuebg and unselected_hover. Override value/value_hover here too so the on-state
@@ -284,9 +335,9 @@ struct SixSinesSkin
                          get(LogicalColor::KnobBody));
 
         // ---- VU Meter ----
-        // vu_gutter is always near-black (the unlit background of the meter)
+        // vu_gutter is the unlit background / ticks / outline of the meter (default black)
         sheet->setColour(jcmp::VUMeter::Styles::styleClass, jcmp::VUMeter::Styles::vu_gutter,
-                         juce::Colour(0, 0, 0));
+                         get(LogicalColor::VUGutter));
         sheet->setColour(jcmp::VUMeter::Styles::styleClass, jcmp::VUMeter::Styles::vu_gradstart,
                          get(LogicalColor::VUGradStart));
         sheet->setColour(jcmp::VUMeter::Styles::styleClass, jcmp::VUMeter::Styles::vu_gradend,

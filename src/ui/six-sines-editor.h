@@ -215,6 +215,9 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     std::unique_ptr<struct SpectrumAnalyzerWindow> spectrumWindow;
     void showSpectrumAnalyzer();
     void toggleSpectrumAnalyzer();
+    // Push the current skin to the spectrum analyzer window (if open) so its paint colours
+    // track theme swaps and live colour edits.
+    void refreshSpectrumAnalyzerSkin();
     std::unique_ptr<struct AnalyzerToggleButton> analyzerToggleButton;
 
     std::unique_ptr<jcmp::ToolTip> toolTip;

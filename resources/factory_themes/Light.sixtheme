@@ -17,4 +17,12 @@
   <Color name="Patch Selector Text" rgba="FF141414"/>
   <Color name="Matrix Grid Overlay" rgba="FFCCCCCC"/>
   <Color name="Knob Body" rgba="FFC2C2C2"/>
+  <Color name="VU Gutter" rgba="FF000000"/>
+  <Color name="Panel Outline" rgba="FF808080"/>
+  <Color name="Analyzer Curve" rgba="FF3030A0"/>
+  <Color name="Analyzer Stop 0" rgba="FF000004"/>
+  <Color name="Analyzer Stop 1" rgba="FF280B54"/>
+  <Color name="Analyzer Stop 2" rgba="FF8C2981"/>
+  <Color name="Analyzer Stop 3" rgba="FFF1605D"/>
+  <Color name="Analyzer Stop 4" rgba="FFFCFDBF"/>
 </SixSinesSkin>

@@ -811,7 +811,7 @@ void PlayModeSubPanel::showZoomMenu()
     auto p = juce::PopupMenu();
     p.addSectionHeader("Zoom Level");
     p.addSeparator();
-    for (auto scale : {75, 90, 100, 110, 125, 150})
+    for (auto scale : {75, 90, 100, 110, 125, 150, 175, 200})
     {
         auto isCur = std::fabs(editor.zoomFactor * 100 - scale) < 2;
         p.addItem("Zoom " + std::to_string(scale) + "%", true, isCur,

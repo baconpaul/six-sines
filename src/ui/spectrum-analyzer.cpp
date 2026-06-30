@@ -33,28 +33,6 @@ namespace
 constexpr float dbMin = -96.f;
 constexpr float dbMax = 0.f;
 
-// Magma-ish 5-stop gradient, lerped at paint time
-constexpr std::array<std::array<uint8_t, 3>, 5> colormap = {{
-    {0, 0, 4},       // black
-    {40, 11, 84},    // deep purple
-    {140, 41, 129},  // magenta
-    {241, 96, 93},   // coral
-    {252, 253, 191}, // pale yellow
-}};
-
-juce::Colour colorFor(float t)
-{
-    t = std::clamp(t, 0.f, 1.f);
-    constexpr int n = (int)colormap.size();
-    auto x = t * (n - 1);
-    auto i = std::min((int)x, n - 2);
-    auto f = x - i;
-    auto lerp = [f](uint8_t a, uint8_t b) { return (uint8_t)std::round(a + (b - a) * f); };
-    return juce::Colour(lerp(colormap[i][0], colormap[i + 1][0]),
-                        lerp(colormap[i][1], colormap[i + 1][1]),
-                        lerp(colormap[i][2], colormap[i + 1][2]));
-}
-
 float magToNorm(float mag)
 {
     auto db = 20.f * std::log10(std::max(mag, 1e-12f));
@@ -63,8 +41,9 @@ float magToNorm(float mag)
 } // namespace
 
 SpectrumAnalyzerComponent::SpectrumAnalyzerComponent(Synth::audioOutputQueue_t &r, float hostSr,
-                                                     defaultsProvder_t *d)
-    : ring(r), defaults(d)
+                                                     defaultsProvder_t *d,
+                                                     const SixSinesSkin &initialSkin)
+    : ring(r), defaults(d), skin(initialSkin)
 {
     if (hostSr > 0.f)
         hostSampleRate = hostSr;
@@ -115,6 +94,16 @@ void SpectrumAnalyzerComponent::setHostSampleRate(float sr)
         return;
     hostSampleRate = sr;
     applyMode(modeIdx);
+}
+
+void SpectrumAnalyzerComponent::setSkin(const SixSinesSkin &s)
+{
+    skin = s;
+    // The analyzer shares the editor's (already re-skinned) stylesheet singleton, so just
+    // re-propagate it to the child widgets (e.g. the always-on-top toggle) and repaint.
+    if (auto st = style())
+        setStyle(st);
+    repaint();
 }
 
 SpectrumAnalyzerComponent::~SpectrumAnalyzerComponent()
@@ -350,7 +339,29 @@ float SpectrumAnalyzerComponent::magInRange(const float *c, float b0, float b1) 
 
 void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
 {
-    g.fillAll(juce::Colours::black);
+    using LC = SixSinesSkin::LogicalColor;
+    auto bg = skin.get(LC::Background);
+    auto curveCol = skin.get(LC::AnalyzerCurve);
+    auto peakCol = curveCol.darker(0.4f);
+    auto frameCol = skin.get(LC::Border);                // plot bounding boxes
+    auto gridCol = bg.interpolatedWith(frameCol, 0.55f); // internal grid lines
+    auto gridMid = bg.interpolatedWith(frameCol, 0.8f);  // emphasized scope centre line
+    auto labelCol = skin.get(LC::Label);
+    auto insetBg = skin.isDark() ? bg.darker(0.4f) : bg.darker(0.08f); // scope inset fill
+    const std::array<juce::Colour, 5> stops{
+        skin.get(LC::AnalyzerStop0), skin.get(LC::AnalyzerStop1), skin.get(LC::AnalyzerStop2),
+        skin.get(LC::AnalyzerStop3), skin.get(LC::AnalyzerStop4)};
+    // Spectrogram colormap: lerp across the five stops at paint time.
+    auto colorFor = [&stops](float t) -> juce::Colour
+    {
+        t = std::clamp(t, 0.f, 1.f);
+        auto x = t * 4.f;
+        int i = std::min((int)x, 3);
+        auto f = x - i;
+        return stops[i].interpolatedWith(stops[i + 1], f);
+    };
+
+    g.fillAll(bg);
 
     constexpr int leftMargin = 38;
     constexpr int bottomMargin = 14;
@@ -463,8 +474,12 @@ void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
         juce::Graphics::ScopedSaveState ss(g);
         g.reduceClipRegion(lineArea);
 
-        g.setColour(juce::Colour(0xff202020));
+        // Match the scope's inset fill so the two bottom plots share a background.
+        g.setColour(insetBg);
+        g.fillRect(lineRect);
+        g.setColour(frameCol);
         g.drawRect(lineRect, 1.f);
+        g.setColour(gridCol);
         for (int db = -20; db >= -80; db -= 20)
         {
             auto y = dbToY((float)db);
@@ -501,7 +516,7 @@ void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
                     peakPath.lineTo(x, y);
             }
         }
-        g.setColour(juce::Colour(0xff806030));
+        g.setColour(peakCol);
         g.strokePath(peakPath, juce::PathStrokeType(1.f));
 
         // Live line spectrum
@@ -526,12 +541,12 @@ void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
                     linePath.lineTo(x, y);
             }
         }
-        g.setColour(juce::Colour(0xfff0c060));
+        g.setColour(curveCol);
         g.strokePath(linePath, juce::PathStrokeType(1.5f));
     }
 
     // Labels (drawn outside the line-area clip)
-    g.setColour(juce::Colour(0xff808080));
+    g.setColour(labelCol);
     g.setFont(10.f);
 
     auto freqLabel = [](float f)
@@ -562,9 +577,9 @@ void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
 
     // Scope: 20 ms left-to-right, retriggered at the next positive zero crossing.
     // Samples beyond ±1 are clipped by the scope rect.
-    g.setColour(juce::Colour(0xff0a0a0a));
+    g.setColour(insetBg);
     g.fillRect(scopeRect);
-    g.setColour(juce::Colour(0xff202020));
+    g.setColour(frameCol);
     g.drawRect(scopeRect, 1.f);
     {
         juce::Graphics::ScopedSaveState ss(g);
@@ -572,9 +587,9 @@ void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
 
         auto cy = scopeRect.getCentreY();
         auto halfH = scopeRect.getHeight() * 0.5f;
-        g.setColour(juce::Colour(0xff303030));
+        g.setColour(gridMid);
         g.drawHorizontalLine((int)cy, scopeRect.getX(), scopeRect.getRight());
-        g.setColour(juce::Colour(0xff202020));
+        g.setColour(gridCol);
         g.drawHorizontalLine((int)(cy - 0.5f * halfH), scopeRect.getX(), scopeRect.getRight());
         g.drawHorizontalLine((int)(cy + 0.5f * halfH), scopeRect.getX(), scopeRect.getRight());
 
@@ -593,7 +608,7 @@ void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
                 else
                     tracePath.lineTo(x, y);
             }
-            g.setColour(juce::Colour(0xfff0c060));
+            g.setColour(curveCol);
             g.strokePath(tracePath, juce::PathStrokeType(1.f));
         }
     }
@@ -603,9 +618,9 @@ void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
     {
         auto pad = 4;
         auto box = juce::Rectangle<int>(area.getX() + pad, area.getY() + pad, 200, 14);
-        g.setColour(juce::Colour(0xa0000000));
+        g.setColour(bg.withAlpha(0.65f));
         g.fillRect(box);
-        g.setColour(juce::Colour(0xffc0c0c0));
+        g.setColour(labelCol);
         g.setFont(10.f);
         g.drawText(txt, box.reduced(4, 0), juce::Justification::centredLeft);
     };

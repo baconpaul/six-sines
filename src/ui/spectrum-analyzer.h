@@ -33,6 +33,7 @@
 
 #include "synth/synth.h"
 #include "ui-defaults.h"
+#include "six-sines-skin.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -59,7 +60,8 @@ struct SpectrumAnalyzerComponent : sst::jucegui::components::WindowPanel, privat
     static constexpr int defaultScopeScale = 1;
 
     SpectrumAnalyzerComponent(Synth::audioOutputQueue_t &ring, float hostSampleRate,
-                              defaultsProvder_t *defaults = nullptr);
+                              defaultsProvder_t *defaults = nullptr,
+                              const SixSinesSkin &initialSkin = SixSinesSkin::darkDefault());
     ~SpectrumAnalyzerComponent() override;
 
     void paint(juce::Graphics &) override;
@@ -68,6 +70,10 @@ struct SpectrumAnalyzerComponent : sst::jucegui::components::WindowPanel, privat
 
     // Pushed by the editor when the host sample rate changes; rebuilds buffers if needed.
     void setHostSampleRate(float sr);
+
+    // Pushed by the editor when the skin changes (theme swap or live colour edit). Updates
+    // the colours used by paint() and re-propagates the (shared) stylesheet to child widgets.
+    void setSkin(const SixSinesSkin &skin);
 
     // Fired by the always-on-top toggle. The window wires this to setAlwaysOnTop().
     std::function<void(bool)> onAlwaysOnTopChanged;
@@ -86,6 +92,8 @@ struct SpectrumAnalyzerComponent : sst::jucegui::components::WindowPanel, privat
     Synth::audioOutputQueue_t &ring;
     float hostSampleRate{48000.f};
     defaultsProvder_t *defaults{nullptr};
+    // Colour source for paint(). Kept in sync with the editor via setSkin().
+    SixSinesSkin skin{SixSinesSkin::darkDefault()};
     int scopeScale{defaultScopeScale};
 
     int modeIdx{defaultModeIdx};

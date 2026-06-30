@@ -750,7 +750,7 @@ void SixSinesEditor::showPresetPopup()
 
     auto uim = juce::PopupMenu();
 
-    for (auto scale : {75, 90, 100, 110, 125, 150})
+    for (auto scale : {75, 90, 100, 110, 125, 150, 175, 200})
     {
         uim.addItem("Zoom " + std::to_string(scale) + "%", true,
                     std::fabs(zoomFactor * 100 - scale) < 2,
@@ -1297,8 +1297,8 @@ void SixSinesEditor::showSpectrumAnalyzer()
         spectrumWindow->toFront(true);
         return;
     }
-    auto comp =
-        std::make_unique<SpectrumAnalyzerComponent>(audioOutputRing, hostSR, defaultsProvider);
+    auto comp = std::make_unique<SpectrumAnalyzerComponent>(audioOutputRing, hostSR,
+                                                            defaultsProvider, currentSkin);
     spectrumWindow = std::make_unique<SpectrumAnalyzerWindow>(std::move(comp));
     spectrumWindow->onCloseRequested = [w = juce::Component::SafePointer(this)]()
     {
@@ -1685,15 +1685,24 @@ void SixSinesEditor::applyTheme(const SixSinesSkin &skin, const std::string &pre
     }
     currentSkin = skin;
     currentSkin.applyToStylesheet(style());
-    // applyToStylesheet mutates the stylesheet in-place and does not fire
-    // onStyleChanged, so we explicitly notify the LookAndFeel and the colour editor
-    // window (further below) to keep popup menu colours and floating window styles in sync.
-    if (lnf)
-        lnf->setStyle(style());
-    repaint();
-    // Propagate the refreshed stylesheet to the colour editor if open.
-    if (colorEditorContent)
-        colorEditorContent->setStyle(style());
+    // applyToStylesheet mutates the stylesheet in place without firing onStyleChanged.
+    // Re-propagate it across the whole component tree via setStyle(): widgets that read
+    // getColour() live in paint() would refresh on a repaint alone, but ones that *cache*
+    // colours in onStyleChanged() (notably jcmp::TextEditor, which stashes them in juce
+    // ColourIds) keep stale colours until onStyleChanged() runs again. setStyle() recurses
+    // into every StyleConsumer child, and SixSinesEditor::onStyleChanged() re-syncs the
+    // LookAndFeel and the colour editor window.
+    setStyle(style());
+    // The spectrum analyzer paints from a skin copy; refresh it if the window is open.
+    refreshSpectrumAnalyzerSkin();
+}
+
+void SixSinesEditor::refreshSpectrumAnalyzerSkin()
+{
+    if (spectrumWindow)
+        if (auto *c =
+                dynamic_cast<SpectrumAnalyzerComponent *>(spectrumWindow->getContentComponent()))
+            c->setSkin(currentSkin);
 }
 
 void SixSinesEditor::setThemeFromPreference()
@@ -1773,12 +1782,13 @@ void SixSinesEditor::openColorEditor()
             {
                 w->currentSkin.set(lc, c);
                 w->currentSkin.applyToStylesheet(w->style());
-                if (w->lnf)
-                    w->lnf->setStyle(w->style());
-                // Re-propagate the updated stylesheet to the colour editor window so
-                // that label and hex-field colours in RowComponents stay in sync.
-                if (w->colorEditorContent)
-                    w->colorEditorContent->setStyle(w->style());
+                // Re-propagate so colour-caching widgets refresh too (see applyTheme): a plain
+                // repaint updates live-getColour widgets, but jcmp::TextEditor keeps stale
+                // ColourIds until its onStyleChanged() re-runs. setStyle() recurses the tree;
+                // onStyleChanged() re-syncs the LookAndFeel and the colour editor window.
+                w->setStyle(w->style());
+                // Refresh the spectrum analyzer if it is open (it paints from a skin copy).
+                w->refreshSpectrumAnalyzerSkin();
                 w->scheduleDawExtraStatePush();
                 break;
             }
