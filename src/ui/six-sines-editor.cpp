@@ -769,8 +769,15 @@ void SixSinesEditor::showPresetPopup()
     {
         auto storedTheme =
             defaultsProvider->getUserDefaultValue(Defaults::themePath, std::string("factory:Dark"));
+        bool addedSelenizedSep{false};
         for (auto &ft : uiThemeManager->factoryThemes)
         {
+            // Separate the built-in Selenized themes from Light/Dark.
+            if (!addedSelenizedSep && ft.name.rfind("Selenized", 0) == 0)
+            {
+                uim.addSeparator();
+                addedSelenizedSep = true;
+            }
             auto isCurrent = (storedTheme == std::string(factoryThemeSentinel) + ft.name);
             uim.addItem(ft.name, true, isCurrent,
                         [w = juce::Component::SafePointer(this), skin = ft.skin, name = ft.name]()
@@ -780,7 +787,7 @@ void SixSinesEditor::showPresetPopup()
                             w->applyTheme(skin, std::string(factoryThemeSentinel) + name);
                         });
         }
-
+        uim.addSeparator();
         // User themes submenu (only shown if there are any on disk)
         uiThemeManager->rescanUserThemes();
         if (!uiThemeManager->userThemes.empty())
@@ -1907,8 +1914,15 @@ void SixSinesEditor::openColorEditor()
                 return;
             auto menu = juce::PopupMenu();
             menu.addSectionHeader("Factory");
+            bool addedSelenizedSep{false};
             for (auto &ft : w->uiThemeManager->factoryThemes)
             {
+                // Separate the built-in Selenized themes from Light/Dark.
+                if (!addedSelenizedSep && ft.name.rfind("Selenized", 0) == 0)
+                {
+                    menu.addSeparator();
+                    addedSelenizedSep = true;
+                }
                 menu.addItem(ft.name,
                              [w, skin = ft.skin, name = ft.name]()
                              {

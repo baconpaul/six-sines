@@ -865,6 +865,8 @@ void PlayModeSubPanel::showThemeMenu()
                               skin, std::string(SixSinesEditor::factoryThemeSentinel) + name);
                           w->setThemeButtonLabel();
                       });
+            if (ft.name == "Light")
+                p.addSeparator();
         }
 
         editor.uiThemeManager->rescanUserThemes();

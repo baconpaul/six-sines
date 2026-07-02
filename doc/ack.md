@@ -1,6 +1,6 @@
 Six Sines is possible because of a group of collaborators who helped with design, testing, and ideas over the two big sprints to date (the 0.9->1.1 sprint in early 2025 and the 1.2 sprint in spring 2026)
 
-Members of the surge community were incredibly helpful. Especially EvilDragon, Andreya/A.Liv, Jacky Ligon, Trace98, dj.tuBIG/MaliceX and Kinsey Dulcet were massively helpful in both sprints. Zulu Matrix (Tommy Gerencser) inspired the PD features in 1.2 and was crucial in their design. Discord user MrkRnbrd designed the logo. Chris Johnson / Airwindows left the bad
+Members of the surge community were incredibly helpful. Especially EvilDragon, Andreya/A.Liv, Jacky Ligon, Trace98, dj.tuBIG/MaliceX and Kinsey Dulcet were massively helpful in both sprints. Zulu Matrix (Tommy Gerencser) inspired the PD features in 1.2 and was crucial in their design. Discord user MrkRnbrd designed the logo. Discord user Barbouze provided the Selenized themes. Chris Johnson / Airwindows left the bad
 resamplers intact for your listening pleasure. And many other folks tried and gave great feedback early versions.
 
 The February 2025 one synth challenge produced many great bug reports, amazing instruction videos from Taron, and a large number of super tracks with the 1.1 build out.

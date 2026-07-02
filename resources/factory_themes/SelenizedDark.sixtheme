@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<SixSinesSkin version="1">
+  <Color name="Background" rgba="FF103C48"/>
+  <Color name="Window Background" rgba="FF2D5B69"/>
+  <Color name="Border" rgba="FF72898F"/>
+  <Color name="Label" rgba="FFCAD8D9"/>
+  <Color name="Value" rgba="FFFD9456"/>
+  <Color name="Gutter" rgba="FF184956"/>
+  <Color name="Handle" rgba="FFCAD8D9"/>
+  <Color name="Menu Fill" rgba="FF184956"/>
+  <Color name="Button Fill" rgba="FF184956"/>
+  <Color name="VU Grad Start" rgba="FFFD9456"/>
+  <Color name="VU Grad End" rgba="FF266B4F"/>
+  <Color name="VU Overload" rgba="FFCAD8D9"/>
+  <Color name="VU Gutter" rgba="FF184956"/>
+  <Color name="Patch Selector Background" rgba="FF184956"/>
+  <Color name="Patch Selector Text" rgba="FFFD9456"/>
+  <Color name="Matrix Grid Overlay" rgba="FF2D5B69"/>
+  <Color name="Knob Body" rgba="FF72898F"/>
+  <Color name="Panel Outline" rgba="FF72898F"/>
+  <Color name="Analyzer Curve" rgba="FFFD9456"/>
+  <Color name="Analyzer Stop 0" rgba="FF103C48"/>
+  <Color name="Analyzer Stop 1" rgba="FF266B4F"/>
+  <Color name="Analyzer Stop 2" rgba="FF908B2A"/>
+  <Color name="Analyzer Stop 3" rgba="FFFD9456"/>
+  <Color name="Analyzer Stop 4" rgba="FFCAD8D9"/>
+</SixSinesSkin>
