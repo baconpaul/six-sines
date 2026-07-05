@@ -767,14 +767,14 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     extML->setText("M");
     addChildComponent(*extML);
 
-    createComponent(editor, *this, sn.envToExtendedModeM, envToExtM, envToExtMD);
+    createRescaledComponent(editor, *this, sn.envToExtendedModeM, envToExtM, envToExtMD);
     addChildComponent(*envToExtM);
     traverse(envToExtM);
     envToExtML = std::make_unique<jcmp::Label>();
     envToExtML->setText(std::string() + "Env" + u8"\U00002192" + "M");
     addChildComponent(*envToExtML);
 
-    createComponent(editor, *this, sn.lfoToExtendedModeM, lfoToExtM, lfoToExtMD);
+    createRescaledComponent(editor, *this, sn.lfoToExtendedModeM, lfoToExtM, lfoToExtMD);
     addChildComponent(*lfoToExtM);
     traverse(lfoToExtM);
     lfoToExtML = std::make_unique<jcmp::Label>();
@@ -788,14 +788,14 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     extNL->setText("N");
     addChildComponent(*extNL);
 
-    createComponent(editor, *this, sn.envToExtendedModeN, envToExtN, envToExtND);
+    createRescaledComponent(editor, *this, sn.envToExtendedModeN, envToExtN, envToExtND);
     addChildComponent(*envToExtN);
     traverse(envToExtN);
     envToExtNL = std::make_unique<jcmp::Label>();
     envToExtNL->setText(std::string() + "Env" + u8"\U00002192" + "N");
     addChildComponent(*envToExtNL);
 
-    createComponent(editor, *this, sn.lfoToExtendedModeN, lfoToExtN, lfoToExtND);
+    createRescaledComponent(editor, *this, sn.lfoToExtendedModeN, lfoToExtN, lfoToExtND);
     addChildComponent(*lfoToExtN);
     traverse(lfoToExtN);
     lfoToExtNL = std::make_unique<jcmp::Label>();

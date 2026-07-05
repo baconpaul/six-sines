@@ -88,10 +88,14 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::MultiSwitch> phaseMapShape;
     std::unique_ptr<PatchDiscrete> phaseMapShapeD;
     std::unique_ptr<jcmp::Knob> extM, envToExtM, lfoToExtM;
-    std::unique_ptr<PatchContinuous> extMD, envToExtMD, lfoToExtMD;
+    std::unique_ptr<PatchContinuous> extMD;
+    // Bipolar mod-depth knobs get a cubic throw so small depths get more of the
+    // throw (fine control near zero), matching the matrix panel's depth knobs.
+    std::unique_ptr<PatchContinuous::cubic_t> envToExtMD, lfoToExtMD;
     std::unique_ptr<jcmp::Label> extML, envToExtML, lfoToExtML;
     std::unique_ptr<jcmp::Knob> extN, envToExtN, lfoToExtN;
-    std::unique_ptr<PatchContinuous> extND, envToExtND, lfoToExtND;
+    std::unique_ptr<PatchContinuous> extND;
+    std::unique_ptr<PatchContinuous::cubic_t> envToExtND, lfoToExtND;
     std::unique_ptr<jcmp::Label> extNL, envToExtNL, lfoToExtNL;
     std::unique_ptr<juce::Component> pdWavPainter;
 
