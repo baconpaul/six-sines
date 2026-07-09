@@ -5,7 +5,7 @@ resamplers intact for your listening pleasure. And many other folks tried and ga
 
 The February 2025 one synth challenge produced many great bug reports, amazing instruction videos from Taron, and a large number of super tracks with the 1.1 build out.
 
-The Factory Patch bank was a result of contributions from early users who gave us large numbers of patches. Kinsey and Jacky did all their patches 2 or 3 times as the synth changed, and gave us huge swaths of the factory library.  The continual rework of their patches as the synth evolved was a labor of love. We also had substantial patch contributions from Metamyther, Trinitou, dj.tuBIG/MaliceX, videco and SiL3NC3
+The Factory Patch bank was a result of contributions from early users who gave us large numbers of patches. Kinsey and Jacky did all their patches 2 or 3 times as the synth changed, and gave us huge swaths of the factory library.  The continual rework of their patches as the synth evolved was a labor of love. We also had substantial patch contributions from Metamyther, Trinitou, dj.tuBIG/MaliceX, videco and SiL3NC3 and for 1.2, Jacky again and Tommy/Zulu Matrix.
 
 Six Sines is a 'clap-first' synth, using the clap and clap wrapper projects to project into various formats. Thanks to my collaborators on the clap team - especially defiantnerd - for the work on making this technology complete.
 
