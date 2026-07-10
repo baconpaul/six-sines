@@ -209,6 +209,12 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     // Safe pointer to the ColorEditorContent (a WindowPanel subclass) so that
     // onStyleChanged() can propagate style changes to the floating colour editor window.
     juce::Component::SafePointer<jcmp::WindowPanel> colorEditorContent;
+    // Safe pointer to the live ColorEditor screen (a child of colorEditorContent). The
+    // editor caches each logical colour in its `entries`; a wholesale theme swap restyles
+    // the window but leaves those snapshots stale, so refreshColorEditorFromSkin() re-reads
+    // them from currentSkin. Both auto-null when the colour editor window is closed.
+    juce::Component::SafePointer<sst::jucegui::screens::ColorEditor> colorEditorScreen;
+    void refreshColorEditorFromSkin();
 
     // Spectrum analyzer floating window. Lifecycle: created on showSpectrumAnalyzer(),
     // destroyed on close (which unsubscribes the audio ring and joins the analysis thread).

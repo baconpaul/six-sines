@@ -1702,6 +1702,30 @@ void SixSinesEditor::applyTheme(const SixSinesSkin &skin, const std::string &pre
     setStyle(style());
     // The spectrum analyzer paints from a skin copy; refresh it if the window is open.
     refreshSpectrumAnalyzerSkin();
+    // The colour editor caches its swatch/hex values; re-snap them from the new skin if
+    // the window is open. setStyle above only restyles its chrome, not the cached entries.
+    refreshColorEditorFromSkin();
+}
+
+void SixSinesEditor::refreshColorEditorFromSkin()
+{
+    if (!colorEditorScreen)
+        return;
+    // The colour editor holds a snapshot of each editable logical colour in its public
+    // `entries`, built in openColorEditor by iterating the editable logical colours in
+    // order. Re-read them from the freshly applied skin in that same order, then force a
+    // row rebuild so the swatches and hex fields re-render.
+    auto &ents = colorEditorScreen->entries;
+    size_t ei = 0;
+    for (size_t i = 0; i < SixSinesSkin::numColors && ei < ents.size(); i++)
+    {
+        auto lc = static_cast<SixSinesSkin::LogicalColor>(i);
+        if (!SixSinesSkin::isEditable(lc))
+            continue;
+        ents[ei].color = currentSkin.get(lc);
+        ei++;
+    }
+    colorEditorScreen->refreshAllRows();
 }
 
 void SixSinesEditor::refreshSpectrumAnalyzerSkin()
@@ -1808,6 +1832,7 @@ void SixSinesEditor::openColorEditor()
     // onAnyColorChanged fires after every colour change; we need to repaint both the main
     // editor (theme colours changed) and the colour editor itself (swatches updated).
     auto cePtr = juce::Component::SafePointer<jscr::ColorEditor>(ce.get());
+    colorEditorScreen = cePtr;
     ce->onAnyColorChanged = [w = juce::Component::SafePointer(this), cePtr]()
     {
         if (w)
