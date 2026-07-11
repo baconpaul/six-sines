@@ -1334,6 +1334,16 @@ void Synth::pushFullUIRefresh()
         audioToUi.push(au);
     }
     audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
+    // A freshly constructed editor (e.g. a Reaper close/reopen) only gets this
+    // full refresh — no preset/state load — so send the macro names too or its
+    // labels fall back to the "Macro N" defaults.
+    for (int i = 0; i < numMacros; ++i)
+    {
+        AudioToUIMsg mn{AudioToUIMsg::SET_MACRO_NAME};
+        mn.paramId = i;
+        mn.patchNamePointer = patch.macroNames[i].data();
+        audioToUi.push(mn);
+    }
     audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
     audioToUi.push(
         {AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)hostSampleRate, (float)engineSampleRate});
