@@ -565,16 +565,21 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
             auto cvoice = head;
             while (cvoice)
             {
+                float tmp[2][blockSize];
                 for (int i = 0; i < numOps; ++i)
                 {
                     if (!cvoice->mixerNode[i].active)
                     {
                         continue;
                     }
+                    // Sum every voice's contribution (unison etc.) rather than
+                    // overwriting, matching the summed main bus.
                     mech::mul_block<blockSize>(cvoice->out.finalEnvLevel,
-                                               cvoice->mixerNode[i].output[0], stp[i][0]);
+                                               cvoice->mixerNode[i].output[0], tmp[0]);
                     mech::mul_block<blockSize>(cvoice->out.finalEnvLevel,
-                                               cvoice->mixerNode[i].output[1], stp[i][1]);
+                                               cvoice->mixerNode[i].output[1], tmp[1]);
+                    mech::accumulate_from_to<blockSize>(tmp[0], stp[i][0]);
+                    mech::accumulate_from_to<blockSize>(tmp[1], stp[i][1]);
                 }
                 cvoice = cvoice->next;
             }
