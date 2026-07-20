@@ -2,6 +2,17 @@
 
 # Changelog
 
+## 1.2.1
+
+Some small bug fixes vs 1.2.0
+
+- Fix a scaling issue with Bitwig and Windows non-100% scale on re-opening the editor
+- Disable preset discovery, which crashes Studio Pro. This will return as I investigate!
+- Make the per op VU work in unison mode properly
+- Fix an error with NoteID hosts, piano mode, and retrigger
+- Refresh macro labels on editor-reopen
+- Refresh color editor if open when theme changes
+
 ## 1.2.0 (v1.1.0 → current)
 
 These are the changes in the 1.2.0 release candidate (as of 2b0c0193a9)
