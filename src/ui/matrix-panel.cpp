@@ -26,7 +26,7 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
 {
     using kt_t = sst::jucegui::accessibility::KeyboardTraverser;
 
-    auto &mn = editor.patchCopy.selfNodes;
+    auto &mn = editor.patchMainRef.selfNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
         createRescaledComponent(editor, *this, mn[i].fbLevel, Sknobs[i], SknobsData[i], i, true);
@@ -51,8 +51,8 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         {
             if (!w)
                 return;
-            w->editor.setAndSendParamValue(w->editor.patchCopy.selfNodes[i].active, true);
-            w->editor.setAndSendParamValue(w->editor.patchCopy.sourceNodes[i].active, true);
+            w->editor.setAndSendParamValue(w->editor.patchMainRef.selfNodes[i].active, true);
+            w->editor.setAndSendParamValue(w->editor.patchMainRef.sourceNodes[i].active, true);
             w->optionalAllSoundsOffOnToggle();
             w->repaint();
         };
@@ -60,7 +60,7 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         sst::jucegui::component_adapters::setTraversalId(Sknobs[i].get(), i * 50 + 48);
     }
 
-    auto &mx = editor.patchCopy.matrixNodes;
+    auto &mx = editor.patchMainRef.matrixNodes;
     for (auto i = 0U; i < matrixSize; ++i)
     {
         createRescaledComponent(editor, *this, mx[i].level, Mknobs[i], MknobsData[i], i, false);
@@ -104,9 +104,9 @@ MatrixPanel::MatrixPanel(SixSinesEditor &e) : jcmp::NamedPanel("Matrix"), HasEdi
         {
             if (!w)
                 return;
-            w->editor.setAndSendParamValue(w->editor.patchCopy.matrixNodes[i].active.meta.id, true,
+            w->editor.setAndSendParamValue(w->editor.patchMainRef.matrixNodes[i].active.meta.id, true,
                                            true);
-            w->editor.setAndSendParamValue(w->editor.patchCopy.sourceNodes[si].active.meta.id, true,
+            w->editor.setAndSendParamValue(w->editor.patchMainRef.sourceNodes[si].active.meta.id, true,
                                            true);
             w->optionalAllSoundsOffOnToggle();
             w->repaint();
@@ -259,7 +259,7 @@ void MatrixPanel::beginEdit(size_t idx, bool self)
 
 void MatrixPanel::setModModeDisplay(int i)
 {
-    auto v = (int)std::round(editor.patchCopy.matrixNodes[i].modulationMode.value);
+    auto v = (int)std::round(editor.patchMainRef.matrixNodes[i].modulationMode.value);
     std::string label = std::string() + u8"\U000003C6";
     label = "PM";
     switch (v)
@@ -280,8 +280,8 @@ void MatrixPanel::setModModeDisplay(int i)
 void MatrixPanel::showModModeMenu(int i)
 {
     beginEdit(i, false);
-    const auto &meta = editor.patchCopy.matrixNodes[i].modulationMode.meta;
-    auto v = (int)std::round(editor.patchCopy.matrixNodes[i].modulationMode.value);
+    const auto &meta = editor.patchMainRef.matrixNodes[i].modulationMode.meta;
+    auto v = (int)std::round(editor.patchMainRef.matrixNodes[i].modulationMode.value);
 
     auto p = juce::PopupMenu();
     p.addSectionHeader(meta.name);
@@ -295,14 +295,14 @@ void MatrixPanel::showModModeMenu(int i)
                       if (!w)
                           return;
                       w->editor.setAndSendParamValue(
-                          w->editor.patchCopy.matrixNodes[i].modulationMode.meta.id, el);
+                          w->editor.patchMainRef.matrixNodes[i].modulationMode.meta.id, el);
                   });
     }
 
     auto rmOptions = v == 1;
     p.addSeparator();
-    const auto &metaO = editor.patchCopy.matrixNodes[i].modulationScale.meta;
-    auto vO = (int)std::round(editor.patchCopy.matrixNodes[i].modulationScale.value);
+    const auto &metaO = editor.patchMainRef.matrixNodes[i].modulationScale.meta;
+    auto vO = (int)std::round(editor.patchMainRef.matrixNodes[i].modulationScale.value);
     for (int el = (int)metaO.minVal; el <= (int)metaO.maxVal; ++el)
     {
         p.addItem("RM by " + *(metaO.valueToString(el)), rmOptions, rmOptions && (el == vO),
@@ -311,7 +311,7 @@ void MatrixPanel::showModModeMenu(int i)
                       if (!w)
                           return;
                       w->editor.setAndSendParamValue(
-                          w->editor.patchCopy.matrixNodes[i].modulationScale.meta.id, el);
+                          w->editor.patchMainRef.matrixNodes[i].modulationScale.meta.id, el);
                   });
     }
 
@@ -323,7 +323,7 @@ void MatrixPanel::updateSelfKnobState(int idx)
 {
     if (idx < 0 || idx >= (int)numOps)
         return;
-    auto &sn = editor.patchCopy.sourceNodes[idx];
+    auto &sn = editor.patchMainRef.sourceNodes[idx];
     auto isAudioIn = ((int)std::round(sn.waveForm.value) == SinTable::WaveForm::AUDIO_IN);
     Sknobs[idx]->setEnabled(!isAudioIn);
     Spower[idx]->setEnabled(!isAudioIn);

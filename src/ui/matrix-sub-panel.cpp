@@ -26,7 +26,7 @@ void MatrixSubPanel::setSelectedIndex(int idx)
 
     removeAllChildren();
 
-    auto &m = editor.patchCopy.matrixNodes[idx];
+    auto &m = editor.patchMainRef.matrixNodes[idx];
     setupDAHDSR(editor, m);
     setupLFO(editor, m);
     setupModulation(editor, m);

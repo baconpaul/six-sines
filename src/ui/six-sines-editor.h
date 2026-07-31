@@ -77,18 +77,38 @@ struct PresetDataBinding;
 
 struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<SixSinesEditor>
 {
-    Patch patchCopy;
+    // Bound to Synth::patchMain — the editor renders and edits the main-thread source of truth
+    // directly; it does not own a patch copy.
+    Patch &patchMainRef;
     ModMatrixConfig modMatrixConfig;
 
-    Synth::audioToUIQueue_t &audioToUI;
+    Synth::audioToMainQueue_t &audioToMain;
     Synth::mainToAudioQueue_T &mainToAudio;
     Synth::audioOutputQueue_t &audioOutputRing;
+    // Set true while this editor idles (owns draining audioToMain); gates the audio thread's
+    // telemetry pushes and its request for onMainThread to drain.
+    std::atomic<bool> &editorActive;
+    // An out-of-band write to patchMain (host stateLoad / preset load) bumps this; idle() notices
+    // the change and rebuilds every widget from patchMain.
+    std::atomic<uint32_t> &uiForceRebuild;
+    uint32_t lastForceRebuild{0};
     const clap_host_t *clapHost{nullptr};
 
-    SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudioQueue_T &utoa,
-                   Synth::audioOutputQueue_t &aor, defaultsProvder_t &defaults,
+    SixSinesEditor(Patch &patchMain, Synth::audioToMainQueue_t &atou,
+                   Synth::mainToAudioQueue_T &utoa, Synth::audioOutputQueue_t &aor,
+                   std::atomic<bool> &editorActive, std::atomic<uint32_t> &uiForceRebuild,
+                   Synth::DawStateMain &dawStateMain, defaultsProvder_t &defaults,
                    const clap_host_t *ch);
     virtual ~SixSinesEditor();
+
+    // Rebuild every widget from patchMainRef after an out-of-band load (host stateLoad / preset).
+    void rebuildFromPatchMain();
+    // The editor owns dirty state (patchMain is shared). Mark patchMain dirty on a user edit and
+    // light the preset indicator directly — no audio-thread round-trip.
+    void markPatchDirty();
+    // Tell the host to re-read param INFO (name / module). Direct main-thread call, used when a
+    // macro rename changes the primary macro param's host-visible name.
+    void requestParamInfoRescan();
 
     std::unique_ptr<sst::jucegui::style::LookAndFeelManager> lnf;
     void onStyleChanged() override;
@@ -150,23 +170,28 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
 
     SixSinesSkin currentSkin;
 
-    // Editor-side mirror of the synth's DawExtraState. Kept in sync via
-    // SET_DAW_EXTRA_STATE messages (audio->UI on load/attach, UI->audio on color edits).
-    // Stable address so messages UI->audio can safely pass &editorDawExtraState.
-    Synth::DawExtraState editorDawExtraState;
-    // Debounce timer: restarted on every color edit; when it fires, the latest
-    // editorDawExtraState is pushed to the audio thread.
+    // The engine's main-thread-authoritative session state (audio + main parts), shared by a single
+    // reference. The editor edits it single-threaded — the colour map (main part) directly, and the
+    // audio part with a SET_AUDIO_DAW_STATE message so the audio thread follows
+    // (pushAudioDawState). It never writes the engine's audio-thread copy directly.
+    Synth::DawStateMain &dawStateMainRef;
+    // Debounce timer: restarted on every colour edit; when it fires, the latest colour map is
+    // committed into dawStateMainRef.main.colorMapXml.
     std::unique_ptr<juce::Timer> dawExtraStatePushTimer;
     void scheduleDawExtraStatePush();
-    void pushDawExtraStateToAudio();
-    // Apply a newly-received DES (from the audio thread) to the editor: if it carries a
-    // colour map, parse it and applyTheme(). Also fans out to dawExtraStateRefreshListeners
-    // so widgets bound to non-patch session state (e.g. MPE controls) can refresh.
-    void applyDawExtraStateFromAudio();
+    // Commit the current skin's colour map into the main-authoritative dawStateMain (read by
+    // stateSave). Main-thread-only; it never ships across the audio thread.
+    void commitSessionColorMap();
+    // Push the audio-relevant session state (dawStateMainRef.audio) to the audio thread by value.
+    void pushAudioDawState();
+    // Apply the current session state to the editor: if a colour map is present, parse it and
+    // applyTheme(). Also fans out to dawExtraStateRefreshListeners so widgets bound to non-patch
+    // session state (e.g. MPE controls) can refresh. Called on a load and at editor open.
+    void applyDawExtraState();
 
-    // Listeners called whenever editorDawExtraState is replaced by a SET_DAW_EXTRA_STATE
-    // echo from the audio thread. Panels with widgets backed by dawExtraState register here
-    // (e.g. PlayModeSubPanel's MPE active toggle and bend-range jog).
+    // Listeners called when the session state (dawStateMainRef) may have changed — a load, or a
+    // direct edit. Panels with widgets backed by it register here (e.g. PlayModeSubPanel's MPE
+    // active toggle and bend-range jog).
     std::vector<std::function<void()>> dawExtraStateRefreshListeners;
     // Install the dark base stylesheet + dark skin.  Called once during construction
     // before lnf exists; setThemeFromPreference() then overlays the user's saved theme.
@@ -294,9 +319,6 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
 
     void requestParamsFlush();
     const clap_host_params_t *clapParamsExtension{nullptr};
-
-    // the name tells you about the intent. It just makes startup faster
-    void sneakyStartupGrabFrom(Patch &other);
 };
 
 struct HasEditor

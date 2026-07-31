@@ -27,7 +27,7 @@ void MixerSubPanel::setSelectedIndex(int idx)
 
     removeAllChildren();
 
-    auto &sn = editor.patchCopy.mixerNodes[idx];
+    auto &sn = editor.patchMainRef.mixerNodes[idx];
     setupDAHDSR(editor, sn);
     setupLFO(editor, sn);
     setupModulation(editor, sn);

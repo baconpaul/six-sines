@@ -55,7 +55,7 @@ void MacroSubPanel::setSelectedIndex(size_t i)
 
     removeAllChildren();
 
-    auto &mn = editor.patchCopy.macroNodes[i];
+    auto &mn = editor.patchMainRef.macroNodes[i];
 
     setupDAHDSR(editor, mn);
     setupLFO(editor, mn);
@@ -114,7 +114,7 @@ void MacroSubPanel::setSelectedIndex(size_t i)
     editor.componentRefreshByID[mn.macroPower.meta.id] = refreshEnabled;
     envMulD->onGuiSetValue = refreshEnabled;
 
-    auto &nameBuf = editor.patchCopy.macroNames[i];
+    auto &nameBuf = editor.patchMainRef.macroNames[i];
     nameEditor->setText(juce::String(nameBuf.data()), juce::dontSendNotification);
 
     setEnabledState();
@@ -269,7 +269,7 @@ void MacroSubPanel::refreshNameFromPatch()
 {
     if (!nameEditor)
         return;
-    auto &buf = editor.patchCopy.macroNames[index];
+    auto &buf = editor.patchMainRef.macroNames[index];
     nameEditor->setText(juce::String(buf.data()), juce::dontSendNotification);
     if (editor.singlePanel)
         editor.singlePanel->setName(displayName());
@@ -374,7 +374,7 @@ std::string MacroSubPanel::displayName() const { return MacroPanel::displayName(
 void MacroSubPanel::commitName()
 {
     auto txt = nameEditor->getText().toStdString();
-    auto &buf = editor.patchCopy.macroNames[index];
+    auto &buf = editor.patchMainRef.macroNames[index];
 
     // No-op on focus-enter/exit without an edit; only push on real changes.
     if (std::strncmp(buf.data(), txt.c_str(), buf.size()) == 0)
@@ -384,12 +384,10 @@ void MacroSubPanel::commitName()
     auto n = std::min(txt.size(), buf.size() - 1);
     std::memcpy(buf.data(), txt.data(), n);
 
-    Synth::MainToAudioMsg msg{Synth::MainToAudioMsg::SEND_MACRO_NAME};
-    msg.paramId = static_cast<uint32_t>(index);
-    msg.uiManagedPointer = buf.data();
-    editor.mainToAudio.push(msg);
-    // The audio-side SEND_MACRO_NAME handler diffs against the current name and
-    // requests an INFO rescan via Synth::requestParamRescan when it actually changes.
+    // Macro names are main-thread-only patch state (streamed in the patch, read by the CLAP
+    // paramsInfo edge from patchMain). The name changed (early-out above guards no-ops), so tell
+    // the host to re-read param info directly — no audio-thread round-trip.
+    editor.requestParamInfoRescan();
 
     if (editor.macroPanel && index < editor.macroPanel->labels.size() &&
         editor.macroPanel->labels[index])

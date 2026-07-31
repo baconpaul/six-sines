@@ -21,7 +21,7 @@ namespace baconpaul::six_sines::ui
 {
 FineTuneSubPanel::FineTuneSubPanel(SixSinesEditor &e) : HasEditor(e)
 {
-    auto &on = editor.patchCopy.fineTuneMod;
+    auto &on = editor.patchMainRef.fineTuneMod;
     setupDAHDSR(e, on);
     setupModulation(e, on);
     setupLFO(e, on);
@@ -75,7 +75,7 @@ FineTuneSubPanel::FineTuneSubPanel(SixSinesEditor &e) : HasEditor(e)
     addAndMakeVisible(*coarse);
     addAndMakeVisible(*coarseL);
 
-    createComponent(editor, *this, editor.patchCopy.output.fineTune, fine, fineD);
+    createComponent(editor, *this, editor.patchMainRef.output.fineTune, fine, fineD);
     fineL = std::make_unique<jcmp::Label>();
     fineL->setText("Fine");
     addAndMakeVisible(*fine);

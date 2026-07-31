@@ -87,7 +87,7 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<PatchContinuous> uniPanD;
     std::unique_ptr<jcmp::GlyphPainter> uniSpreadG, uniPanG;
 
-    // MPE controls bind to engine-instance state (Synth::DawExtraState mirror on the editor),
+    // MPE controls bind to engine-instance state (Synth::DawStateMain::audio, shared by reference),
     // not to patch params. DiscreteToValueReference owns the widget pointer; the JogUpDown
     // variant is subclassed in the .cpp to set its 1..96 range.
     std::unique_ptr<
@@ -103,7 +103,7 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<jcmp::RuledLabel> smoothingSectionTitle;
     std::unique_ptr<jcmp::Label> mpeRowLabel, smoothingRowLabel, paramSmoothingRowLabel;
     // ContinuousToValueReference owns the HSliderFilled (access via ->widget) and binds it to
-    // the ms smoothing floats in editorDawExtraState, which are not patch params.
+    // the ms smoothing floats in dawStateMainRef.audio, which are not patch params.
     std::unique_ptr<
         sst::jucegui::component_adapters::ContinuousToValueReference<jcmp::HSliderFilled>>
         midiSmoothingSliderD, paramSmoothingSliderD;

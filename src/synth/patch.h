@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <string>
+#include <cstring>
 #include <clap/clap.h>
 #include "configuration.h"
 #include "sst/cpputils/constructors.h"
@@ -234,7 +235,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                             .withName(name + " LFO Active")
                             .withGroupName(name)),
               tempoSync(baseMd(version) // non-automatable
-                            .asBool()
+                            .asOnOffBool()
                             .withID(id0 + 5)
                             .withName(name + " Temposync")
                             .withGroupName(name)
@@ -416,7 +417,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                       .withDefault(false)
                                       .withID((id1 > 0 ? id1 : (id0 + 13)) + 0)),
               envTempoSync(baseMd(version_120g) // non-automatable
-                               .asBool()
+                               .asOnOffBool()
                                .withName(name + " Env Temposync")
                                .withGroupName(name)
                                .withDefault(false)
@@ -1727,7 +1728,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                       .withUnorderedMapFormatting({{0, "Reset"}, {1, "Pause"}, {2, "Continue"}})),
 
               pianoModeActive(baseMd()
-                                  .asBool()
+                                  .asOnOffBool()
                                   .withName(name() + " Piano Mode Active")
                                   .withGroupName(name())
                                   .withDefault(true)
@@ -2024,6 +2025,21 @@ struct Patch : pats::PatchBase<Patch, Param>
     char name[stringBufferLen]{"Init"};
     char author[stringBufferLen]{""};
     std::array<std::array<char, 64>, numMacros> macroNames;
+
+    // Value-only copy between two Patch instances. NEVER use operator= : params/paramMap hold
+    // Param* into the owning Patch, so assignment would alias them across objects. Copies every
+    // param value plus the non-Param streamed state (macroNames + name + author) and dirty.
+    // defaultAuthor is a main-thread editor default, not streamed — deliberately not copied so a
+    // load doesn't wipe the user's default author.
+    void copyValuesFrom(const Patch &o)
+    {
+        for (const auto *p : o.params)
+            paramMap.at(p->meta.id)->value = p->value;
+        macroNames = o.macroNames;
+        memcpy(name, o.name, sizeof(name));
+        memcpy(author, o.author, sizeof(author));
+        dirty = o.dirty;
+    }
 
     float migrateParamValueFromVersion(Param *p, float value, uint32_t version);
     void migratePatchFromVersion(uint32_t version);

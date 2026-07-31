@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <array>
+#include <atomic>
 #include <cassert>
 #include <string>
 
@@ -75,7 +76,8 @@ struct Synth
             audioInResampler->push(L, R);
     }
 
-    Patch patch;
+    Patch patch;     // audio-thread working copy
+    Patch patchMain; // main-thread source of truth
     MonoValues monoValues;
     sst::basic_blocks::dsp::LagCollection<130> midiCCLagCollection; // 130 for 128 + pitch + chanat
 
@@ -401,29 +403,51 @@ struct Synth
     static_assert(sst::voicemanager::constraints::ConstraintsChecker<VMConfig, VMResponder,
                                                                      VMMonoResponder>::satisfies());
 
-    // Daw-session-only state. Streamed into host state (clap state) but NOT into patches.
-    // Holds non-parameter state that is specific to a session and editable only via the editor.
+    // Daw-session state: streamed into host (clap) state but NOT into patches. Split by which
+    // thread needs it so the audio/main separation is explicit in the type (see surge-xt2).
     //
-    // mpeFromExtraState is a transient marker (not serialized): set true by fromDawExtraState
-    // when the incoming XML actually contained an <mpe> element. The SET_DAW_EXTRA_STATE
-    // handler uses it to decide whether to fall back to the legacy patch slots — only 1.1-era
-    // sessions that stored MPE inside the patch will have it false.
-    struct DawExtraState
+    // AudioDawState is the part the audio engine consumes (MPE dialect + engine-wide lag rates).
+    // Trivially-copyable POD so it can be transported to the audio thread by value; the main
+    // thread owns the authoritative copy and the audio thread only ever reads it (into monoValues)
+    // and never writes it back.
+    struct AudioDawState
     {
-        std::string colorMapXml;
         bool mpeActive{false};
         int mpeBendRange{24};
-        bool mpeFromExtraState{false};
-
-        // Engine-wide smoothing times, in milliseconds.
-        // midiCCSmoothingTimeMs: MIDI CC + MPE + note-expression lags.
-        // paramAutomationSmoothingTimeMs: per-param host-automation lag.
+        // Engine-wide smoothing times, in milliseconds. midiCCSmoothingTimeMs: MIDI CC + MPE +
+        // note-expression lags. paramAutomationSmoothingTimeMs: per-param host-automation lag.
         float midiCCSmoothingTimeMs{25.f};
         float paramAutomationSmoothingTimeMs{2.f};
     };
-    DawExtraState dawExtraState;
 
-    // User-defaults reader, owned by the engine so non-UI startup can seed DawExtraState
+    // MainDawState is the part only the UI needs; it never crosses to the audio thread, so it may
+    // hold heap members (the colour-map XML). mpeFromExtraState marks that an incoming save carried
+    // an <mpe> element — a false value drives the 1.1-era fallback to the legacy in-patch MPE slots
+    // (resolved on the main thread in stateLoad).
+    struct MainDawState
+    {
+        std::string colorMapXml;
+        bool mpeFromExtraState{false};
+    };
+
+    // The definitive DAW session state is all main-thread. `dawStateMain` is the authoritative
+    // copy: the editor binds it by reference and edits it single-threaded, and stateSave streams
+    // it. Its audio-relevant part is pushed to the audio thread by value via SET_AUDIO_DAW_STATE;
+    // the colour map never crosses. Grouping audio + main here lets the editor bind one reference.
+    struct DawStateMain
+    {
+        AudioDawState audio;
+        MainDawState main;
+    };
+    DawStateMain dawStateMain;
+
+    // The engine's audio-thread copy of the audio-relevant DAW state. QUEUE-INBOUND-ONLY: written
+    // solely by the SET_AUDIO_DAW_STATE handler (and seeded once at construction, pre-audio), which
+    // then applies it into monoValues. No main thread ever touches it at runtime — the only
+    // main/audio channel is the queue.
+    AudioDawState audioDawState;
+
+    // User-defaults reader, owned by the engine so non-UI startup can seed the session state
     // from saved preferences. Shared with the editor (by pointer) for read/write.
     std::unique_ptr<ui::defaultsProvder_t> defaultsProvider;
 
@@ -432,62 +456,65 @@ struct Synth
     // single source of truth for presets, themes, and user defaults. Empty on filesystem error.
     static fs::path userDocumentsPath();
 
-    void toDawExtraState(TiXmlElement &e) const;
-    static void fromDawExtraState(TiXmlElement &e, DawExtraState &out);
-    void fromDawExtraState(TiXmlElement &e) { fromDawExtraState(e, dawExtraState); }
+    // Stream / parse the <dawExtraState> block. Static and operate on a caller-held DawStateMain,
+    // so they never implicitly touch engine state; the patchMain hooks pass `dawStateMain`. Both
+    // are [main-thread] (stateSave / stateLoad).
+    static void toDawExtraState(TiXmlElement &e, const DawStateMain &s);
+    static void fromDawExtraState(TiXmlElement &e, DawStateMain &s);
+
+    // Audio thread: consume the queue-inbound audioDawState into monoValues (MPE dialect + lag
+    // rates), from the SET_AUDIO_DAW_STATE handler (and once at construction, pre-audio).
+    void applyAudioDawState(const AudioDawState &s)
+    {
+        monoValues.mpeActive = s.mpeActive;
+        monoValues.mpeBendRange = s.mpeBendRange;
+        monoValues.midiCCSmoothingTimeMs = s.midiCCSmoothingTimeMs;
+        monoValues.paramAutomationSmoothingTimeMs = s.paramAutomationSmoothingTimeMs;
+        applyMpeState();
+        applySmoothingTimes();
+    }
 
     // UI Communication
-    struct AudioToUIMsg
+    struct AudioToMainMsg
     {
         enum Action : uint32_t
         {
-            UPDATE_PARAM,
+            UPDATE_PARAM, // host-automation echo; keeps patchMain current + moves the knob
             UPDATE_VU,
             UPDATE_VOICE_COUNT,
             UPDATE_CPU_USAGE,
-            SET_PATCH_NAME,
-            SET_PATCH_DIRTY_STATE,
-
             SEND_SAMPLE_RATE,
-            SET_DAW_EXTRA_STATE,
-            SET_MACRO_NAME, // paramId = macro index, patchNamePointer = name buffer
-            MTS_POINTER     // dawExtraStatePointer = MTSClient* (or nullptr)
+            MTS_POINTER // dawExtraStatePointer = MTSClient* (or nullptr)
         } action;
         uint32_t paramId{0};
         float value{0}, value2{0};
-        const char *patchNamePointer{0};
         const void *dawExtraStatePointer{nullptr};
     };
     struct MainToAudioMsg
     {
         enum Action : uint32_t
         {
-            REQUEST_REFRESH,
+            // Ask the engine to echo back its non-patch UI state (sample rate + MTS pointer). The
+            // editor reads all patch state directly from patchMain.
+            REQUEST_NON_PATCH_STATE,
             SET_PARAM,
             SET_PARAM_WITHOUT_NOTIFYING,
             BEGIN_EDIT,
             END_EDIT,
             STOP_AUDIO,
             START_AUDIO,
-            SEND_PATCH_NAME,
-            SEND_PATCH_AUTHOR,
-            SEND_PATCH_IS_CLEAN,
             SEND_POST_LOAD,
-            EDITOR_ATTACH_DETATCH, // paramid is true for attach and false for detach
-            SEND_PREP_FOR_STREAM,
             PANIC_STOP_VOICES,
             SET_DESIGN_MODE_RUN_ALL,
-            SET_DAW_EXTRA_STATE,
-            SET_MPE_ACTIVE,                // value = 0/1; engine-instance, not a patch param
-            SET_MPE_BEND_RANGE,            // value = 1..96; engine-instance, not a patch param
-            SET_MIDI_CC_SMOOTHING_TIME_MS, // value = ms; engine-instance
-            SET_PARAM_AUTOMATION_SMOOTHING_TIME_MS, // value = ms; engine-instance
-            SEND_MACRO_NAME // paramId = macro index, uiManagedPointer = name buffer
+            // Transport the main-owned AudioDawState (MPE + smoothing) to the audio thread, by
+            // value in the `audioDawState` field. Engine-instance session state, not a patch param.
+            SET_AUDIO_DAW_STATE
         } action;
         uint32_t paramId{0};
         float value{0};
-        const char *uiManagedPointer{nullptr};
-        const void *dawExtraStatePointer{nullptr};
+
+        // SET_AUDIO_DAW_STATE payload: the session state to consume, carried by value (POD).
+        AudioDawState audioDawState{};
     };
 
     // Rescan request flags accumulated in onMainRescanFlags. Bit positions match
@@ -503,40 +530,64 @@ struct Synth
     // Thread-safe; accumulates flags and asks the host to call us back on the main
     // thread, where onMainThread() will issue the actual clap rescans.
     void requestParamRescan(uint32_t flags);
-    using audioToUIQueue_t = sst::cpputils::SimpleRingBuffer<AudioToUIMsg, 1024 * 16>;
+    using audioToMainQueue_t = sst::cpputils::SimpleRingBuffer<AudioToMainMsg, 1024 * 16>;
     using mainToAudioQueue_T = sst::cpputils::SimpleRingBuffer<MainToAudioMsg, 1024 * 64>;
-    audioToUIQueue_t audioToUi;
+    audioToMainQueue_t audioToMain;
     mainToAudioQueue_T mainToAudio;
 
     // Stereo audio tap for visualizers; ~1.4s @ 96kHz / 2.7s @ 48kHz.
     using audioOutputQueue_t = sst::cpputils::StereoRingBuffer<float, 1024 * 128>;
     audioOutputQueue_t audioOutputRing;
-    std::atomic<bool> doFullRefresh{false};
-    bool isEditorAttached{false};
+
+    // Set true while an editor idles (it owns draining audioToMain). Gates the audio thread's
+    // telemetry pushes and its request for onMainThread to drain.
+    std::atomic<bool> editorActive{false};
+    // Coalesces request_callback: the audio thread flips it so at most one onMainThread drain is
+    // pending while no editor is open.
+    std::atomic<bool> mainThreadDrainRequested{false};
+    // Bumped on an out-of-band write to patchMain (host stateLoad / preset load / an inactive
+    // paramsFlush) so an open editor rebuilds every widget from patchMain on its next idle.
+    std::atomic<uint32_t> uiForceRebuild{0};
     sst::basic_blocks::dsp::UIComponentLagHandler lagHandler;
 
-    std::atomic<bool> readyForStream{false};
-    void prepForStream()
+    // Snap every lagged param to its settled value and clear the active lag set. Audio-thread-safe
+    // (no allocation). Used by tests and before streaming a snapshot.
+    void snapAllParams()
     {
         if (lagHandler.active)
             lagHandler.instantlySnap();
-
         for (auto &p : paramLagSet)
         {
             p.lag.snapToTarget();
             p.value = p.lag.v;
         }
         paramLagSet.removeAll();
-
-        patch.dirty = false;
-        doFullRefresh = true;
-        readyForStream = true;
     }
 
-    void pushFullUIRefresh();
+    // Applies a patch-model audioToMain message (a host-automation param value) to `dest`. Returns
+    // true if handled, false for UI-only telemetry (VU / voice count / CPU / sample rate / MTS)
+    // which the editor idle handles itself. Static: it only touches `dest`, so the editor (which
+    // has no Synth handle) can call it too, and drainAudioToMainInto shares it.
+    static bool handleAudioToMainMessage(Patch &dest, const AudioToMainMsg &m);
+
+    // Main-thread drain of audioToMain into a target patch (patchMain), discarding the UI-only
+    // messages. Used when no editor is open (onMainThread, stateSave, tests).
+    void drainAudioToMainInto(Patch &dest);
+
+    // Main-thread paramsFlush (plugin INACTIVE): apply incoming host events in place to patchMain
+    // and echo queued UI edits to the host. Never touches `patch`.
+    void paramsFlushMainThread(const clap_input_events_t *in, const clap_output_events_t *out);
+
+    // Push an entire patch's params into the audio-thread `patch` via the mainToAudio queue, then
+    // tell the host to re-read. Main thread only. Patch name / author / dirty / macroNames are
+    // main-thread-only state, set on patchMain by the caller — they do not travel here. Static
+    // because callers (preset manager, clap adapter) hold the queue + host but not a Synth handle.
+    static void sendEntirePatchToAudio(Patch &src, mainToAudioQueue_T &mainToAudio,
+                                       const clap_host_t *host,
+                                       const clap_host_params_t *hostParams = nullptr);
+
     void postLoad()
     {
-        doFullRefresh = true;
         reapplyControlSettings();
         resetSoloState();
 
@@ -553,9 +604,9 @@ struct Synth
     void resetSoloState();
     void handleAudioThreadParamSideEffects(Param *dest);
 
-    // Push the current monoValues mpe state into the voice manager (dialect setup).
-    // Called from message handlers when mpeActive / mpeBendRange change, and from the
-    // SET_DAW_EXTRA_STATE handler after dawExtraState is applied.
+    // Push the current monoValues mpe state into the voice manager (dialect setup). Called from
+    // applyAudioDawState (the SET_AUDIO_DAW_STATE handler / construction seed) after the
+    // AudioDawState has been consumed into monoValues, and from reapplyControlSettings.
     void applyMpeState();
 
     // Re-rates the engine-wide MIDI CC lag and per-param-map lags from monoValues smoothing

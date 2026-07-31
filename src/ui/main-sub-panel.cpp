@@ -21,7 +21,7 @@ namespace baconpaul::six_sines::ui
 MainSubPanel::MainSubPanel(SixSinesEditor &e)
     : HasEditor(e), DAHDSRComponents(), ModulationComponents()
 {
-    auto &on = editor.patchCopy.output;
+    auto &on = editor.patchMainRef.output;
     voiceTrigerAllowed = false;
     setupDAHDSR(e, on);
     setupModulation(e, on);

@@ -26,21 +26,21 @@ namespace baconpaul::six_sines::ui
 {
 MainPanel::MainPanel(SixSinesEditor &e) : jcmp::NamedPanel("Main"), HasEditor(e)
 {
-    createComponent(editor, *this, editor.patchCopy.output.level, lev, levData, 0);
+    createComponent(editor, *this, editor.patchMainRef.output.level, lev, levData, 0);
     addAndMakeVisible(*lev);
     sst::jucegui::component_adapters::setTraversalId(lev.get(), 1);
     levLabel = std::make_unique<jcmp::Label>();
     levLabel->setText("Level");
     addAndMakeVisible(*levLabel);
 
-    createComponent(editor, *this, editor.patchCopy.output.pan, pan, panData, 1);
+    createComponent(editor, *this, editor.patchMainRef.output.pan, pan, panData, 1);
     sst::jucegui::component_adapters::setTraversalId(pan.get(), 2);
     addAndMakeVisible(*pan);
     panLabel = std::make_unique<jcmp::Label>();
     panLabel->setText("Pan");
     addAndMakeVisible(*panLabel);
 
-    createComponent(editor, *this, editor.patchCopy.output.fineTune, tun, tunData, 2);
+    createComponent(editor, *this, editor.patchMainRef.output.fineTune, tun, tunData, 2);
     sst::jucegui::component_adapters::setTraversalId(tun.get(), 3);
     addAndMakeVisible(*tun);
     tunLabel = std::make_unique<jcmp::Label>();

@@ -43,8 +43,11 @@ Synth::Synth(bool mo)
         monoValues.macroPtr[i] = &patch.macroNodes[i].level.value;
     }
 
-    patch.dawExtraStateTo = [this](TiXmlElement &e) { toDawExtraState(e); };
-    patch.dawExtraStateFrom = [this](TiXmlElement &e) { fromDawExtraState(e); };
+    // patchMain is the streamed patch (stateSave/stateLoad + preset save/load all use it), so the
+    // <dawExtraState> hooks live on it and read/write the main-thread dawStateMain. The
+    // audio-thread `patch` is never serialised.
+    patchMain.dawExtraStateTo = [this](TiXmlElement &e) { toDawExtraState(e, dawStateMain); };
+    patchMain.dawExtraStateFrom = [this](TiXmlElement &e) { fromDawExtraState(e, dawStateMain); };
 
     std::fill(lState.begin(), lState.end(), nullptr);
     std::fill(rState.begin(), rState.end(), nullptr);
@@ -56,19 +59,20 @@ Synth::Synth(bool mo)
         docPath, "SixSinesUI", ui::defaultName,
         [](auto e, auto b) { SXSNLOG("[ERROR]" << e << " " << b); });
 
-    // Seed the session (DawExtraState) and live mono values from saved defaults, falling back
-    // to the struct defaults when a preference is absent. A fresh patch then starts from the
-    // user's preferred MPE bend range and smoothing times.
-    dawExtraState.mpeBendRange =
-        defaultsProvider->getUserDefaultValue(ui::defaultMPEBend, dawExtraState.mpeBendRange);
+    // Seed the session state from saved defaults, falling back to the struct defaults when a
+    // preference is absent. Construction is single-threaded and precedes any audio, so seed the
+    // main copy, the engine's queue-inbound copy, and monoValues directly here; runtime edits and
+    // loads instead reach the audio thread through the SET_AUDIO_DAW_STATE queue.
+    auto &seed = dawStateMain.audio;
+    seed.mpeBendRange =
+        defaultsProvider->getUserDefaultValue(ui::defaultMPEBend, seed.mpeBendRange);
     {
         auto ms = defaultsProvider->getUserDefaultValue(ui::defaultMIDISmoothing, std::string{});
         if (!ms.empty())
         {
             try
             {
-                auto f = std::stof(ms);
-                dawExtraState.midiCCSmoothingTimeMs = f;
+                seed.midiCCSmoothingTimeMs = std::stof(ms);
             }
             catch (const std::exception &e)
             {
@@ -80,8 +84,7 @@ Synth::Synth(bool mo)
         {
             try
             {
-                auto f = std::stof(ps);
-                dawExtraState.paramAutomationSmoothingTimeMs = f;
+                seed.paramAutomationSmoothingTimeMs = std::stof(ps);
             }
             catch (const std::exception &e)
             {
@@ -89,9 +92,8 @@ Synth::Synth(bool mo)
             }
         }
     }
-    monoValues.mpeBendRange = dawExtraState.mpeBendRange;
-    monoValues.midiCCSmoothingTimeMs = dawExtraState.midiCCSmoothingTimeMs;
-    monoValues.paramAutomationSmoothingTimeMs = dawExtraState.paramAutomationSmoothingTimeMs;
+    audioDawState = dawStateMain.audio;
+    applyAudioDawState(audioDawState);
 
     reapplyControlSettings();
     resetSoloState();
@@ -157,12 +159,14 @@ fs::path Synth::userDocumentsPath()
     return {};
 }
 
-void Synth::toDawExtraState(TiXmlElement &e) const
+void Synth::toDawExtraState(TiXmlElement &e, const DawStateMain &s)
 {
+    // Streams the main-owned session state (stateSave is [main-thread]; the caller passes the
+    // authoritative dawStateMain).
     TiXmlElement cm("colorMap");
-    if (!dawExtraState.colorMapXml.empty())
+    if (!s.main.colorMapXml.empty())
     {
-        TiXmlText t(dawExtraState.colorMapXml);
+        TiXmlText t(s.main.colorMapXml);
         t.SetCDATA(true);
         cm.InsertEndChild(t);
     }
@@ -171,20 +175,20 @@ void Synth::toDawExtraState(TiXmlElement &e) const
     // Always emit current engine-instance MPE state; this is what flips 1.1→1.2 sessions
     // to "the new way" once a re-save has happened.
     TiXmlElement mpe("mpe");
-    mpe.SetAttribute("active", monoValues.mpeActive ? 1 : 0);
-    mpe.SetAttribute("bendRange", monoValues.mpeBendRange);
+    mpe.SetAttribute("active", s.audio.mpeActive ? 1 : 0);
+    mpe.SetAttribute("bendRange", s.audio.mpeBendRange);
     e.InsertEndChild(mpe);
 
-    // Engine-wide smoothing times (ms). Absent in pre-1.x saves; defaults in DawExtraState apply.
+    // Engine-wide smoothing times (ms). Absent in pre-1.x saves; AudioDawState defaults apply.
     TiXmlElement sm("smoothing");
-    sm.SetDoubleAttribute("midiCCMs", dawExtraState.midiCCSmoothingTimeMs);
-    sm.SetDoubleAttribute("paramAutomationMs", dawExtraState.paramAutomationSmoothingTimeMs);
+    sm.SetDoubleAttribute("midiCCMs", s.audio.midiCCSmoothingTimeMs);
+    sm.SetDoubleAttribute("paramAutomationMs", s.audio.paramAutomationSmoothingTimeMs);
     e.InsertEndChild(sm);
 }
 
-void Synth::fromDawExtraState(TiXmlElement &e, DawExtraState &out)
+void Synth::fromDawExtraState(TiXmlElement &e, DawStateMain &s)
 {
-    out = DawExtraState{};
+    s = DawStateMain{};
     auto *cm = e.FirstChildElement("colorMap");
     if (cm)
     {
@@ -193,21 +197,22 @@ void Synth::fromDawExtraState(TiXmlElement &e, DawExtraState &out)
         {
             auto *txt = n->ToText();
             if (txt && txt->Value())
-                out.colorMapXml = txt->Value();
+                s.main.colorMapXml = txt->Value();
         }
     }
 
-    // The mpe element is only present in 1.2+ saves. Flag drives the 1.1 fallback.
+    // The mpe element is only present in 1.2+ saves. Flag drives the 1.1 fallback (resolved on the
+    // main thread in stateLoad, reading the legacy in-patch MPE slots from patchMain).
     auto *mpe = e.FirstChildElement("mpe");
     if (mpe)
     {
-        out.mpeFromExtraState = true;
+        s.main.mpeFromExtraState = true;
         int active{0};
         if (mpe->QueryIntAttribute("active", &active) == TIXML_SUCCESS)
-            out.mpeActive = (active != 0);
+            s.audio.mpeActive = (active != 0);
         int bendRange{24};
         if (mpe->QueryIntAttribute("bendRange", &bendRange) == TIXML_SUCCESS)
-            out.mpeBendRange = bendRange;
+            s.audio.mpeBendRange = bendRange;
     }
 
     // Smoothing element absent in older saves; struct defaults stand.
@@ -216,9 +221,9 @@ void Synth::fromDawExtraState(TiXmlElement &e, DawExtraState &out)
     {
         double v{0.0};
         if (sm->QueryDoubleAttribute("midiCCMs", &v) == TIXML_SUCCESS)
-            out.midiCCSmoothingTimeMs = (float)v;
+            s.audio.midiCCSmoothingTimeMs = (float)v;
         if (sm->QueryDoubleAttribute("paramAutomationMs", &v) == TIXML_SUCCESS)
-            out.paramAutomationSmoothingTimeMs = (float)v;
+            s.audio.paramAutomationSmoothingTimeMs = (float)v;
     }
 }
 
@@ -337,8 +342,8 @@ void Synth::setSampleRate(double sampleRate)
                                               1.0 / blockSize);
     midiCCLagCollection.snapAllActiveToTarget();
 
-    audioToUi.push(
-        {AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)hostSampleRate, (float)engineSampleRate});
+    audioToMain.push(
+        {AudioToMainMsg::SEND_SAMPLE_RATE, 0, (float)hostSampleRate, (float)engineSampleRate});
 
     // Refresh anything keyed off engineSampleRate (filter coefs, ZOH ratio).
     // Safe vs. recursion: reapplyControlSettings only re-enters setSampleRate
@@ -558,7 +563,7 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
             generated += gen0;
         }
 
-        if (isEditorAttached)
+        if (editorActive.load(std::memory_order_relaxed))
         {
             float stp[numOps][2][blockSize];
             memset(stp, 0, sizeof(stp));
@@ -594,24 +599,24 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
 
             if (lastVuUpdate >= updateVuEvery)
             {
-                AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
-                audioToUi.push(msg);
+                AudioToMainMsg msg{AudioToMainMsg::UPDATE_VU, 0, vuPeak.vu_peak[0],
+                                   vuPeak.vu_peak[1]};
+                audioToMain.push(msg);
                 for (uint32_t j = 0; j < numOps; ++j)
                 {
-                    AudioToUIMsg smsg{AudioToUIMsg::UPDATE_VU, j + 1, opVuPeak[j].vu_peak[0],
-                                      opVuPeak[j].vu_peak[1]};
-                    audioToUi.push(smsg);
+                    AudioToMainMsg smsg{AudioToMainMsg::UPDATE_VU, j + 1, opVuPeak[j].vu_peak[0],
+                                        opVuPeak[j].vu_peak[1]};
+                    audioToMain.push(smsg);
                 }
 
-                AudioToUIMsg msg2{AudioToUIMsg::UPDATE_VOICE_COUNT, (uint32_t)voiceCount};
-                audioToUi.push(msg2);
+                AudioToMainMsg msg2{AudioToMainMsg::UPDATE_VOICE_COUNT, (uint32_t)voiceCount};
+                audioToMain.push(msg2);
 
-                AudioToUIMsg msg3{AudioToUIMsg::UPDATE_CPU_USAGE, 0, (float)(cpuUsage * 100)};
-                audioToUi.push(msg3);
+                AudioToMainMsg msg3{AudioToMainMsg::UPDATE_CPU_USAGE, 0, (float)(cpuUsage * 100)};
+                audioToMain.push(msg3);
 
-                AudioToUIMsg msg4{AudioToUIMsg::MTS_POINTER, 0, 0, 0, nullptr,
-                                  monoValues.mtsClient};
-                audioToUi.push(msg4);
+                AudioToMainMsg msg4{AudioToMainMsg::MTS_POINTER, 0, 0, 0, monoValues.mtsClient};
+                audioToMain.push(msg4);
 
                 lastVuUpdate = 0;
             }
@@ -671,7 +676,7 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
         }
     }
 
-    if (isEditorAttached)
+    if (editorActive.load(std::memory_order_relaxed))
     {
         // Tap host-SR main bus for visualizers (only when someone is listening).
         if (audioOutputRing.subscribed())
@@ -763,13 +768,6 @@ void Synth::dumpVoiceList()
 
 void Synth::processUIQueue(const clap_output_events_t *outq)
 {
-    bool didRefresh{false};
-    if (doFullRefresh)
-    {
-        pushFullUIRefresh();
-        doFullRefresh = false;
-        didRefresh = true;
-    }
     // Accumulate rescan flags across the whole drain so we issue one
     // requestParamRescan / request_callback at the end, regardless of how many
     // messages in this batch wanted a rescan.
@@ -779,13 +777,14 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
     {
         switch (uiM->action)
         {
-        case MainToAudioMsg::REQUEST_REFRESH:
+        case MainToAudioMsg::REQUEST_NON_PATCH_STATE:
         {
-            if (!didRefresh)
-            {
-                // don't do it twice in one process obvs
-                pushFullUIRefresh();
-            }
+            // The editor reads all patch state straight from patchMain; echo back only the
+            // engine-owned non-patch bits it can't read directly: the sample rate and MTS pointer.
+            audioToMain.push({AudioToMainMsg::SEND_SAMPLE_RATE, 0, (float)hostSampleRate,
+                              (float)engineSampleRate});
+            AudioToMainMsg mts{AudioToMainMsg::MTS_POINTER, 0, 0, 0, monoValues.mtsClient};
+            audioToMain.push(mts);
         }
         break;
         case MainToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING:
@@ -829,13 +828,8 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             }
 
             handleAudioThreadParamSideEffects(dest);
-
-            auto d = patch.dirty;
-            if (!d)
-            {
-                patch.dirty = true;
-                audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
-            }
+            // Patch dirty state is main-thread-only now: the UI marks patchMain dirty at the edit
+            // site, so the audio thread no longer tracks or echoes it.
         }
         break;
         case MainToAudioMsg::BEGIN_EDIT:
@@ -875,60 +869,12 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             audioRunning = true;
         }
         break;
-        case MainToAudioMsg::SEND_PATCH_NAME:
-        {
-            memset(patch.name, 0, sizeof(patch.name));
-            strncpy(patch.name, uiM->uiManagedPointer, 255);
-            audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
-        }
-        break;
-        case MainToAudioMsg::SEND_PATCH_AUTHOR:
-        {
-            patch.setAuthor(uiM->uiManagedPointer ? uiM->uiManagedPointer : "");
-        }
-        break;
-        case MainToAudioMsg::SEND_MACRO_NAME:
-        {
-            auto idx = uiM->paramId;
-            if (idx < numMacros && uiM->uiManagedPointer)
-            {
-                auto &buf = patch.macroNames[idx];
-                // Only act on actual changes — avoids gratuitous INFO rescans on
-                // preset loads where macro names match what the host already knows.
-                if (std::strncmp(buf.data(), uiM->uiManagedPointer, buf.size()) != 0)
-                {
-                    std::fill(buf.begin(), buf.end(), 0);
-                    strncpy(buf.data(), uiM->uiManagedPointer, buf.size() - 1);
-                    AudioToUIMsg out{AudioToUIMsg::SET_MACRO_NAME};
-                    out.paramId = idx;
-                    out.patchNamePointer = buf.data();
-                    audioToUi.push(out);
-                    pendingRescan |= RescanRequest::INFO;
-                }
-            }
-        }
-        break;
-        case MainToAudioMsg::SEND_PATCH_IS_CLEAN:
-        {
-            patch.dirty = false;
-            audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
-        }
-        break;
         case MainToAudioMsg::SEND_POST_LOAD:
         {
             postLoad();
-            // Preset load just rewrote every param value — let the host re-read.
+            // Preset load just rewrote every param value — let the host re-read. (The load funnel
+            // also rescans directly; this covers any queue-only path.)
             pendingRescan |= RescanRequest::VALUES;
-        }
-        break;
-        case MainToAudioMsg::SEND_PREP_FOR_STREAM:
-        {
-            prepForStream();
-        }
-        break;
-        case MainToAudioMsg::EDITOR_ATTACH_DETATCH:
-        {
-            isEditorAttached = uiM->paramId;
         }
         break;
         case MainToAudioMsg::PANIC_STOP_VOICES:
@@ -943,75 +889,13 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             monoValues.designModeRunAll = uiM->value > 0.5;
         }
         break;
-        case MainToAudioMsg::SET_DAW_EXTRA_STATE:
+        case MainToAudioMsg::SET_AUDIO_DAW_STATE:
         {
-            auto *p = static_cast<const DawExtraState *>(uiM->dawExtraStatePointer);
-            if (p)
-            {
-                dawExtraState = *p;
-                // If the incoming DES had no <mpe> element (1.1-era session), fall back
-                // to the legacy patch slots — patch swap messages are queued before this
-                // one in CLAP stateLoad, so legacy values are already in place. Resolved
-                // state is echoed back so future host saves are written in the new form.
-                if (!dawExtraState.mpeFromExtraState)
-                {
-                    dawExtraState.mpeActive = patch.output.legacyMpeActive.value > 0.5f;
-                    dawExtraState.mpeBendRange =
-                        (int)std::round(patch.output.legacyMpeBendRange.value);
-                }
-                monoValues.mpeActive = dawExtraState.mpeActive;
-                monoValues.mpeBendRange = dawExtraState.mpeBendRange;
-                monoValues.midiCCSmoothingTimeMs = dawExtraState.midiCCSmoothingTimeMs;
-                monoValues.paramAutomationSmoothingTimeMs =
-                    dawExtraState.paramAutomationSmoothingTimeMs;
-                applyMpeState();
-                applySmoothingTimes();
-
-                AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
-                au.dawExtraStatePointer = &dawExtraState;
-                audioToUi.push(au);
-            }
-        }
-        break;
-        case MainToAudioMsg::SET_MPE_ACTIVE:
-        {
-            monoValues.mpeActive = uiM->value > 0.5f;
-            dawExtraState.mpeActive = monoValues.mpeActive;
-            applyMpeState();
-            AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
-            au.dawExtraStatePointer = &dawExtraState;
-            audioToUi.push(au);
-        }
-        break;
-        case MainToAudioMsg::SET_MPE_BEND_RANGE:
-        {
-            monoValues.mpeBendRange = std::clamp((int)std::round(uiM->value), 1, 96);
-            dawExtraState.mpeBendRange = monoValues.mpeBendRange;
-            applyMpeState();
-            AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
-            au.dawExtraStatePointer = &dawExtraState;
-            audioToUi.push(au);
-        }
-        break;
-        case MainToAudioMsg::SET_MIDI_CC_SMOOTHING_TIME_MS:
-        {
-            monoValues.midiCCSmoothingTimeMs = std::max(0.f, uiM->value);
-            dawExtraState.midiCCSmoothingTimeMs = monoValues.midiCCSmoothingTimeMs;
-            applySmoothingTimes();
-            AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
-            au.dawExtraStatePointer = &dawExtraState;
-            audioToUi.push(au);
-        }
-        break;
-        case MainToAudioMsg::SET_PARAM_AUTOMATION_SMOOTHING_TIME_MS:
-        {
-            monoValues.paramAutomationSmoothingTimeMs = std::max(0.f, uiM->value);
-            dawExtraState.paramAutomationSmoothingTimeMs =
-                monoValues.paramAutomationSmoothingTimeMs;
-            applySmoothingTimes();
-            AudioToUIMsg au{AudioToUIMsg::SET_DAW_EXTRA_STATE};
-            au.dawExtraStatePointer = &dawExtraState;
-            audioToUi.push(au);
+            // The queue is the only main->audio channel for this: store the value-carried copy
+            // into the engine's queue-inbound audioDawState, then apply it into monoValues. No
+            // echo — the authoritative copy stays on the main thread (dawStateMain).
+            audioDawState = uiM->audioDawState;
+            applyAudioDawState(audioDawState);
         }
         break;
         }
@@ -1305,8 +1189,15 @@ void Synth::handleParamValue(Param *p, uint32_t pid, float value)
 
     handleAudioThreadParamSideEffects(p);
 
-    AudioToUIMsg au = {AudioToUIMsg::UPDATE_PARAM, pid, value};
-    audioToUi.push(au);
+    AudioToMainMsg au = {AudioToMainMsg::UPDATE_PARAM, pid, value};
+    audioToMain.push(au);
+
+    // If no editor is open to drain audioToMain, ask the main thread to drain it into patchMain.
+    // Coalesce so at most one callback is pending per drain. Check the host first so tests (null
+    // host) never flip the flag.
+    if (clapHost && !editorActive.load(std::memory_order_relaxed) &&
+        !mainThreadDrainRequested.exchange(true))
+        clapHost->request_callback(clapHost);
 }
 
 void Synth::handleAudioThreadParamSideEffects(Param *dest)
@@ -1331,31 +1222,153 @@ void Synth::handleAudioThreadParamSideEffects(Param *dest)
     }
 }
 
-void Synth::pushFullUIRefresh()
+bool Synth::handleAudioToMainMessage(Patch &dest, const AudioToMainMsg &m)
 {
-    for (const auto *p : patch.params)
+    // Applies the patch-model message (a host-automation param value) to `dest`. Returns true if
+    // handled; false for UI-only telemetry (VU / voice count / CPU / sample rate / MTS) which the
+    // editor idle deals with itself. Name / author / dirty / macro names are UI-owned and never
+    // travel audio -> main.
+    switch (m.action)
     {
-        AudioToUIMsg au = {AudioToUIMsg::UPDATE_PARAM, p->meta.id, p->value};
-        audioToUi.push(au);
-    }
-    audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
-    // A freshly constructed editor (e.g. a Reaper close/reopen) only gets this
-    // full refresh — no preset/state load — so send the macro names too or its
-    // labels fall back to the "Macro N" defaults.
-    for (int i = 0; i < numMacros; ++i)
+    case AudioToMainMsg::UPDATE_PARAM:
     {
-        AudioToUIMsg mn{AudioToUIMsg::SET_MACRO_NAME};
-        mn.paramId = i;
-        mn.patchNamePointer = patch.macroNames[i].data();
-        audioToUi.push(mn);
+        auto it = dest.paramMap.find(m.paramId);
+        if (it != dest.paramMap.end())
+            it->second->value = m.value;
     }
-    audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
-    audioToUi.push(
-        {AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)hostSampleRate, (float)engineSampleRate});
+        return true;
+    default:
+        return false;
+    }
+}
 
-    AudioToUIMsg des{AudioToUIMsg::SET_DAW_EXTRA_STATE};
-    des.dawExtraStatePointer = &dawExtraState;
-    audioToUi.push(des);
+void Synth::drainAudioToMainInto(Patch &dest)
+{
+    auto m = audioToMain.pop();
+    while (m.has_value())
+    {
+        handleAudioToMainMessage(dest, *m);
+        m = audioToMain.pop();
+    }
+}
+
+void Synth::paramsFlushMainThread(const clap_input_events_t *in, const clap_output_events_t *out)
+{
+    // host -> plugin: apply incoming param changes in place to patchMain.
+    bool appliedIncoming{false};
+    auto sz = in->size(in);
+    for (uint32_t i = 0; i < sz; ++i)
+    {
+        auto ev = in->get(in, i);
+        if (ev->space_id == CLAP_CORE_EVENT_SPACE_ID && ev->type == CLAP_EVENT_PARAM_VALUE)
+        {
+            auto pevt = reinterpret_cast<const clap_event_param_value *>(ev);
+            auto it = patchMain.paramMap.find(pevt->param_id);
+            if (it != patchMain.paramMap.end())
+            {
+                it->second->value = pevt->value;
+                appliedIncoming = true;
+            }
+        }
+    }
+    // Inactive: no audio thread is pushing UPDATE_PARAM to refresh an open editor, so treat a
+    // host-driven value change as an out-of-band patchMain write and force the editor to rebuild.
+    if (appliedIncoming)
+        uiForceRebuild++;
+
+    // plugin -> host: drain queued UI edits into patchMain and echo automation out. patchMain is
+    // not running audio, so values are written directly (no lag). Selector-free patch: audio-only
+    // messages (STOP/START/POST_LOAD/PANIC/DESIGN_MODE/DAW_STATE) are irrelevant while inactive —
+    // the DAW state is already committed on patchMain-side dawStateMain by the UI, and activate()
+    // re-seeds nothing that isn't drained on the first process.
+    auto uiM = mainToAudio.pop();
+    while (uiM.has_value())
+    {
+        switch (uiM->action)
+        {
+        case MainToAudioMsg::SET_PARAM:
+        case MainToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING:
+        {
+            auto it = patchMain.paramMap.find(uiM->paramId);
+            if (it != patchMain.paramMap.end())
+            {
+                auto *dest = it->second;
+                dest->value = uiM->value;
+                bool notify = (uiM->action == MainToAudioMsg::SET_PARAM) &&
+                              (dest->meta.flags & CLAP_PARAM_IS_AUTOMATABLE);
+                if (notify)
+                {
+                    clap_event_param_value_t p;
+                    p.header.size = sizeof(clap_event_param_value_t);
+                    p.header.time = 0;
+                    p.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+                    p.header.type = CLAP_EVENT_PARAM_VALUE;
+                    p.header.flags = 0;
+                    p.param_id = uiM->paramId;
+                    // Cookie is the audio-thread param (see paramsInfo); the host feeds it back
+                    // into process() on the audio thread.
+                    p.cookie = patch.paramMap.at(uiM->paramId);
+                    p.note_id = -1;
+                    p.port_index = -1;
+                    p.channel = -1;
+                    p.key = -1;
+                    p.value = uiM->value;
+                    out->try_push(out, &p.header);
+                }
+            }
+        }
+        break;
+        case MainToAudioMsg::BEGIN_EDIT:
+        case MainToAudioMsg::END_EDIT:
+        {
+            auto it = patchMain.paramMap.find(uiM->paramId);
+            if (it != patchMain.paramMap.end() &&
+                (it->second->meta.flags & CLAP_PARAM_IS_AUTOMATABLE))
+            {
+                clap_event_param_gesture_t p;
+                p.header.size = sizeof(clap_event_param_gesture_t);
+                p.header.time = 0;
+                p.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+                p.header.type = uiM->action == MainToAudioMsg::BEGIN_EDIT
+                                    ? CLAP_EVENT_PARAM_GESTURE_BEGIN
+                                    : CLAP_EVENT_PARAM_GESTURE_END;
+                p.header.flags = 0;
+                p.param_id = uiM->paramId;
+                out->try_push(out, &p.header);
+            }
+        }
+        break;
+        default:
+            break;
+        }
+        uiM = mainToAudio.pop();
+    }
+}
+
+void Synth::sendEntirePatchToAudio(Patch &src, mainToAudioQueue_T &mainToAudio,
+                                   const clap_host_t *h, const clap_host_params_t *hostParams)
+{
+    if (!h)
+        return;
+    if (hostParams == nullptr)
+        hostParams = static_cast<const clap_host_params_t *>(h->get_extension(h, CLAP_EXT_PARAMS));
+
+    mainToAudio.push({MainToAudioMsg::STOP_AUDIO});
+    for (const auto *p : src.params)
+        mainToAudio.push({MainToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING, p->meta.id, p->value});
+    mainToAudio.push({MainToAudioMsg::START_AUDIO});
+    mainToAudio.push({MainToAudioMsg::SEND_POST_LOAD});
+
+    // A load is a bulk out-of-band value change; the host reads values / text / param info (macro
+    // names) from patchMain, which the caller updated first, so tell the host to re-read directly
+    // rather than round-tripping a rescan through the audio thread. INFO is issued separately from
+    // VALUES|TEXT (this codebase treats them as mutually exclusive per the host rules).
+    if (hostParams)
+    {
+        hostParams->rescan(h, CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
+        hostParams->rescan(h, CLAP_PARAM_RESCAN_INFO);
+        hostParams->request_flush(h);
+    }
 }
 
 void Synth::resetSoloState()
@@ -1374,6 +1387,15 @@ void Synth::resetSoloState()
 
 void Synth::onMainThread()
 {
+    // When no editor is open, this callback owns draining audioToMain into patchMain so
+    // host-driven param changes stay reflected in the main-thread source of truth. Store the
+    // request flag false before draining so a message arriving mid-drain re-arms a callback.
+    if (!editorActive.load(std::memory_order_relaxed))
+    {
+        mainThreadDrainRequested.store(false);
+        drainAudioToMainInto(patchMain);
+    }
+
     auto flags = onMainRescanFlags.exchange(0, std::memory_order_acquire);
     if (flags == 0 || !clapHost)
         return;

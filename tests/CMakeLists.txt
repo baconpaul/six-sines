@@ -6,6 +6,7 @@ add_executable(six-sines-test
 		factory_patches.cpp
 		output_stage_dsp.cpp
 		mpe_smoothing.cpp
+		patch_sync.cpp
 )
 
 target_link_libraries(six-sines-test

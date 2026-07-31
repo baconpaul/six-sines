@@ -23,7 +23,7 @@ namespace baconpaul::six_sines::ui
 {
 MacroPanel::MacroPanel(SixSinesEditor &e) : jcmp::NamedPanel("Macros"), HasEditor(e)
 {
-    auto &mn = editor.patchCopy.macroNodes;
+    auto &mn = editor.patchMainRef.macroNodes;
     for (auto i = 0U; i < numMacros; ++i)
     {
         createComponent(editor, *this, mn[i].level, knobs[i], knobsData[i], i);

@@ -27,7 +27,7 @@ namespace baconpaul::six_sines::ui
 {
 SourcePanel::SourcePanel(SixSinesEditor &e) : jcmp::NamedPanel("Source"), HasEditor(e)
 {
-    auto &mn = editor.patchCopy.sourceNodes;
+    auto &mn = editor.patchMainRef.sourceNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
         createComponent(editor, *this, mn[i].ratio, knobs[i], knobsData[i], i);
@@ -322,7 +322,7 @@ void SourcePanel::updateOpEnabledState(int idx)
 {
     if (idx < 0 || idx >= (int)numOps)
         return;
-    auto &sn = editor.patchCopy.sourceNodes[idx];
+    auto &sn = editor.patchMainRef.sourceNodes[idx];
     auto isAudioIn = ((int)std::round(sn.waveForm.value) == SinTable::WaveForm::AUDIO_IN);
     knobs[idx]->setEnabled(!isAudioIn);
     upButton[idx]->setEnabled(!isAudioIn);
