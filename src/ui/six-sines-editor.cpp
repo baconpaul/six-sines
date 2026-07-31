@@ -71,7 +71,7 @@ struct DesPushTimer : juce::Timer
     void timerCallback() override
     {
         stopTimer();
-        editor.pushDawExtraStateToAudio();
+        editor.commitSessionColorMap();
     }
 };
 
@@ -115,12 +115,17 @@ namespace jstl = sst::jucegui::style;
 using sheet_t = jstl::StyleSheet;
 static constexpr sheet_t::Class PatchMenu("six-sines.patch-menu");
 
-SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudioQueue_T &utoa,
-                               Synth::audioOutputQueue_t &aor, defaultsProvder_t &defaults,
+SixSinesEditor::SixSinesEditor(Patch &patchMain, Synth::audioToMainQueue_t &atou,
+                               Synth::mainToAudioQueue_T &utoa, Synth::audioOutputQueue_t &aor,
+                               std::atomic<bool> &editorActiveIn,
+                               std::atomic<uint32_t> &uiForceRebuildIn,
+                               Synth::DawStateMain &dawStateMain, defaultsProvder_t &defaults,
                                const clap_host_t *h)
-    : jcmp::WindowPanel(true), audioToUI(atou), mainToAudio(utoa), audioOutputRing(aor),
-      defaultsProvider(&defaults), clapHost(h)
+    : jcmp::WindowPanel(true), patchMainRef(patchMain), audioToMain(atou), mainToAudio(utoa),
+      audioOutputRing(aor), editorActive(editorActiveIn), uiForceRebuild(uiForceRebuildIn),
+      dawStateMainRef(dawStateMain), defaultsProvider(&defaults), clapHost(h)
 {
+    lastForceRebuild = uiForceRebuild.load();
     setTitle("Six Sines - an Audio Rate Modulation Synthesizer");
     setAccessible(true);
 
@@ -196,10 +201,6 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     sst::jucegui::component_adapters::setTraversalId(macroPanel.get(), 60000);
     sst::jucegui::component_adapters::setTraversalId(singlePanel.get(), 70000);
 
-    auto startMsg = Synth::MainToAudioMsg{Synth::MainToAudioMsg::REQUEST_REFRESH};
-    mainToAudio.push(startMsg);
-    requestParamsFlush();
-
     // Build the routing-relevant param ID set once. Patch shape doesn't change
     // at runtime, so this is a one-shot scan.
     auto recordRouting = [this](auto &node)
@@ -210,33 +211,37 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
             modRoutingParamIds.insert(node.modtarget[s].meta.id);
         }
     };
-    for (auto &n : patchCopy.sourceNodes)
+    for (auto &n : patchMainRef.sourceNodes)
         recordRouting(n);
-    for (auto &n : patchCopy.selfNodes)
+    for (auto &n : patchMainRef.selfNodes)
         recordRouting(n);
-    for (auto &n : patchCopy.mixerNodes)
+    for (auto &n : patchMainRef.mixerNodes)
         recordRouting(n);
-    for (auto &n : patchCopy.matrixNodes)
+    for (auto &n : patchMainRef.matrixNodes)
         recordRouting(n);
-    for (auto &n : patchCopy.macroNodes)
+    for (auto &n : patchMainRef.macroNodes)
         recordRouting(n);
-    recordRouting(patchCopy.output);
-    recordRouting(patchCopy.fineTuneMod);
-    recordRouting(patchCopy.mainPanMod);
+    recordRouting(patchMainRef.output);
+    recordRouting(patchMainRef.fineTuneMod);
+    recordRouting(patchMainRef.mainPanMod);
 
     onModulationRoutingChanged = [this]() { recomputeMacroUsage(); };
     recomputeMacroUsage();
 
     idleTimer = std::make_unique<IdleTimer>(*this);
     idleTimer->startTimer(1000. / 60.);
+    // Idle now owns draining audioToMain; mark the editor active so the audio thread gates its
+    // telemetry on us being here and stops asking onMainThread to drain.
+    editorActive = true;
 
     dawExtraStatePushTimer = std::make_unique<DesPushTimer>(*this);
 
     toolTip = std::make_unique<jcmp::ToolTip>();
     addChildComponent(*toolTip);
 
-    presetDataBinding = std::make_unique<PresetDataBinding>(*presetManager, patchCopy, mainToAudio);
-    presetDataBinding->setStateForDisplayName(patchCopy.name);
+    presetDataBinding =
+        std::make_unique<PresetDataBinding>(*presetManager, patchMainRef, mainToAudio);
+    presetDataBinding->setStateForDisplayName(patchMainRef.name);
 
     presetButton = std::make_unique<jcmp::JogUpDownButton>();
     presetButton->setCustomClass(PatchMenu);
@@ -260,6 +265,10 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     // Override the dark-default startup skin with the user's saved theme preference.
     setThemeFromPreference();
 
+    // If a session was loaded before this editor opened, its colour map (in the engine-owned
+    // MainDawState, shared by reference) takes precedence — apply it now.
+    applyDawExtraState();
+
     vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::HORIZONTAL);
     addAndMakeVisible(*vuMeter);
 
@@ -278,13 +287,14 @@ SixSinesEditor::SixSinesEditor(Synth::audioToUIQueue_t &atou, Synth::mainToAudio
     if (defaultsProvider->getUserDefaultValue(Defaults::designModeAllSoundsOffOnToggle, false))
         sessionAllSoundsOffOnToggle = true;
 
-    patchCopy.defaultAuthor =
+    patchMainRef.defaultAuthor =
         defaultsProvider->getUserDefaultValue(Defaults::defaultAuthor, std::string{});
 
-    mainToAudio.push({Synth::MainToAudioMsg::EDITOR_ATTACH_DETATCH, true});
     if (sessionRunAllNodes)
         sendDesignModeToAudio();
-    mainToAudio.push({Synth::MainToAudioMsg::REQUEST_REFRESH, true});
+    // The editor renders patch state straight from patchMainRef; it only needs the engine-owned
+    // non-patch bits (sample rate, MTS pointer) echoed back.
+    mainToAudio.push({Synth::MainToAudioMsg::REQUEST_NON_PATCH_STATE});
     requestParamsFlush();
 
     auto defaultZoomPct = 100;
@@ -312,7 +322,10 @@ SixSinesEditor::~SixSinesEditor()
         sessionRunAllNodes = false;
         mainToAudio.push({Synth::MainToAudioMsg::SET_DESIGN_MODE_RUN_ALL, 0, 0.f});
     }
-    mainToAudio.push({Synth::MainToAudioMsg::EDITOR_ATTACH_DETATCH, false});
+    // Hand draining of audioToMain back to onMainThread, then stop idling.
+    editorActive = false;
+    if (clapHost)
+        clapHost->request_callback(clapHost);
     idleTimer->stopTimer();
     setLookAndFeel(nullptr);
 }
@@ -324,16 +337,29 @@ void SixSinesEditor::idle()
         SXSNLOG("Seems I have hit that renoise too-much-height bug");
         setZoomFactor(zoomFactor);
     }
-    auto aum = audioToUI.pop();
+
+    // An out-of-band load (host stateLoad / preset load) wrote patchMain directly and bumped the
+    // counter. patchMainRef already holds the new state; refresh every widget from it.
+    auto fr = uiForceRebuild.load();
+    if (fr != lastForceRebuild)
+    {
+        lastForceRebuild = fr;
+        rebuildFromPatchMain();
+    }
+
+    auto aum = audioToMain.pop();
     while (aum.has_value())
     {
-        if (aum->action == Synth::AudioToUIMsg::UPDATE_PARAM)
+        if (aum->action == Synth::AudioToMainMsg::UPDATE_PARAM)
         {
+            // setAndSendParamValue(..., false) writes patchMainRef (== the model) and refreshes the
+            // widget; the host-automation echo must not dirty or re-notify, hence
+            // notifyAudio=false.
             setAndSendParamValue(aum->paramId, aum->value, false);
             if (modRoutingParamIds.count(aum->paramId))
                 recomputeMacroUsage();
         }
-        else if (aum->action == Synth::AudioToUIMsg::UPDATE_VU)
+        else if (aum->action == Synth::AudioToMainMsg::UPDATE_VU)
         {
             assert(aum->paramId < numOps + 1);
             if (aum->paramId == 0)
@@ -343,38 +369,12 @@ void SixSinesEditor::idle()
                 mixerPanel->vuMeters[aum->paramId - 1]->setLevels(aum->value, aum->value2);
             }
         }
-        else if (aum->action == Synth::AudioToUIMsg::UPDATE_VOICE_COUNT)
+        else if (aum->action == Synth::AudioToMainMsg::UPDATE_VOICE_COUNT)
         {
             settingsPanel->setVoiceCount(aum->paramId);
             settingsPanel->repaint();
         }
-        else if (aum->action == Synth::AudioToUIMsg::SET_PATCH_NAME)
-        {
-            memset(patchCopy.name, 0, sizeof(patchCopy.name));
-            strncpy(patchCopy.name, aum->patchNamePointer, 255);
-            setPatchNameDisplay();
-        }
-        else if (aum->action == Synth::AudioToUIMsg::SET_MACRO_NAME)
-        {
-            auto idx = aum->paramId;
-            if (idx < numMacros && aum->patchNamePointer)
-            {
-                auto &buf = patchCopy.macroNames[idx];
-                std::fill(buf.begin(), buf.end(), 0);
-                strncpy(buf.data(), aum->patchNamePointer, buf.size() - 1);
-                if (macroPanel)
-                    macroPanel->refreshLabel(idx);
-                if (macroSubPanel && macroSubPanel->isVisible() && macroSubPanel->index == idx)
-                    macroSubPanel->refreshNameFromPatch();
-            }
-        }
-        else if (aum->action == Synth::AudioToUIMsg::SET_PATCH_DIRTY_STATE)
-        {
-            patchCopy.dirty = (bool)aum->paramId;
-            presetDataBinding->setDirtyState(patchCopy.dirty);
-            presetButton->repaint();
-        }
-        else if (aum->action == Synth::AudioToUIMsg::SEND_SAMPLE_RATE)
+        else if (aum->action == Synth::AudioToMainMsg::SEND_SAMPLE_RATE)
         {
             engineSR = aum->value2;
             hostSR = aum->value;
@@ -387,20 +387,11 @@ void SixSinesEditor::idle()
                     cb();
             repaint();
         }
-        else if (aum->action == Synth::AudioToUIMsg::SET_DAW_EXTRA_STATE)
-        {
-            if (aum->dawExtraStatePointer)
-            {
-                editorDawExtraState =
-                    *static_cast<const Synth::DawExtraState *>(aum->dawExtraStatePointer);
-                applyDawExtraStateFromAudio();
-            }
-        }
-        else if (aum->action == Synth::AudioToUIMsg::UPDATE_CPU_USAGE)
+        else if (aum->action == Synth::AudioToMainMsg::UPDATE_CPU_USAGE)
         {
             settingsPanel->setCpuUsage(aum->value);
         }
-        else if (aum->action == Synth::AudioToUIMsg::MTS_POINTER)
+        else if (aum->action == Synth::AudioToMainMsg::MTS_POINTER)
         {
             mtsClient = static_cast<MTSClient *>(const_cast<void *>(aum->dawExtraStatePointer));
         }
@@ -408,7 +399,7 @@ void SixSinesEditor::idle()
         {
             SXSNLOG("Ignored patch message " << aum->action);
         }
-        aum = audioToUI.pop();
+        aum = audioToMain.pop();
     }
 
     if (playModeSubPanel)
@@ -655,7 +646,7 @@ void SixSinesEditor::showPresetPopup()
             }
             em.addItem(
                 noExt, [cat = c, pat = e, this]()
-                { this->presetManager->loadFactoryPreset(patchCopy, mainToAudio, cat, pat); });
+                { this->presetManager->loadFactoryPreset(patchMainRef, mainToAudio, cat, pat); });
         }
         f.addSubMenu(c, em);
     }
@@ -672,7 +663,7 @@ void SixSinesEditor::showPresetPopup()
             u.addItem(dn,
                       [this, pth = up, dn]()
                       {
-                          presetManager->loadUserPresetDirect(patchCopy, mainToAudio,
+                          presetManager->loadUserPresetDirect(patchMainRef, mainToAudio,
                                                               presetManager->userPatchesPath / pth);
                       });
         }
@@ -694,7 +685,7 @@ void SixSinesEditor::showPresetPopup()
             s.addItem(dn,
                       [this, pth = up, dn]()
                       {
-                          presetManager->loadUserPresetDirect(patchCopy, mainToAudio,
+                          presetManager->loadUserPresetDirect(patchMainRef, mainToAudio,
                                                               presetManager->userPatchesPath / pth);
                       });
         }
@@ -727,9 +718,9 @@ void SixSinesEditor::showPresetPopup()
               });
     p.addSeparator();
     std::string ap = "Set Author";
-    if (!patchCopy.defaultAuthor.empty())
+    if (!patchMainRef.defaultAuthor.empty())
     {
-        ap = "Set Author (" + patchCopy.defaultAuthor + ")";
+        ap = "Set Author (" + patchMainRef.defaultAuthor + ")";
     }
     p.addItem(ap,
               [w = juce::Component::SafePointer(this)]()
@@ -943,12 +934,12 @@ void SixSinesEditor::showPresetPopup()
 
 void SixSinesEditor::startSavePatch()
 {
-    if (patchCopy.author[0] == 0)
+    if (patchMainRef.author[0] == 0)
     {
-        if (!patchCopy.defaultAuthor.empty())
+        if (!patchMainRef.defaultAuthor.empty())
         {
-            patchCopy.setAuthor(patchCopy.defaultAuthor);
-            mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_AUTHOR, 0, 0, patchCopy.author});
+            // Author is main-thread-only patch state; the audio patch never needs it.
+            patchMainRef.setAuthor(patchMainRef.defaultAuthor);
         }
         else
         {
@@ -957,20 +948,18 @@ void SixSinesEditor::startSavePatch()
         }
     }
 
-    if (!patchCopy.defaultAuthor.empty() &&
-        std::strcmp(patchCopy.author, patchCopy.defaultAuthor.c_str()) != 0)
+    if (!patchMainRef.defaultAuthor.empty() &&
+        std::strcmp(patchMainRef.author, patchMainRef.defaultAuthor.c_str()) != 0)
     {
-        auto current = std::string(patchCopy.author);
-        auto replacement = patchCopy.defaultAuthor;
+        auto current = std::string(patchMainRef.author);
+        auto replacement = patchMainRef.defaultAuthor;
         auto prompt = sst::jucegui::screens::AlertOrPrompt::YesNo(
             "Replace Author?", "Replace author '" + current + "' with '" + replacement + "'?",
             [w = juce::Component::SafePointer(this), replacement]()
             {
                 if (!w)
                     return;
-                w->patchCopy.setAuthor(replacement);
-                w->mainToAudio.push(
-                    {Synth::MainToAudioMsg::SEND_PATCH_AUTHOR, 0, 0, w->patchCopy.author});
+                w->patchMainRef.setAuthor(replacement);
                 w->finishSavePatch();
             },
             [w = juce::Component::SafePointer(this)]()
@@ -990,11 +979,11 @@ void SixSinesEditor::finishSavePatch()
     auto svDir =
         lastUserSaveDirectory.empty() ? presetManager->userPatchesPath : lastUserSaveDirectory;
     auto svP = svDir;
-    if (strcmp(patchCopy.name, "Init") != 0)
+    if (strcmp(patchMainRef.name, "Init") != 0)
     {
         // append .sxsnp rather than replace_extension: a patch name like
         // "foo1.2.3.11" would otherwise have ".11" stripped as a fake extension.
-        std::string fn = patchCopy.name;
+        std::string fn = patchMainRef.name;
         static constexpr std::string_view ext{".sxsnp"};
         if (fn.size() < ext.size() || fn.compare(fn.size() - ext.size(), ext.size(), ext) != 0)
             fn += ext;
@@ -1020,11 +1009,13 @@ void SixSinesEditor::finishSavePatch()
 
 #if USE_WCHAR_PRESET
                                  w->presetManager->saveUserPresetDirect(
-                                     w->patchCopy, result[0].getFullPathName().toUTF16());
+                                     w->patchMainRef, result[0].getFullPathName().toUTF16());
 #else
-                                 w->presetManager->saveUserPresetDirect(w->patchCopy, pn);
+                                 w->presetManager->saveUserPresetDirect(w->patchMainRef, pn);
 #endif
 
+                                 // Saving makes the patch clean; update the model, view follows.
+                                 w->patchMainRef.dirty = false;
                                  w->presetDataBinding->setDirtyState(false);
                                  w->repaint();
                              });
@@ -1032,9 +1023,9 @@ void SixSinesEditor::finishSavePatch()
 
 void SixSinesEditor::setPatchNameTo(const std::string &s)
 {
-    memset(patchCopy.name, 0, sizeof(patchCopy.name));
-    strncpy(patchCopy.name, s.c_str(), 255);
-    mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_NAME, 0, 0, patchCopy.name});
+    memset(patchMainRef.name, 0, sizeof(patchMainRef.name));
+    strncpy(patchMainRef.name, s.c_str(), 255);
+    // Name is main-thread-only patch state; the audio patch never needs it.
     setPatchNameDisplay();
 }
 
@@ -1054,27 +1045,25 @@ void SixSinesEditor::doLoadPatch()
                 return;
             }
             auto loadPath = fs::path{result[0].getFullPathName().toStdString()};
-            w->presetManager->loadUserPresetDirect(w->patchCopy, w->mainToAudio, loadPath);
+            w->presetManager->loadUserPresetDirect(w->patchMainRef, w->mainToAudio, loadPath);
         });
 }
 
-void SixSinesEditor::resetToDefault() { presetManager->loadInit(patchCopy, mainToAudio); }
+void SixSinesEditor::resetToDefault() { presetManager->loadInit(patchMainRef, mainToAudio); }
 
 void SixSinesEditor::doSetDefaultAuthor(bool saveAfter)
 {
     auto prompt = sst::jucegui::screens::PromptForValue::Prompt(
         "Set Default Author",
         "Please provide the author name you want embedded in patches you save.",
-        patchCopy.defaultAuthor,
+        patchMainRef.defaultAuthor,
         [w = juce::Component::SafePointer(this), saveAfter](const std::string &value)
         {
             if (!w)
                 return;
             w->defaultsProvider->updateUserDefaultValue(Defaults::defaultAuthor, value);
-            w->patchCopy.defaultAuthor = value;
-            w->patchCopy.setAuthor(value);
-            w->mainToAudio.push(
-                {Synth::MainToAudioMsg::SEND_PATCH_AUTHOR, 0, 0, w->patchCopy.author});
+            w->patchMainRef.defaultAuthor = value;
+            w->patchMainRef.setAuthor(value);
             if (saveAfter)
                 w->startSavePatch();
         },
@@ -1085,7 +1074,7 @@ void SixSinesEditor::doSetDefaultAuthor(bool saveAfter)
 void SixSinesEditor::setAndSendParamValue(uint32_t paramId, float value, bool notifyAudio,
                                           bool sendBeginEnd)
 {
-    patchCopy.paramMap[paramId]->value = value;
+    patchMainRef.paramMap[paramId]->value = value;
 
     auto rit = componentRefreshByID.find(paramId);
     if (rit != componentRefreshByID.end())
@@ -1099,6 +1088,7 @@ void SixSinesEditor::setAndSendParamValue(uint32_t paramId, float value, bool no
 
     if (notifyAudio)
     {
+        markPatchDirty();
         if (sendBeginEnd)
             mainToAudio.push({Synth::MainToAudioMsg::Action::BEGIN_EDIT, paramId});
         mainToAudio.push({Synth::MainToAudioMsg::Action::SET_PARAM, paramId, value});
@@ -1112,13 +1102,53 @@ void SixSinesEditor::setPatchNameDisplay()
 {
     if (!presetButton)
         return;
-    presetDataBinding->setStateForDisplayName(patchCopy.name);
+    presetDataBinding->setStateForDisplayName(patchMainRef.name);
     presetButton->repaint();
+}
+
+void SixSinesEditor::markPatchDirty()
+{
+    if (patchMainRef.dirty)
+        return;
+    patchMainRef.dirty = true;
+    presetDataBinding->setDirtyState(true);
+    if (presetButton)
+        presetButton->repaint();
+}
+
+void SixSinesEditor::requestParamInfoRescan()
+{
+    if (!clapParamsExtension)
+        clapParamsExtension = static_cast<const clap_host_params_t *>(
+            clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
+    if (clapParamsExtension)
+    {
+        clapParamsExtension->rescan(clapHost, CLAP_PARAM_RESCAN_INFO);
+        clapParamsExtension->request_flush(clapHost);
+    }
+}
+
+void SixSinesEditor::rebuildFromPatchMain()
+{
+    // patchMainRef (== patchMain) already carries the new values, name, dirty, author and macro
+    // names (a host stateLoad / preset load wrote it directly). postPatchChange pushes all of it
+    // into the widgets; also re-apply any session colour map the load carried.
+    postPatchChange(patchMainRef.name);
+    setPatchNameDisplay();
+    applyDawExtraState();
 }
 
 void SixSinesEditor::postPatchChange(const std::string &s)
 {
     presetDataBinding->setStateForDisplayName(s);
+    // Mirror the dirty indicator from patchMain (the model owns dirty; the view follows).
+    presetDataBinding->setDirtyState(patchMainRef.dirty);
+    // Macro names are patch state the load rewrote; re-label the macro widgets from patchMain.
+    if (macroPanel)
+        for (size_t i = 0; i < numMacros; ++i)
+            macroPanel->refreshLabel(i);
+    if (macroSubPanel && macroSubPanel->isVisible())
+        macroSubPanel->refreshNameFromPatch();
     for (auto [id, f] : componentRefreshByID)
         f();
 
@@ -1134,7 +1164,7 @@ void SixSinesEditor::postPatchChange(const std::string &s)
 
 void SixSinesEditor::recomputeMacroUsage()
 {
-    macroUsageCache = computeMacroUsage(patchCopy);
+    macroUsageCache = computeMacroUsage(patchMainRef);
     if (macroPanel)
     {
         for (size_t i = 0; i < numMacros; ++i)
@@ -1601,16 +1631,6 @@ void SixSinesEditor::requestParamsFlush()
     }
 }
 
-void SixSinesEditor::sneakyStartupGrabFrom(Patch &other)
-{
-    for (auto &p : other.params)
-    {
-        patchCopy.paramMap.at(p->meta.id)->value = p->value;
-    }
-    strncpy(patchCopy.name, other.name, 255);
-    postPatchChange(other.name);
-}
-
 bool SixSinesEditor::isRunAllNodes() const { return sessionRunAllNodes; }
 
 bool SixSinesEditor::isAllSoundsOffOnToggle() const { return sessionAllSoundsOffOnToggle; }
@@ -1658,22 +1678,30 @@ void SixSinesEditor::scheduleDawExtraStatePush()
     }
 }
 
-void SixSinesEditor::pushDawExtraStateToAudio()
+void SixSinesEditor::commitSessionColorMap()
 {
-    editorDawExtraState.colorMapXml = currentSkin.toXmlString();
-    Synth::MainToAudioMsg msg{Synth::MainToAudioMsg::SET_DAW_EXTRA_STATE};
-    msg.dawExtraStatePointer = &editorDawExtraState;
+    // Colour map is main-thread-only session state: write it straight into the main-authoritative
+    // dawStateMain (read by stateSave) — it never ships across the audio thread.
+    dawStateMainRef.main.colorMapXml = currentSkin.toXmlString();
+}
+
+void SixSinesEditor::pushAudioDawState()
+{
+    // The audio-relevant session state (MPE + smoothing) is carried to the audio thread by value;
+    // the authoritative copy stays here on dawStateMain. No echo back.
+    Synth::MainToAudioMsg msg{Synth::MainToAudioMsg::SET_AUDIO_DAW_STATE};
+    msg.audioDawState = dawStateMainRef.audio;
     mainToAudio.push(msg);
 }
 
-void SixSinesEditor::applyDawExtraStateFromAudio()
+void SixSinesEditor::applyDawExtraState()
 {
-    if (!editorDawExtraState.colorMapXml.empty())
+    if (!dawStateMainRef.main.colorMapXml.empty())
     {
         // Apply without writing to the themePath user default: the session's colour map
         // takes precedence over the user's per-installation preference only within this
         // session.
-        auto skin = SixSinesSkin::fromXmlString(editorDawExtraState.colorMapXml);
+        auto skin = SixSinesSkin::fromXmlString(dawStateMainRef.main.colorMapXml);
         applyTheme(skin);
     }
     for (auto &l : dawExtraStateRefreshListeners)

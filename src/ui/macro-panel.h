@@ -52,14 +52,14 @@ struct MacroPanel : jcmp::NamedPanel, HasEditor
     // Full = sub-panel title. Both fall back to "Macro N" when unrenamed.
     static std::string displayShortName(const SixSinesEditor &editor, size_t idx)
     {
-        auto &buf = editor.patchCopy.macroNames[idx];
+        auto &buf = editor.patchMainRef.macroNames[idx];
         std::string nm(buf.data());
         auto def = "Macro " + std::to_string(idx + 1);
         return (nm.empty() || nm == def) ? def : nm;
     }
     static std::string displayName(const SixSinesEditor &editor, size_t idx)
     {
-        auto &buf = editor.patchCopy.macroNames[idx];
+        auto &buf = editor.patchMainRef.macroNames[idx];
         std::string nm(buf.data());
         auto def = "Macro " + std::to_string(idx + 1);
         return (nm.empty() || nm == def) ? def : (nm + " (" + def + ")");

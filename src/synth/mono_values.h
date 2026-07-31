@@ -108,11 +108,11 @@ struct MonoValues
     float noiseBandLimitHz{0.f};
 
     // Instance-scoped MPE config — lives on the engine, NOT in the patch. Persisted
-    // via Synth::DawExtraState so DAW sessions round-trip without polluting patches.
+    // via Synth::AudioDawState so DAW sessions round-trip without polluting patches.
     bool mpeActive{false};
     int mpeBendRange{24};
 
-    // Engine-wide smoothing times, in milliseconds. Mirrored from Synth::DawExtraState.
+    // Engine-wide smoothing times, in milliseconds. Mirrored from Synth::AudioDawState.
     // midiCCSmoothingTimeMs governs MIDI CC, MPE (bend/pressure/timbre), and per-voice
     // note-expression lags. paramAutomationSmoothingTimeMs governs the per-param lag
     // applied to host parameter automation.

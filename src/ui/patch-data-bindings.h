@@ -40,7 +40,7 @@ struct PatchContinuous : jdat::Continuous
 
     PatchContinuous(SixSinesEditor &e, uint32_t id) : editor(e), pid(id)
     {
-        if (e.patchCopy.paramMap.find(id) == e.patchCopy.paramMap.end())
+        if (e.patchMainRef.paramMap.find(id) == e.patchMainRef.paramMap.end())
         {
             SXSNLOG("You were unable to find param " << id
                                                      << " - its probably not in patch::params()");
@@ -48,7 +48,7 @@ struct PatchContinuous : jdat::Continuous
             std::terminate();
         }
 
-        p = e.patchCopy.paramMap.at(id);
+        p = e.patchMainRef.paramMap.at(id);
     }
     ~PatchContinuous() override = default;
 
@@ -108,6 +108,7 @@ struct PatchContinuous : jdat::Continuous
                 onPullFromDef();
         }
         p->value = f;
+        editor.markPatchDirty();
         editor.mainToAudio.push({Synth::MainToAudioMsg::Action::SET_PARAM, pid, f});
         editor.requestParamsFlush();
         editor.updateTooltip(this);
@@ -138,14 +139,14 @@ struct PatchDiscrete : jdat::Discrete
 
     PatchDiscrete(SixSinesEditor &e, uint32_t id) : editor(e), pid(id)
     {
-        if (e.patchCopy.paramMap.find(id) == e.patchCopy.paramMap.end())
+        if (e.patchMainRef.paramMap.find(id) == e.patchMainRef.paramMap.end())
         {
             SXSNLOG("You were unable to find param " << id
                                                      << " - its probably not in patch::params()");
             assert(false);
             std::terminate();
         }
-        p = e.patchCopy.paramMap.at(id);
+        p = e.patchMainRef.paramMap.at(id);
     }
     ~PatchDiscrete() override = default;
 
@@ -165,6 +166,7 @@ struct PatchDiscrete : jdat::Discrete
     void setValueFromGUI(const int &f) override
     {
         p->value = f;
+        editor.markPatchDirty();
         editor.mainToAudio.push(
             {Synth::MainToAudioMsg::Action::SET_PARAM, pid, static_cast<float>(f)});
         editor.requestParamsFlush();

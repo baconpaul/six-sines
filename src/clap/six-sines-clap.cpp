@@ -73,14 +73,14 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     std::unique_ptr<Synth> engine;
     size_t blockPos{0};
 
-    // Stable buffer so SET_DAW_EXTRA_STATE messages pushed from stateLoad remain valid
-    // for the audio thread to pick up after stateLoad returns.
-    Synth::DawExtraState loadedDawExtraState;
-
   protected:
     bool activate(double sampleRate, uint32_t minFrameCount,
                   uint32_t maxFrameCount) noexcept override
     {
+        // The audio thread is stopped here; seed it from the main-thread source of truth. The DAW
+        // session state (MPE / smoothing) is seeded at construction and thereafter reaches the
+        // audio thread only through the SET_AUDIO_DAW_STATE queue, so it is not touched here.
+        engine->patch.copyValuesFrom(engine->patchMain);
         engine->setSampleRate(sampleRate);
         return true;
     }
@@ -323,58 +323,69 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     bool implementsState() const noexcept override { return true; }
     bool stateSave(const clap_ostream *ostream) noexcept override
     {
-        engine->mainToAudio.push({Synth::MainToAudioMsg::SEND_PREP_FOR_STREAM});
-        if (_host.canUseParams())
-            _host.paramsRequestFlush();
+        // patchMain is authoritative. If no editor is open to keep it current, drain any pending
+        // audio-thread updates into it first (we are the only consumer then). With the editor open,
+        // the idle owns the queue, so patchMain can lag the audio thread by up to one idle tick
+        // during an automation burst — a window of inconsistency, not a race.
+        if (!engine->editorActive.load())
+            engine->drainAudioToMainInto(engine->patchMain);
 
-        // best efforts on that message for now
-        static constexpr int maxIts{5};
-        int i{0};
-        for (i = 0; i < maxIts && !engine->readyForStream; ++i)
-        {
-            using namespace std::chrono_literals;
-            std::this_thread::sleep_for(4ms);
-        }
-        if (i == maxIts && !engine->readyForStream)
-        {
-            // sigh. something is wonky
-            engine->prepForStream();
-        }
-
-        auto res = sst::plugininfra::patch_support::patchToOutStream(engine->patch, ostream, true);
-        engine->readyForStream = false;
-        return res;
+        return sst::plugininfra::patch_support::patchToOutStream(engine->patchMain, ostream, true);
     }
     bool stateLoad(const clap_istream *istream) noexcept override
     {
-        auto patchCopy = std::make_unique<Patch>();
-        loadedDawExtraState = Synth::DawExtraState{};
-        patchCopy->dawExtraStateFrom = [this](TiXmlElement &e)
-        { Synth::fromDawExtraState(e, loadedDawExtraState); };
+        // Load into temps so a parse failure never leaves the engine half-written.
+        auto tmp = std::make_unique<Patch>();
+        Synth::DawStateMain loadedState{};
+        tmp->dawExtraStateFrom = [&](TiXmlElement &e) { Synth::fromDawExtraState(e, loadedState); };
 
-        if (!sst::plugininfra::patch_support::inStreamToPatch(istream, *patchCopy))
+        if (!sst::plugininfra::patch_support::inStreamToPatch(istream, *tmp))
             return false;
 
-        presets::PresetManager::sendEntirePatchToAudio(*patchCopy, engine->mainToAudio,
-                                                       patchCopy->name, _host.host());
+        engine->patchMain.copyValuesFrom(*tmp);
 
-        Synth::MainToAudioMsg des{Synth::MainToAudioMsg::SET_DAW_EXTRA_STATE};
-        des.dawExtraStatePointer = &loadedDawExtraState;
-        engine->mainToAudio.push(des);
-
-        if (_host.canUseParams())
+        // 1.1-era sessions carry no <mpe> element; derive MPE from the legacy in-patch slots (now
+        // in patchMain). Resolved on the main thread where patchMain is authoritative.
+        if (!loadedState.main.mpeFromExtraState)
         {
-            _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES);
-            _host.paramsRequestFlush();
+            loadedState.audio.mpeActive = engine->patchMain.output.legacyMpeActive.value > 0.5f;
+            loadedState.audio.mpeBendRange =
+                (int)std::round(engine->patchMain.output.legacyMpeBendRange.value);
         }
+        engine->dawStateMain = loadedState;
+        engine->uiForceRebuild++; // an open editor rebuilds from patchMain
+
+        if (isActive())
+        {
+            // Push the loaded patch into the audio-thread `patch`; this also rescans the host.
+            Synth::sendEntirePatchToAudio(engine->patchMain, engine->mainToAudio, _host.host());
+        }
+        else if (_host.canUseParams())
+        {
+            // Not running: the next activate() copies patchMain into patch. Just tell the host to
+            // re-read the loaded values / names (it reads them from patchMain). INFO carries the
+            // macro-name changes; issue it separately from VALUES|TEXT.
+            _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
+            _host.paramsRescan(CLAP_PARAM_RESCAN_INFO);
+        }
+
+        // Transport the loaded AudioDawState (mpe / smoothing) to the audio thread by value; the
+        // handler stores the engine's queue-inbound copy and applies it into monoValues. Drains on
+        // the next process (or the first process after activate, when inactive).
+        Synth::MainToAudioMsg des{Synth::MainToAudioMsg::SET_AUDIO_DAW_STATE};
+        des.audioDawState = engine->dawStateMain.audio;
+        engine->mainToAudio.push(des);
         return true;
     }
 
     bool implementsParams() const noexcept override { return true; }
-    uint32_t paramsCount() const noexcept override { return engine->patch.params.size(); }
+    uint32_t paramsCount() const noexcept override { return engine->patchMain.params.size(); }
     bool paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept override
     {
-        auto ok = sst::plugininfra::patch_support::patchParamsInfo(paramIndex, info, engine->patch);
+        // All param reads come from patchMain (the main-thread source of truth); never
+        // engine->patch.
+        auto ok =
+            sst::plugininfra::patch_support::patchParamsInfo(paramIndex, info, engine->patchMain);
         if (!ok)
             return ok;
 
@@ -387,7 +398,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             int idx = (info->id - Patch::MacroNode::idBase) / Patch::MacroNode::idStride;
             if (idx >= 0 && idx < (int)numMacros)
             {
-                const auto &nameBuf = engine->patch.macroNames[idx];
+                const auto &nameBuf = engine->patchMain.macroNames[idx];
                 std::string userName(nameBuf.data());
                 auto def = Patch::MacroNode::defaultGroupName(idx);
                 if (!userName.empty() && userName != def)
@@ -402,31 +413,35 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     }
     bool paramsValue(clap_id paramId, double *value) noexcept override
     {
-        return sst::plugininfra::patch_support::patchParamsValue(paramId, value, engine->patch);
+        return sst::plugininfra::patch_support::patchParamsValue(paramId, value, engine->patchMain);
     }
     bool paramsValueToText(clap_id paramId, double value, char *display,
                            uint32_t size) noexcept override
     {
         return sst::plugininfra::patch_support::patchParamsValueToText(paramId, value, display,
-                                                                       size, engine->patch);
+                                                                       size, engine->patchMain);
     }
     bool paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept override
     {
         return sst::plugininfra::patch_support::patchParamsTextToValue(paramId, display, value,
-                                                                       engine->patch);
+                                                                       engine->patchMain);
     }
     void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override
     {
-        auto sz = in->size(in);
-
-        for (int i = 0; i < sz; ++i)
+        // paramsFlush is audio-thread when the plugin is ACTIVE, main-thread when INACTIVE.
+        if (isActive())
         {
-            const clap_event_header_t *nextEvent{nullptr};
-            nextEvent = in->get(in, i);
-            handleEvent(nextEvent);
+            // Audio thread: route param changes through the queue into `patch`.
+            auto sz = in->size(in);
+            for (uint32_t i = 0; i < sz; ++i)
+                handleEvent(in->get(in, i));
+            engine->processUIQueue(out);
         }
-
-        engine->processUIQueue(out);
+        else
+        {
+            // Main thread: patchMain is the truth; update it in place and echo out.
+            engine->paramsFlushMainThread(in, out);
+        }
     }
 
     bool implementsPresetLoad() const noexcept override { return true; }
@@ -448,12 +463,26 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                     std::stringstream buffer;
                     buffer << t.rdbuf();
 
-                    auto patchCopy = std::make_unique<Patch>();
-                    patchCopy->fromState(buffer.str());
+                    auto tmp = std::make_unique<Patch>();
+                    tmp->fromState(buffer.str());
 
+                    engine->patchMain.copyValuesFrom(*tmp);
+                    // Name is main-thread-only patch state; a preset takes the filename, set on
+                    // patchMain directly (after copyValuesFrom, which copied the streamed name).
                     auto dn = p.filename().replace_extension("").u8string();
-                    presets::PresetManager::sendEntirePatchToAudio(*patchCopy, engine->mainToAudio,
-                                                                   patchCopy->name, _host.host());
+                    memset(engine->patchMain.name, 0, sizeof(engine->patchMain.name));
+                    strncpy(engine->patchMain.name, dn.c_str(), sizeof(engine->patchMain.name) - 1);
+                    engine->patchMain.dirty = false;
+                    engine->uiForceRebuild++;
+
+                    if (isActive())
+                        Synth::sendEntirePatchToAudio(engine->patchMain, engine->mainToAudio,
+                                                      _host.host());
+                    else if (_host.canUseParams())
+                    {
+                        _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
+                        _host.paramsRescan(CLAP_PARAM_RESCAN_INFO);
+                    }
                     return true;
                 }
                 else
@@ -477,9 +506,11 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
             auto &p = pm.factoryPatchVector[idx];
 
-            // TODO : Assert the keys match here
-            auto patchCopy = std::make_unique<Patch>();
-            pm.loadFactoryPreset(*patchCopy, engine->mainToAudio, p.first, p.second);
+            // TODO : Assert the keys match here. loadFactoryPreset writes patchMain (name / dirty /
+            // macro names via fromState) and funnels params into the audio patch; force an open
+            // editor to rebuild from patchMain.
+            pm.loadFactoryPreset(engine->patchMain, engine->mainToAudio, p.first, p.second);
+            engine->uiForceRebuild++;
             return true;
         }
         return false;
@@ -493,7 +524,8 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     std::unique_ptr<juce::Component> createEditor() override
     {
         auto res = std::make_unique<baconpaul::six_sines::ui::SixSinesEditor>(
-            engine->audioToUi, engine->mainToAudio, engine->audioOutputRing,
+            engine->patchMain, engine->audioToMain, engine->mainToAudio, engine->audioOutputRing,
+            engine->editorActive, engine->uiForceRebuild, engine->dawStateMain,
             *engine->defaultsProvider, _host.host());
 
         res->onZoomChanged = [this](auto f)
@@ -515,7 +547,6 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             e->setZoomFactor(e->zoomFactor);
             return true;
         };
-        // res->sneakyStartupGrabFrom(engine->patch);
         res->repaint();
 
         return res;
@@ -565,7 +596,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                                               size_t param_count) noexcept
     {
         auto *self = static_cast<SixSinesClap *>(plugin->plugin_data);
-        auto &params = self->engine->patch.params;
+        auto &params = self->engine->patchMain.params;
         if (param_count != params.size())
             return false;
 

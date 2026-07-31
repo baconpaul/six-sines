@@ -19,7 +19,7 @@ namespace baconpaul::six_sines::ui
 {
 MainPanSubPanel::MainPanSubPanel(SixSinesEditor &e) : HasEditor(e)
 {
-    auto &on = editor.patchCopy.mainPanMod;
+    auto &on = editor.patchMainRef.mainPanMod;
     setupDAHDSR(e, on);
     setupModulation(e, on);
     setupLFO(e, on);

@@ -563,7 +563,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
 
     removeAllChildren();
 
-    auto &sn = editor.patchCopy.sourceNodes[idx];
+    auto &sn = editor.patchMainRef.sourceNodes[idx];
     setupDAHDSR(editor, sn);
     setupLFO(editor, sn);
     setupModulation(editor, sn);
@@ -575,7 +575,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
         using EM = Patch::SourceNode::ExtendedMode;
         using TID = Patch::SourceNode::TargetID;
         auto em = static_cast<EM>(static_cast<int>(
-            std::round(w->editor.patchCopy.sourceNodes[w->index].extendedModeMode.value)));
+            std::round(w->editor.patchMainRef.sourceNodes[w->index].extendedModeMode.value)));
         if (tid == TID::EXTEND_M)
             return em == EM::PHASE_REMAP || em == EM::RESONANT_SWEEP || em == EM::NOISE;
         if (tid == TID::EXTEND_N)
@@ -1214,7 +1214,7 @@ void SourceSubPanel::setExtendedModeVisibility()
         noisePainter->setVisible(isNoise);
 
     using NT = Patch::SourceNode::NoiseType;
-    auto &sn = editor.patchCopy.sourceNodes[index];
+    auto &sn = editor.patchMainRef.sourceNodes[index];
     auto nt = static_cast<NT>(static_cast<int>(std::round(sn.noiseType.value)));
     auto showLfsr = isNoise && (nt == NT::CHIP_LFSR);
     if (lfsrMode)
@@ -1225,7 +1225,7 @@ void SourceSubPanel::setExtendedModeVisibility()
 
 void SourceSubPanel::setEnabledState()
 {
-    auto &sn = editor.patchCopy.sourceNodes[index];
+    auto &sn = editor.patchMainRef.sourceNodes[index];
     auto isAudioIn = ((int)std::round(sn.waveForm.value) == SinTable::AUDIO_IN);
 
     auto ekt = sn.keyTrack.value < 0.5;
@@ -1294,14 +1294,14 @@ void SourceSubPanel::setEnabledState()
     if (index == 0 && editor.selfSubPanel->isVisible())
         editor.selfSubPanel->setEnabledState();
 
-    unisonBehaviorB->setEnabled(editor.patchCopy.output.unisonCount > 1);
+    unisonBehaviorB->setEnabled(editor.patchMainRef.output.unisonCount > 1);
     repaint();
     editor.repaint();
 }
 
 void SourceSubPanel::showWaveformPopup()
 {
-    auto &sn = editor.patchCopy.sourceNodes[index];
+    auto &sn = editor.patchMainRef.sourceNodes[index];
     auto wfid = sn.waveForm.meta.id;
     auto currentVal = (int)std::round(sn.waveForm.value);
 
@@ -1342,13 +1342,13 @@ void SourceSubPanel::showWaveformPopup()
 
 void SourceSubPanel::showUnisonFeaturesMenu()
 {
-    if (editor.patchCopy.output.unisonCount < 1.5)
+    if (editor.patchMainRef.output.unisonCount < 1.5)
         return;
 
     auto p = juce::PopupMenu();
-    auto canCenter = (int)(editor.patchCopy.output.unisonCount.value) % 2;
-    auto upart = (int)editor.patchCopy.sourceNodes[index].unisonParticipation.value;
-    auto upid = editor.patchCopy.sourceNodes[index].unisonParticipation.meta.id;
+    auto canCenter = (int)(editor.patchMainRef.output.unisonCount.value) % 2;
+    auto upart = (int)editor.patchMainRef.sourceNodes[index].unisonParticipation.value;
+    auto upid = editor.patchMainRef.sourceNodes[index].unisonParticipation.meta.id;
     p.addSectionHeader("Op " + std::to_string(index + 1) + " Unison Behavior");
     p.addSeparator();
     p.addItem("Participates in Tuning", true, (upart & 1),
@@ -1372,8 +1372,8 @@ void SourceSubPanel::showUnisonFeaturesMenu()
                   w->editor.setAndSendParamValue(upid, nv);
               });
     p.addSeparator();
-    auto u2m = (int)editor.patchCopy.sourceNodes[index].unisonToMain.value;
-    auto u2mid = editor.patchCopy.sourceNodes[index].unisonToMain.meta.id;
+    auto u2m = (int)editor.patchMainRef.sourceNodes[index].unisonToMain.value;
+    auto u2mid = editor.patchMainRef.sourceNodes[index].unisonToMain.meta.id;
 
     p.addItem("All Voices to Main", true, u2m == 0,
               [w = juce::Component::SafePointer(this), u2mid]()
@@ -1400,8 +1400,8 @@ void SourceSubPanel::showUnisonFeaturesMenu()
                       w->editor.setAndSendParamValue(u2mid, 3);
               });
     p.addSeparator();
-    auto u2o = (int)editor.patchCopy.sourceNodes[index].unisonToOpOut.value;
-    auto u2oid = editor.patchCopy.sourceNodes[index].unisonToOpOut.meta.id;
+    auto u2o = (int)editor.patchMainRef.sourceNodes[index].unisonToOpOut.value;
+    auto u2oid = editor.patchMainRef.sourceNodes[index].unisonToOpOut.meta.id;
     p.addItem("All Voices to Op " + std::to_string(index + 1) + "Out", true, u2o == 0,
               [w = juce::Component::SafePointer(this), u2oid]()
               {

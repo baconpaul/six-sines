@@ -96,7 +96,7 @@ PlayModeSubPanel::~PlayModeSubPanel() = default;
 
 PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
 {
-    auto &on = editor.patchCopy.output;
+    auto &on = editor.patchMainRef.output;
 
     createComponent(editor, *this, on.bendUp, bUp, bUpD);
     createComponent(editor, *this, on.bendDown, bDn, bDnD);
@@ -226,16 +226,16 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     addAndMakeVisible(*mpeRowLabel);
 
     mpeActiveButtonD = std::make_unique<decltype(mpeActiveButtonD)::element_type>(
-        editor.editorDawExtraState.mpeActive);
+        editor.dawStateMainRef.audio.mpeActive);
     mpeActiveButtonD->setLabel("MPE Active");
     mpeActiveButtonD->widget->setLabel("Active");
     mpeActiveButtonD->onValueChanged = [w = juce::Component::SafePointer(this), op](bool v)
     {
         if (!w)
             return;
-        Synth::MainToAudioMsg m{Synth::MainToAudioMsg::SET_MPE_ACTIVE};
-        m.value = v ? 1.f : 0.f;
-        w->editor.mainToAudio.push(m);
+        // The toggle wrote dawStateMainRef.audio.mpeActive directly (bound by reference); ship the
+        // audio-relevant session state to the audio thread.
+        w->editor.pushAudioDawState();
         op();
     };
     addAndMakeVisible(*mpeActiveButtonD->widget);
@@ -260,8 +260,8 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     refreshMpeRangeEditor();
     addAndMakeVisible(*mpeRangeEditor);
 
-    // Refresh widget visuals + dependent enabled-state when the dawExtraState changes
-    // (e.g. CLAP host stateLoad echoes a SET_DAW_EXTRA_STATE back to the UI).
+    // Refresh widget visuals + dependent enabled-state when the session state changes (a load
+    // bumps uiForceRebuild, whose rebuild calls applyDawExtraState -> these listeners).
     editor.dawExtraStateRefreshListeners.push_back(
         [w = juce::Component::SafePointer(this)]()
         {
@@ -282,14 +282,13 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     mpeRangeL->setJustification(juce::Justification::centredRight);
     addAndMakeVisible(*mpeRangeL);
 
-    // Builds a smoothing slider bound to a float in editorDawExtraState. The slider is a real
+    // Builds a smoothing slider bound to a float in dawStateMainRef.audio. The slider is a real
     // HSliderFilled (fill + RMB value typein + set-to-default) reading/writing the float; every
-    // GUI change pushes the matching SET_*_SMOOTHING_TIME_MS message to the audio thread.
+    // GUI change ships the audio-relevant session state to the audio thread by value.
     auto makeSmoothingSlider =
         [this](std::unique_ptr<sst::jucegui::component_adapters::ContinuousToValueReference<
                    jcmp::HSliderFilled>> &slot,
-               float &under, float mx, float def, const std::string &label,
-               Synth::MainToAudioMsg::Action act)
+               float &under, float mx, float def, const std::string &label)
     {
         slot = std::make_unique<typename std::decay_t<decltype(slot)>::element_type>(under);
         slot->setLabel(label);
@@ -305,13 +304,13 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
         };
         auto *wid = slot->widget.get();
         jdat::Continuous *src = slot.get();
-        slot->onValueChanged = [w = juce::Component::SafePointer(this), act, src](float v)
+        slot->onValueChanged = [w = juce::Component::SafePointer(this), src](float v)
         {
             if (!w)
                 return;
-            Synth::MainToAudioMsg m{act};
-            m.value = v;
-            w->editor.mainToAudio.push(m);
+            // The slider wrote the bound float in dawStateMainRef.audio; ship the whole audio
+            // state.
+            w->editor.pushAudioDawState();
             // Keep the live tooltip in sync while dragging.
             w->editor.updateTooltip(src);
         };
@@ -345,18 +344,17 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     smoothingRowLabel->setJustification(juce::Justification::centredRight);
     addAndMakeVisible(*smoothingRowLabel);
 
-    makeSmoothingSlider(midiSmoothingSliderD, editor.editorDawExtraState.midiCCSmoothingTimeMs,
-                        100.f, 25.f, "MIDI Smoothing",
-                        Synth::MainToAudioMsg::SET_MIDI_CC_SMOOTHING_TIME_MS);
+    makeSmoothingSlider(midiSmoothingSliderD, editor.dawStateMainRef.audio.midiCCSmoothingTimeMs,
+                        100.f, 25.f, "MIDI Smoothing");
 
     paramSmoothingRowLabel = std::make_unique<jcmp::Label>();
     paramSmoothingRowLabel->setText("Param Smoothing");
     paramSmoothingRowLabel->setJustification(juce::Justification::centredRight);
     addAndMakeVisible(*paramSmoothingRowLabel);
 
-    makeSmoothingSlider(
-        paramSmoothingSliderD, editor.editorDawExtraState.paramAutomationSmoothingTimeMs, 25.f, 2.f,
-        "Param Smoothing", Synth::MainToAudioMsg::SET_PARAM_AUTOMATION_SMOOTHING_TIME_MS);
+    makeSmoothingSlider(paramSmoothingSliderD,
+                        editor.dawStateMainRef.audio.paramAutomationSmoothingTimeMs, 25.f, 2.f,
+                        "Param Smoothing");
 
     tsposeTitle = std::make_unique<jcmp::RuledLabel>();
     tsposeTitle->setText("Octave");
@@ -399,7 +397,7 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     outputControlTitle->setText("Output Stage (Main)");
     addAndMakeVisible(*outputControlTitle);
 
-    auto &out = editor.patchCopy.output;
+    auto &out = editor.patchMainRef.output;
     createComponent(editor, *this, out.sampleRateStrategy, srStrat, srStratD);
     addAndMakeVisible(*srStrat);
     createComponent(editor, *this, out.resampleEngine, rsEng, rsEngD);
@@ -675,7 +673,7 @@ void PlayModeSubPanel::setUltrasonicLabel()
 
 void PlayModeSubPanel::setTriggerButtonLabel()
 {
-    auto v = (int)std::round(editor.patchCopy.output.defaultTrigger.value);
+    auto v = (int)std::round(editor.patchMainRef.output.defaultTrigger.value);
     switch (v)
     {
     case KEY_PRESS:
@@ -690,14 +688,14 @@ void PlayModeSubPanel::setTriggerButtonLabel()
 
 void PlayModeSubPanel::showTriggerButtonMenu()
 {
-    auto tmv = (int)std::round(editor.patchCopy.output.defaultTrigger.value);
+    auto tmv = (int)std::round(editor.patchMainRef.output.defaultTrigger.value);
 
     auto genSet = [w = juce::Component::SafePointer(this)](int nv)
     {
         auto that = w;
         return [nv, that]()
         {
-            auto &p = that->editor.patchCopy.output.defaultTrigger;
+            auto &p = that->editor.patchMainRef.output.defaultTrigger;
             that->editor.setAndSendParamValue(p, nv);
             that->setTriggerButtonLabel();
         };
@@ -710,26 +708,26 @@ void PlayModeSubPanel::showTriggerButtonMenu()
         p.addItem(TriggerModeName[g], true, tmv == g, genSet(g));
     }
     p.addSeparator();
-    auto rpo = editor.patchCopy.output.rephaseOnRetrigger;
-    auto rnp = editor.patchCopy.output.uniPhaseRand;
-    auto uc = (int)editor.patchCopy.output.unisonCount.value;
+    auto rpo = editor.patchMainRef.output.rephaseOnRetrigger;
+    auto rnp = editor.patchMainRef.output.uniPhaseRand;
+    auto uc = (int)editor.patchMainRef.output.unisonCount.value;
     p.addItem("Reset Phase on Retrigger", !rnp || (uc == 1), rpo,
               [rpo, w = juce::Component::SafePointer(this)]()
               {
                   if (!w)
                       return;
-                  w->editor.setAndSendParamValue(w->editor.patchCopy.output.rephaseOnRetrigger,
+                  w->editor.setAndSendParamValue(w->editor.patchMainRef.output.rephaseOnRetrigger,
                                                  !rpo);
               });
 
     p.addSeparator();
-    auto atfl = editor.patchCopy.output.attackFloorOnRetrig;
+    auto atfl = editor.patchMainRef.output.attackFloorOnRetrig;
     p.addItem("Attack Floored on Retrigger", true, atfl,
               [atfl, w = juce::Component::SafePointer(this)]()
               {
                   if (!w)
                       return;
-                  w->editor.setAndSendParamValue(w->editor.patchCopy.output.attackFloorOnRetrig,
+                  w->editor.setAndSendParamValue(w->editor.patchMainRef.output.attackFloorOnRetrig,
                                                  !atfl);
               });
 
@@ -739,7 +737,7 @@ void PlayModeSubPanel::showTriggerButtonMenu()
 
 void PlayModeSubPanel::setPortaContinuationLabel()
 {
-    auto v = (int)std::round(editor.patchCopy.output.portaContMode.value);
+    auto v = (int)std::round(editor.patchMainRef.output.portaContMode.value);
     switch (v)
     {
     case 0:
@@ -756,14 +754,14 @@ void PlayModeSubPanel::setPortaContinuationLabel()
 
 void PlayModeSubPanel::showPortaContinuationMenu()
 {
-    auto tmv = (int)std::round(editor.patchCopy.output.portaContMode.value);
+    auto tmv = (int)std::round(editor.patchMainRef.output.portaContMode.value);
 
     auto genSet = [w = juce::Component::SafePointer(this)](int nv)
     {
         auto that = w;
         return [nv, that]()
         {
-            auto &p = that->editor.patchCopy.output.portaContMode;
+            auto &p = that->editor.patchMainRef.output.portaContMode;
             that->editor.setAndSendParamValue(p, nv);
             that->setPortaContinuationLabel();
         };
@@ -789,7 +787,7 @@ void PlayModeSubPanel::showSmoothingDefaultsMenu()
               {
                   if (!w || !w->editor.defaultsProvider)
                       return;
-                  auto &des = w->editor.editorDawExtraState;
+                  auto &des = w->editor.dawStateMainRef.audio;
                   auto *dp = w->editor.defaultsProvider;
                   dp->updateUserDefaultValue(Defaults::defaultMPEBend, des.mpeBendRange);
                   dp->updateUserDefaultValue(Defaults::defaultMIDISmoothing,
@@ -896,14 +894,14 @@ void PlayModeSubPanel::showThemeMenu()
 
 void PlayModeSubPanel::setEnabledState()
 {
-    auto vm = editor.patchCopy.output.playMode.value;
+    auto vm = editor.patchMainRef.output.playMode.value;
     auto en = vm > 0.5;
     portaL->setEnabled(en);
     portaTime->setEnabled(en);
     portaContinuationButton->setEnabled(en);
     pianoModeButton->setEnabled(!en);
 
-    auto uc = editor.patchCopy.output.unisonCount.value;
+    auto uc = editor.patchMainRef.output.unisonCount.value;
     uniSpread->setEnabled(uc > 1.5);
     uniSpreadG->setEnabled(uc > 1.5);
     uniPan->setEnabled(uc > 1.5);
@@ -914,11 +912,11 @@ void PlayModeSubPanel::setEnabledState()
     else
         uniCtL->setText("Voices");
 
-    auto brOn = editor.patchCopy.output.bitRateAdjust.value > 0.5;
+    auto brOn = editor.patchMainRef.output.bitRateAdjust.value > 0.5;
     zohPreFilter->setEnabled(brOn);
     zohPreFilterLabel->setEnabled(brOn);
 
-    auto me = editor.editorDawExtraState.mpeActive;
+    auto me = editor.dawStateMainRef.audio.mpeActive;
     mpeRangeEditor->setEnabled(me);
     mpeRangeL->setEnabled(me);
 
@@ -930,7 +928,7 @@ void PlayModeSubPanel::showPolyLimitMenu()
     auto p = juce::PopupMenu();
     p.addSectionHeader("Voice Limit");
     p.addSeparator();
-    auto currentLimit = (int)std::round(editor.patchCopy.output.polyLimit.value);
+    auto currentLimit = (int)std::round(editor.patchMainRef.output.polyLimit.value);
     for (auto lim : voiceLimit->steps)
     {
         p.addItem(std::to_string(lim), true, lim == currentLimit,
@@ -938,7 +936,7 @@ void PlayModeSubPanel::showPolyLimitMenu()
                   {
                       if (!w)
                           return;
-                      w->editor.setAndSendParamValue(w->editor.patchCopy.output.polyLimit, lim,
+                      w->editor.setAndSendParamValue(w->editor.patchMainRef.output.polyLimit, lim,
                                                      true, true);
                   });
     }
@@ -974,19 +972,17 @@ void PlayModeSubPanel::updateMTSStatus()
 
 void PlayModeSubPanel::refreshMpeRangeEditor()
 {
-    auto v = editor.editorDawExtraState.mpeBendRange;
+    auto v = editor.dawStateMainRef.audio.mpeBendRange;
     mpeRangeEditor->setAllText(std::to_string(v));
 }
 
 void PlayModeSubPanel::commitMpeRangeEditor()
 {
     auto txt = mpeRangeEditor->getText().trim();
-    int v = txt.isEmpty() ? editor.editorDawExtraState.mpeBendRange : txt.getIntValue();
+    int v = txt.isEmpty() ? editor.dawStateMainRef.audio.mpeBendRange : txt.getIntValue();
     v = std::clamp(v, 1, 96);
-    editor.editorDawExtraState.mpeBendRange = v;
-    Synth::MainToAudioMsg m{Synth::MainToAudioMsg::SET_MPE_BEND_RANGE};
-    m.value = (float)v;
-    editor.mainToAudio.push(m);
+    editor.dawStateMainRef.audio.mpeBendRange = v;
+    editor.pushAudioDawState();
     refreshMpeRangeEditor();
 }
 

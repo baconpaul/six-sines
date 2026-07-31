@@ -17,6 +17,7 @@
 #include "synth/synth.h"
 #include <sstream>
 #include <fstream>
+#include <cstring>
 
 #include "sst/plugininfra/strnatcmp.h"
 
@@ -26,6 +27,20 @@ CMRC_DECLARE(sixsines_patches);
 
 namespace baconpaul::six_sines::presets
 {
+
+namespace
+{
+// Name + dirty are main-thread-only patch state: the audio patch never reads them, and the editor
+// reads them straight off patchMain. Set them on the patch (== patchMain) here rather than
+// round-tripping through the queues. Author + macro names were already written by fromState /
+// resetToInit; the funnel moves only param values into the audio patch.
+void nameAndMarkClean(Patch &patch, const std::string &name)
+{
+    memset(patch.name, 0, sizeof(patch.name));
+    strncpy(patch.name, name.c_str(), sizeof(patch.name) - 1);
+    patch.dirty = false;
+}
+} // namespace
 
 PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
 {
@@ -180,7 +195,8 @@ void PresetManager::loadUserPresetDirect(Patch &patch, Synth::mainToAudioQueue_T
     patch.fromState(buffer.str());
 
     auto dn = p.filename().replace_extension("").u8string();
-    sendEntirePatchToAudio(patch, mainToAudio, dn);
+    nameAndMarkClean(patch, dn);
+    Synth::sendEntirePatchToAudio(patch, mainToAudio, clapHost);
     if (onPresetLoaded)
         onPresetLoaded(dn);
 }
@@ -214,7 +230,8 @@ void PresetManager::loadFactoryPreset(Patch &patch, Synth::mainToAudioQueue_T &m
         {
             noExt = noExt.substr(0, ps);
         }
-        sendEntirePatchToAudio(patch, mainToAudio, noExt);
+        nameAndMarkClean(patch, noExt);
+        Synth::sendEntirePatchToAudio(patch, mainToAudio, clapHost);
 
         if (onPresetLoaded)
         {
@@ -230,83 +247,10 @@ void PresetManager::loadFactoryPreset(Patch &patch, Synth::mainToAudioQueue_T &m
 void PresetManager::loadInit(Patch &patch, Synth::mainToAudioQueue_T &mainToAudio)
 {
     patch.resetToInit();
-    sendEntirePatchToAudio(patch, mainToAudio, "Init");
+    nameAndMarkClean(patch, "Init");
+    Synth::sendEntirePatchToAudio(patch, mainToAudio, clapHost);
     if (onPresetLoaded)
         onPresetLoaded("Init");
-}
-
-void PresetManager::sendEntirePatchToAudio(Patch &patch, Synth::mainToAudioQueue_T &mainToAudio,
-                                           const std::string &s)
-{
-    if (!clapHostParams)
-    {
-        clapHostParams = static_cast<const clap_host_params_t *>(
-            clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
-    }
-    sendEntirePatchToAudio(patch, mainToAudio, s, clapHost, clapHostParams);
-}
-
-void PresetManager::sendEntirePatchToAudio(Patch &patch, Synth::mainToAudioQueue_T &mainToAudio,
-                                           const std::string &name, const clap_host_t *h,
-                                           const clap_host_params_t *hostPar)
-{
-    if (!h)
-        return;
-
-    if (hostPar == nullptr)
-    {
-        hostPar = static_cast<const clap_host_params_t *>(h->get_extension(h, CLAP_EXT_PARAMS));
-    }
-    static char stringBuffer[stringBufferEntries][stringBufferLen];
-    static int currentString{0};
-
-    char *tmpDat = stringBuffer[currentString];
-    currentString = (currentString + 1) % stringBufferEntries;
-
-    memset(tmpDat, 0, stringBufferLen);
-    strncpy(tmpDat, name.c_str(), stringBufferLen - 1);
-    mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_NAME, 0, 0.f, tmpDat});
-
-    char *authorDat = stringBuffer[currentString];
-    currentString = (currentString + 1) % stringBufferEntries;
-    memset(authorDat, 0, stringBufferLen);
-    auto authorStr = patch.getAuthor();
-    strncpy(authorDat, authorStr.c_str(), stringBufferLen - 1);
-    mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_AUTHOR, 0, 0.f, authorDat});
-
-    // Each macro name uses its own slot in the rotating buffer so the pointer
-    // stays valid until the audio thread drains the queue.
-    for (uint32_t mi = 0; mi < numMacros; ++mi)
-    {
-        char *macDat = stringBuffer[currentString];
-        currentString = (currentString + 1) % stringBufferEntries;
-        memset(macDat, 0, stringBufferLen);
-        strncpy(macDat, patch.macroNames[mi].data(), stringBufferLen - 1);
-        Synth::MainToAudioMsg msg{Synth::MainToAudioMsg::SEND_MACRO_NAME};
-        msg.paramId = mi;
-        msg.uiManagedPointer = macDat;
-        mainToAudio.push(msg);
-    }
-    // The audio-side SEND_MACRO_NAME handler decides whether each name actually
-    // changed and requests an INFO rescan only if so (atomic-OR coalesces the
-    // burst into a single host call).
-
-    mainToAudio.push({Synth::MainToAudioMsg::STOP_AUDIO});
-    for (const auto &p : patch.params)
-    {
-        mainToAudio.push(
-            {Synth::MainToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING, p->meta.id, p->value});
-    }
-    mainToAudio.push({Synth::MainToAudioMsg::START_AUDIO});
-    mainToAudio.push({Synth::MainToAudioMsg::SEND_PATCH_IS_CLEAN, true});
-    // SEND_POST_LOAD's audio handler now requests the VALUES rescan via
-    // Synth::requestParamRescan, so no separate rescan message is needed here.
-    mainToAudio.push({Synth::MainToAudioMsg::SEND_POST_LOAD, true});
-
-    if (hostPar)
-    {
-        hostPar->request_flush(h);
-    }
 }
 
 } // namespace baconpaul::six_sines::presets

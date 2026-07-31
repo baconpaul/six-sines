@@ -237,7 +237,7 @@ template <typename Comp, typename Patch> struct ModulationComponents
                     sCopy < (int)ModMatrixConfig::MACRO_MOD_0 + (int)numMacros)
                 {
                     int k = sCopy - (int)ModMatrixConfig::MACRO_MOD_0;
-                    auto &mp = w->editor.patchCopy.macroNodes[k].macroPower;
+                    auto &mp = w->editor.patchMainRef.macroNodes[k].macroPower;
                     if (mp.value < 0.5f)
                         w->editor.setAndSendParamValue(mp, 1.f);
                 }

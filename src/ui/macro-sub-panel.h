@@ -76,11 +76,11 @@ struct MacroSubPanel : juce::Component,
     void setEnabledState();
     void refreshUsedByList();
 
-    // Persist the name editor's text into patchCopy, push to audio thread, and
+    // Persist the name editor's text into patchMainRef, push to audio thread, and
     // refresh the dependent UI (MacroPanel label + singlePanel title).
     void commitName();
 
-    // Re-reads patchCopy.macroNames[index] into nameEditor and refreshes the
+    // Re-reads patchMainRef.macroNames[index] into nameEditor and refreshes the
     // singlePanel title. Called when the audio thread tells us the name
     // changed (patch load, etc.) and this sub-panel is the visible one.
     void refreshNameFromPatch();

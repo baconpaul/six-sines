@@ -28,10 +28,10 @@ void SelfSubPanel::setSelectedIndex(int idx)
 
     removeAllChildren();
 
-    auto &n = editor.patchCopy.selfNodes[idx];
-    setupDAHDSR(editor, editor.patchCopy.selfNodes[idx]);
-    setupLFO(editor, editor.patchCopy.selfNodes[idx]);
-    setupModulation(editor, editor.patchCopy.selfNodes[idx]);
+    auto &n = editor.patchMainRef.selfNodes[idx];
+    setupDAHDSR(editor, editor.patchMainRef.selfNodes[idx]);
+    setupLFO(editor, editor.patchMainRef.selfNodes[idx]);
+    setupModulation(editor, editor.patchMainRef.selfNodes[idx]);
 
     auto travidx{400};
     auto traverse = [&travidx](auto &c)
@@ -131,7 +131,7 @@ void SelfSubPanel::setEnabledState()
     // When op1 (index 0) is in AUDIO_IN mode, feedback is skipped — grey everything out
     auto isAudioIn =
         (index == 0) &&
-        ((int)std::round(editor.patchCopy.sourceNodes[0].waveForm.value) == SinTable::AUDIO_IN);
+        ((int)std::round(editor.patchMainRef.sourceNodes[0].waveForm.value) == SinTable::AUDIO_IN);
 
     auto en = envMulD->getValue() < 0.5;
     envToLev->setEnabled(en && !isAudioIn);

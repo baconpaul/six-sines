@@ -25,7 +25,7 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
 {
     using kt_t = sst::jucegui::accessibility::KeyboardTraverser;
 
-    auto &mn = editor.patchCopy.mixerNodes;
+    auto &mn = editor.patchMainRef.mixerNodes;
     for (auto i = 0U; i < numOps; ++i)
     {
         createComponent(editor, *this, mn[i].level, knobs[i], knobsData[i], i);
@@ -54,9 +54,9 @@ MixerPanel::MixerPanel(SixSinesEditor &e) : jcmp::NamedPanel("Mixer"), HasEditor
         {
             if (!w)
                 return;
-            w->editor.setAndSendParamValue(w->editor.patchCopy.mixerNodes[i].active.meta.id, true,
+            w->editor.setAndSendParamValue(w->editor.patchMainRef.mixerNodes[i].active.meta.id, true,
                                            true);
-            w->editor.setAndSendParamValue(w->editor.patchCopy.sourceNodes[i].active.meta.id, true,
+            w->editor.setAndSendParamValue(w->editor.patchMainRef.sourceNodes[i].active.meta.id, true,
                                            true);
             w->optionalAllSoundsOffOnToggle();
             w->repaint();
