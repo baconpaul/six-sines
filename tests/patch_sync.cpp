@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "synth/synth.h"
+#include "sst/plugininfra/patch-support/patch_base_clap_adapter.h"
 
 using namespace baconpaul::six_sines;
 
@@ -267,4 +268,60 @@ TEST_CASE("DAW session state round-trips through patchMain streaming", "[patch-s
     REQUIRE(b->dawStateMain.audio.mpeBendRange == 48);
     REQUIRE(approxEq(b->dawStateMain.audio.midiCCSmoothingTimeMs, 12.5f));
     REQUIRE(approxEq(b->dawStateMain.audio.paramAutomationSmoothingTimeMs, 7.5f));
+}
+
+TEST_CASE("Host automation carrying a clap cookie reaches the audio patch", "[patch-sync]")
+{
+    auto enginePtr = std::make_unique<Synth>(false);
+    auto &engine = *enginePtr;
+
+    const uint32_t pid = engine.patch.macroNodes[0].level.meta.id;
+    const float target = 0.42f;
+
+    // paramsInfo reads patchMain for the info fields but must cookie the audio patch.
+    uint32_t idx{0};
+    bool found{false};
+    for (uint32_t i = 0; i < engine.patchMain.params.size(); ++i)
+    {
+        if (engine.patchMain.params[i]->meta.id == pid)
+        {
+            idx = i;
+            found = true;
+            break;
+        }
+    }
+    REQUIRE(found);
+
+    clap_param_info info{};
+    REQUIRE(sst::plugininfra::patch_support::patchParamsInfo(idx, &info, engine.patchMain));
+    info.cookie = engine.clapCookieFor(info.id);
+
+    REQUIRE(info.cookie == (void *)engine.patch.paramMap.at(pid));
+    REQUIRE(info.cookie != (void *)engine.patchMain.paramMap.at(pid));
+
+    clap_event_param_value_t pevt{};
+    pevt.header.size = sizeof(pevt);
+    pevt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+    pevt.header.type = CLAP_EVENT_PARAM_VALUE;
+    pevt.param_id = pid;
+    pevt.cookie = info.cookie;
+    pevt.note_id = -1;
+    pevt.port_index = -1;
+    pevt.channel = -1;
+    pevt.key = -1;
+    pevt.value = target;
+
+    // Exactly what the clap process() event loop does with the host's cookie.
+    auto par = sst::plugininfra::patch_support::paramFromClapEvent<Param>(&pevt, engine.patch);
+    engine.handleParamValue(par, pevt.param_id, pevt.value);
+    engine.snapAllParams();
+
+    // The engine must actually hear the automation ...
+    REQUIRE(approxEq(engine.patch.paramMap.at(pid)->value, target));
+    // ... and the audio thread must not have written patchMain behind the main thread's back.
+    REQUIRE_FALSE(approxEq(engine.patchMain.paramMap.at(pid)->value, target));
+
+    // patchMain catches up only through the queue.
+    engine.drainAudioToMainInto(engine.patchMain);
+    REQUIRE(approxEq(engine.patchMain.paramMap.at(pid)->value, target));
 }

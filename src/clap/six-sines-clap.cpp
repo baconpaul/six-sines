@@ -389,11 +389,15 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         if (!ok)
             return ok;
 
+        // patchParamsInfo cookies the patch it read, but the host hands the cookie back on
+        // param events we resolve on the audio thread, so it must point into `patch`
+        info->cookie = engine->clapCookieFor(info->id);
+
         // The macro amplitude param is tagged with isPrimaryMacroFeature; for that
         // single param swap the host-displayed name to "Foo (Macro N)" when the
         // user has renamed the macro. Every other macro param is left alone.
-        auto *param = static_cast<const Param *>(info->cookie);
-        if (param && param->meta.hasFeature(isPrimaryMacroFeature))
+        auto *param = engine->patchMain.params[paramIndex];
+        if (param->meta.hasFeature(isPrimaryMacroFeature))
         {
             int idx = (info->id - Patch::MacroNode::idBase) / Patch::MacroNode::idStride;
             if (idx >= 0 && idx < (int)numMacros)
