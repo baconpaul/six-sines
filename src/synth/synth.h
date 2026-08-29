@@ -400,6 +400,14 @@ struct Synth
 
     void handleParamValue(Param *p, uint32_t pid, float value);
 
+    // Every clap cookie we hand the host points into the audio-thread `patch`: the host hands
+    // it back on param events, which we only ever resolve on the audio thread.
+    void *clapCookieFor(uint32_t paramId)
+    {
+        auto it = patch.paramMap.find(paramId);
+        return it == patch.paramMap.end() ? nullptr : (void *)it->second;
+    }
+
     static_assert(sst::voicemanager::constraints::ConstraintsChecker<VMConfig, VMResponder,
                                                                      VMMonoResponder>::satisfies());
 
