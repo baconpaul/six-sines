@@ -42,6 +42,82 @@ void nameAndMarkClean(Patch &patch, const std::string &name)
 }
 } // namespace
 
+std::string PresetManager::stripPresetExtension(const std::string &fileName)
+{
+    std::string ext{presetExtension};
+    if (fileName.size() >= ext.size() &&
+        fileName.compare(fileName.size() - ext.size(), ext.size(), ext) == 0)
+        return fileName.substr(0, fileName.size() - ext.size());
+    return fileName;
+}
+
+PresetManager::LoadedPreset PresetManager::LoadedPreset::init()
+{
+    return {Kind::Init, {}, {}, "Init"};
+}
+
+PresetManager::LoadedPreset PresetManager::LoadedPreset::factory(const std::string &cat,
+                                                                 const std::string &file)
+{
+    return {Kind::Factory, cat, fs::path{file}, stripPresetExtension(file)};
+}
+
+PresetManager::LoadedPreset PresetManager::LoadedPreset::user(const fs::path &relative)
+{
+    auto dn = relative.filename();
+    return {Kind::User, {}, relative, dn.replace_extension("").u8string()};
+}
+
+PresetManager::LoadedPreset PresetManager::LoadedPreset::unknown(const std::string &name)
+{
+    return {Kind::Unknown, {}, {}, name};
+}
+
+std::string PresetManager::LoadedPreset::sessionKind() const
+{
+    switch (kind)
+    {
+    case Kind::Init:
+        return "init";
+    case Kind::Factory:
+        return "factory";
+    case Kind::User:
+        return "user";
+    case Kind::Unknown:
+        break;
+    }
+    return "";
+}
+
+PresetManager::LoadedPreset PresetManager::LoadedPreset::fromSession(const std::string &kind,
+                                                                     const std::string &cat,
+                                                                     const std::string &path)
+{
+    if (kind == "init")
+        return init();
+    if (kind == "factory")
+        return factory(cat, path);
+    if (kind == "user")
+        return user(fs::u8path(path));
+    return unknown("");
+}
+
+PresetManager::LoadedPreset PresetManager::identifyUserPath(const fs::path &absolute) const
+{
+    auto dn = absolute.filename();
+    dn = dn.replace_extension("");
+
+    if (userPatchesPath.empty())
+        return LoadedPreset::unknown(dn.u8string());
+
+    // purely lexical, to match how rescanUserPresets stores the entries
+    auto rel = absolute.lexically_relative(userPatchesPath);
+    if (rel.empty() || *rel.begin() == "..")
+        return LoadedPreset::unknown(dn.u8string());
+
+    return LoadedPreset::user(rel);
+}
+
 PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
 {
     try
@@ -155,6 +231,8 @@ void PresetManager::rescanUserPresets()
     catch (fs::filesystem_error &)
     {
     }
+
+    userPatchesEpoch++;
 }
 
 #if USE_WCHAR_PRESET
@@ -194,11 +272,11 @@ void PresetManager::loadUserPresetDirect(Patch &patch, Synth::mainToAudioQueue_T
 
     patch.fromState(buffer.str());
 
-    auto dn = p.filename().replace_extension("").u8string();
-    nameAndMarkClean(patch, dn);
+    auto loaded = identifyUserPath(p);
+    nameAndMarkClean(patch, loaded.displayName);
     Synth::sendEntirePatchToAudio(patch, mainToAudio, clapHost);
     if (onPresetLoaded)
-        onPresetLoaded(dn);
+        onPresetLoaded(loaded);
 }
 
 void PresetManager::loadFactoryPreset(Patch &patch, Synth::mainToAudioQueue_T &mainToAudio,
@@ -224,18 +302,13 @@ void PresetManager::loadFactoryPreset(Patch &patch, Synth::mainToAudioQueue_T &m
             return;
         }
 
-        auto noExt = pat;
-        auto ps = noExt.find(".sxsnp");
-        if (ps != std::string::npos)
-        {
-            noExt = noExt.substr(0, ps);
-        }
-        nameAndMarkClean(patch, noExt);
+        auto loaded = LoadedPreset::factory(cat, pat);
+        nameAndMarkClean(patch, loaded.displayName);
         Synth::sendEntirePatchToAudio(patch, mainToAudio, clapHost);
 
         if (onPresetLoaded)
         {
-            onPresetLoaded(noExt);
+            onPresetLoaded(loaded);
         }
     }
     catch (const std::exception &e)
@@ -247,10 +320,11 @@ void PresetManager::loadFactoryPreset(Patch &patch, Synth::mainToAudioQueue_T &m
 void PresetManager::loadInit(Patch &patch, Synth::mainToAudioQueue_T &mainToAudio)
 {
     patch.resetToInit();
-    nameAndMarkClean(patch, "Init");
+    auto loaded = LoadedPreset::init();
+    nameAndMarkClean(patch, loaded.displayName);
     Synth::sendEntirePatchToAudio(patch, mainToAudio, clapHost);
     if (onPresetLoaded)
-        onPresetLoaded("Init");
+        onPresetLoaded(loaded);
 }
 
 } // namespace baconpaul::six_sines::presets
