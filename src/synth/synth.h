@@ -436,6 +436,22 @@ struct Synth
     {
         std::string colorMapXml;
         bool mpeFromExtraState{false};
+
+        // Which preset the session is showing. patch.name carries only the bare display name,
+        // which is not a unique key - a user preset can share it with a factory one - so the
+        // slot itself is recorded here. Empty kind means unknown: fall back to matching by name.
+        std::string presetKind{};     // "init" | "factory" | "user"
+        std::string presetCategory{}; // factory category
+        std::string presetPath{};     // factory: the file name. user: relative to userPatchesPath
+
+        // no arguments clears the record, so a load we cannot place falls back to the name
+        void recordPreset(const std::string &kind = "", const std::string &cat = "",
+                          const std::string &path = "")
+        {
+            presetKind = kind;
+            presetCategory = cat;
+            presetPath = path;
+        }
     };
 
     // The definitive DAW session state is all main-thread. `dawStateMain` is the authoritative

@@ -131,11 +131,6 @@ SixSinesEditor::SixSinesEditor(Patch &patchMain, Synth::audioToMainQueue_t &atou
 
     // Some panels use defaults on construction
     presetManager = std::make_unique<presets::PresetManager>(clapHost);
-    presetManager->onPresetLoaded = [this](auto s)
-    {
-        this->postPatchChange(s);
-        repaint();
-    };
 
     uiThemeManager = std::make_unique<presets::UIThemeManager>();
 
@@ -239,9 +234,18 @@ SixSinesEditor::SixSinesEditor(Patch &patchMain, Synth::audioToMainQueue_t &atou
     toolTip = std::make_unique<jcmp::ToolTip>();
     addChildComponent(*toolTip);
 
-    presetDataBinding =
-        std::make_unique<PresetDataBinding>(*presetManager, patchMainRef, mainToAudio);
-    presetDataBinding->setStateForDisplayName(patchMainRef.name);
+    presetDataBinding = std::make_unique<PresetDataBinding>(*presetManager, patchMainRef,
+                                                            mainToAudio, dawStateMainRef.main);
+    // startup: the session was loaded before this editor existed, so recover the preset from
+    // the session state rather than from the (ambiguous) patch name
+    presetDataBinding->restoreSelectionFromSession(patchMainRef.name);
+
+    presetManager->onPresetLoaded = [this](const auto &loaded)
+    {
+        presetDataBinding->setStateForLoadedPreset(loaded);
+        this->postPatchChange();
+        repaint();
+    };
 
     presetButton = std::make_unique<jcmp::JogUpDownButton>();
     presetButton->setCustomClass(PatchMenu);
@@ -1014,6 +1018,10 @@ void SixSinesEditor::finishSavePatch()
                                  w->presetManager->saveUserPresetDirect(w->patchMainRef, pn);
 #endif
 
+                                 // saveUserPresetDirect rescanned, so the file we just wrote now
+                                 // has a slot; select it rather than leaving the pre-save index
+                                 w->presetDataBinding->setStateForSavedUserPath(pn);
+
                                  // Saving makes the patch clean; update the model, view follows.
                                  w->patchMainRef.dirty = false;
                                  w->presetDataBinding->setDirtyState(false);
@@ -1132,15 +1140,17 @@ void SixSinesEditor::rebuildFromPatchMain()
 {
     // patchMainRef (== patchMain) already carries the new values, name, dirty, author and macro
     // names (a host stateLoad / preset load wrote it directly). postPatchChange pushes all of it
-    // into the widgets; also re-apply any session colour map the load carried.
-    postPatchChange(patchMainRef.name);
-    setPatchNameDisplay();
+    // into the widgets; also re-apply any session colour map the load carried. The write came
+    // from outside, so the preset is whatever the incoming session state recorded.
+    presetDataBinding->restoreSelectionFromSession(patchMainRef.name);
+    postPatchChange();
     applyDawExtraState();
+    if (presetButton)
+        presetButton->repaint();
 }
 
-void SixSinesEditor::postPatchChange(const std::string &s)
+void SixSinesEditor::postPatchChange()
 {
-    presetDataBinding->setStateForDisplayName(s);
     // Mirror the dirty indicator from patchMain (the model owns dirty; the view follows).
     presetDataBinding->setDirtyState(patchMainRef.dirty);
     // Macro names are patch state the load rewrote; re-label the macro widgets from patchMain.

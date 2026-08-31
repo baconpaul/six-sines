@@ -184,6 +184,17 @@ void Synth::toDawExtraState(TiXmlElement &e, const DawStateMain &s)
     sm.SetDoubleAttribute("midiCCMs", s.audio.midiCCSmoothingTimeMs);
     sm.SetDoubleAttribute("paramAutomationMs", s.audio.paramAutomationSmoothingTimeMs);
     e.InsertEndChild(sm);
+
+    // Which preset slot the session sits on. The patch name alone cannot say whether "Harmony 4"
+    // is the factory one or the user's.
+    if (!s.main.presetKind.empty())
+    {
+        TiXmlElement pr("preset");
+        pr.SetAttribute("kind", s.main.presetKind);
+        pr.SetAttribute("category", s.main.presetCategory);
+        pr.SetAttribute("path", s.main.presetPath);
+        e.InsertEndChild(pr);
+    }
 }
 
 void Synth::fromDawExtraState(TiXmlElement &e, DawStateMain &s)
@@ -224,6 +235,21 @@ void Synth::fromDawExtraState(TiXmlElement &e, DawStateMain &s)
             s.audio.midiCCSmoothingTimeMs = (float)v;
         if (sm->QueryDoubleAttribute("paramAutomationMs", &v) == TIXML_SUCCESS)
             s.audio.paramAutomationSmoothingTimeMs = (float)v;
+    }
+
+    // Absent before 1.3 and in any state written without a preset selection; the reader then
+    // falls back to identifying the preset by name.
+    auto *pr = e.FirstChildElement("preset");
+    if (pr)
+    {
+        auto attr = [pr](const char *n) -> std::string
+        {
+            auto *v = pr->Attribute(n);
+            return v ? v : "";
+        };
+        s.main.presetKind = attr("kind");
+        s.main.presetCategory = attr("category");
+        s.main.presetPath = attr("path");
     }
 }
 

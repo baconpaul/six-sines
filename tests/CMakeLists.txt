@@ -7,6 +7,7 @@ add_executable(six-sines-test
 		output_stage_dsp.cpp
 		mpe_smoothing.cpp
 		patch_sync.cpp
+		preset_jog.cpp
 )
 
 target_link_libraries(six-sines-test

@@ -154,7 +154,7 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     void startSavePatch();
     void finishSavePatch();
     void doSetDefaultAuthor(bool saveAfter = false);
-    void postPatchChange(const std::string &displayName);
+    void postPatchChange();
     void resetToDefault();
     void setPatchNameDisplay();
     void setPatchNameTo(const std::string &);

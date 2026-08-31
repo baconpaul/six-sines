@@ -26,138 +26,207 @@ namespace baconpaul::six_sines::ui
 
 struct PresetDataBinding : sst::jucegui::data::Discrete
 {
+    using LoadedPreset = presets::PresetManager::LoadedPreset;
+
     presets::PresetManager &pm;
     Patch &patch;
     Synth::mainToAudioQueue_T &mainToAudio;
-    PresetDataBinding(presets::PresetManager &p, Patch &pat, Synth::mainToAudioQueue_T &m)
-        : pm(p), patch(pat), mainToAudio(m)
+    // The session records which preset is showing; the binding is the only writer.
+    Synth::MainDawState &sessionState;
+    PresetDataBinding(presets::PresetManager &p, Patch &pat, Synth::mainToAudioQueue_T &m,
+                      Synth::MainDawState &des)
+        : pm(p), patch(pat), mainToAudio(m), sessionState(des)
     {
+        // Seed without publishing: sessionState already holds whatever stateLoad put there, and
+        // restoreSelectionFromSession is about to read it.
+        selected = LoadedPreset::init();
+        selectedIndex = 0;
+        selectedEpoch = pm.userPatchesEpoch;
     }
 
     std::string getLabel() const override { return "Presets"; }
 
-    int curr{0};
-    bool hasExtra{false};
-    std::string extraName{};
-    void setExtra(const std::string &s)
-    {
-        hasExtra = true;
-        extraName = s;
-    }
+    // What is loaded, keyed on the file rather than on the display name. The index into the jog
+    // list is derived from it, so a rescan (a save, a refresh) re-resolves to the same preset
+    // instead of leaving a stale slot behind.
+    LoadedPreset selected{};
+    mutable int selectedIndex{0};
+    mutable uint32_t selectedEpoch{0};
 
-    int getValue() const override { return curr; }
-    int getDefaultValue() const override { return 0; };
     bool isDirty{false};
+
+    // no slot in the list: the extra entry at -1 shows the name and nothing else
+    bool hasExtra() const { return selected.kind == LoadedPreset::Kind::Unknown; }
+
+    int getValue() const override
+    {
+        if (selectedEpoch != pm.userPatchesEpoch)
+        {
+            selectedIndex = indexOf(selected);
+            selectedEpoch = pm.userPatchesEpoch;
+        }
+        return selectedIndex;
+    }
+    int getDefaultValue() const override { return 0; };
 
     std::string getValueAsStringFor(int i) const override
     {
-        if (hasExtra && i < 0)
-            return extraName;
+        if (i < 0)
+            return hasExtra() ? selected.displayName : "ERR";
+
+        auto lp = presetAt(i);
+        if (lp.kind == LoadedPreset::Kind::Unknown)
+            return "ERR";
 
         std::string postfix = isDirty ? " *" : "";
-
-        if (i == 0)
-            return "Init" + postfix;
-        auto fp = i - 1;
-        if (fp < pm.factoryPatchVector.size())
+        if (lp.kind == LoadedPreset::Kind::Factory)
         {
-            fs::path p{pm.factoryPatchVector[fp].first};
-            p = p / pm.factoryPatchVector[fp].second;
-            p = p.replace_extension("");
-            return p.u8string() + postfix;
+            auto p = fs::path{lp.category} / lp.path;
+            return p.replace_extension("").u8string() + postfix;
         }
-        fp -= pm.factoryPatchVector.size();
-        if (fp < pm.userPatches.size())
+        if (lp.kind == LoadedPreset::Kind::User)
         {
-            auto pt = pm.userPatches[fp];
-            pt = pt.replace_extension("");
-            return pt.u8string() + postfix;
+            auto p = lp.path;
+            return p.replace_extension("").u8string() + postfix;
         }
-        return "ERR";
+        return lp.displayName + postfix;
     }
+
     void setValueFromGUI(const int &f) override
     {
-        isDirty = false;
-        if (hasExtra)
-        {
-            hasExtra = false;
-        }
-        curr = f;
-        if (f == 0)
-        {
-            pm.loadInit(patch, mainToAudio);
+        auto lp = presetAt(f);
+        if (lp.kind == LoadedPreset::Kind::Unknown)
             return;
-        }
-        auto fp = f - 1;
-        if (fp < pm.factoryPatchVector.size())
+
+        isDirty = false;
+        setSelection(lp);
+
+        switch (lp.kind)
         {
-            pm.loadFactoryPreset(patch, mainToAudio, pm.factoryPatchVector[fp].first,
-                                 pm.factoryPatchVector[fp].second);
-        }
-        fp -= pm.factoryPatchVector.size();
-        if (fp < pm.userPatches.size())
-        {
-            auto pt = pm.userPatches[fp];
-            pm.loadUserPresetDirect(patch, mainToAudio, pm.userPatchesPath / pt);
+        case LoadedPreset::Kind::Init:
+            pm.loadInit(patch, mainToAudio);
+            break;
+        case LoadedPreset::Kind::Factory:
+            pm.loadFactoryPreset(patch, mainToAudio, lp.category, lp.path.u8string());
+            break;
+        case LoadedPreset::Kind::User:
+            pm.loadUserPresetDirect(patch, mainToAudio, pm.userPatchesPath / lp.path);
+            break;
+        case LoadedPreset::Kind::Unknown:
+            break;
         }
     };
-    void setValueFromModel(const int &f) override { curr = f; }
-    int getMin() const override { return hasExtra ? -1 : 0; }
+    void setValueFromModel(const int &f) override { setSelection(presetAt(f)); }
+    int getMin() const override { return hasExtra() ? -1 : 0; }
     int getMax() const override
     {
-        return 1 + pm.factoryPatchVector.size() + pm.userPatches.size() - 1 + (hasExtra ? 1 : 0);
-    } // last -1 is because inclusive
+        // inclusive: Init plus both lists
+        return (int)(pm.factoryPatchVector.size() + pm.userPatches.size());
+    }
 
     void setDirtyState(bool b) { isDirty = b; }
 
+    // The preset manager loaded something and told us exactly what it was.
+    void setStateForLoadedPreset(const LoadedPreset &lp) { setSelection(lp); }
+
+    // A save wrote this file and the manager has rescanned, so it now has a slot.
+    void setStateForSavedUserPath(const fs::path &absolute)
+    {
+        setSelection(pm.identifyUserPath(absolute));
+    }
+
+    // A session (or a host stateLoad) brought back a patch. Prefer the preset the session
+    // recorded, but only when it still resolves and still carries the name the patch has -
+    // otherwise something loaded a different preset behind our back and the record is stale.
+    void restoreSelectionFromSession(const std::string &name)
+    {
+        auto lp = LoadedPreset::fromSession(sessionState.presetKind, sessionState.presetCategory,
+                                            sessionState.presetPath);
+        if (lp.kind != LoadedPreset::Kind::Unknown && lp.displayName == name && indexOf(lp) >= 0)
+        {
+            setSelection(lp);
+            return;
+        }
+        setStateForDisplayName(name);
+    }
+
+    // Last resort, for a patch that arrived without an identity (a host stateLoad): all we have
+    // is the name. It is ambiguous, so hold the current selection whenever it still carries that
+    // name rather than relocating onto whichever list happens to hold it first.
     void setStateForDisplayName(const std::string &s)
     {
-        auto q = getValueAsString();
-        auto sp = q.find("/");
-        if (sp != std::string::npos)
+        if (selected.displayName == s && getValue() >= 0)
+            return;
+        setSelection(identify(s));
+    }
+
+  private:
+    void setSelection(const LoadedPreset &lp)
+    {
+        selected = lp;
+        selectedIndex = indexOf(lp);
+        selectedEpoch = pm.userPatchesEpoch;
+
+        sessionState.recordPreset(lp.sessionKind(), lp.category, lp.sessionPath());
+    }
+
+    int indexOf(const LoadedPreset &lp) const
+    {
+        switch (lp.kind)
         {
-            q = q.substr(sp + 1);
+        case LoadedPreset::Kind::Init:
+            return 0;
+        case LoadedPreset::Kind::Factory:
+            for (size_t i = 0; i < pm.factoryPatchVector.size(); ++i)
+                if (lp.matchesFactory(pm.factoryPatchVector[i].first,
+                                      pm.factoryPatchVector[i].second))
+                    return 1 + (int)i;
+            break;
+        case LoadedPreset::Kind::User:
+            for (size_t i = 0; i < pm.userPatches.size(); ++i)
+                if (lp.matchesUser(pm.userPatches[i]))
+                    return 1 + (int)pm.factoryPatchVector.size() + (int)i;
+            break;
+        case LoadedPreset::Kind::Unknown:
+            break;
+        }
+        return -1;
+    }
+
+    LoadedPreset presetAt(int i) const
+    {
+        if (i == 0)
+            return LoadedPreset::init();
+
+        auto fp = i - 1;
+        if (fp >= 0 && fp < (int)pm.factoryPatchVector.size())
+            return LoadedPreset::factory(pm.factoryPatchVector[fp].first,
+                                         pm.factoryPatchVector[fp].second);
+
+        auto up = fp - (int)pm.factoryPatchVector.size();
+        if (up >= 0 && up < (int)pm.userPatches.size())
+            return LoadedPreset::user(pm.userPatches[up]);
+
+        return LoadedPreset::unknown("");
+    }
+
+    LoadedPreset identify(const std::string &s) const
+    {
+        if (s == "Init")
+            return LoadedPreset::init();
+
+        for (const auto &[c, f] : pm.factoryPatchVector)
+            if (presets::PresetManager::stripPresetExtension(f) == s)
+                return LoadedPreset::factory(c, f);
+
+        for (const auto &p : pm.userPatches)
+        {
+            auto pn = p.filename();
+            if (pn.replace_extension("").u8string() == s)
+                return LoadedPreset::user(p);
         }
 
-        if (s == "Init")
-        {
-            setValueFromModel(0);
-        }
-        else
-        {
-            bool found{false};
-            int idx{1};
-            for (const auto &[c, pp] : pm.factoryPatchVector)
-            {
-                auto p = pp.substr(0, pp.find(".sxsnp"));
-                if (p == s)
-                {
-                    setValueFromModel(idx);
-                    found = true;
-                    break;
-                }
-                idx++;
-            }
-            if (!found)
-            {
-                for (auto &p : pm.userPatches)
-                {
-                    auto pn = p.filename().replace_extension("").u8string();
-                    if (s == pn)
-                    {
-                        setValueFromModel(idx);
-                        found = true;
-                        break;
-                    }
-                    idx++;
-                }
-            }
-            if (!found)
-            {
-                setExtra(s);
-                setValueFromModel(-1);
-            }
-        }
+        return LoadedPreset::unknown(s);
     }
 };
 } // namespace baconpaul::six_sines::ui

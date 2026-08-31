@@ -477,6 +477,9 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                     memset(engine->patchMain.name, 0, sizeof(engine->patchMain.name));
                     strncpy(engine->patchMain.name, dn.c_str(), sizeof(engine->patchMain.name) - 1);
                     engine->patchMain.dirty = false;
+                    // no PresetManager here to place the file in the user tree, so record no
+                    // preset rather than leaving the previous one standing
+                    engine->dawStateMain.main.recordPreset();
                     engine->uiForceRebuild++;
 
                     if (isActive())
@@ -514,6 +517,9 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             // macro names via fromState) and funnels params into the audio patch; force an open
             // editor to rebuild from patchMain.
             pm.loadFactoryPreset(engine->patchMain, engine->mainToAudio, p.first, p.second);
+            auto loaded = presets::PresetManager::LoadedPreset::factory(p.first, p.second);
+            engine->dawStateMain.main.recordPreset(loaded.sessionKind(), loaded.category,
+                                                   loaded.sessionPath());
             engine->uiForceRebuild++;
             return true;
         }
