@@ -199,7 +199,8 @@ struct Patch : pats::PatchBase<Patch, Param>
         enum LfoRunMode
         {
             VOICE_TRIGGER = 0,
-            SONGPOS
+            SONGPOS,
+            RANDOM_PHASE
         };
 
         LFOMixin(const std::string name, int id0, int stepid0 = -1, uint64_t version = version_110)
@@ -284,11 +285,12 @@ struct Patch : pats::PatchBase<Patch, Param>
                           .withName(name + " LFO Run Mode")
                           .withGroupName(name)
                           .withGroupName(name)
-                          .withRange(LfoRunMode::VOICE_TRIGGER, LfoRunMode::SONGPOS)
+                          .withRange(LfoRunMode::VOICE_TRIGGER, LfoRunMode::RANDOM_PHASE)
                           .withDefault(LfoRunMode::VOICE_TRIGGER)
                           .withID(stepid0 > 0 ? (id0 + 9) : (id0 + 27))
                           .withUnorderedMapFormatting({{LfoRunMode::VOICE_TRIGGER, "Retrig"},
-                                                       {LfoRunMode::SONGPOS, "Song"}}))
+                                                       {LfoRunMode::SONGPOS, "Song"},
+                                                       {LfoRunMode::RANDOM_PHASE, "Rand"}}))
         {
             lfoRate.tempoSyncPartner = &tempoSync;
         }

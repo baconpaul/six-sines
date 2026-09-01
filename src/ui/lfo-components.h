@@ -495,6 +495,12 @@ template <typename Comp, typename Patch> struct LFOComponents
                       if (w)
                           w->setRunMode(Patch::SONGPOS);
                   });
+        p.addItem("Random Phase on Attack", true, cur == Patch::RANDOM_PHASE,
+                  [w = juce::Component::SafePointer(asComp())]()
+                  {
+                      if (w)
+                          w->setRunMode(Patch::RANDOM_PHASE);
+                  });
         p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
                         makeMenuAccessibleButtonCB(runMode.get()));
     }
