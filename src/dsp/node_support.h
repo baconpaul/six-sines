@@ -393,6 +393,11 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
             // of the whole sequence.
             double total =
                 std::clamp(lfoStartPhase + lfoStartMod, 0.f, 0.999f) * stepStorage.repeat;
+            if (runMode == Patch::LFOMixin::RANDOM_PHASE)
+            {
+                // whole steps, so we land on a step boundary in both cycle and per-step rate
+                total += monoValues.rng.unifInt(0, stepStorage.repeat);
+            }
             if (runMode == Patch::LFOMixin::SONGPOS)
             {
                 // Steps advance at 2^rate per second, scaled by the whole-sequence length
@@ -415,6 +420,11 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
         {
             lfo.attack(shape);
             float phaseOffset = lfoStartPhase + lfoStartMod;
+            if (runMode == Patch::LFOMixin::RANDOM_PHASE)
+            {
+                phaseOffset += monoValues.rng.unif01();
+                phaseOffset -= std::floor(phaseOffset);
+            }
             if (runMode == Patch::LFOMixin::SONGPOS)
             {
                 // Derive the start phase from the song position rather than the note
