@@ -45,7 +45,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
                    const VoiceValues &vv)
         : matrixNode(mn), monoValues(mv), voiceValues(vv), onto(on), from(fr), level(mn.level),
           modmodeV(mn.modulationMode), activeV(mn.active), EnvelopeSupport(mn, mv, vv),
-          LFOSupport(mn, mv), lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel),
+          LFOSupport(mn, mv, vv), lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel),
           overdriveV(mn.overdrive), lfoDepthMode(mn.lfoDepthMode),
           ModulationSupport(mn, this, mv, vv), rmScaleV(mn.modulationScale)
     {
@@ -278,7 +278,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
     MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, MonoValues &mv, const VoiceValues &vv)
         : selfNode(sn), monoValues(mv), voiceValues(vv), onto(on), fbBase(sn.fbLevel),
           lfoToFB(sn.lfoToFB), activeV(sn.active), envToFB(sn.envToFB), overdriveV(sn.overdrive),
-          lfoFBMode(sn.lfoFBMode), EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv),
+          lfoFBMode(sn.lfoFBMode), EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv, vv),
           ModulationSupport(sn, this, mv, vv) {};
     bool active{true}, lfoMul{false};
     float overdriveFactor{1.0};
@@ -449,7 +449,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         : mixerNode(mn), monoValues(mv), voiceValues(vv), from(f), pan(mn.pan), level(mn.level),
           activeF(mn.active), lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan),
           envToLevel(mn.envToLevel), lfoLevelMode(mn.lfoLevelMode), EnvelopeSupport(mn, mv, vv),
-          LFOSupport(mn, mv), ModulationSupport(mn, this, mv, vv)
+          LFOSupport(mn, mv, vv), ModulationSupport(mn, this, mv, vv)
     {
         memset(output, 0, sizeof(output));
     }
@@ -687,7 +687,7 @@ struct MainPanNode : EnvelopeSupport<Patch::MainPanNode>,
     const float &lfoD, &envD;
 
     MainPanNode(const Patch::MainPanNode &mn, MonoValues &mv, const VoiceValues &vv)
-        : ModulationSupport(mn, this, mv, vv), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
+        : ModulationSupport(mn, this, mv, vv), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv, vv),
           modNode(mn), monoValues(mv), voiceValues(vv), lfoD(mn.lfoDepth), envD(mn.envDepth)
     {
     }
@@ -827,7 +827,7 @@ struct FineTuneNode : EnvelopeSupport<Patch::FineTuneNode>,
     const float &lfoD, &envD, &coarseTune, &lfoCoarseD, &envCoarseD;
 
     FineTuneNode(const Patch::FineTuneNode &mn, MonoValues &mv, const VoiceValues &vv)
-        : ModulationSupport(mn, this, mv, vv), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv),
+        : ModulationSupport(mn, this, mv, vv), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv, vv),
           coarseTune(mn.coarseTune), modNode(mn), monoValues(mv), voiceValues(vv),
           lfoD(mn.lfoDepth), envD(mn.envDepth), lfoCoarseD(mn.lfoCoarseDepth),
           envCoarseD(mn.envCoarseDepth)
@@ -990,7 +990,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
         : outputNode(on), ModulationSupport(on, this, mv, vv), monoValues(mv), voiceValues(vv),
           fromArr(f), level(on.level), bendUp(on.bendUp), bendDown(on.bendDown),
           octTranspose(on.octTranspose), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),
-          LFOSupport(on, mv), defTrigV(on.defaultTrigger), pan(on.pan), fineTune(on.fineTune),
+          LFOSupport(on, mv, vv), defTrigV(on.defaultTrigger), pan(on.pan), fineTune(on.fineTune),
           lfoDepth(on.lfoDepth), ftModNode(ftMN, mv, vv), panModNode(panMN, mv, vv)
     {
         memset(output, 0, sizeof(output));

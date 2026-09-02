@@ -53,7 +53,7 @@ struct MacroVoiceNode : EnvelopeSupport<Patch::MacroNode>,
         : macroNode(mn), monoValues(mv), voiceValues(vv), level(mn.level),
           macroPowerV(mn.macroPower), envDepth(mn.envDepth), lfoDepth(mn.lfoDepth),
           lfoLevelMode(mn.lfoLevelMode), ModulationSupport(mn, this, mv, vv),
-          EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv)
+          EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv, vv)
     {
     }
 

@@ -166,6 +166,8 @@ struct Synth
 
             auto upr = synth.patch.output.uniPhaseRand.value > 0.5;
             auto prt = synth.patch.output.rephaseOnRetrigger > 0.5;
+            // one draw for the whole note; unison-locked LFOs hash it per instance
+            auto notePhaseSeed = synth.monoValues.rng.unifU32();
             for (int vc = 0; vc < ct; ++vc)
             {
                 // Bipolar position −1..1 across the unison field; 0 when ct==1.
@@ -196,6 +198,7 @@ struct Synth
                             synth.voices[i].voiceValues.uniRatioMul = 1.f;
                             synth.voices[i].voiceValues.uniPanShift = 0.f;
                             synth.voices[i].voiceValues.uniPMScale = uniScale;
+                            synth.voices[i].voiceValues.notePhaseSeed = notePhaseSeed;
                             synth.voices[i].voiceValues.phaseRandom = (vc > 0 && upr);
                             synth.voices[i].voiceValues.rephaseOnRetrigger = (!upr && prt);
                             synth.voices[i].voiceValues.noteExpressionTuningInSemis = 0;
