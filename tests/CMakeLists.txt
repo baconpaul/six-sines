@@ -9,6 +9,7 @@ add_executable(six-sines-test
 		patch_sync.cpp
 		preset_jog.cpp
 		lfo_unison_random.cpp
+		phase_map_read_phase.cpp
 )
 
 target_link_libraries(six-sines-test
