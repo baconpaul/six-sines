@@ -83,6 +83,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         Patch::SourceNode::ExtendedMode::NONE};
     Patch::SourceNode::PhaseMapShape phaseMapShapeCachedAtAttack{
         Patch::SourceNode::PhaseMapShape::SAW};
+    // post-remap read offset; lets you read a cosine (or any rotation) through the map
+    uint32_t phaseMapReadPhaseCachedAtAttack{0};
     Patch::SourceNode::ResonantSweepWindow resonantSweepWindowCachedAtAttack{
         Patch::SourceNode::ResonantSweepWindow::SAW};
     Patch::SourceNode::NoiseMode noiseModeCachedAtAttack{
@@ -109,6 +111,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             static_cast<EM>(static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
         phaseMapShapeCachedAtAttack =
             static_cast<PM>(static_cast<uint32_t>(std::round(sourceNode.phaseMapModeShape.value)));
+        phaseMapReadPhaseCachedAtAttack =
+            static_cast<uint32_t>((1 << 26) * sourceNode.phaseMapReadPhase.value);
         resonantSweepWindowCachedAtAttack = static_cast<RW>(
             static_cast<uint32_t>(std::round(sourceNode.resonantSweepWindowShape.value)));
 
@@ -645,7 +649,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                 else if constexpr (S == PM::DOUBLE_SAW)
                     ph = remap::remapDoubleSaw(ph & phase::phaseMask, nextM);
                 nextM += dM;
-                out = st.at(ph);
+                out = st.at(ph + phaseMapReadPhaseCachedAtAttack);
             }
             else if constexpr (ET == EM::RESONANT_SWEEP)
             {

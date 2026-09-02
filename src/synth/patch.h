@@ -97,6 +97,8 @@ struct Patch : pats::PatchBase<Patch, Param>
     // Seventh chunk of 1.2.0: LFO song-position run mode
     static constexpr uint64_t version_120g = 0x010207;
     static constexpr uint64_t version_120h = 0x010208;
+    // first chunk of 1.3.0: phase-map read-phase offset
+    static constexpr uint64_t version_130a = 0x010301;
 
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
     static md_t floatMd(uint64_t version = version_110)
@@ -866,6 +868,12 @@ struct Patch : pats::PatchBase<Patch, Param>
                                         {(int)PhaseMapShape::SIN_TO_SQUARE, "Sin to Square"},
                                         {(int)PhaseMapShape::DOUBLE_SAW, "Sin to Saw"},
                                     })),
+              phaseMapReadPhase(floatMd(version_130a)
+                                    .asPercent()
+                                    .withName(name(idx) + " Phase Map Read Phase")
+                                    .withGroupName(name(idx))
+                                    .withDefault(0)
+                                    .withID(id(188, idx))),
               resonantSweepWindowShape(
                   intMd(version_120d)
                       .withRange(0, 6)
@@ -970,6 +978,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param lfoToExtendedModeM, lfoToExtendedModeN;
 
         Param phaseMapModeShape;
+        Param phaseMapReadPhase;
         Param resonantSweepWindowShape;
         Param resonantSweepFrequencyDepth;
         Param noiseMode;
@@ -1005,6 +1014,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &lfoToExtendedModeM,
                                      &lfoToExtendedModeN,
                                      &phaseMapModeShape,
+                                     &phaseMapReadPhase,
                                      &resonantSweepWindowShape,
                                      &resonantSweepFrequencyDepth,
                                      &noiseMode,

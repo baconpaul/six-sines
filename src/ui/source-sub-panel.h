@@ -26,6 +26,7 @@
 #include "lfo-components.h"
 #include "modulation-components.h"
 #include "sst/jucegui/components/RuledLabel.h"
+#include "sst/jucegui/components/TextPushButton.h"
 #include "sst/jucegui/components/LineSegment.h"
 #include "clipboard.h"
 #include "waveform-display.h"
@@ -97,6 +98,10 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<PatchContinuous> extND;
     std::unique_ptr<PatchContinuous::cubic_t> envToExtND, lfoToExtND;
     std::unique_ptr<jcmp::Label> extNL, envToExtNL, lfoToExtNL;
+    std::unique_ptr<jcmp::HSliderFilled> phaseMapReadPhase;
+    std::unique_ptr<PatchContinuous> phaseMapReadPhaseD;
+    std::unique_ptr<jcmp::Label> phaseMapReadPhaseL;
+    std::unique_ptr<jcmp::TextPushButton> readPhaseZero, readPhaseQuarter, readPhaseHalf;
     std::unique_ptr<juce::Component> pdWavPainter;
 
     // Resonant sweep body components

@@ -93,13 +93,13 @@ struct WavPainter : juce::Component
  */
 struct PDWavPainter : juce::Component
 {
-    const Param &wf, &ph, &mp, &shp;
+    const Param &wf, &ph, &mp, &shp, &rdp;
     SixSinesEditor &editor;
     SinTable st;
 
     PDWavPainter(const Param &w, const Param &p, const Param &mParam, const Param &sParam,
-                 SixSinesEditor &e)
-        : wf(w), ph(p), mp(mParam), shp(sParam), editor(e)
+                 const Param &rParam, SixSinesEditor &e)
+        : wf(w), ph(p), mp(mParam), shp(sParam), rdp(rParam), editor(e)
     {
     }
 
@@ -203,6 +203,7 @@ struct PDWavPainter : juce::Component
         st.setWaveForm(wfVal);
         uint32_t phs{0};
         phs += (1 << 26) * ph.value;
+        auto readPhase = static_cast<uint32_t>((1 << 26) * rdp.value);
         int nPixels = waveBox.getWidth();
         auto dPhase = (1 << 26) / (nPixels - 1);
         auto h = waveBox.getHeight() - 2;
@@ -210,7 +211,7 @@ struct PDWavPainter : juce::Component
         auto p = juce::Path();
         for (int i = 0; i < nPixels; ++i)
         {
-            auto sv = st.at(doRemap(phs)) * 0.98;
+            auto sv = st.at(doRemap(phs) + readPhase) * 0.98;
             auto x = waveBox.getX() + i;
             auto y = (1 - (sv + 1) * 0.5) * h + ho;
             if (i == 0)
@@ -802,8 +803,44 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     lfoToExtNL->setText(std::string() + "LFO" + u8"\U00002192" + "N");
     addChildComponent(*lfoToExtNL);
 
-    pdWavPainter = std::make_unique<PDWavPainter>(sn.waveForm, sn.startingPhase, sn.extendedModeM,
-                                                  sn.phaseMapModeShape, editor);
+    createComponent(editor, *this, sn.phaseMapReadPhase, phaseMapReadPhase, phaseMapReadPhaseD);
+    addChildComponent(*phaseMapReadPhase);
+    traverse(phaseMapReadPhase);
+    phaseMapReadPhaseL = std::make_unique<jcmp::Label>();
+    phaseMapReadPhaseL->setText(std::string() + u8"\U000003B8" + " off");
+    addChildComponent(*phaseMapReadPhaseL);
+
+    auto jumpReadPhase = [w = juce::Component::SafePointer(this)](float v)
+    {
+        if (!w)
+            return;
+        auto id = w->phaseMapReadPhaseD->pid;
+        w->editor.mainToAudio.push({Synth::MainToAudioMsg::Action::BEGIN_EDIT, id});
+        w->phaseMapReadPhaseD->setValueFromGUI(v);
+        w->editor.mainToAudio.push({Synth::MainToAudioMsg::Action::END_EDIT, id});
+        w->phaseMapReadPhase->repaint();
+    };
+    readPhaseZero = std::make_unique<jcmp::TextPushButton>();
+    readPhaseZero->setLabel("0");
+    readPhaseZero->setOnCallback([jumpReadPhase]() { jumpReadPhase(0.f); });
+    addChildComponent(*readPhaseZero);
+    traverse(readPhaseZero);
+
+    readPhaseQuarter = std::make_unique<jcmp::TextPushButton>();
+    readPhaseQuarter->setLabel(std::string() + u8"\U000003C0" + "/4");
+    readPhaseQuarter->setOnCallback([jumpReadPhase]() { jumpReadPhase(0.25f); });
+    addChildComponent(*readPhaseQuarter);
+    traverse(readPhaseQuarter);
+
+    readPhaseHalf = std::make_unique<jcmp::TextPushButton>();
+    readPhaseHalf->setLabel(std::string() + u8"\U000003C0" + "/2");
+    readPhaseHalf->setOnCallback([jumpReadPhase]() { jumpReadPhase(0.5f); });
+    addChildComponent(*readPhaseHalf);
+    traverse(readPhaseHalf);
+
+    pdWavPainter =
+        std::make_unique<PDWavPainter>(sn.waveForm, sn.startingPhase, sn.extendedModeM,
+                                       sn.phaseMapModeShape, sn.phaseMapReadPhase, editor);
     addChildComponent(*pdWavPainter);
 
     createComponent(editor, *this, sn.resonantSweepWindowShape, resonantWindowShape,
@@ -868,6 +905,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     resonantSweepDepthD->onGuiSetValue = repaintExt;
     noiseModeD->onGuiSetValue = repaintExt;
     extND->onGuiSetValue = repaintExt;
+    phaseMapReadPhaseD->onGuiSetValue = repaintExt;
     auto noiseTypeChanged = [w = juce::Component::SafePointer(this)]()
     {
         if (!w)
@@ -883,6 +921,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     editor.componentRefreshByID[sn.extendedModeM.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.extendedModeN.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.phaseMapModeShape.meta.id] = repaintExt;
+    editor.componentRefreshByID[sn.phaseMapReadPhase.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.resonantSweepWindowShape.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.resonantSweepFrequencyDepth.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.noiseMode.meta.id] = repaintExt;
@@ -1049,6 +1088,21 @@ void SourceSubPanel::resized()
         knobRow.add(knobCell(extM, extML));
         knobRow.add(knobCell(envToExtM, envToExtML));
         knobRow.add(knobCell(lfoToExtM, lfoToExtML));
+        // read-phase block fills the tail of the row, top-aligned with the knobs:
+        // label and jump buttons over a full-width slider
+        knobRow.addGap(uicMargin);
+        auto thetaCol =
+            jlo::VList().withHeight(uicLabelHeight * 2 + uicMargin).withAutoGap(uicMargin);
+        auto thetaButtons = jlo::HList().withHeight(uicLabelHeight);
+        thetaButtons.add(jlo::Component(*phaseMapReadPhaseL).withWidth(34));
+        thetaButtons.add(jlo::Component(*readPhaseZero).expandToFill());
+        thetaButtons.addGap(2);
+        thetaButtons.add(jlo::Component(*readPhaseQuarter).expandToFill());
+        thetaButtons.addGap(2);
+        thetaButtons.add(jlo::Component(*readPhaseHalf).expandToFill());
+        thetaCol.add(thetaButtons);
+        thetaCol.add(jlo::Component(*phaseMapReadPhase).insetBy(0, 2).withHeight(uicLabelHeight));
+        knobRow.add(thetaCol.expandToFill());
         rightCol.addGap(uicMargin);
         rightCol.add(knobRow);
 
@@ -1183,6 +1237,11 @@ void SourceSubPanel::setExtendedModeVisibility()
 
     comingSoonLabel->setVisible(false);
     phaseMapShape->setVisible(isPhaseRemap);
+    phaseMapReadPhase->setVisible(isPhaseRemap);
+    phaseMapReadPhaseL->setVisible(isPhaseRemap);
+    readPhaseZero->setVisible(isPhaseRemap);
+    readPhaseQuarter->setVisible(isPhaseRemap);
+    readPhaseHalf->setVisible(isPhaseRemap);
     extM->setVisible(showsM);
     extML->setVisible(showsM);
     envToExtM->setVisible(showsM);
@@ -1267,6 +1326,10 @@ void SourceSubPanel::setEnabledState()
     // Extended-mode controls (disabled wholesale on AUDIO_IN)
     extModeButton->setEnabled(!isAudioIn);
     phaseMapShape->setEnabled(!isAudioIn);
+    phaseMapReadPhase->setEnabled(!isAudioIn);
+    readPhaseZero->setEnabled(!isAudioIn);
+    readPhaseQuarter->setEnabled(!isAudioIn);
+    readPhaseHalf->setEnabled(!isAudioIn);
     resonantWindowShape->setEnabled(!isAudioIn);
     resonantSweepDepth->setEnabled(!isAudioIn);
     extM->setEnabled(!isAudioIn);
