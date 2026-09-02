@@ -66,6 +66,10 @@ struct VoiceValues
     bool hasCenterVoice{false}, isCenterVoice{false};
     bool phaseRandom{false}, rephaseOnRetrigger{false};
 
+    // drawn once per note-on and copied to every unison voice, so RANDOM_PHASE_UNISON
+    // LFOs land on one phase across the stack; each LFO hashes it with its own param id
+    uint32_t notePhaseSeed{0};
+
     sst::basic_blocks::dsp::OnePoleLag<float, false> velocityLag;
 
     // Per-voice smoothing for MPE / note-expression values. Mod-matrix sources

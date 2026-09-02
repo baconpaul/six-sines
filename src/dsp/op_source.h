@@ -137,7 +137,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
     OpSource(const Patch::SourceNode &sn, MonoValues &mv, const VoiceValues &vv)
         : sourceNode(sn), monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv),
-          LFOSupport(sn, mv), ModulationSupport(sn, this, mv, vv), ratio(sn.ratio),
+          LFOSupport(sn, mv, vv), ModulationSupport(sn, this, mv, vv), ratio(sn.ratio),
           activeV(sn.active), envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio),
           waveForm(sn.waveForm), kt(sn.keyTrack), ktv(sn.keyTrackValue),
           ktlo(sn.keyTrackValueIsLow), ktlov(sn.keyTrackLowFrequencyValue),

@@ -8,6 +8,7 @@ add_executable(six-sines-test
 		mpe_smoothing.cpp
 		patch_sync.cpp
 		preset_jog.cpp
+		lfo_unison_random.cpp
 )
 
 target_link_libraries(six-sines-test

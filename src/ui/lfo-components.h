@@ -495,11 +495,17 @@ template <typename Comp, typename Patch> struct LFOComponents
                       if (w)
                           w->setRunMode(Patch::SONGPOS);
                   });
-        p.addItem("Random Phase on Attack", true, cur == Patch::RANDOM_PHASE,
+        p.addItem("Random Phase per Voice", true, cur == Patch::RANDOM_PHASE,
                   [w = juce::Component::SafePointer(asComp())]()
                   {
                       if (w)
                           w->setRunMode(Patch::RANDOM_PHASE);
+                  });
+        p.addItem("Random Phase per Note (Unison Shared)", true, cur == Patch::RANDOM_PHASE_UNISON,
+                  [w = juce::Component::SafePointer(asComp())]()
+                  {
+                      if (w)
+                          w->setRunMode(Patch::RANDOM_PHASE_UNISON);
                   });
         p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
                         makeMenuAccessibleButtonCB(runMode.get()));

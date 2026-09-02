@@ -294,6 +294,7 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
 {
     const T &paramBundle;
     MonoValues &monoValues; // non-const so we can read the RNG
+    const VoiceValues &lfoVoiceValues;
 
     const float &lfoRate, &lfoDeform, &lfoShape, &lfoActiveV, &tempoSyncV, &bipolarV,
         &lfoIsEnvelopedV, &lfoStartPhase, &runModeV;
@@ -310,11 +311,12 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
     const float *stepCountValue{nullptr};
     const float *stepCycleModeValue{nullptr};
 
-    LFOSupport(const T &mn, MonoValues &mv)
-        : paramBundle(mn), lfo(&mv.sr, mv.rng), stepLFO(mv.tuningProvider), lfoRate(mn.lfoRate),
-          lfoDeform(mn.lfoDeform), lfoShape(mn.lfoShape), lfoActiveV(mn.lfoActive),
-          tempoSyncV(mn.tempoSync), monoValues(mv), bipolarV(mn.lfoBipolar),
-          lfoIsEnvelopedV(mn.lfoIsEnveloped), lfoStartPhase(mn.lfoStartPhase), runModeV(mn.runMode),
+    LFOSupport(const T &mn, MonoValues &mv, const VoiceValues &vv)
+        : paramBundle(mn), lfo(&mv.sr, mv.rng), stepLFO(mv.tuningProvider), lfoVoiceValues(vv),
+          lfoRate(mn.lfoRate), lfoDeform(mn.lfoDeform), lfoShape(mn.lfoShape),
+          lfoActiveV(mn.lfoActive), tempoSyncV(mn.tempoSync), monoValues(mv),
+          bipolarV(mn.lfoBipolar), lfoIsEnvelopedV(mn.lfoIsEnveloped),
+          lfoStartPhase(mn.lfoStartPhase), runModeV(mn.runMode),
           stepValues(sst::cpputils::make_array_lambda<const float *, numSeqSteps>(
               [&mn](int i) { return &mn.lfoSeqSteps[i].value; })),
           stepCountValue(&mn.lfoStepCount.value), stepCycleModeValue(&mn.lfoCycleMode.value)
@@ -344,6 +346,24 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
     bool bipolar{true};
     bool lfoIsEnveloped{false};
     int runMode{Patch::LFOMixin::VOICE_TRIGGER};
+
+    // Decorrelate the per-note seed per LFO instance (murmur3 fmix32). RANDOM_PHASE_UNISON
+    // wants one phase shared by every unison voice of a note but independent between LFOs,
+    // so hash rather than draw: the seed is common to the stack, the param id is not.
+    float unisonRandomPhase() const
+    {
+        auto mix = [](uint32_t h)
+        {
+            h ^= h >> 16;
+            h *= 0x7feb352dU;
+            h ^= h >> 15;
+            h *= 0x846ca68bU;
+            h ^= h >> 16;
+            return h;
+        };
+        auto h = mix(lfoVoiceValues.notePhaseSeed ^ mix(paramBundle.lfoRate.meta.id));
+        return (float)(h >> 8) * 0x1p-24f;
+    }
 
     // Map the engine song position onto an LFO phase in [0,1) for SONGPOS run mode.
     // rate is the log2 LFO frequency; the instantaneous frequency is tsScale * 2^rate Hz
@@ -398,6 +418,11 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
                 // whole steps, so we land on a step boundary in both cycle and per-step rate
                 total += monoValues.rng.unifInt(0, stepStorage.repeat);
             }
+            if (runMode == Patch::LFOMixin::RANDOM_PHASE_UNISON)
+            {
+                auto st = (int)(unisonRandomPhase() * stepStorage.repeat);
+                total += std::min(st, stepStorage.repeat - 1);
+            }
             if (runMode == Patch::LFOMixin::SONGPOS)
             {
                 // Steps advance at 2^rate per second, scaled by the whole-sequence length
@@ -423,6 +448,11 @@ template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSup
             if (runMode == Patch::LFOMixin::RANDOM_PHASE)
             {
                 phaseOffset += monoValues.rng.unif01();
+                phaseOffset -= std::floor(phaseOffset);
+            }
+            if (runMode == Patch::LFOMixin::RANDOM_PHASE_UNISON)
+            {
+                phaseOffset += unisonRandomPhase();
                 phaseOffset -= std::floor(phaseOffset);
             }
             if (runMode == Patch::LFOMixin::SONGPOS)
