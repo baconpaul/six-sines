@@ -32,7 +32,7 @@ bool SinTable::staticsInitialized{false};
 
 void SinTable::fillTable(int WF, std::function<std::pair<double, double>(double x, int Q)> der)
 {
-    static constexpr double dxdPhase = 1.0 / (nQuadrants * (nPoints - 1));
+    static constexpr double dxdPhase = 1.0 / (nQuadrants * nPoints);
     for (int Q = 0; Q < nQuadrants; ++Q)
     {
         for (int i = 0; i < nPoints + 1; ++i)
@@ -52,11 +52,16 @@ void SinTable::initializeStatics()
     memset(quadrantTable, 0, sizeof(quadrantTable));
     memset(dQuadrantTable, 0, sizeof(dQuadrantTable));
 
+    // at() reads the cycle through a 14 bit position index, so the grid is spaced
+    // 1/(nQuadrants*nPoints) of a cycle and index nPoints lands exactly on the next
+    // quadrant's index 0. That entry exists only to supply the upper half of the Hermite
+    // pair at the top of the quadrant - spacing the grid by nPoints-1 instead stretches
+    // each quadrant by nPoints/(nPoints-1) and duplicates a sample at every seam.
     for (int i = 0; i < nPoints + 1; ++i)
     {
         for (int Q = 0; Q < nQuadrants; ++Q)
         {
-            xTable[Q][i] = (1.0 * i / (nPoints - 1) + Q) * 0.25;
+            xTable[Q][i] = (1.0 * i / nPoints + Q) * 0.25;
         }
     }
 
