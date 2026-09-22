@@ -42,6 +42,7 @@ class TiXmlElement;
 #include "synth/voice.h"
 #include "synth/patch.h"
 #include "mono_values.h"
+#include "wavetable_handoff.h"
 #include "mod_matrix.h"
 #include "ui/ui-defaults.h"
 #include "sst/basic-blocks/dsp/LagCollection.h"
@@ -79,6 +80,10 @@ struct Synth
     Patch patch;     // audio-thread working copy
     Patch patchMain; // main-thread source of truth
     MonoValues monoValues;
+
+    // Getting a built table across to the audio thread, and knowing when the old one is safe
+    // to free. The tables themselves live on the patch, one per SourceNode on each side.
+    WavetableHandoff wavetableHandoff;
     sst::basic_blocks::dsp::LagCollection<130> midiCCLagCollection; // 130 for 128 + pitch + chanat
 
     struct VMConfig
@@ -535,7 +540,11 @@ struct Synth
             SET_DESIGN_MODE_RUN_ALL,
             // Transport the main-owned AudioDawState (MPE + smoothing) to the audio thread, by
             // value in the `audioDawState` field. Engine-instance session state, not a patch param.
-            SET_AUDIO_DAW_STATE
+            SET_AUDIO_DAW_STATE,
+            // Adopt the wavetable the main thread parked in WavetableStore staging slot
+            // `paramId`. Only the slot index crosses, so the message stays POD; see
+            // WavetableStore for why that is and how the slot cannot be overwritten early.
+            SET_WAVETABLE
         } action;
         uint32_t paramId{0};
         float value{0};
@@ -609,6 +618,18 @@ struct Synth
     // tell the host to re-read. Main thread only. Patch name / author / dirty / macroNames are
     // main-thread-only state, set on patchMain by the caller — they do not travel here. Static
     // because callers (preset manager, clap adapter) hold the queue + host but not a Synth handle.
+    /*
+     * [main] Bring the store and the audio thread in line with patchMain's wavetable blobs:
+     * build anything newly referenced, publish it, and let go of anything nothing points at.
+     * Idempotent, so it is safe to call on every idle, and it returns false when a staging
+     * slot was unavailable so the caller knows to come back.
+     */
+    bool reconcileWavetables();
+
+
+    // Errors from the last reconcile, for the UI to show. Main thread only.
+    std::array<std::string, numOps> wavetableError;
+
     static void sendEntirePatchToAudio(Patch &src, mainToAudioQueue_T &mainToAudio,
                                        const clap_host_t *host,
                                        const clap_host_params_t *hostParams = nullptr);

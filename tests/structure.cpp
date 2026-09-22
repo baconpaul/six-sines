@@ -129,3 +129,23 @@ TEST_CASE("param_order_110", "[structure]")
 
     plugin->destroy(plugin);
 }
+
+TEST_CASE("Every discrete parameter's default lies inside its range", "[structure]")
+{
+    /*
+     * A range and a default are written a few lines apart, so a range edited without its
+     * default - or, as happened here, edited by a careless search and replace that matched
+     * seven other parameters - leaves a default outside the range it is clamped to. Nothing
+     * else in the suite notices: the value still streams, it just silently moves.
+     */
+    MatrixIndex::initialize();
+    auto p = std::make_unique<Patch>();
+    for (const auto *prm : p->params)
+    {
+        INFO("param '" << prm->meta.name << "' id " << prm->meta.id << " default "
+                       << prm->meta.defaultVal << " range " << prm->meta.minVal << " .. "
+                       << prm->meta.maxVal);
+        REQUIRE(prm->meta.defaultVal >= prm->meta.minVal);
+        REQUIRE(prm->meta.defaultVal <= prm->meta.maxVal);
+    }
+}

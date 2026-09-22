@@ -14,6 +14,9 @@
  */
 
 #include "synth/synth.h"
+
+#include "dsp/wavetable_io.h"
+
 #include "sst/cpputils/constructors.h"
 #include "sst/basic-blocks/mechanics/block-ops.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
@@ -903,6 +906,18 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             pendingRescan |= RescanRequest::VALUES;
         }
         break;
+        case MainToAudioMsg::SET_WAVETABLE:
+        {
+            // Copying the staged shared_ptr is one atomic increment and no allocation. The
+            // old table's count cannot reach zero here - WavetableStore keeps a reference
+            // until its own collect() on the main thread - so no destructor runs on audio.
+            auto slot = uiM->paramId;
+            auto op = wavetableHandoff.opForSlot(slot);
+            auto t = wavetableHandoff.consume(slot);
+            if (op >= 0 && op < (int)numOps)
+                patch.sourceNodes[op].wavetable = std::move(t);
+        }
+        break;
         case MainToAudioMsg::PANIC_STOP_VOICES:
         {
             voiceManager->allSoundsOff();
@@ -1369,6 +1384,12 @@ void Synth::paramsFlushMainThread(const clap_input_events_t *in, const clap_outp
         }
         uiM = mainToAudio.pop();
     }
+}
+
+bool Synth::reconcileWavetables()
+{
+    return baconpaul::six_sines::reconcileWavetables<mainToAudioQueue_T, MainToAudioMsg>(
+        patchMain, wavetableHandoff, mainToAudio, wavetableError);
 }
 
 void Synth::sendEntirePatchToAudio(Patch &src, mainToAudioQueue_T &mainToAudio,

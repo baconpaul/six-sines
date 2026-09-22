@@ -122,11 +122,11 @@ inline sst::jucegui::layouts::LayoutComponent sideLabel(const L &l, const C &c)
 };
 
 template <typename L, typename C>
-inline sst::jucegui::layouts::LayoutComponent sideLabelSlider(const L &l, const C &c)
+inline sst::jucegui::layouts::LayoutComponent sideLabelSlider(const L &l, const C &c, int w=14)
 {
     namespace jlo = sst::jucegui::layouts;
     auto ul = jlo::HList().withHeight(uicLabelHeight);
-    ul.add(jlo::Component(*l).withWidth(14));
+    ul.add(jlo::Component(*l).withWidth(w));
     ul.add(jlo::Component(*c).insetBy(0, 2).expandToFill());
     return ul;
 };

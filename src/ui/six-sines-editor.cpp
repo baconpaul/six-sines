@@ -115,15 +115,17 @@ namespace jstl = sst::jucegui::style;
 using sheet_t = jstl::StyleSheet;
 static constexpr sheet_t::Class PatchMenu("six-sines.patch-menu");
 
-SixSinesEditor::SixSinesEditor(Patch &patchMain, Synth::audioToMainQueue_t &atou,
+SixSinesEditor::SixSinesEditor(Patch &patchMain, WavetableHandoff &handoff,
+                               Synth::audioToMainQueue_t &atou,
                                Synth::mainToAudioQueue_T &utoa, Synth::audioOutputQueue_t &aor,
                                std::atomic<bool> &editorActiveIn,
                                std::atomic<uint32_t> &uiForceRebuildIn,
                                Synth::DawStateMain &dawStateMain, defaultsProvder_t &defaults,
                                const clap_host_t *h)
-    : jcmp::WindowPanel(true), patchMainRef(patchMain), audioToMain(atou), mainToAudio(utoa),
-      audioOutputRing(aor), editorActive(editorActiveIn), uiForceRebuild(uiForceRebuildIn),
-      dawStateMainRef(dawStateMain), defaultsProvider(&defaults), clapHost(h)
+    : jcmp::WindowPanel(true), patchMainRef(patchMain), wavetableHandoffRef(handoff),
+      audioToMain(atou), mainToAudio(utoa), audioOutputRing(aor), editorActive(editorActiveIn),
+      uiForceRebuild(uiForceRebuildIn), dawStateMainRef(dawStateMain), defaultsProvider(&defaults),
+      clapHost(h)
 {
     lastForceRebuild = uiForceRebuild.load();
     setTitle("Six Sines - an Audio Rate Modulation Synthesizer");
@@ -344,6 +346,29 @@ void SixSinesEditor::idle()
 
     // An out-of-band load (host stateLoad / preset load) wrote patchMain directly and bumped the
     // counter. patchMainRef already holds the new state; refresh every widget from it.
+    // Cheap and idempotent when nothing changed, so it can just run every idle. This is also
+    // what picks up a host stateLoad or preset load: those rewrite patchMain out of band, and
+    // the blobs they bring need building before any note can read them.
+    if (reconcileWavetables() && sourceSubPanel)
+    {
+        // a table appeared or went away, so the morph controls come or go with it
+        sourceSubPanel->setEnabledState();
+        sourceSubPanel->resized();
+        sourceSubPanel->repaint();
+    }
+    for (int i = 0; i < (int)numOps; ++i)
+    {
+        // A blob that will not build leaves the operator on a sine, which is quiet enough to
+        // look like nothing happened. Say so once, then remember we did.
+        if (wavetableError[i] != reportedWavetableError[i])
+        {
+            reportedWavetableError[i] = wavetableError[i];
+            if (!wavetableError[i].empty())
+                reportError("Wavetable Load Failed",
+                            "Op " + std::to_string(i + 1) + ": " + wavetableError[i]);
+        }
+    }
+
     auto fr = uiForceRebuild.load();
     if (fr != lastForceRebuild)
     {
@@ -1010,6 +1035,25 @@ void SixSinesEditor::finishSavePatch()
                                  auto pn = fs::path{result[0].getFullPathName().toStdString()};
                                  w->setPatchNameTo(pn.filename().replace_extension("").u8string());
                                  w->lastUserSaveDirectory = pn.parent_path();
+
+                                 /*
+                                  * Embedded wavetables make a patch large in a way nothing else
+                                  * here does, and XML forces base64 on top of the deflate. Say
+                                  * so on an explicit save - and only here: Synth::stateSave is
+                                  * a DAW session write, which must not dialog, block or fail.
+                                  */
+                                 auto wtBytes = w->patchMainRef.encodedWavetableBytes();
+                                 if (wtBytes > Patch::wavetablePayloadWarnBytes)
+                                 {
+                                     auto mb = [](size_t b)
+                                     { return std::to_string(b / (1024 * 1024)); };
+                                     w->reportError("Large Patch",
+                                                    "The wavetables in this patch take about " +
+                                                        mb(wtBytes) +
+                                                        "MB once encoded. It has been saved, but "
+                                                        "DAW projects using it will carry that "
+                                                        "too.");
+                                 }
 
 #if USE_WCHAR_PRESET
                                  w->presetManager->saveUserPresetDirect(
@@ -2118,4 +2162,18 @@ void SixSinesEditor::openColorEditor()
     colorEditorWindow->setVisible(true);
 }
 
+bool SixSinesEditor::reconcileWavetables()
+{
+    std::array<const Wavetable *, numOps> before{};
+    for (int i = 0; i < (int)numOps; ++i)
+        before[i] = patchMainRef.sourceNodes[i].wavetable.get();
+
+    baconpaul::six_sines::reconcileWavetables<Synth::mainToAudioQueue_T, Synth::MainToAudioMsg>(
+        patchMainRef, wavetableHandoffRef, mainToAudio, wavetableError);
+
+    for (int i = 0; i < (int)numOps; ++i)
+        if (before[i] != patchMainRef.sourceNodes[i].wavetable.get())
+            return true;
+    return false;
+}
 } // namespace baconpaul::six_sines::ui

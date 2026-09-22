@@ -1,0 +1,1124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; }
+    img { max-width: 100%; }
+    [hidden] { display: none !important; }
+  </style>
+<title>Six Sines Wavetables</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+  :root {
+    --ground: #eaeeee;
+    --surface: #ffffff;
+    --surface-2: #f2f5f5;
+    --ink: #141f1e;
+    --ink-2: #3c4a49;
+    --muted: #61706e;
+    --rule: #ccd7d6;
+    --rule-soft: #dee6e5;
+    --accent: #0c6b70;
+    --accent-ink: #085055;
+    --accent-soft: #d4e6e6;
+    --warn: #9d3b26;
+    --warn-soft: #f4e2dd;
+    --gold: #7d5f0f;
+    --gold-soft: #f0e8cf;
+
+    --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    --measure: 68ch;
+    --wide: 1020px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0e1414;
+      --surface: #151d1d;
+      --surface-2: #1b2424;
+      --ink: #e2ebe9;
+      --ink-2: #bdcac8;
+      --muted: #8b9a98;
+      --rule: #2b3736;
+      --rule-soft: #222d2c;
+      --accent: #57b6b8;
+      --accent-ink: #8ed3d3;
+      --accent-soft: #1a2e2f;
+      --warn: #e08a70;
+      --warn-soft: #33201a;
+      --gold: #cfae54;
+      --gold-soft: #2d2616;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0e1414;
+    --surface: #151d1d;
+    --surface-2: #1b2424;
+    --ink: #e2ebe9;
+    --ink-2: #bdcac8;
+    --muted: #8b9a98;
+    --rule: #2b3736;
+    --rule-soft: #222d2c;
+    --accent: #57b6b8;
+    --accent-ink: #8ed3d3;
+    --accent-soft: #1a2e2f;
+    --warn: #e08a70;
+    --warn-soft: #33201a;
+    --gold: #cfae54;
+    --gold-soft: #2d2616;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15.5px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .bar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 20;
+    background: color-mix(in srgb, var(--ground) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar-in {
+    max-width: var(--wide);
+    margin: 0 auto;
+    padding: 9px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 18px;
+  }
+  .bar-title {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-right: auto;
+  }
+  .bar nav { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .bar nav a {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+  }
+  .bar nav a:hover { color: var(--ink); border-bottom-color: var(--accent); }
+
+  .wrap { max-width: var(--wide); margin: 0 auto; padding: 0 16px; }
+  .col { max-width: var(--measure); }
+
+  header.top { padding-block: 52px 34px; }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(30px, 5.4vw, 44px);
+    line-height: 1.1;
+    letter-spacing: -.015em;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  .dek {
+    font-size: 17px;
+    color: var(--ink-2);
+    margin: 0 0 22px;
+    max-width: 60ch;
+  }
+  .meta {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+  }
+  .meta b { color: var(--ink-2); font-weight: 500; }
+
+  section { padding-block: 30px; border-top: 1px solid var(--rule-soft); }
+  section:first-of-type { border-top: 1px solid var(--rule); }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(22px, 3.2vw, 28px);
+    line-height: 1.2;
+    letter-spacing: -.01em;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 16.5px;
+    margin: 30px 0 8px;
+    letter-spacing: -.005em;
+  }
+  h4 {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 24px 0 6px;
+  }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.35em; }
+  li { margin-bottom: 6px; }
+  li > ul, li > ol { margin-top: 6px; margin-bottom: 4px; }
+  a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  strong { font-weight: 600; }
+  code {
+    font-family: var(--mono);
+    font-size: .875em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule-soft);
+    border-radius: 3px;
+    padding: .08em .3em;
+    white-space: nowrap;
+  }
+  pre {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    padding: 13px 15px;
+    overflow-x: auto;
+    margin: 0 0 16px;
+  }
+  pre code { background: none; border: 0; padding: 0; white-space: pre; font-size: inherit; }
+  .cmt { color: var(--muted); }
+
+  /* decision records */
+  .decisions { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .dec {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 2px solid var(--gold);
+    padding: 13px 14px 14px;
+  }
+  .dec .q {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 5px;
+  }
+  .dec .a { font-weight: 600; font-size: 14.5px; margin: 0 0 6px; line-height: 1.35; }
+  .dec p { font-size: 13px; color: var(--ink-2); margin: 0; }
+
+  /* callouts */
+  .note, .risk {
+    padding: 12px 14px;
+    margin: 0 0 16px;
+    font-size: 14.5px;
+  }
+  .note { background: var(--accent-soft); border-left: 3px solid var(--accent); }
+  .risk { background: var(--warn-soft); border-left: 3px solid var(--warn); }
+  .note :last-child, .risk :last-child { margin-bottom: 0; }
+  .note .lbl, .risk .lbl {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .note .lbl { color: var(--accent-ink); }
+  .risk .lbl { color: var(--warn); }
+
+  /* tables */
+  .tscroll { overflow-x: auto; margin: 0 0 18px; max-width: var(--wide); }
+  table {
+    border-collapse: collapse;
+    font-size: 13.5px;
+    width: 100%;
+    min-width: 440px;
+    font-variant-numeric: tabular-nums;
+  }
+  caption {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 7px;
+  }
+  th, td { text-align: left; padding: 6px 14px 6px 0; border-bottom: 1px solid var(--rule-soft); }
+  th {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  td.n, th.n { text-align: right; padding-right: 20px; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td code { white-space: nowrap; }
+
+  /* phase / diagram figures */
+  figure { margin: 0 0 20px; max-width: var(--wide); }
+  figure .fscroll { overflow-x: auto; }
+  figure svg { display: block; min-width: 620px; height: auto; max-width: 100%; }
+  figcaption { font-size: 12.5px; color: var(--muted); padding-top: 8px; max-width: 60ch; }
+
+  /* phase bit strip */
+  .bits { display: flex; font-family: var(--mono); font-size: 11px; border: 1px solid var(--rule); }
+  .bits div { padding: 7px 8px; text-align: center; line-height: 1.35; }
+  .bits .b1 { flex: 13; background: var(--accent-soft); color: var(--accent-ink); }
+  .bits .b2 { flex: 12; background: var(--gold-soft); color: var(--gold); border-left: 1px solid var(--rule); }
+  .bits .b3 { flex: 1; background: var(--surface-2); color: var(--muted); border-left: 1px solid var(--rule); }
+  .bits b { display: block; font-weight: 600; }
+
+  /* phase list (implementation order) */
+  ol.phases { list-style: none; padding: 0; counter-reset: ph; margin: 0; }
+  ol.phases > li {
+    counter-increment: ph;
+    display: grid;
+    grid-template-columns: 2.4em 1fr;
+    gap: 0 14px;
+    padding: 13px 0;
+    border-top: 1px solid var(--rule-soft);
+    margin: 0;
+  }
+  ol.phases > li:first-child { border-top: 1px solid var(--rule); }
+  ol.phases > li::before {
+    content: counter(ph, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+  ol.phases h3 { margin: 0 0 3px; font-size: 15.5px; }
+  ol.phases p { margin: 0 0 6px; font-size: 14px; color: var(--ink-2); }
+  ol.phases .gate {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  ol.phases .gate b { color: var(--ink-2); font-weight: 500; }
+
+  dl.files { margin: 0 0 16px; }
+  dl.files dt {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--accent-ink);
+    margin-top: 12px;
+  }
+  dl.files dd { margin: 2px 0 0; font-size: 14px; color: var(--ink-2); }
+
+  footer {
+    padding-block: 28px 44px;
+    border-top: 1px solid var(--rule);
+    font-size: 13px;
+    color: var(--muted);
+    max-width: var(--measure);
+  }
+
+  @media (max-width: 560px) {
+    body { font-size: 15px; }
+    .bits { flex-direction: column; }
+    .bits div { border-left: 0 !important; border-top: 1px solid var(--rule); }
+    .bits .b1 { border-top: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="bar-in">
+    <span class="bar-title">Six Sines &middot; Wavetables</span>
+    <nav>
+      <a href="#found">Findings</a>
+      <a href="#decided">Decisions</a>
+      <a href="#arch">Architecture</a>
+      <a href="#formats">Formats</a>
+      <a href="#params">Params</a>
+      <a href="#ui">UI</a>
+      <a href="#tests">Tests</a>
+      <a href="#phases">Phases</a>
+      <a href="#risks">Risks</a>
+    </nav>
+  </div>
+</div>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="col">
+    <h1>User wavetables for Six Sines</h1>
+    <p class="dek">Replace the static <code>SinTable</code> read with a loaded multi-frame table, keeping every existing
+      operator feature — PM, FM, RM, self-feedback, phase remap, resonant sweep — untouched. One FFT at load time
+      buys the exact derivative, exact band-limiting, and the mip chain from a single piece of machinery.</p>
+    <div class="meta">
+      <span><b>Status</b> design, pre-implementation</span>
+      <span><b>Scope</b> src/dsp, src/synth, src/ui, libs</span>
+      <span><b>New deps</b> pffft</span>
+      <span><b>Patch version</b> 12 &rarr; 13</span>
+    </div>
+  </div>
+</header>
+
+<section id="found">
+  <div class="col">
+    <p class="eyebrow">Why this is cheaper than it looks</p>
+    <h2>What the existing code already gives us</h2>
+    <p>Four things in the current engine make this a smaller change than a wavetable oscillator usually is.</p>
+  </div>
+
+  <div class="col">
+    <h3>1. <code>simdQuad</code> is already a pointer</h3>
+    <p><code>SinTable</code> is a 16-byte object: a <code>SIMD_M128 *simdQuad</code> and a <code>frToPhase</code>
+      scalar. All the table data is <code>static</code>. <code>setWaveForm()</code> does nothing but repoint
+      <code>simdQuad</code> at a different slice of <code>simdFullQuad</code>. A <em>single-frame</em> wavetable is
+      therefore almost free: point it at a heap-allocated frame and the inner loop never knows.</p>
+
+    <h3>2. Hermite interpolation is linear in <code>(q, dq)</code>, so morph is exact <em>and</em> cheap</h3>
+    <p><code>at()</code> is a dot product of the 4-vector <code>(q[i], dq[i], q[i+1], dq[i+1])</code> against
+      precomputed cubic coefficients. Because the dot product is linear in its first argument:</p>
+<pre><code>lerp(dot(q_lo, c), dot(q_hi, c))  ==  dot(lerp(q_lo, q_hi), c)</code></pre>
+    <p>Crossfading two frames' <em>packed vectors</em> is bit-for-bit identical to crossfading two table reads, and
+      costs one extra load plus a multiply-add instead of a second full <code>at()</code>. Frame morphing is one SIMD
+      lerp.</p>
+
+    <h3>3. Mode enums already latch at attack</h3>
+    <p><code>OpSource::cacheEnums()</code> freezes <code>waveFormCachedAtAttack</code> and friends in
+      <code>reset()</code>. Latching <em>which table</em> at attack falls straight out of that, and it is what makes
+      the lifetime problem tractable — a sounding voice can keep rendering the table it started on while the main
+      thread swaps in a new one.</p>
+
+    <h3>4. <code>macroNames</code> is the precedent for bulk patch state</h3>
+    <p><code>Patch::setupAdditionalState()</code> already hangs non-parameter, main-thread-only state off
+      <code>additionalToState</code> / <code>additionalFromState</code>. Wavetable blobs are the same shape of thing,
+      one order of magnitude larger.</p>
+
+    <div class="risk">
+      <span class="lbl">The one thing nobody listed</span>
+      <p><strong>Aliasing.</strong> A 2048-sample source cycle carries 1024 harmonics. At the engine's 240 kHz
+        oversampled rate, harmonic 1024 of a 1 kHz note lands near 1 MHz. Your existing tables have fixed harmonic
+        content and already alias mildly at the top of the keyboard; arbitrary user content will alias badly enough to
+        be the first thing anyone hears. This is why the mip chain is in v1 rather than deferred.</p>
+    </div>
+  </div>
+</section>
+
+<section id="decided">
+  <div class="col">
+    <p class="eyebrow">Decision record</p>
+    <h2>Settled questions</h2>
+  </div>
+  <div class="decisions">
+    <div class="dec">
+      <p class="q">Table construction</p>
+      <p class="a">FFT &rarr; harmonics &rarr; synthesize</p>
+      <p>Exact analytic derivative, exact band-limiting, arbitrary output resolution. Via <strong>pffft in
+        <code>libs/</code></strong>, not <code>juce_dsp</code> — keeps the loader JUCE-free and testable.</p>
+    </div>
+    <div class="dec">
+      <p class="q">Anti-aliasing</p>
+      <p class="a">Band-limited mip chain in v1</p>
+      <p>Level <em>k</em> keeps harmonics below <em>H</em>&#8320;/2<sup>k</sup> at proportionally fewer points, so the
+        whole chain costs ~2&times; level 0. Level picked per block from base frequency.</p>
+    </div>
+    <div class="dec">
+      <p class="q">Memory budget</p>
+      <p class="a">~8 MB per distinct table</p>
+      <p>512 harmonics, 8192-point base level, frame axis resampled to 64 frames. Sources sharing a table share the
+        memory; worst case six distinct tables is ~48 MB.</p>
+    </div>
+    <div class="dec">
+      <p class="q">Patch payload</p>
+      <p class="a">Source samples, deflate + base64</p>
+      <p>Embed the source file verbatim. Load-from-file and load-from-patch become the <em>same</em> code path, and
+        re-deriving harmonics at load keeps patches resolution-independent anyway. Warn only on explicit save, past
+        5 MB.</p>
+    </div>
+    <div class="dec">
+      <p class="q">The hot loop</p>
+      <p class="a">Template, never a runtime branch</p>
+      <p>MSVC on Windows x86 will not reliably hoist a ternary out of this loop. <code>IsWT</code> becomes a template
+        parameter, 38 instantiations become 76, and the existing sine path compiles bit-identically to today.</p>
+    </div>
+  </div>
+</section>
+
+<section id="arch">
+  <div class="col">
+    <p class="eyebrow">Architecture</p>
+    <h2>Load pipeline, runtime read, storage</h2>
+  </div>
+
+  <div class="col">
+    <h3>The load pipeline</h3>
+    <p>One path, used identically by the file chooser and by patch load:</p>
+<pre><code>bytes  <span class="cmt">// .wt / .wav / .sxwt, from disk or from the patch blob</span>
+  &rarr; parse            <span class="cmt">// &rarr; SourceFrames { cycleLength, nFrames, vector&lt;float&gt; }</span>
+  &rarr; forward FFT      <span class="cmt">// one per source frame, at cycleLength</span>
+  &rarr; frame resample   <span class="cmt">// linear along the frame axis, to &le;64 frames</span>
+  &rarr; per frame, per mip level k:
+       harmonics 1..H_k, zero above
+       inverse FFT              &rarr; value table   v[0..N_k]
+       harmonics &times; j&middot;2&pi;n, IFFT  &rarr; slope table   dv/di[0..N_k]
+  &rarr; interleave (v, dv) pairs, append wrap point
+  &rarr; Wavetable { hash, name, nFrames, levels[] }</code></pre>
+    <p>The derivative is a frequency-domain multiply, so it is <em>exact</em> — no finite differencing, no
+      upsample-and-estimate. The same multiply-and-zero gives every mip level, and both fall out of machinery we need
+      anyway. Note that this replaces the libsamplerate approach entirely on this path; libsamplerate stays where it
+      is, downsampling the engine output.</p>
+
+    <div class="note">
+      <span class="lbl">Convention to get right</span>
+      <p>The static <code>SinTable</code> stores slope per table step using
+        <code>dxdPhase = 1/(nQuadrants*(nPoints-1))</code> — a shared-endpoint quirk that makes each quadrant span
+        slightly more than a quarter cycle (~0.02% off). The wavetable path should use the exact
+        <code>1/N</code> convention with an explicit wrap point at index <code>N</code>, not replicate the quirk.</p>
+    </div>
+
+    <h3>Runtime representation</h3>
+<pre><code><span class="cmt">// src/dsp/wavetable.h — immutable once built, shared across all voices</span>
+struct Wavetable
+{
+    struct Level
+    {
+        uint32_t nPoints;      <span class="cmt">// 8192 &gt;&gt; k</span>
+        uint32_t topHarmonic;  <span class="cmt">// 512 &gt;&gt; k</span>
+        uint32_t posShift, fracShift, posMask;
+        <span class="cmt">// nFrames * (nPoints + 1) interleaved (v, dv) float pairs</span>
+        const float *data;
+    };
+    uint64_t   hash;                 <span class="cmt">// of the source bytes; the dedup key</span>
+    std::string name;
+    uint16_t   nFrames;
+    uint8_t    nLevels;
+    Level      levels[maxMipLevels];
+    std::vector&lt;float&gt; storage;      <span class="cmt">// owns everything above</span>
+};</code></pre>
+    <p>Frames store interleaved <code>(v, dv)</code> pairs rather than the pre-packed 4-wide layout
+      <code>simdFullQuad</code> uses. An unaligned 16-byte load at offset <code>2*i</code> yields
+      <code>(v[i], dv[i], v[i+1], dv[i+1])</code> — exactly the Hermite 4-vector, for half the memory. Every other
+      index is naturally aligned; the rest straddle by 8 bytes, which costs nothing inside a cache line.</p>
+
+    <h3>The read path</h3>
+    <figure>
+      <div class="fscroll">
+        <svg viewBox="0 0 900 208" role="img" aria-label="Wavetable read path: 26-bit phase splits into position and fractional indices, position selects two adjacent frames whose packed vectors are lerped by morph, then dotted with the Hermite coefficient vector.">
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"/>
+            </marker>
+          </defs>
+
+          <rect x="1" y="74" width="120" height="44" fill="var(--surface)" stroke="var(--rule)"/>
+          <text x="61" y="92" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--ink)">uint32 ph</text>
+          <text x="61" y="107" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">26 bits</text>
+
+          <line x1="121" y1="96" x2="158" y2="96" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#ar)"/>
+
+          <rect x="158" y="40" width="152" height="40" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="234" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent-ink)">(ph &gt;&gt; posShift)</text>
+          <text x="234" y="71" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent-ink)">&amp; posMask</text>
+
+          <rect x="158" y="112" width="152" height="40" fill="var(--gold-soft)" stroke="var(--gold)"/>
+          <text x="234" y="129" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--gold)">(ph &gt;&gt; fracShift)</text>
+          <text x="234" y="143" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--gold)">&amp; 0xFFF</text>
+
+          <line x1="310" y1="60" x2="352" y2="60" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#ar)"/>
+          <line x1="310" y1="132" x2="600" y2="132" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#ar)"/>
+
+          <rect x="352" y="22" width="166" height="34" fill="var(--surface)" stroke="var(--rule)"/>
+          <text x="435" y="43" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink)">loadu frame[lo] + 2i</text>
+          <rect x="352" y="64" width="166" height="34" fill="var(--surface)" stroke="var(--rule)"/>
+          <text x="435" y="85" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink)">loadu frame[hi] + 2i</text>
+
+          <line x1="518" y1="39" x2="556" y2="52" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#ar)"/>
+          <line x1="518" y1="81" x2="556" y2="68" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#ar)"/>
+
+          <rect x="558" y="42" width="104" height="36" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="610" y="59" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent-ink)">lerp</text>
+          <text x="610" y="72" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--accent-ink)">by morph frac</text>
+
+          <line x1="662" y1="60" x2="700" y2="72" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#ar)"/>
+          <line x1="600" y1="132" x2="600" y2="132" stroke="var(--muted)" stroke-width="1.2"/>
+          <rect x="600" y="114" width="102" height="36" fill="var(--gold-soft)" stroke="var(--gold)"/>
+          <text x="651" y="136" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--gold)">simdCubic[t]</text>
+          <line x1="702" y1="132" x2="716" y2="100" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#ar)"/>
+
+          <rect x="702" y="62" width="92" height="36" fill="var(--surface)" stroke="var(--rule)"/>
+          <text x="748" y="85" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink)">mul + hadd</text>
+
+          <line x1="794" y1="80" x2="828" y2="80" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#ar)"/>
+          <text x="866" y="77" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--accent-ink)">float</text>
+          <text x="866" y="91" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">out</text>
+
+          <text x="435" y="180" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="var(--muted)">two loads and a lerp replace a second table read &mdash; and give the identical result</text>
+        </svg>
+      </div>
+      <figcaption>The only structural addition over <code>SinTable::at()</code> is the frame lerp. When
+        <code>nFrames == 1</code>, <code>hi == lo</code> and the lerp is skipped entirely.</figcaption>
+    </figure>
+
+    <h4>Bit layout, mip level 0</h4>
+    <div class="bits">
+      <div class="b1"><b>13 bits</b> position index &mdash; 8192 points/cycle</div>
+      <div class="b2"><b>12 bits</b> Hermite <code>t</code> &rarr; <code>simdCubic</code></div>
+      <div class="b3"><b>1</b> dropped</div>
+    </div>
+    <p style="margin-top:12px">Phase stays the existing 26-bit accumulator. Level <em>k</em> has
+      <code>posShift = 13 + k</code>, <code>fracShift = 1 + k</code>, <code>posMask = (8192 &gt;&gt; k) - 1</code>.
+      The existing 4096-entry <code>simdCubic</code> coefficient table is reused unchanged — we just drop the bottom
+      <code>1 + k</code> bits of fractional precision feeding it, which at level 0 is 1 part in
+      33.5&nbsp;million of a cycle.</p>
+
+    <h3>The table read is a template dimension, not a branch</h3>
+    <p>A runtime ternary in this loop is not acceptable — MSVC on Windows x86 does not reliably unswitch it, and this
+      is the hottest loop in the synth. So <code>IsWT</code> becomes a real template parameter and the read resolves
+      at compile time:</p>
+<pre><code>template &lt;bool IsWT&gt;
+inline float readTable(uint32_t ph) const
+{
+    if constexpr (IsWT)
+        return wtReader.at(ph);
+    else
+        return st.at(ph);
+}</code></pre>
+    <p>The eight <code>st.at(ph)</code> call sites in <code>innerLoopImpl</code> become
+      <code>readTable&lt;IsWT&gt;(ph)</code>, and <code>innerLoopImpl</code> gains <code>IsWT</code> alongside
+      <code>UsesFB</code>. The same <code>if constexpr</code> guards the per-block mip level selection, so the
+      non-wavetable instantiation never mentions <code>wtReader</code> at all and <code>SinTable::at()</code> keeps
+      its <code>constexpr</code> shifts and masks. <strong>The existing sine path compiles to exactly the code it
+      compiles to today</strong> — provably, not probably.</p>
+    <p>One call site does <em>not</em> change: <code>stWindow.at(wph)</code> in <code>RESONANT_SWEEP</code>. The sweep
+      window is always a static <code>SinTable</code> waveform; only the operator's own waveform becomes a
+      wavetable.</p>
+
+    <h4>What it costs</h4>
+    <p>The dispatch goes from 38 instantiations to 76:
+      <code>UsesFB &times; IsWT &times; {NONE, PHASE_REMAP&times;6, RESONANT_SWEEP&times;7, NOISE&times;5}</code>,
+      with one extra dispatch level at the top:</p>
+<pre><code>innerLoop()
+  &rarr; usesWavetableCachedAtAttack ? Dispatch&lt;UsesFB, true&gt; : Dispatch&lt;UsesFB, false&gt;
+      &rarr; switch extendedMode &rarr; switch shape &rarr; innerLoopImpl&lt;UsesFB, IsWT, ET, S, R, NM&gt;</code></pre>
+    <p>Those instantiations land in the TUs that actually call <code>renderBlock</code> —
+      <code>voice.cpp</code> and <code>tests/perf_scenarios.cpp</code> — not in every TU that merely includes
+      <code>synth.h</code>. <code>voice.cpp</code> is therefore the one to watch on MSVC.</p>
+    <div class="note">
+      <span class="lbl">Mitigation held in reserve</span>
+      <p>If <code>voice.cpp</code>'s compile time or object size becomes a problem, move
+        <code>innerLoopDispatch</code> out of line into two translation units —
+        <code>op_source_render_sin.cpp</code> and <code>op_source_render_wt.cpp</code> — with explicit instantiation,
+        so the two halves compile in parallel instead of as one enormous TU. The per-block call overhead of an
+        out-of-line dispatch is irrelevant next to eight samples of inner loop. Worth doing only if measured, since it
+        costs the header-only simplicity of <code>OpSource</code>.</p>
+    </div>
+
+    <h3>Morph</h3>
+    <p>Morph is a live, modulatable, per-sample value, so it is deliberately <em>not</em> latched at attack. It follows
+      the same shape as <code>extendedModeM</code>: patch value plus external mod plus env and LFO contributions,
+      through a one-pole lag, then a linear walk across the block.</p>
+<pre><code>float m   = morph * (nFrames - 1);
+uint32_t lo = (uint32_t)m;
+uint32_t hi = std::min(lo + 1u, nFrames - 1u);
+float    f  = m - lo;
+<span class="cmt">// walked per sample: m += dMorph</span></code></pre>
+    <p>Because time-domain frame interpolation and harmonic-domain frame interpolation are the same operation (the FFT
+      is linear), block-rate frame-pair selection with per-sample weight matches what Serum and Surge do, and matches
+      how we resampled the frame axis at load.</p>
+
+    <h3>Mip level selection</h3>
+    <p>Chosen per block, from the base frequency, before the sample loop:</p>
+<pre><code>H_allowed = 0.45f * engineSampleRate / f0;
+k = smallest level with topHarmonic &le; H_allowed, clamped to [0, nLevels-1];</code></pre>
+    <div class="tscroll">
+      <table>
+        <caption>Level selected at 240 kHz engine rate, 512-harmonic base</caption>
+        <thead>
+          <tr><th>Note</th><th class="n">f&#8320; (Hz)</th><th class="n">H allowed</th><th class="n">Level</th><th class="n">Harmonics</th><th class="n">Points</th><th class="n">KiB/frame</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>A1</td><td class="n">55</td><td class="n">1 963</td><td class="n">0</td><td class="n">512</td><td class="n">8 192</td><td class="n">64.0</td></tr>
+          <tr><td>A3</td><td class="n">220</td><td class="n">491</td><td class="n">1</td><td class="n">256</td><td class="n">4 096</td><td class="n">32.0</td></tr>
+          <tr><td>A4</td><td class="n">440</td><td class="n">245</td><td class="n">2</td><td class="n">128</td><td class="n">2 048</td><td class="n">16.0</td></tr>
+          <tr><td>A5</td><td class="n">880</td><td class="n">123</td><td class="n">3</td><td class="n">64</td><td class="n">1 024</td><td class="n">8.0</td></tr>
+          <tr><td>A6</td><td class="n">1 760</td><td class="n">61</td><td class="n">4</td><td class="n">32</td><td class="n">512</td><td class="n">4.0</td></tr>
+          <tr><td>A7</td><td class="n">3 520</td><td class="n">31</td><td class="n">5</td><td class="n">16</td><td class="n">256</td><td class="n">2.0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Add hysteresis — go coarser at <code>0.45&nbsp;&times;&nbsp;SR</code>, come back finer only at
+      <code>0.40</code> — so a slow pitch envelope or portamento crossing a boundary does not chatter. Level changes
+      only alter the top octave of harmonic content, so the discontinuity is small; no crossfade needed in v1.</p>
+
+    <h4>Interpolation error vs points-per-period of the top harmonic</h4>
+    <div class="tscroll">
+      <table>
+        <caption>Cubic Hermite with exact slopes, order-of-magnitude (&asymp; (2&pi;/R)&#8308;/384)</caption>
+        <thead><tr><th class="n">R</th><th class="n">Relative error</th><th class="n">dB</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr><td class="n">8</td><td class="n">9.9 &times; 10&#8315;&#8308;</td><td class="n">&minus;60</td><td>audible on a clean tone</td></tr>
+          <tr><td class="n">16</td><td class="n">6.2 &times; 10&#8315;&#8309;</td><td class="n">&minus;84</td><td>chosen</td></tr>
+          <tr><td class="n">32</td><td class="n">3.9 &times; 10&#8315;&#8310;</td><td class="n">&minus;108</td><td>doubles memory for nothing</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>R = 16 sets the whole size budget: 16 &times; 512 harmonics = <strong>8192 points at level 0</strong>, and the
+      same ratio holds at every level down the chain, so quality is uniform across the keyboard.</p>
+
+    <h3>Memory arithmetic</h3>
+    <div class="tscroll">
+      <table>
+        <caption>Interleaved float32 (v, dv) pairs, N+1 points per level</caption>
+        <thead><tr><th class="n">Level</th><th class="n">Points</th><th class="n">Harmonics</th><th class="n">KiB/frame</th></tr></thead>
+        <tbody>
+          <tr><td class="n">0</td><td class="n">8 192</td><td class="n">512</td><td class="n">64.0</td></tr>
+          <tr><td class="n">1</td><td class="n">4 096</td><td class="n">256</td><td class="n">32.0</td></tr>
+          <tr><td class="n">2</td><td class="n">2 048</td><td class="n">128</td><td class="n">16.0</td></tr>
+          <tr><td class="n">3&ndash;7</td><td class="n">1 024 &rarr; 64</td><td class="n">64 &rarr; 4</td><td class="n">15.5</td></tr>
+          <tr><td colspan="3"><strong>Chain total per frame</strong></td><td class="n"><strong>127.5</strong></td></tr>
+          <tr><td colspan="3"><strong>&times; 64 frames = one table</strong></td><td class="n"><strong>7.97 MiB</strong></td></tr>
+          <tr><td colspan="3">Six distinct tables (worst case)</td><td class="n">47.8 MiB</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Typical use is one or two distinct tables, so 8&ndash;16 MiB. Sources pointing at the same table share the
+      allocation, which is what the content hash is for.</p>
+
+    <h3>The store, dedup and lifetime</h3>
+    <p>Bulk data reaching the audio thread is the genuinely new architectural piece — there is no precedent for it in
+      the codebase. The design keeps the audio thread free of allocation, deallocation and locks:</p>
+    <ul>
+      <li><strong><code>WavetableStore</code></strong> lives beside <code>patchMain</code>, main-thread-mutated only.
+        It holds <code>std::array&lt;std::shared_ptr&lt;const Wavetable&gt;, numOps&gt; published</code> — one
+        publication cell per operator, indexed <em>by</em> operator, since an operator has exactly one table — plus a
+        <code>hash &rarr; shared_ptr</code> dedup map. Loading a file whose bytes hash to a table already in the map
+        reuses that allocation; that is the &ldquo;two sources, one table&rdquo; requirement, and it caps distinct
+        tables at <code>numOps</code> by construction.</li>
+      <li><strong>Publication</strong> is a new <code>MainToAudioMsg::SET_WAVETABLE { opIndex }</code> — the cell index
+        <em>is</em> the operator index, so the message carries nothing but a small integer and stays POD. The main
+        thread writes <code>published[op]</code>, then pushes; the ring buffer's release/acquire pairing makes the
+        write visible before the message is.</li>
+      <li><strong>Back-to-back loads on one operator</strong> are the only ordering hazard: a second write to
+        <code>published[op]</code> before the audio thread has consumed the first message would race the audio
+        thread's copy. An <code>outstanding[op]</code> flag, cleared by an <code>audioToMain</code> ack, defers the
+        second write until the first is consumed. At UI gesture rate this is invisible, and it avoids needing a
+        ping-pong cell or a table pool.</li>
+      <li><strong>The audio thread</strong> copies <code>published[op]</code> into
+        <code>monoValues.wavetableForOp[op]</code> — a <code>shared_ptr</code> copy, one atomic increment, no
+        allocation. <code>OpSource::reset()</code> copies it again into the voice at attack.</li>
+      <li><strong>Nothing is ever destroyed on the audio thread</strong>, because a table displaced from
+        <code>published</code> moves to a main-thread <code>retiring</code> list that keeps a reference alive. The main
+        thread drops it only once <code>use_count() == 1</code>, polled from the existing idle /
+        <code>onMainThread</code> path. So the store's steady-state size is <code>numOps</code> cells plus however
+        many tables are briefly retiring.</li>
+    </ul>
+    <div class="note">
+      <span class="lbl">Simpler fallback if this proves fussy</span>
+      <p>Bracket the swap in the existing <code>STOP_AUDIO</code> / <code>START_AUDIO</code> pair, which already calls
+        <code>allSoundsOff()</code>. Then raw pointers suffice and lifetime is trivial. The cost is that loading a
+        table cuts any held note — acceptable for a load gesture, mildly annoying while auditioning. The
+        <code>shared_ptr</code> scheme above is barely more code and avoids it, so start there.</p>
+    </div>
+
+    <h3>Patch serialization</h3>
+    <p><code>Patch</code> gains a main-thread-only <code>WavetableSet wavetables</code> — exactly the
+      <code>macroNames</code> precedent — serialized through the existing
+      <code>additionalToState</code> / <code>additionalFromState</code> hooks. Blobs are stored once and referenced,
+      so a table shared by two sources appears once in the file too:</p>
+<pre><code>&lt;wavetables&gt;
+  &lt;table id="0" hash="9f3c…" name="Bells 3" srcFormat="serum-wav"
+         cycleLength="2048" srcFrames="256" encoding="deflate-base64"&gt;
+    eJyVk2t…
+  &lt;/table&gt;
+&lt;/wavetables&gt;
+&lt;sourceWavetables&gt;
+  &lt;source idx="0" table="0"/&gt;
+  &lt;source idx="3" table="0"/&gt;
+&lt;/sourceWavetables&gt;</code></pre>
+    <p>Compression uses <code>sst-plugininfra::miniz</code>, already vendored — flip
+      <code>SST_PLUGININFRA_PROVIDE_MINIZ</code> on in <code>libs/CMakeLists.txt</code> and link the alias. No new
+      submodule, and <code>patch.cpp</code> stays JUCE-free.</p>
+    <h4>Why base64, and what it costs</h4>
+    <p>The patch <em>is</em> an XML document, so the payload has to survive as text. CDATA cannot carry arbitrary bytes
+      — NUL, the <code>]]&gt;</code> sequence and any invalid UTF-8 all break it — so base64 is forced, at 4/3 of the
+      deflated size. The CLAP state stream underneath is perfectly binary-capable; it is the XML layer above it that
+      isn't, and replacing that format is well outside this feature. Base85/Z85 would claw back 8 points of overhead
+      for a non-standard encoding and a hand-rolled codec — not worth it.</p>
+    <div class="tscroll">
+      <table>
+        <caption>Embedded verbatim, deflate + base64</caption>
+        <thead><tr><th>Source</th><th class="n">Raw</th><th class="n">Deflated</th><th class="n">In patch</th></tr></thead>
+        <tbody>
+          <tr><td>Surge <code>.wt</code>, int16, 128 &times; 2048</td><td class="n">512 KB</td><td class="n">~400 KB</td><td class="n">~530 KB</td></tr>
+          <tr><td>Serum <code>.wav</code>, float32, 256 &times; 2048</td><td class="n">2.0 MB</td><td class="n">~1.8 MB</td><td class="n">~2.4 MB</td></tr>
+          <tr><td><code>.sxwt</code>, sparse harmonics</td><td class="n">&lt; 20 KB</td><td class="n">&lt; 8 KB</td><td class="n">&lt; 11 KB</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The soft limit is <strong>5 MB</strong> of encoded payload, which a single table never reaches — it fires only
+      on a patch carrying several large verbatim sources. Past it, the editor offers to re-encode to the 64 frames
+      actually used, which drops that Serum case to roughly 270 KB.</p>
+    <div class="note">
+      <span class="lbl">Where the warning lives</span>
+      <p>The size warning belongs <strong>only</strong> in the editor's explicit <em>Save Patch</em> path, never in
+        <code>Synth::stateSave</code>. A DAW session save is not a user gesture: it must not dialog, must not block,
+        and must not fail. It writes whatever the patch holds, at any size.</p>
+    </div>
+    <p>Robustness: a patch naming <code>USER_TABLE</code> with a missing or unparseable blob falls back to
+      <code>SIN</code> and surfaces the failure in the UI rather than rendering silence. Factory patches embedding
+      tables would grow the compiled binary, so that is an explicit later decision, not a side effect.</p>
+  </div>
+</section>
+
+<section id="formats">
+  <div class="col">
+    <p class="eyebrow">File formats</p>
+    <h2>Three parsers, one output struct</h2>
+    <p>Every parser produces the same <code>SourceFrames { cycleLength, nFrames, vector&lt;float&gt; }</code>, so the
+      FFT pipeline downstream never branches on provenance.</p>
+
+    <div class="note">
+      <span class="lbl">Read these two files first</span>
+      <p>The local Surge checkout has both formats already solved, and the details below are taken from it rather than
+        from memory: <code>surge/src/common/dsp/Wavetable.h</code> for the <code>.wt</code> header, and
+        <code>surge/src/common/WAVFileSupport.cpp</code> for the <code>.wav</code> chunk chain — the latter is a decade
+        of accumulated real-world edge cases and is worth reading in full before writing a line of the parser.</p>
+    </div>
+
+    <h3>Surge <code>.wt</code></h3>
+    <p><code>#pragma pack(1)</code>, read straight off disk:</p>
+<pre><code>struct wt_header {
+    char           tag[4];      <span class="cmt">// "vawt"</span>
+    unsigned int   n_samples;   <span class="cmt">// per frame</span>
+    unsigned short n_tables;    <span class="cmt">// frames</span>
+    unsigned short flags;
+};</code></pre>
+    <div class="tscroll">
+      <table>
+        <caption>Flags, from <code>Wavetable.h</code></caption>
+        <thead><tr><th class="n">Bit</th><th>Name</th><th>Meaning for us</th></tr></thead>
+        <tbody>
+          <tr><td class="n">0x01</td><td><code>wtf_is_sample</code></td><td>not a wavetable — reject with a clear message</td></tr>
+          <tr><td class="n">0x02</td><td><code>wtf_loop_sample</code></td><td>sample-only; irrelevant</td></tr>
+          <tr><td class="n">0x04</td><td><code>wtf_int16</code></td><td>int16 data rather than float32</td></tr>
+          <tr><td class="n">0x08</td><td><code>wtf_int16_is_16</code></td><td>with the above: full 16-bit range, not 15</td></tr>
+          <tr><td class="n">0x10</td><td><code>wtf_has_metadata</code></td><td>NUL-terminated XML appended after the samples</td></tr>
+          <tr><td class="n">0x20</td><td><code>wtf_user_modified</code></td><td>re-sliced at runtime; informational</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Sample data is table-major after the header. Surge's own ceiling is
+      <code>max_subtables = 512</code>, a sane bound for us to reject beyond too. The trailing metadata XML carries a
+      name, which is worth lifting for the UI label.</p>
+
+    <h3>Serum-tagged <code>.wav</code></h3>
+    <p>Hand-rolled RIFF walk rather than a JUCE reader, for two reasons: it keeps the parser JUCE-free alongside the
+      rest of the loader, and JUCE's WAV reader does not surface the non-standard chunks we need. Read
+      <code>fmt&nbsp;</code> for int16 / int24 / float32 and channel count; take channel 0 if stereo.</p>
+    <p>Frame size follows Surge's priority chain, which is more thorough than anything I would have invented:</p>
+    <ol>
+      <li><code>clm&nbsp;</code> — payload begins <code>&lt;!&gt;dddd</code>, e.g. <code>&lt;!&gt;2048 10000000</code>.
+        Note Surge only recognises a literal <code>2048</code> here; <strong>we should parse the integer generally</strong>,
+        which is a small improvement over the reference implementation.</li>
+      <li><code>uhWT</code> — Hive metadata, treated exactly like <code>clm&nbsp;</code> (implies 2048).</li>
+      <li><code>cue&nbsp;</code> — cue points delimit frames. Trust the chunk size over the cue count the chunk
+        declares; they disagree in the wild.</li>
+      <li><code>srge</code> / <code>srgo</code> — Surge's own tag: <code>int version</code> then
+        <code>int frameSize</code>.</li>
+      <li><code>smpl</code> — loop start/end give the length. An <em>empty</em> <code>smpl</code> block means 2048
+        (that quirk is RAPID's).</li>
+      <li>Otherwise: power-of-two guess from the data length, preferring 2048, then prompt.</li>
+    </ol>
+
+    <h3>Six Sines <code>.sxwt</code></h3>
+    <p>tinyxml, matching the patch format's house style. Three frame kinds, in decreasing order of how much I
+      recommend them:</p>
+    <ul>
+      <li><code>kind="harmonics"</code> — sparse sine/cosine coefficients. Tiny, hand-authorable, exactly
+        band-limited, exact derivatives for free. <em>This is the headline feature</em>: a five-line XML file gives a
+        mathematically perfect table.
+<pre style="margin-top:10px"><code>&lt;frame kind="harmonics"&gt;
+  &lt;h n="1" a="1.0"/&gt;
+  &lt;h n="3" a="0.333"/&gt;
+  &lt;h n="5" a="0.2" phase="0.25"/&gt;
+&lt;/frame&gt;</code></pre>
+      </li>
+      <li><code>kind="samples"</code> — base64 float32 for one cycle; goes through the same FFT path as a
+        <code>.wt</code> file.</li>
+      <li><code>kind="exact"</code> — explicit <code>(v, dv)</code> pairs at a declared point count, bypassing the FFT
+        entirely. This is the literal &ldquo;function and derivative at Six Sines size&rdquo; request, and it is the
+        right tool for a genuinely non-band-limited analytic shape. <strong>Caveat worth stating plainly:</strong> it
+        is the one representation coupled to a runtime resolution, so it must carry its point count and be resampled
+        (or rejected) if the runtime size ever changes. The other two kinds are immune to that.</li>
+    </ul>
+    <div class="risk">
+      <span class="lbl">Still to check against real artifacts</span>
+      <p>The header layout and chunk chain above are confirmed against the Surge source. What is <em>not</em> confirmed
+        is behaviour on files in the wild: int24 <code>.wav</code>, stereo sources, a <code>clm&nbsp;</code> declaring
+        something other than 2048, and frame counts above 256. Phase 5 should test against actual Surge and Serum
+        wavetables, not only synthesized fixtures.</p>
+    </div>
+  </div>
+</section>
+
+<section id="params">
+  <div class="col">
+    <p class="eyebrow">Parameters and streaming</p>
+    <h2>Four additions, one renumbering</h2>
+  </div>
+  <div class="col">
+    <div class="tscroll">
+      <table>
+        <caption><code>SourceNode</code>, idBase 1500, idStride 250 — offsets 189+ are free</caption>
+        <thead><tr><th class="n">Offset</th><th>Name</th><th>Type</th><th>Version tag</th></tr></thead>
+        <tbody>
+          <tr><td class="n">189</td><td><code>wavetableMorph</code></td><td>float 0…1</td><td><code>version_130b</code></td></tr>
+          <tr><td class="n">190</td><td><code>envToWavetableMorph</code></td><td>float −1…1</td><td><code>version_130b</code></td></tr>
+          <tr><td class="n">191</td><td><code>lfoToWavetableMorph</code></td><td>float −1…1</td><td><code>version_130b</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul>
+      <li><code>TargetID::MORPH = 16</code> — free, and sits next to <code>STARTING_PHASE</code> in the direct-shaping
+        family. Added to <code>targetList</code> as &ldquo;Morph&rdquo; and handled in
+        <code>OpSource::calculateModulation()</code>.</li>
+      <li><code>static constexpr uint64_t version_130b = 0x010302;</code> and
+        <code>patchVersion 12 &rarr; 13</code>.</li>
+      <li><code>SinTable::USER_TABLE</code> inserted <em>before</em> <code>AUDIO_IN</code>, per the convention the
+        enum's own comment sets out. That moves <code>AUDIO_IN</code> from <strong>21 to 22</strong>.</li>
+    </ul>
+
+    <div class="note">
+      <span class="lbl">Agreed &mdash; and it must land in the same commit</span>
+      <p>Renumbering <code>AUDIO_IN</code> and bumping the patch version is accepted. The migration ships with it, or
+        every saved patch using op&nbsp;1 audio input breaks silently:</p>
+<pre style="margin-bottom:0"><code>if (p-&gt;adhocFeatures &amp; AdHocFeatureValues::WAVEFORM &amp;&amp; version &lt; 13)
+    if ((int)std::round(value) == 21) value = 22;   <span class="cmt">// AUDIO_IN moved</span></code></pre>
+      <p style="margin-top:10px"><code>structure.cpp</code> pins parameter <em>order</em>, not enum value remapping,
+        so this needs its own test.</p>
+    </div>
+
+    <p>Three things follow mechanically and the compiler will find two of them:
+      <code>waveForm</code>'s <code>withUnorderedMapFormatting</code> gains <code>{USER_TABLE, "Wavetable"}</code>;
+      <code>waveformMenuBase</code> in <code>waveform-display.h</code> needs <code>USER_TABLE</code> excluded from its
+      <code>static_assert</code> the way <code>AUDIO_IN</code> already is, since it has no static table entry; and
+      <code>WaveformPatchDiscrete::getMax()</code>'s <code>NUM_WAVEFORMS - 2</code> now lands on
+      <code>USER_TABLE</code>, which is correct — it is available on all six operators, unlike audio in.</p>
+  </div>
+</section>
+
+<section id="ui">
+  <div class="col">
+    <p class="eyebrow">Interface</p>
+    <h2>One menu section, one slider, one painter</h2>
+    <ul>
+      <li><strong><code>showWaveformPopup()</code></strong> gains a trailing section: <em>Load Wavetable…</em>,
+        a <em>User Wavetables</em> submenu scanning <code>~/Documents/Six Sines/Wavetables</code>, and — when a table
+        is loaded — the table's name and a <em>Clear</em> item. Picking a table sets
+        <code>waveForm = USER_TABLE</code> in the same gesture, so there is no invalid intermediate state.</li>
+      <li><strong>Morph</strong> appears in <code>SourceSubPanel</code> only when
+        <code>waveForm == USER_TABLE</code>, using the existing <code>setEnabledState()</code> visibility pattern that
+        already drives the phase-remap and noise controls. It comes with <code>envToMorph</code> and
+        <code>lfoToMorph</code> knobs, matching how <code>extendedModeM</code> is presented. Hidden — not disabled —
+        when <code>nFrames == 1</code>.</li>
+      <li><strong>The waveform painter</strong> needs read access to the table, so the editor takes a
+        <code>WavetableStore &amp;</code> alongside its existing <code>patchMainRef</code>. Draw the interpolated
+        current frame solid with the neighbouring frames faint behind it, so morph position is legible at a glance.</li>
+      <li><strong>Clipboard</strong> — <code>SupportsClipboard</code> on a source node must carry the table reference,
+        or copying op 1 to op 3 produces an operator in <code>USER_TABLE</code> mode with no table.</li>
+      <li><strong>File chooser</strong> follows the existing <code>juce::FileChooser</code> +
+        <code>launchAsync</code> pattern in <code>six-sines-editor.cpp</code>, filtering
+        <code>*.wt;*.wav;*.sxwt</code>.</li>
+    </ul>
+    <div class="note">
+      <span class="lbl">Behaviour to document in the manual</span>
+      <p>Changing <em>which</em> table an operator uses takes effect on the next note, because the table is latched at
+        attack like every other mode enum in this engine. Morph is live. That split is deliberate and consistent, but
+        it will read as a bug to anyone who has not been told.</p>
+    </div>
+  </div>
+</section>
+
+<section id="tests">
+  <div class="col">
+    <p class="eyebrow">Verification</p>
+    <h2>Tests</h2>
+    <p>Four new files in <code>tests/</code>, each added to the explicit source list in
+      <code>tests/CMakeLists.txt</code>.</p>
+    <dl class="files">
+      <dt>wavetable_build.cpp</dt>
+      <dd>Synthesize from a known harmonic set and assert the built table matches the closed form to better than
+        −100 dB. Check the stored slope against a high-resolution finite difference. Forward-FFT each built mip level
+        and assert energy above its <code>topHarmonic</code> sits below −120 dB. Golden values for a three-harmonic
+        table at fixed phases, following the <code>golden-source</code> pattern already used for the output stages.</dd>
+
+      <dt>wavetable_io.cpp</dt>
+      <dd>Round-trip fixtures for all three formats. Ambiguous <code>.wav</code> frame-size inference. Truncated,
+        zero-frame and absurdly-large inputs rejected without crashing or allocating wildly.</dd>
+
+      <dt>wavetable_stream.cpp</dt>
+      <dd>Patch save/load round trip. Two sources sharing one blob stay one allocation after reload — assert on
+        pointer identity, not just equal samples. A stripped blob falls back to <code>SIN</code>. Version gating: a v12
+        patch with <code>waveForm == 21</code> loads as audio in, not as a wavetable. Back-to-back loads on one
+        operator serialize correctly through the <code>outstanding</code> ack. A displaced table leaves
+        <code>published</code>, sits in <code>retiring</code> while a voice still holds it, and is reclaimed once the
+        voice ends. Clipboard copy carries the table.</dd>
+
+      <dt>wavetable_dsp.cpp</dt>
+      <dd>Morph at 0, 0.5 and 1 equals analytic frame interpolation. Frame-lerp-in-packed-domain equals
+        crossfade-of-two-reads bit for bit. Mip level switching is continuous across a boundary. A loaded table
+        combined with <code>PHASE_REMAP</code> and with <code>RESONANT_SWEEP</code> renders finite output.</dd>
+    </dl>
+    <p>Plus a <code>perf_scenarios.cpp</code> addition — 8 voices, all six operators on a 64-frame table with morph
+      under LFO modulation — and a confirmation that the <em>existing</em> plain-sine and no-self-feedback
+      SIMD-baseline scenarios are untouched. With <code>IsWT</code> templated they should be identical rather than
+      merely close; anything else means the dispatch leaked into the wrong instantiation.</p>
+  </div>
+</section>
+
+<section id="phases">
+  <div class="col">
+    <p class="eyebrow">Implementation order</p>
+    <h2>Eight phases</h2>
+    <p>Sequenced so each one is verifiable on its own, and so the perf question gets answered early — before there is
+      much built on top of the answer.</p>
+  </div>
+  <ol class="phases">
+    <li>
+      <h3>Dependencies and the build unit</h3>
+      <p><code>pffft</code> as a submodule at <code>libs/pffft</code>, wrapped in a small static target;
+        <code>SST_PLUGININFRA_PROVIDE_MINIZ</code> on. A <code>wavetable-build</code> translation unit with no JUCE
+        dependency.</p>
+      <p class="gate"><b>Gate</b> synthesize a table from a hand-written harmonic set in a test; derivative and
+        band-limit assertions pass.</p>
+    </li>
+    <li>
+      <h3>Runtime read path, single frame</h3>
+      <p><code>Wavetable</code>, <code>WavetableReader</code>, the <code>IsWT</code> template dimension through
+        <code>innerLoopDispatch</code> and <code>innerLoopImpl</code>, <code>USER_TABLE</code> in the enum with its
+        migration. One frame, one level, table supplied by a test.</p>
+      <p class="gate"><b>Gate</b> <code>six-sines-perf</code> unchanged on the existing scenarios, plus a look at
+        <code>voice.cpp</code> compile time and object size on MSVC &mdash; that is where the 76 instantiations land,
+        and where the out-of-line TU split gets decided.</p>
+    </li>
+    <li>
+      <h3>Mip chain and level selection</h3>
+      <p>Chain construction, per-block level choice, hysteresis.</p>
+      <p class="gate"><b>Gate</b> a bright table played chromatically to the top of the keyboard has no audible
+        aliasing; band-limit tests green.</p>
+    </li>
+    <li>
+      <h3>Multi-frame and morph</h3>
+      <p>Frame axis, packed-domain lerp, <code>wavetableMorph</code> and its env/LFO depths,
+        <code>TargetID::MORPH</code>.</p>
+      <p class="gate"><b>Gate</b> morph under audio-rate LFO is click-free; packed-lerp equals two-read crossfade.</p>
+    </li>
+    <li>
+      <h3>File parsers</h3>
+      <p><code>.wt</code>, Serum-tagged <code>.wav</code>, <code>.sxwt</code>, with fixtures. Work from
+        <code>surge/src/common/dsp/Wavetable.h</code> and <code>surge/src/common/WAVFileSupport.cpp</code> in the local
+        checkout rather than reinventing the chunk chain.</p>
+      <p class="gate"><b>Gate</b> a real Surge table and a real Serum table both load and sound right &mdash; actual
+        files, not only synthesized fixtures.</p>
+    </li>
+    <li>
+      <h3>Store, publication, serialization</h3>
+      <p>Dedup by hash, slot publication, <code>SET_WAVETABLE</code>, main-thread reclamation, patch blobs.</p>
+      <p class="gate"><b>Gate</b> patch round trip; two sources one allocation; no allocation on the audio thread
+        under ASAN with a sanitizer build.</p>
+    </li>
+    <li>
+      <h3>UI</h3>
+      <p>Menu section, file chooser, morph visibility, painter, clipboard, missing-table failure surface.</p>
+      <p class="gate"><b>Gate</b> load, morph, save, reload, and copy an operator — all by hand in the
+        standalone.</p>
+    </li>
+    <li>
+      <h3>Documentation and factory content</h3>
+      <p><code>doc/manual.md</code> on the latch-at-attack behaviour and the <code>.sxwt</code> harmonic format.
+        Decide separately whether any factory patches ship with embedded tables, given the binary-size cost.</p>
+      <p class="gate"><b>Gate</b> your review.</p>
+    </li>
+  </ol>
+</section>
+
+<section id="risks">
+  <div class="col">
+    <p class="eyebrow">Risks</p>
+    <h2>What I would watch</h2>
+    <ol>
+      <li><strong>Build time and code size from 76 instantiations.</strong> This is the price of getting the table read
+        out of the runtime and into the type system, and it is the right trade — a runtime ternary in this loop does
+        not survive MSVC on Windows x86. The cost lands almost entirely in <code>voice.cpp</code>. Phase 2 measures it;
+        the out-of-line two-TU split is the escape hatch.</li>
+      <li><strong>Mip level comes from base frequency, so heavy PM and FM still alias.</strong> The instantaneous
+        phase increment under audio-rate modulation has nothing to do with <code>dPhase</code>. Every wavetable synth
+        with FM has this problem; the engine's existing tables have a version of it too. Document it, do not chase
+        it.</li>
+      <li><strong>Patch size.</strong> A Serum-sized table is ~2.4 MB of base64 in the DAW project file, forced by the
+        XML container. Under the 5 MB threshold, so it lands silently — a real change in the feel of a Six Sines patch
+        even when nothing warns.</li>
+      <li><strong>The <code>AUDIO_IN</code> renumbering.</strong> Agreed and accepted, but it is still the
+        lowest-effort, highest-consequence item in the plan — four lines of migration plus a test, and it breaks user
+        patches silently if forgotten.</li>
+      <li><strong><code>.wav</code> files in the wild.</strong> The chunk chain is confirmed against Surge, but int24,
+        stereo sources, non-2048 <code>clm&nbsp;</code> declarations and frame counts above 256 are untested paths.</li>
+      <li><strong><code>pffft</code>'s licence</strong> is FFTPACK-derived and BSD-like, which fits the repo's MIT
+        source / GPL3 combined-work position — worth confirming rather than assuming.</li>
+      <li><strong>Load time.</strong> A 256-frame source means ~1000 inverse FFTs, which should be well under 100 ms.
+        If it is not, it moves to a <code>juce::ThreadPool</code> job, which drags UI state handling along with it.
+        Measure in phase 5 before deciding.</li>
+    </ol>
+
+    <h3>Deliberately out of scope</h3>
+    <p>A browsable wavetable library panel with preview; a shipped factory wavetable set; wavetable morph as a
+      second dimension in the matrix; loading arbitrary samples as multi-cycle sources. All reasonable follow-ons,
+      none of them needed for the feature to be complete and useful.</p>
+  </div>
+</section>
+
+<footer>
+  Plan for <code>baconpaul/six-sines</code>, drafted against <code>main</code> at <code>dfba04d</code>.
+  Nothing implemented yet — this is the design for review.
+</footer>
+
+</div>
+</body>
+</html>

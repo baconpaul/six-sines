@@ -20,7 +20,11 @@ add_subdirectory(sst/sst-filters)
 
 set(SST_PLUGININFRA_PROVIDE_TINYXML ON CACHE BOOL "yesxml")
 set(SST_PLUGININFRA_PROVIDE_PATCHBASE ON CACHE BOOL "patchbase pls")
+# FORCE so an existing build dir picks it up; we require it, it is not a choice
+set(SST_PLUGININFRA_PROVIDE_MINIZ ON CACHE BOOL "deflate for wavetable blobs" FORCE)
 add_subdirectory(sst/sst-plugininfra)
+
+add_subdirectory(pffft EXCLUDE_FROM_ALL)
 
 add_library(mts-esp-client STATIC MTS-ESP/Client/libMTSClient.cpp)
 target_include_directories(mts-esp-client PUBLIC MTS-ESP/Client)

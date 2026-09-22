@@ -31,7 +31,11 @@
 #include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
 #include "sst/plugininfra/patch-support/patch_base.h"
 #include "synth/matrix_index.h"
+#include <memory>
+
 #include "dsp/sintable.h"
+#include "dsp/wavetable.h"
+#include "filesystem/import.h"
 
 namespace baconpaul::six_sines
 {
@@ -75,7 +79,7 @@ struct Param : pats::ParamBase, sst::cpputils::active_set_overlay<Param>::partic
 
 struct Patch : pats::PatchBase<Patch, Param>
 {
-    static constexpr uint32_t patchVersion{12};
+    static constexpr uint32_t patchVersion{13};
     static constexpr const char *id{"org.baconpaul.six-sines"};
 
     static constexpr uint32_t floatFlags{CLAP_PARAM_IS_AUTOMATABLE};
@@ -99,6 +103,8 @@ struct Patch : pats::PatchBase<Patch, Param>
     static constexpr uint64_t version_120h = 0x010208;
     // first chunk of 1.3.0: phase-map read-phase offset
     static constexpr uint64_t version_130a = 0x010301;
+    // user wavetables: morph and its env / lfo depths
+    static constexpr uint64_t version_130b = 0x010302;
 
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
     static md_t floatMd(uint64_t version = version_110)
@@ -549,6 +555,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             DIRECT = 10,
             DIRECT_FINE = 11,
             STARTING_PHASE = 15,
+            MORPH = 16,
             ENV_DEPTH_ATTEN = 20,
             LFO_DEPTH_ATTEN = 30,
             EXTEND_M = 18,
@@ -561,6 +568,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             {TargetID::DIRECT, "Ratio"},
             {TargetID::DIRECT_FINE, "Ratio (Fine)"},
             {TargetID::STARTING_PHASE, "Phase"},
+            {TargetID::MORPH, "Wavetable Morph"},
             {TargetID::ENV_DEPTH_ATTEN, "Env Atten"},
             {TargetID::LFO_DEPTH_ATTEN, "LFO Atten"},
             {TargetID::SKIP, ""},
@@ -714,6 +722,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                {SinTable::WaveForm::HALF_BLACKMAN_HARRIS_WINDOW,
                                 std::string() + u8"\U000000BD" + " Blackman Harris"},
                                {SinTable::WaveForm::TUKEY_WINDOW, "Tukey"},
+                               {SinTable::WaveForm::USER_TABLE, "Wavetable"},
                                {SinTable::WaveForm::AUDIO_IN, "Audio In"},
                            })),
 
@@ -874,6 +883,44 @@ struct Patch : pats::PatchBase<Patch, Param>
                                     .withGroupName(name(idx))
                                     .withDefault(0)
                                     .withID(id(188, idx))),
+              wavetableBandLimit(
+                  intMd(version_130b)
+                      .withRange(0, 3)
+                      // Tapered by default: a brick wall band limit rings around every sharp
+                      // edge, and a wavetable that rings on load is a worse first impression
+                      // than one that is slightly softer than its source.
+                      .withDefault((int)WavetableBandLimit::BAND_LIMITED_TAPERED)
+                      .withName(name(idx) + " Wavetable Playback")
+                      .withGroupName(name(idx))
+                      .withID(id(192, idx))
+                      .withUnorderedMapFormatting(
+                          {{(int)WavetableBandLimit::BAND_LIMITED, "Band Limited"},
+                           {(int)WavetableBandLimit::BAND_LIMITED_TAPERED, "Band Limited Tapered"},
+                           {(int)WavetableBandLimit::DIRECT, "Direct"},
+                           {(int)WavetableBandLimit::DIRECT_ZOH, "Direct ZOH"}})),
+              wavetableMipChain(boolMd(version_130b)
+                                    .withName(name(idx) + " Wavetable Mip Chain")
+                                    .withGroupName(name(idx))
+                                    .withDefault(true)
+                                    .withID(id(193, idx))),
+              wavetableMorph(floatMd(version_130b)
+                                 .asPercent()
+                                 .withName(name(idx) + " Wavetable Morph")
+                                 .withGroupName(name(idx))
+                                 .withDefault(0)
+                                 .withID(id(189, idx))),
+              envToWavetableMorph(floatMd(version_130b)
+                                      .asPercentBipolar()
+                                      .withName(name(idx) + " Env to Wavetable Morph")
+                                      .withGroupName(name(idx))
+                                      .withDefault(0)
+                                      .withID(id(190, idx))),
+              lfoToWavetableMorph(floatMd(version_130b)
+                                      .asPercentBipolar()
+                                      .withName(name(idx) + " LFO to Wavetable Morph")
+                                      .withGroupName(name(idx))
+                                      .withDefault(0)
+                                      .withID(id(191, idx))),
               resonantSweepWindowShape(
                   intMd(version_120d)
                       .withRange(0, 6)
@@ -977,8 +1024,23 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param envToExtendedModeM, envToExtendedModeN;
         Param lfoToExtendedModeM, lfoToExtendedModeN;
 
+        /*
+         * The wavetable this operator uses. Not a Param - it streams as a blob rather than a
+         * value - but it follows the same mirroring as one: patchMain's copy is written on the
+         * main thread, patch's copy is written on the audio thread when a SET_WAVETABLE
+         * arrives. A built table is immutable, so reads need no synchronisation; only these
+         * two shared_ptr *objects* are single-threaded, one per side.
+         *
+         * blobIndex is main-only bookkeeping: which of Patch::wavetableBlobs this came from.
+         */
+        int wavetableBlobIndex{-1};
+        std::shared_ptr<const Wavetable> wavetable;
+
         Param phaseMapModeShape;
         Param phaseMapReadPhase;
+        Param wavetableBandLimit, wavetableMipChain;
+        Param wavetableMorph;
+        Param envToWavetableMorph, lfoToWavetableMorph;
         Param resonantSweepWindowShape;
         Param resonantSweepFrequencyDepth;
         Param noiseMode;
@@ -1015,6 +1077,11 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &lfoToExtendedModeN,
                                      &phaseMapModeShape,
                                      &phaseMapReadPhase,
+                                     &wavetableBandLimit,
+                                     &wavetableMipChain,
+                                     &wavetableMorph,
+                                     &envToWavetableMorph,
+                                     &lfoToWavetableMorph,
                                      &resonantSweepWindowShape,
                                      &resonantSweepFrequencyDepth,
                                      &noiseMode,
@@ -2040,6 +2107,38 @@ struct Patch : pats::PatchBase<Patch, Param>
     char author[stringBufferLen]{""};
     std::array<std::array<char, 64>, numMacros> macroNames;
 
+    /*
+     * Wavetables are main-thread-only patch state, the same shape of thing as macroNames but
+     * an order of magnitude larger. The patch carries the *source bytes* rather than anything
+     * derived, so loading a file and rehydrating a patch are literally the same code path,
+     * and so a later change to table resolution or mip strategy breaks nothing already saved.
+     *
+     * Blobs are deduplicated by content, and operators reference them by index, so two
+     * operators sharing a table cost one blob in the file and one allocation in memory.
+     */
+    struct WavetableBlob
+    {
+        uint64_t hash{0};
+        std::string name;
+        // Where it came from, so the UI can step through its neighbours. Best effort: the file
+        // may be gone by the time a patch is reopened, and the table plays regardless because
+        // the bytes travel with the patch.
+        fs::path sourcePath;
+        std::vector<uint8_t> sourceBytes;
+    };
+    std::vector<WavetableBlob> wavetableBlobs;
+
+    // Append, or hand back the index these bytes already occupy. -1 when they are empty.
+    int addWavetableBlob(const std::vector<uint8_t> &bytes, const std::string &name,
+                         const fs::path &sourcePath = {});
+    void clearWavetables();
+    void readWavetablesFromState(TiXmlElement *root);
+
+    // Soft limit on the encoded payload. Warn on an explicit save past this; never in
+    // stateSave, which must not dialog, block or fail.
+    static constexpr size_t wavetablePayloadWarnBytes{5 * 1024 * 1024};
+    size_t encodedWavetableBytes() const;
+
     // Value-only copy between two Patch instances. NEVER use operator= : params/paramMap hold
     // Param* into the owning Patch, so assignment would alias them across objects. Copies every
     // param value plus the non-Param streamed state (macroNames + name + author) and dirty.
@@ -2050,6 +2149,18 @@ struct Patch : pats::PatchBase<Patch, Param>
         for (const auto *p : o.params)
             paramMap.at(p->meta.id)->value = p->value;
         macroNames = o.macroNames;
+        /*
+         * Wavetable blobs and the per-node index are patch state but not Params, so they have
+         * to be carried explicitly - a host stateLoad parses into a temp patch and copies from
+         * it, and without this the waveform restores as USER_TABLE with nothing behind it.
+         *
+         * The built table is deliberately NOT copied. The two patches sit on different threads
+         * and each owns its own shared_ptr; writing one from the other is exactly what the
+         * handoff exists to avoid. reconcileWavetables rebuilds and publishes instead.
+         */
+        wavetableBlobs = o.wavetableBlobs;
+        for (size_t i = 0; i < sourceNodes.size(); ++i)
+            sourceNodes[i].wavetableBlobIndex = o.sourceNodes[i].wavetableBlobIndex;
         memcpy(name, o.name, sizeof(name));
         memcpy(author, o.author, sizeof(author));
         dirty = o.dirty;
