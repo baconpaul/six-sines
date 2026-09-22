@@ -39,6 +39,11 @@ struct Clipboard
         FEEDBACK_FULLNODE
     } clipboardType{NONE};
 
+    // Source nodes only: which of the patch's wavetable blobs the copied operator used. The
+    // editor idle reconciles, so a paste takes effect on the next tick without the clipboard
+    // needing to know how tables are built.
+    int wavetableBlobIndex{-1};
+
     void doCopyFrom(const std::vector<Param *> &pars, ClipboardType type)
     {
         clipboard.clear();
@@ -143,12 +148,22 @@ struct Clipboard
     template <typename Node> void copyFullNodeFrom(Node &n, ClipboardType type)
     {
         doCopyFrom(n.params(), type);
+        // A source node's wavetable is not a Param, so copying the params alone would leave the
+        // target in USER_TABLE mode with nothing to read. The blob is already shared within the
+        // patch, so carrying the index is all it takes.
+        if constexpr (requires { n.wavetableBlobIndex; })
+            wavetableBlobIndex = n.wavetableBlobIndex;
     }
 
     template <typename Node>
     void pasteFullNodeTo(SixSinesEditor &e, Node &n, ClipboardType type) const
     {
         doPasteTo(e, n.params(), type);
+        if constexpr (requires { n.wavetableBlobIndex; })
+        {
+            if (clipboardType == type)
+                n.wavetableBlobIndex = wavetableBlobIndex;
+        }
     }
 
     template <typename Node> void resetFullNodeHelper(SixSinesEditor &e, Node &n) const

@@ -66,6 +66,9 @@ struct SinTable
         HALF_BLACKMAN_HARRIS_WINDOW,
         TUKEY_WINDOW,
 
+        // no table entry; OpSource reads a loaded Wavetable instead of quadrantTable
+        USER_TABLE,
+
         // AUDIO_IN must stay last among the WaveForm values (just before NUM_WAVEFORMS).
         // New synthesized waveforms should be inserted BEFORE this line, not after.
         //
@@ -94,6 +97,12 @@ struct SinTable
     static SIMD_M128 simdFullQuad alignas(
         16)[NUM_WAVEFORMS][nQuadrants * nPoints];    // for each quad it is q, q+1, dq + 1
     static SIMD_M128 simdCubic alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
+    /*
+     * (1, 0, 0, 0) at every fractional position: dotted against the same (v, dv, v+1, dv+1)
+     * vector it yields v, so a reader pointed here holds each sample instead of interpolating.
+     * Zero order hold as data rather than as a branch in the inner loop.
+     */
+    static SIMD_M128 simdZOH alignas(16)[nPoints];
     static bool staticsInitialized;
 
     SIMD_M128 *simdQuad;

@@ -17,6 +17,10 @@
 #define BACONPAUL_SIX_SINES_UI_SOURCE_SUB_PANEL_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
+
+#include <string>
+#include <utility>
+#include <vector>
 #include "sst/jucegui/components/JogUpDownButton.h"
 #include "sst/jucegui/components/HSliderFilled.h"
 #include "sst/jucegui/components/MultiSwitch.h"
@@ -27,7 +31,9 @@
 #include "modulation-components.h"
 #include "sst/jucegui/components/RuledLabel.h"
 #include "sst/jucegui/components/TextPushButton.h"
+#include "sst/jucegui/components/GlyphButton.h"
 #include "sst/jucegui/components/LineSegment.h"
+#include "filesystem/import.h"
 #include "clipboard.h"
 #include "waveform-display.h"
 
@@ -88,6 +94,29 @@ struct SourceSubPanel : juce::Component,
     std::unique_ptr<jcmp::Label> comingSoonLabel;
     std::unique_ptr<jcmp::MultiSwitch> phaseMapShape;
     std::unique_ptr<PatchDiscrete> phaseMapShapeD;
+    std::unique_ptr<jcmp::HSliderFilled> morph;
+    std::unique_ptr<jcmp::Knob> envToMorph, lfoToMorph;
+    std::unique_ptr<PatchContinuous> morphD;
+    std::unique_ptr<PatchContinuous::cubic_t> envToMorphD, lfoToMorphD;
+    std::unique_ptr<jcmp::Label> morphL, envToMorphL, lfoToMorphL;
+
+    void showWavetableLoadDialog();
+    // Step to the next or previous loadable file in the folder the current table came from.
+    void jogWavetableFile(int dir);
+    juce::PopupMenu buildPlaybackMenu();
+
+    // Overlaid on the wave display: playback options top left, and arrows that step through
+    // the folder the table came from top right.
+    std::unique_ptr<jcmp::GlyphButton> wtPlaybackButton, wtJogPrev, wtJogNext;
+    void loadWavetableFile(const fs::path &);
+    // Built once on construction: an empty list simply means no Surge install here.
+    // One entry per installed synth, in discovery order, for the caller to add at whatever
+    // level it wants. Empty when none of them are on this machine.
+    static std::vector<std::pair<std::string, juce::PopupMenu>>
+    buildVendorFactoryMenus(SourceSubPanel *);
+    void clearWavetable();
+    bool hasWavetable() const;
+
     std::unique_ptr<jcmp::Knob> extM, envToExtM, lfoToExtM;
     std::unique_ptr<PatchContinuous> extMD;
     // Bipolar mod-depth knobs get a cubic throw so small depths get more of the

@@ -80,6 +80,20 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     // Bound to Synth::patchMain — the editor renders and edits the main-thread source of truth
     // directly; it does not own a patch copy.
     Patch &patchMainRef;
+    // The main-thread side of wavetable handover. The tables themselves hang off patchMainRef's
+    // source nodes, so this is only needed to build and publish after a load gesture.
+    WavetableHandoff &wavetableHandoffRef;
+    std::array<std::string, numOps> wavetableError{};
+    // Errors are shown once each. The reconcile runs every idle, so without this a patch
+    // carrying a bad blob would raise the same alert forever.
+    std::array<std::string, numOps> reportedWavetableError{};
+
+    // Build and publish anything patchMainRef newly references. Cheap and idempotent when
+    // nothing changed, so the idle calls it unconditionally. Returns true when a node's table
+    // actually changed, which the source panel needs to know: switching an operator to a
+    // wavetable sets the waveform now but the table only exists after the next reconcile, so
+    // the panel cannot lay out the morph controls until then.
+    bool reconcileWavetables();
     ModMatrixConfig modMatrixConfig;
 
     Synth::audioToMainQueue_t &audioToMain;
@@ -94,7 +108,7 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     uint32_t lastForceRebuild{0};
     const clap_host_t *clapHost{nullptr};
 
-    SixSinesEditor(Patch &patchMain, Synth::audioToMainQueue_t &atou,
+    SixSinesEditor(Patch &patchMain, WavetableHandoff &handoff, Synth::audioToMainQueue_t &atou,
                    Synth::mainToAudioQueue_T &utoa, Synth::audioOutputQueue_t &aor,
                    std::atomic<bool> &editorActive, std::atomic<uint32_t> &uiForceRebuild,
                    Synth::DawStateMain &dawStateMain, defaultsProvder_t &defaults,

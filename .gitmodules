@@ -46,3 +46,6 @@
 [submodule "libs/sst/sst-filters"]
 	path = libs/sst/sst-filters
 	url = https://github.com/surge-synthesizer/sst-filters
+[submodule "libs/pffft"]
+	path = libs/pffft
+	url = https://github.com/surge-synthesizer/pffft.git

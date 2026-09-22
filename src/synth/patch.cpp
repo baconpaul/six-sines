@@ -14,6 +14,11 @@
  */
 
 #include "patch.h"
+#include "dsp/wavetable_io.h"
+
+#include <algorithm>
+#include <map>
+#include <sstream>
 namespace baconpaul::six_sines
 {
 
@@ -21,6 +26,7 @@ void Patch::setupAdditionalState()
 {
     onResetToInit = [](Patch &p)
     {
+        p.clearWavetables();
         p.setAuthor(p.defaultAuthor);
         for (int i = 0; i < numMacros; ++i)
         {
@@ -43,10 +49,49 @@ void Patch::setupAdditionalState()
             mn.InsertEndChild(entry);
         }
         root.InsertEndChild(mn);
+
+        TiXmlElement wts("wavetables");
+        for (size_t i = 0; i < wavetableBlobs.size(); ++i)
+        {
+            const auto &b = wavetableBlobs[i];
+            auto packed = deflateBytes(b.sourceBytes.data(), b.sourceBytes.size());
+            if (packed.empty())
+                continue;
+            TiXmlElement e("table");
+            e.SetAttribute("idx", (int)i);
+            e.SetAttribute("raw", (int)b.sourceBytes.size());
+            e.SetAttribute("encoding", "deflate-base64");
+            e.SetAttribute("name", b.name);
+            // the XML boundary is one of the few places a path becomes a string
+            if (!b.sourcePath.empty())
+                e.SetAttribute("path", b.sourcePath.u8string());
+            std::ostringstream hs;
+            hs << std::hex << b.hash;
+            e.SetAttribute("hash", hs.str());
+            TiXmlText t(base64Encode(packed.data(), packed.size()));
+            t.SetCDATA(false);
+            e.InsertEndChild(t);
+            wts.InsertEndChild(e);
+        }
+        root.InsertEndChild(wts);
+
+        TiXmlElement srcs("sourceWavetables");
+        for (int i = 0; i < numOps; ++i)
+        {
+            if (sourceNodes[i].wavetableBlobIndex < 0)
+                continue;
+            TiXmlElement e("source");
+            e.SetAttribute("idx", i);
+            e.SetAttribute("table", sourceNodes[i].wavetableBlobIndex);
+            srcs.InsertEndChild(e);
+        }
+        root.InsertEndChild(srcs);
     };
 
     additionalFromState = [this](TiXmlElement *root, uint32_t /*ver*/)
     {
+        readWavetablesFromState(root);
+
         auto *mn = root->FirstChildElement("macroNames");
         if (!mn)
             return;
@@ -187,6 +232,14 @@ float Patch::migrateParamValueFromVersion(Param *p, float value, uint32_t versio
         if (ivalue == SinTable::TX8)
             value = SinTable::SPIKY_TX8;
     }
+
+    // version 13 inserted USER_TABLE before AUDIO_IN, so AUDIO_IN moved 21 -> 22. Everything
+    // below the insert point keeps its value.
+    if (p->adhocFeatures & (uint64_t)Param::AdHocFeatureValues::WAVEFORM && version < 13)
+    {
+        if ((int)std::round(value) == 21)
+            value = SinTable::AUDIO_IN;
+    }
     return value;
 }
 
@@ -243,6 +296,122 @@ void Patch::migratePatchFromVersion(uint32_t version)
         halveStepDeform(output);
         halveStepDeform(fineTuneMod);
         halveStepDeform(mainPanMod);
+    }
+}
+
+int Patch::addWavetableBlob(const std::vector<uint8_t> &bytes, const std::string &name,
+                            const fs::path &sourcePath)
+{
+    if (bytes.empty())
+        return -1;
+    auto hash = hashBytes(bytes.data(), bytes.size());
+    for (size_t i = 0; i < wavetableBlobs.size(); ++i)
+        if (wavetableBlobs[i].hash == hash)
+        {
+            // same bytes from a path we did not know before: remember it, so jogging works
+            if (wavetableBlobs[i].sourcePath.empty())
+                wavetableBlobs[i].sourcePath = sourcePath;
+            return (int)i;
+        }
+    wavetableBlobs.push_back({hash, name, sourcePath, bytes});
+    return (int)wavetableBlobs.size() - 1;
+}
+
+void Patch::clearWavetables()
+{
+    wavetableBlobs.clear();
+    for (auto &sn : sourceNodes)
+    {
+        sn.wavetableBlobIndex = -1;
+        // dropping the last reference here would free on whichever thread cleared the patch;
+        // only ever called on main, and the engine's retiring list holds its own reference
+        sn.wavetable.reset();
+    }
+}
+
+size_t Patch::encodedWavetableBytes() const
+{
+    size_t n{0};
+    for (const auto &b : wavetableBlobs)
+    {
+        auto packed = deflateBytes(b.sourceBytes.data(), b.sourceBytes.size());
+        n += (packed.size() + 2) / 3 * 4; // base64 expansion
+    }
+    return n;
+}
+
+void Patch::readWavetablesFromState(TiXmlElement *root)
+{
+    clearWavetables();
+
+    auto *wts = root->FirstChildElement("wavetables");
+    if (wts)
+    {
+        // idx is authoritative, so a blob that fails to decode leaves a hole rather than
+        // shifting every later reference by one
+        std::map<int, WavetableBlob> byIdx;
+        for (auto *e = wts->FirstChildElement("table"); e; e = e->NextSiblingElement("table"))
+        {
+            int idx{-1}, raw{0};
+            if (e->QueryIntAttribute("idx", &idx) != TIXML_SUCCESS || idx < 0)
+                continue;
+            if (e->QueryIntAttribute("raw", &raw) != TIXML_SUCCESS || raw <= 0)
+                continue;
+            /*
+             * The entry is recorded whether or not its payload survives. An empty slot is how
+             * the reconcile learns that a wavetable was in this patch and could not be read -
+             * skipping it entirely would leave the operator looking like it never had one, and
+             * it would quietly play something else instead.
+             */
+            WavetableBlob b;
+            if (auto *nm = e->Attribute("name"))
+                b.name = nm;
+            if (auto *pa = e->Attribute("path"))
+                b.sourcePath = fs::path(std::string(pa));
+
+            auto *n = e->FirstChild();
+            std::vector<uint8_t> packed;
+            if (n && n->ToText() && n->ToText()->Value() &&
+                base64Decode(n->ToText()->Value(), packed))
+            {
+                if (!inflateBytes(packed.data(), packed.size(), (size_t)raw, b.sourceBytes))
+                    b.sourceBytes.clear();
+            }
+            b.hash = b.sourceBytes.empty()
+                         ? 0
+                         : hashBytes(b.sourceBytes.data(), b.sourceBytes.size());
+            byIdx[idx] = std::move(b);
+        }
+        if (!byIdx.empty())
+        {
+            wavetableBlobs.resize(byIdx.rbegin()->first + 1);
+            for (auto &[i, b] : byIdx)
+                wavetableBlobs[i] = std::move(b);
+        }
+    }
+
+    auto *srcs = root->FirstChildElement("sourceWavetables");
+    if (!srcs)
+        return;
+    for (auto *e = srcs->FirstChildElement("source"); e; e = e->NextSiblingElement("source"))
+    {
+        int idx{-1}, table{-1};
+        if (e->QueryIntAttribute("idx", &idx) != TIXML_SUCCESS || idx < 0 || idx >= numOps)
+            continue;
+        if (e->QueryIntAttribute("table", &table) != TIXML_SUCCESS)
+            continue;
+        /*
+         * A reference past the blobs we recovered is dropped rather than left dangling - that
+         * is a patch written before blobs existed, or one whose wavetables element is gone, and
+         * the operator simply has no selection.
+         *
+         * An empty slot inside the list is different: the blob WAS in the file and did not
+         * decode. Keep the reference so the reconcile reports it, because silently substituting
+         * a different table is how someone loses a wavetable without being told.
+         */
+        if (table < 0 || table >= (int)wavetableBlobs.size())
+            continue;
+        sourceNodes[idx].wavetableBlobIndex = table;
     }
 }
 

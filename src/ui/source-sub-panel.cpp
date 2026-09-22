@@ -13,7 +13,17 @@
  * The source code and license are at https://github.com/baconpaul/six-sines
  */
 
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
+#include <fstream>
+#include <functional>
+#include <vector>
+
+#include "dsp/wavetable_io.h"
+
 #include "source-sub-panel.h"
+#include "presets/preset-manager.h"
 #include "source-panel.h"
 #include "matrix-panel.h"
 #include "self-sub-panel.h"
@@ -30,12 +40,62 @@ namespace baconpaul::six_sines::ui
 SourceSubPanel::SourceSubPanel(SixSinesEditor &e) : HasEditor(e) { setSelectedIndex(0); };
 SourceSubPanel::~SourceSubPanel() {}
 
+/*
+ * What an operator's waveform actually is, for the painters.
+ *
+ * The engine resolves this with a template parameter because it is the inner loop; up here a
+ * branch costs nothing. Having one reader is the point: every painter that draws the waveform
+ * has to know USER_TABLE exists, and three of them quietly did not - the phase remap and
+ * resonant sweep plots drew a sine over a loaded table, and the noise plot drew silence.
+ */
+// The formats the loader accepts, matched without regard to case.
+inline bool isLoadableWavetable(const fs::path &p)
+{
+    auto e = p.extension().u8string();
+    std::transform(e.begin(), e.end(), e.begin(), [](unsigned char c) { return std::tolower(c); });
+    return e == ".wt" || e == ".wav";
+}
+
+struct OperatorWaveReader
+{
+    SinTable st;
+    WavetableReader wt;
+    bool usesWavetable{false};
+
+    void bind(SixSinesEditor &editor, size_t opIndex)
+    {
+        const auto &sn = editor.patchMainRef.sourceNodes[opIndex];
+        auto wfVal = (SinTable::WaveForm)std::round(sn.waveForm.value);
+        usesWavetable = (wfVal == SinTable::USER_TABLE && sn.wavetable != nullptr);
+        if (usesWavetable)
+        {
+            wt.setTable(sn.wavetable.get());
+            wt.setZeroOrderHold(static_cast<WavetableBandLimit>(
+                                    (uint32_t)std::round(sn.wavetableBandLimit.value)) ==
+                                WavetableBandLimit::DIRECT_ZOH);
+            wt.setLevel(0);
+            wt.setMorph(sn.wavetableMorph.value);
+        }
+        else
+        {
+            // a node naming a wavetable it has not got draws the sine it will sound as
+            st.setWaveForm(wfVal == SinTable::USER_TABLE ? SinTable::SIN : wfVal);
+        }
+    }
+
+    float at(uint32_t ph) const { return usesWavetable ? wt.at(ph) : st.at(ph); }
+};
+
 struct WavPainter : juce::Component
 {
     const Param &wf, &ph;
     SixSinesEditor &editor;
-    SinTable st;
-    WavPainter(const Param &w, const Param &p, SixSinesEditor &e) : wf(w), ph(p), editor(e) {}
+    size_t opIndex{0};
+    mutable OperatorWaveReader reader;
+    WavPainter(const Param &w, const Param &p, SixSinesEditor &e, size_t idx)
+        : wf(w), ph(p), editor(e), opIndex(idx)
+    {
+    }
 
     void paint(juce::Graphics &g)
     {
@@ -62,7 +122,8 @@ struct WavPainter : juce::Component
         g.setColour(gridCol);
         g.drawHorizontalLine(getHeight() / 2, 0, getWidth());
 
-        st.setWaveForm(wfVal);
+        reader.bind(editor, opIndex);
+
         uint32_t phase{0};
         phase += (1 << 26) * ph.value;
         int nPixels{getWidth()};
@@ -72,7 +133,7 @@ struct WavPainter : juce::Component
         auto ho = 1;
         for (int i = 0; i < nPixels; ++i)
         {
-            auto sv = st.at(phase) * 0.98;
+            auto sv = reader.at(phase) * 0.98;
             auto x = i;
             auto y = (1 - (sv + 1) * 0.5) * h + ho;
             if (i == 0)
@@ -95,11 +156,12 @@ struct PDWavPainter : juce::Component
 {
     const Param &wf, &ph, &mp, &shp, &rdp;
     SixSinesEditor &editor;
-    SinTable st;
+    size_t opIndex{0};
+    mutable OperatorWaveReader reader;
 
     PDWavPainter(const Param &w, const Param &p, const Param &mParam, const Param &sParam,
-                 const Param &rParam, SixSinesEditor &e)
-        : wf(w), ph(p), mp(mParam), shp(sParam), rdp(rParam), editor(e)
+                 const Param &rParam, SixSinesEditor &e, size_t idx)
+        : wf(w), ph(p), mp(mParam), shp(sParam), rdp(rParam), editor(e), opIndex(idx)
     {
     }
 
@@ -200,7 +262,7 @@ struct PDWavPainter : juce::Component
         g.drawHorizontalLine(waveBox.getY() + waveBox.getHeight() / 2, waveBox.getX(),
                              waveBox.getRight());
 
-        st.setWaveForm(wfVal);
+        reader.bind(editor, opIndex);
         uint32_t phs{0};
         phs += (1 << 26) * ph.value;
         auto readPhase = static_cast<uint32_t>((1 << 26) * rdp.value);
@@ -211,7 +273,7 @@ struct PDWavPainter : juce::Component
         auto p = juce::Path();
         for (int i = 0; i < nPixels; ++i)
         {
-            auto sv = st.at(doRemap(phs) + readPhase) * 0.98;
+            auto sv = reader.at(doRemap(phs) + readPhase) * 0.98;
             auto x = waveBox.getX() + i;
             auto y = (1 - (sv + 1) * 0.5) * h + ho;
             if (i == 0)
@@ -238,13 +300,17 @@ struct ResSweepPlotter : juce::Component
 {
     const Param &wf, &ph, &mp, &winShape, &freqDepth;
     SixSinesEditor &editor;
-    SinTable st, stWindow;
+    // the sweep window is always a static waveform; only the operator's own waveform can be
+    // a wavetable
+    SinTable stWindow;
+    size_t opIndex{0};
+    mutable OperatorWaveReader reader;
 
     static constexpr int numCycles{2};
 
     ResSweepPlotter(const Param &w, const Param &p, const Param &mParam, const Param &winSh,
-                    const Param &fDep, SixSinesEditor &e)
-        : wf(w), ph(p), mp(mParam), winShape(winSh), freqDepth(fDep), editor(e)
+                    const Param &fDep, SixSinesEditor &e, size_t idx)
+        : wf(w), ph(p), mp(mParam), winShape(winSh), freqDepth(fDep), editor(e), opIndex(idx)
     {
     }
 
@@ -337,7 +403,7 @@ struct ResSweepPlotter : juce::Component
             g.drawVerticalLine(x, midY - halfTick, midY + halfTick);
         }
 
-        st.setWaveForm(wfVal);
+        reader.bind(editor, opIndex);
         syncWindowTable();
         using RW = Patch::SourceNode::ResonantSweepWindow;
         const auto rw = static_cast<RW>(static_cast<uint32_t>(std::round(winShape.value)));
@@ -362,7 +428,7 @@ struct ResSweepPlotter : juce::Component
 
             float window = windowAt(rw, wph);
             uint32_t kmph = static_cast<uint32_t>(static_cast<float>(wph) * kFactor);
-            float inner = st.at(kmph);
+            float inner = reader.at(kmph);
             float product = window * inner;
 
             float x = static_cast<float>(i);
@@ -413,7 +479,8 @@ struct NoisePainter : juce::Component
 {
     const Param &wf, &ph, &mp, &np, &noiseMode, &noiseType, &lfsrMode;
     SixSinesEditor &editor;
-    SinTable st;
+    size_t opIndex{0};
+    mutable OperatorWaveReader reader;
 
     static constexpr int numCycles{1};
     static constexpr uint32_t fixedSeed{0xDEC0DE42u};
@@ -432,9 +499,10 @@ struct NoisePainter : juce::Component
     }
 
     NoisePainter(const Param &w, const Param &p, const Param &mParam, const Param &nParam,
-                 const Param &nMode, const Param &nType, const Param &lMode, SixSinesEditor &e)
+                 const Param &nMode, const Param &nType, const Param &lMode, SixSinesEditor &e,
+                 size_t idx)
         : wf(w), ph(p), mp(mParam), np(nParam), noiseMode(nMode), noiseType(nType), lfsrMode(lMode),
-          editor(e)
+          editor(e), opIndex(idx)
     {
     }
 
@@ -471,7 +539,7 @@ struct NoisePainter : juce::Component
             g.drawVerticalLine(x, midY - halfTick, midY + halfTick);
         }
 
-        st.setWaveForm(wfVal);
+        reader.bind(editor, opIndex);
 
         using NM = Patch::SourceNode::NoiseMode;
         using NT = Patch::SourceNode::NoiseType;
@@ -514,7 +582,7 @@ struct NoisePainter : juce::Component
                 noisePos = 0;
             }
             float n = noiseBuf[noisePos++];
-            float base = st.at(wph);
+            float base = reader.at(wph);
             float out;
             uint32_t modPh = wph;
 
@@ -524,7 +592,7 @@ struct NoisePainter : juce::Component
                 modPh = (wph + static_cast<int32_t>(m * n * phase::phaseMaxF *
                                                     Patch::SourceNode::noisePhaseScale)) &
                         phase::phaseMask;
-                out = st.at(modPh);
+                out = reader.at(modPh);
                 break;
             case NM::ADD_TO_SIGNAL:
                 out = base + m * n;
@@ -626,24 +694,60 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     wavTitle->setText("Wave");
     addAndMakeVisible(*wavTitle);
 
-    wavPainter = std::make_unique<WavPainter>(sn.waveForm, sn.startingPhase, editor);
+    wavPainter = std::make_unique<WavPainter>(sn.waveForm, sn.startingPhase, editor, idx);
     addAndMakeVisible(*wavPainter);
+
+    wtPlaybackButton =
+        std::make_unique<jcmp::GlyphButton>(jcmp::GlyphPainter::GlyphType::POLYPHONY);
+    wtPlaybackButton->setOnCallback(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (!w)
+                return;
+            auto m = w->buildPlaybackMenu();
+            m.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&w->editor));
+        });
+    addChildComponent(*wtPlaybackButton);
+
+    wtJogPrev = std::make_unique<jcmp::GlyphButton>(jcmp::GlyphPainter::GlyphType::JOG_LEFT);
+    wtJogPrev->setOnCallback([w = juce::Component::SafePointer(this)]()
+                             {
+                                 if (w)
+                                     w->jogWavetableFile(-1);
+                             });
+    addChildComponent(*wtJogPrev);
+
+    wtJogNext = std::make_unique<jcmp::GlyphButton>(jcmp::GlyphPainter::GlyphType::JOG_RIGHT);
+    wtJogNext->setOnCallback([w = juce::Component::SafePointer(this)]()
+                             {
+                                 if (w)
+                                     w->jogWavetableFile(1);
+                             });
+    addChildComponent(*wtJogNext);
 
     createComponent(editor, *this, sn.waveForm, wavButton, wavButtonD);
     wavButtonD->includeAudioIn = (idx == 0);
+    wavButtonD->sourceNode = &sn;
     addAndMakeVisible(*wavButton);
-    wavButtonD->onGuiSetValue = [this]()
+    // Switching to or from a wavetable adds or removes the morph row, so the column has to be
+    // laid out again - setEnabledState only changes visibility, and resized() is what reads it.
+    auto waveFormChanged = [w = juce::Component::SafePointer(this)]()
     {
-        wavPainter->repaint();
-        if (pdWavPainter)
-            pdWavPainter->repaint();
-        if (resSweepPainter)
-            resSweepPainter->repaint();
-        if (noisePainter)
-            noisePainter->repaint();
-        wavButton->repaint();
-        setEnabledState();
+        if (!w)
+            return;
+        w->wavPainter->repaint();
+        if (w->pdWavPainter)
+            w->pdWavPainter->repaint();
+        if (w->resSweepPainter)
+            w->resSweepPainter->repaint();
+        if (w->noisePainter)
+            w->noisePainter->repaint();
+        w->wavButton->repaint();
+        w->setEnabledState();
+        w->resized();
     };
+    wavButtonD->onGuiSetValue = waveFormChanged;
+    editor.componentRefreshByID[sn.waveForm.meta.id] = waveFormChanged;
     wavButton->onPopupMenu = [w = juce::Component::SafePointer(this)]()
     {
         if (w)
@@ -761,6 +865,27 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     addChildComponent(*phaseMapShape);
     traverse(phaseMapShape);
 
+    createComponent(editor, *this, sn.wavetableMorph, morph, morphD);
+    addChildComponent(*morph);
+    traverse(morph);
+    morphL = std::make_unique<jcmp::Label>();
+    morphL->setText("morph");
+    addChildComponent(*morphL);
+
+    createRescaledComponent(editor, *this, sn.envToWavetableMorph, envToMorph, envToMorphD);
+    addChildComponent(*envToMorph);
+    traverse(envToMorph);
+    envToMorphL = std::make_unique<jcmp::Label>();
+    envToMorphL->setText("env");
+    addChildComponent(*envToMorphL);
+
+    createRescaledComponent(editor, *this, sn.lfoToWavetableMorph, lfoToMorph, lfoToMorphD);
+    addChildComponent(*lfoToMorph);
+    traverse(lfoToMorph);
+    lfoToMorphL = std::make_unique<jcmp::Label>();
+    lfoToMorphL->setText("lfo");
+    addChildComponent(*lfoToMorphL);
+
     createComponent(editor, *this, sn.extendedModeM, extM, extMD);
     addChildComponent(*extM);
     traverse(extM);
@@ -840,7 +965,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
 
     pdWavPainter =
         std::make_unique<PDWavPainter>(sn.waveForm, sn.startingPhase, sn.extendedModeM,
-                                       sn.phaseMapModeShape, sn.phaseMapReadPhase, editor);
+                                       sn.phaseMapModeShape, sn.phaseMapReadPhase, editor, idx);
     addChildComponent(*pdWavPainter);
 
     createComponent(editor, *this, sn.resonantSweepWindowShape, resonantWindowShape,
@@ -858,7 +983,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
 
     resSweepPainter = std::make_unique<ResSweepPlotter>(
         sn.waveForm, sn.startingPhase, sn.extendedModeM, sn.resonantSweepWindowShape,
-        sn.resonantSweepFrequencyDepth, editor);
+        sn.resonantSweepFrequencyDepth, editor, idx);
     addChildComponent(*resSweepPainter);
 
     createComponent(editor, *this, sn.noiseMode, noiseMode, noiseModeD);
@@ -884,7 +1009,7 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
 
     noisePainter = std::make_unique<NoisePainter>(sn.waveForm, sn.startingPhase, sn.extendedModeM,
                                                   sn.extendedModeN, sn.noiseMode, sn.noiseType,
-                                                  sn.lfsrMode, editor);
+                                                  sn.lfsrMode, editor, idx);
     addChildComponent(*noisePainter);
 
     // Live-repaint extended-mode painters when any of their inputs change.
@@ -918,6 +1043,21 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     };
     noiseTypeD->onGuiSetValue = noiseTypeChanged;
     lfsrModeD->onGuiSetValue = repaintExt;
+    // the wavetable's own controls change these plots too, now that they read it
+    morphD->onGuiSetValue = [w = juce::Component::SafePointer(this)]()
+    {
+        if (!w)
+            return;
+        w->wavPainter->repaint();
+        if (w->pdWavPainter)
+            w->pdWavPainter->repaint();
+        if (w->resSweepPainter)
+            w->resSweepPainter->repaint();
+        if (w->noisePainter)
+            w->noisePainter->repaint();
+    };
+    editor.componentRefreshByID[sn.wavetableMorph.meta.id] = morphD->onGuiSetValue;
+
     editor.componentRefreshByID[sn.extendedModeM.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.extendedModeN.meta.id] = repaintExt;
     editor.componentRefreshByID[sn.phaseMapModeShape.meta.id] = repaintExt;
@@ -1006,9 +1146,52 @@ void SourceSubPanel::resized()
                                 uicMargin + uicLabeledKnobHeight};
     constexpr int waveUsedAbove{uicTitleLabelInnerBox + uicMargin + uicLabelHeight + uicMargin +
                                 uicLabelHeight + uicMargin};
-    constexpr int painterH{depthColTotal - waveUsedAbove - uicMargin * 2};
-    waveCol.add(jlo::Component(*wavPainter).withHeight(painterH));
-    waveCol.add(jlo::Component(*wavButton).withHeight(uicLabelHeight));
+    constexpr int painterH{depthColTotal - waveUsedAbove + uicMargin};
+    /*
+     * In wavetable mode the plot and the selector give up width rather than height, and morph
+     * and its two depths stack down the side as small knobs. painterH itself stays constant
+     * because the extended-mode layouts below derive from it.
+     */
+    const bool showMorph = morph->isVisible();
+    if (showMorph)
+    {
+        /*
+         * Env and LFO depths sit beside the plot; morph gets a full width slider under it.
+         * The plot gives up the slider's height and the knob column's width, so the column
+         * still ends where the Env and LFO columns do.
+         *
+         * A Knob sizes itself from its width, so each cell is squared off explicitly -
+         * otherwise a tall narrow cell draws a knob far bigger than the space it was given.
+         */
+        constexpr int plotH{painterH - uicLabelHeight - uicMargin};
+        constexpr int cellH{(plotH) / 2};
+        constexpr int knobBox{cellH - uicLabelHeight < 26 ? cellH - uicLabelHeight : 26};
+        constexpr int knobColW{knobBox + uicMargin};
+
+        auto body = jlo::HList().withHeight(plotH).withAutoGap(uicMargin);
+        body.add(jlo::Component(*wavPainter).withWidth(waveColW - knobColW - uicMargin));
+
+        auto knobCol = jlo::VList().withWidth(knobColW).withAutoGap(uicMargin);
+        auto knobCell = [&](auto &k, auto &l)
+        {
+            auto cell = jlo::VList().withHeight(cellH);
+            cell.add(jlo::Component(*k).withHeight(knobBox).withWidth(knobBox).centerInParent());
+            cell.add(jlo::Component(*l).withHeight(uicLabelHeight));
+            return cell;
+        };
+        knobCol.add(knobCell(envToMorph, envToMorphL));
+        knobCol.add(knobCell(lfoToMorph, lfoToMorphL));
+        body.add(knobCol);
+
+        waveCol.add(body);
+        waveCol.add(sideLabelSlider(morphL, morph,40));
+        waveCol.add(jlo::Component(*wavButton).withHeight(uicLabelHeight));
+    }
+    else
+    {
+        waveCol.add(jlo::Component(*wavPainter).withHeight(painterH));
+        waveCol.add(jlo::Component(*wavButton).withHeight(uicLabelHeight));
+    }
     waveCol.add(sideLabelSlider(startingPhaseL, startingPhase));
     lo.add(waveCol);
 
@@ -1016,6 +1199,20 @@ void SourceSubPanel::resized()
 
     // The keytrack low can sub in for the keytrack
     keyTrackLowValue->setBounds(keyTrackValue->getBounds());
+
+    /*
+     * The two overlays sit inside the plot's corners rather than in the layout, because they
+     * belong to the picture: playback options top left, the arrows that step through the
+     * folder top right.
+     */
+    {
+        constexpr int gs{12};
+        auto pb = wavPainter->getBounds().reduced(3);
+        wtPlaybackButton->setBounds(pb.getX(), pb.getY(), gs, gs);
+        wtJogNext->setBounds(pb.getRight() - gs, pb.getY(), gs, gs);
+        wtJogPrev->setBounds(pb.getRight() - 2 * gs - 2, pb.getY(), gs, gs);
+    }
+
 
     // Extended Mode row — spans full width below the 4-column block
     auto extRowY = depy + depthColTotal + uicMargin * 2;
@@ -1282,10 +1479,38 @@ void SourceSubPanel::setExtendedModeVisibility()
         lfsrModeL->setVisible(showLfsr);
 }
 
+bool SourceSubPanel::hasWavetable() const
+{
+    const auto &sn = editor.patchMainRef.sourceNodes[index];
+    return (int)std::round(sn.waveForm.value) == SinTable::USER_TABLE && sn.wavetable != nullptr;
+}
+
 void SourceSubPanel::setEnabledState()
 {
     auto &sn = editor.patchMainRef.sourceNodes[index];
     auto isAudioIn = ((int)std::round(sn.waveForm.value) == SinTable::AUDIO_IN);
+
+    // Morph only means something with more than one frame, so hide rather than disable it for a
+    // single cycle table - a control that cannot do anything is worse than no control.
+    // the playback button follows the operator being on a wavetable at all, so the options are
+    // reachable for the built in table too
+    auto onWavetable = (int)std::round(sn.waveForm.value) == SinTable::USER_TABLE;
+    wtPlaybackButton->setVisible(onWavetable);
+    // the arrows need a folder to walk, which only a table loaded from a file has
+    auto canJogFile =
+        onWavetable && sn.wavetableBlobIndex >= 0 &&
+        sn.wavetableBlobIndex < (int)editor.patchMainRef.wavetableBlobs.size() &&
+        !editor.patchMainRef.wavetableBlobs[sn.wavetableBlobIndex].sourcePath.empty();
+    wtJogPrev->setVisible(canJogFile);
+    wtJogNext->setVisible(canJogFile);
+
+    auto showMorph = hasWavetable() && sn.wavetable->nFrames > 1;
+    morph->setVisible(showMorph);
+    morphL->setVisible(showMorph);
+    envToMorph->setVisible(showMorph);
+    envToMorphL->setVisible(showMorph);
+    lfoToMorph->setVisible(showMorph);
+    lfoToMorphL->setVisible(showMorph);
 
     auto ekt = sn.keyTrack.value < 0.5;
     auto ktl = sn.keyTrackValueIsLow > 0.5;
@@ -1362,6 +1587,53 @@ void SourceSubPanel::setEnabledState()
     editor.repaint();
 }
 
+/*
+ * Playback options, shared by the waveform menu and the button on the display. Mode
+ * rebuilds the table rather than reinterpreting it, so it is a property of the table; the
+ * reconcile on the next idle picks it up.
+ */
+juce::PopupMenu SourceSubPanel::buildPlaybackMenu()
+{
+    auto &sn = editor.patchMainRef.sourceNodes[index];
+    auto curMode = (int)std::round(sn.wavetableBandLimit.value);
+    auto blid = sn.wavetableBandLimit.meta.id;
+    juce::PopupMenu modes;
+    for (auto m : {WavetableBandLimit::BAND_LIMITED, WavetableBandLimit::BAND_LIMITED_TAPERED,
+                   WavetableBandLimit::DIRECT, WavetableBandLimit::DIRECT_ZOH})
+    {
+        auto v = (int)m;
+        auto nm = sn.wavetableBandLimit.meta.valueToString(v);
+        modes.addItem(nm.has_value() ? *nm : "?", true, curMode == v,
+                      [v, blid, w = juce::Component::SafePointer(this)]()
+                      {
+                          if (!w)
+                              return;
+                          w->editor.setAndSendParamValue(blid, (float)v);
+                          w->editor.reconcileWavetables();
+                          w->wavPainter->repaint();
+                          w->setEnabledState();
+                          w->resized();
+                      });
+    }
+    // Direct has one level by construction, so the chain toggle means nothing for it
+    auto isDirect = curMode == (int)WavetableBandLimit::DIRECT ||
+                    curMode == (int)WavetableBandLimit::DIRECT_ZOH;
+    auto mipId = sn.wavetableMipChain.meta.id;
+    auto mipsOn = sn.wavetableMipChain.value > 0.5f;
+    modes.addSeparator();
+    modes.addItem("Mip Chain", !isDirect, mipsOn && !isDirect,
+                  [mipId, mipsOn, w = juce::Component::SafePointer(this)]()
+                  {
+                      if (!w)
+                          return;
+                      w->editor.setAndSendParamValue(mipId, mipsOn ? 0.f : 1.f);
+                      w->editor.reconcileWavetables();
+                      w->wavPainter->repaint();
+                  });
+
+    return modes;
+}
+
 void SourceSubPanel::showWaveformPopup()
 {
     auto &sn = editor.patchMainRef.sourceNodes[index];
@@ -1399,8 +1671,316 @@ void SourceSubPanel::showWaveformPopup()
         for (int i = 0; i < waveformMenuAudioInCount; ++i)
             addEntry(waveformMenuAudioIn[i]);
 
+    // USER_TABLE is deliberately not in waveformMenuBase and not in the jog order: you reach it
+    // by loading a file, not by scrolling onto a mode with nothing in it.
+    p.addSeparator();
+    p.addSectionHeader("Wavetable");
+    if (sn.wavetableBlobIndex >= 0 &&
+        sn.wavetableBlobIndex < (int)editor.patchMainRef.wavetableBlobs.size())
+    {
+        // Selectable, not a label. This is the only route back to a loaded table once the
+        // operator has been switched to something else, so making it informational stranded
+        // the table: the jog could reach it but the menu that lists every other waveform
+        // could not.
+        auto nm = editor.patchMainRef.wavetableBlobs[sn.wavetableBlobIndex].name;
+        if (nm.empty())
+            nm = "(unnamed)";
+        if (sn.wavetable)
+            nm += "  -  " + std::to_string(sn.wavetable->nFrames) +
+                  (sn.wavetable->nFrames == 1 ? " frame" : " frames");
+        p.addItem(nm, true, currentVal == SinTable::USER_TABLE,
+                  [wfid, w = juce::Component::SafePointer(this)]()
+                  {
+                      if (!w)
+                          return;
+                      w->editor.setAndSendParamValue(wfid, (float)SinTable::USER_TABLE);
+                      w->wavButtonD->onGuiSetValue();
+                  });
+    }
+    else
+    {
+        // nothing loaded: selecting this gives the built in table
+        p.addItem("Wavetable (Sine to Saw)", true, currentVal == SinTable::USER_TABLE,
+                  [wfid, w = juce::Component::SafePointer(this)]()
+                  {
+                      if (!w)
+                          return;
+                      w->editor.setAndSendParamValue(wfid, (float)SinTable::USER_TABLE);
+                      w->wavButtonD->onGuiSetValue();
+                  });
+    }
+    if (!editor.wavetableError[index].empty())
+    {
+        p.addItem("Failed: " + editor.wavetableError[index], false, false, []() {});
+    }
+    p.addItem("Load Wavetable...", true, false,
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                      w->showWavetableLoadDialog();
+              });
+    p.addItem("Clear Wavetable", sn.wavetableBlobIndex >= 0, false,
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                      w->clearWavetable();
+              });
+
+    auto modes = buildPlaybackMenu();
+
+    // Enabled whenever there is a table for it to affect, which now includes the built in one
+    // - gating on a loaded blob asked the wrong question once a table could come from nowhere.
+    p.addSubMenu("Playback", modes,
+                 currentVal == SinTable::USER_TABLE || sn.wavetableBlobIndex >= 0);
+
+    // Each installed synth gets its own top level entry rather than being buried a level
+    // deeper, since these are the lists people actually browse.
+    auto factory = buildVendorFactoryMenus(this);
+    if (!factory.empty())
+        p.addSeparator();
+    for (auto &[vendor, menu] : factory)
+        p.addSubMenu(vendor, menu);
+
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor),
                     makeMenuAccessibleButtonCB(wavButton.get()));
+}
+
+/*
+ * Load a wavetable into this operator. Everything here is main thread: read the file, add the
+ * bytes to patchMain (deduped, so loading the same file into a second operator costs nothing),
+ * point the node at the blob, and switch the waveform. reconcileWavetables then builds and
+ * hands the table to the audio thread.
+ *
+ * The waveform goes through setAndSendParamValue like any other parameter edit, so the host
+ * and the audio thread learn about it the normal way; only the blob is out of band.
+ */
+void SourceSubPanel::showWavetableLoadDialog()
+{
+    namespace fs = std::filesystem;
+
+    /*
+     * Wavetables sit beside Patches under the same user folder the preset manager already
+     * resolved - which handles the vendor and legacy layouts and the platform differences, none
+     * of which a hand built Documents path gets right.
+     */
+    fs::path startPath;
+    if (editor.presetManager && !editor.presetManager->userPath.empty())
+    {
+        auto wt = editor.presetManager->userPath / "Wavetables";
+        try
+        {
+            if (!fs::is_directory(wt))
+                fs::create_directories(wt);
+            startPath = fs::is_directory(wt) ? wt : editor.presetManager->userPath;
+        }
+        catch (const fs::filesystem_error &)
+        {
+            // no write access is not a reason to refuse to open a file dialog
+            startPath = editor.presetManager->userPath;
+        }
+    }
+    // becomes a juce::File only to hand to the chooser
+    auto start = startPath.empty()
+                     ? juce::File()
+                     : juce::File(juce::String(startPath.u8string()));
+
+    editor.fileChooser = std::make_unique<juce::FileChooser>("Load Wavetable", start,
+                                                             "*.wt;*.wav");
+    editor.fileChooser->launchAsync(
+        juce::FileBrowserComponent::canSelectFiles | juce::FileBrowserComponent::openMode,
+        [w = juce::Component::SafePointer(this)](const juce::FileChooser &fc)
+        {
+            if (!w)
+                return;
+            auto picked = fc.getResult();
+            if (picked == juce::File{})
+                return;
+            // the chooser is the only place a juce::File is allowed; leave it here
+            w->loadWavetableFile(fs::path(picked.getFullPathName().toStdString()));
+        });
+}
+
+void SourceSubPanel::loadWavetableFile(const fs::path &f)
+{
+    std::vector<uint8_t> data;
+    {
+        std::ifstream in(f, std::ios::binary);
+        if (!in)
+            return;
+        data.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+    if (data.empty())
+        return;
+
+    auto &sn = editor.patchMainRef.sourceNodes[index];
+    auto idx = editor.patchMainRef.addWavetableBlob(data, f.stem().u8string(), f);
+    if (idx < 0)
+        return;
+    sn.wavetableBlobIndex = idx;
+
+    editor.setAndSendParamValue(sn.waveForm.meta.id, (float)SinTable::USER_TABLE);
+
+    /*
+     * Build before laying out. setEnabledState decides whether the morph controls exist from
+     * whether the node has a table, and resized() reads that decision - so the table has to be
+     * there first, and the two have to run in that order. Laying out first meant the controls
+     * were shown but positioned as though they were not, which looked like the panel simply
+     * ignoring them until something else forced a rebuild.
+     */
+    editor.reconcileWavetables();
+
+    if (!editor.wavetableError[index].empty())
+    {
+        // the operator has fallen back to a sine; the menu carries the reason
+        sn.wavetableBlobIndex = -1;
+    }
+
+    wavButtonD->onGuiSetValue();
+    wavButton->repaint();
+    setEnabledState();
+    resized();
+    repaint();
+}
+
+/*
+ * Surge's factory wavetables, when a Surge install is on this machine. Built fresh each time
+ * the menu opens rather than cached at startup, so installing Surge does not require a
+ * restart, and so a slow or disconnected volume costs one menu open rather than every one.
+ */
+std::vector<std::pair<std::string, juce::PopupMenu>>
+SourceSubPanel::buildVendorFactoryMenus(SourceSubPanel *self)
+{
+    std::function<void(const fs::path &, juce::PopupMenu &, int)> walk =
+        [&](const fs::path &dir, juce::PopupMenu &into, int depth)
+    {
+        if (depth > 3)
+            return;
+
+        std::vector<fs::path> subdirs, files;
+        try
+        {
+            for (const auto &de : fs::directory_iterator(dir))
+            {
+                if (de.is_directory())
+                    subdirs.push_back(de.path());
+                else if (de.is_regular_file() && isLoadableWavetable(de.path()))
+                    files.push_back(de.path());
+            }
+        }
+        catch (const fs::filesystem_error &)
+        {
+            return; // a folder we cannot read is a folder with nothing in it
+        }
+        std::sort(subdirs.begin(), subdirs.end());
+        std::sort(files.begin(), files.end());
+
+        for (const auto &d : subdirs)
+        {
+            juce::PopupMenu sub;
+            walk(d, sub, depth + 1);
+            if (sub.getNumItems() > 0)
+                into.addSubMenu(juce::String(d.filename().u8string()), sub);
+        }
+        for (const auto &f : files)
+            into.addItem(juce::String(f.stem().u8string()), true, false,
+                         [f, w = juce::Component::SafePointer(self)]()
+                         {
+                             if (w)
+                                 w->loadWavetableFile(f);
+                         });
+    };
+
+    auto libs = factoryWavetableLibraries();
+
+    /*
+     * A vendor with a single library does not need a level of menu that only ever says
+     * "Tables", so its contents come straight up. Surge has two and keeps them apart.
+     */
+    auto libsFor = [&libs](const std::string &vendor)
+    {
+        return std::count_if(libs.begin(), libs.end(),
+                             [&vendor](const auto &l) { return l.vendor == vendor; });
+    };
+
+    // grouped by vendor, keeping the order discovery returned
+    std::vector<std::pair<std::string, juce::PopupMenu>> byVendor;
+    for (const auto &lib : libs)
+    {
+        juce::PopupMenu sub;
+        walk(lib.path, sub, 0);
+        if (sub.getNumItems() == 0)
+            continue;
+
+        auto it = std::find_if(byVendor.begin(), byVendor.end(),
+                               [&](const auto &v) { return v.first == lib.vendor; });
+        if (it == byVendor.end())
+        {
+            byVendor.push_back({lib.vendor, juce::PopupMenu{}});
+            it = byVendor.end() - 1;
+        }
+
+        if (libsFor(lib.vendor) > 1)
+            it->second.addSubMenu(lib.label, sub);
+        else
+            it->second = std::move(sub);
+    }
+    return byVendor;
+}
+
+/*
+ * Step to the next or previous loadable file in the folder the current table came from. Best
+ * effort by design: a patch can be opened on a machine where that folder is gone, and the
+ * table still plays because its bytes travel with the patch - so this simply does nothing
+ * rather than complaining.
+ */
+void SourceSubPanel::jogWavetableFile(int dir)
+{
+    const auto &sn = editor.patchMainRef.sourceNodes[index];
+    if (sn.wavetableBlobIndex < 0 ||
+        sn.wavetableBlobIndex >= (int)editor.patchMainRef.wavetableBlobs.size())
+        return;
+
+    const auto &here = editor.patchMainRef.wavetableBlobs[sn.wavetableBlobIndex].sourcePath;
+    if (here.empty())
+        return;
+
+    std::vector<fs::path> siblings;
+    try
+    {
+        auto folder = here.parent_path();
+        if (!fs::is_directory(folder))
+            return;
+        for (const auto &de : fs::directory_iterator(folder))
+            if (de.is_regular_file() && isLoadableWavetable(de.path()))
+                siblings.push_back(de.path());
+    }
+    catch (const fs::filesystem_error &)
+    {
+        return;
+    }
+    if (siblings.size() < 2)
+        return;
+    std::sort(siblings.begin(), siblings.end());
+
+    auto at = std::find(siblings.begin(), siblings.end(), here);
+    // the file we are on may have been renamed out from under us; start from the top
+    auto i = (at == siblings.end()) ? 0 : (int)std::distance(siblings.begin(), at);
+    auto n = (int)siblings.size();
+    loadWavetableFile(siblings[((i + dir) % n + n) % n]);
+}
+
+void SourceSubPanel::clearWavetable()
+{
+    auto &sn = editor.patchMainRef.sourceNodes[index];
+    sn.wavetableBlobIndex = -1;
+    editor.wavetableError[index].clear();
+    // back to a plain sine; reconcile then retires the table once the voices let go
+    editor.setAndSendParamValue(sn.waveForm.meta.id, (float)SinTable::SIN);
+    editor.reconcileWavetables();
+    wavButtonD->onGuiSetValue();
+    setEnabledState();
+    resized();
+    repaint();
 }
 
 void SourceSubPanel::showUnisonFeaturesMenu()

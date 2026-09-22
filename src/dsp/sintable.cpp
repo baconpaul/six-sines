@@ -27,6 +27,7 @@ float SinTable::linterpCoefficients[2][nPoints];
 SIMD_M128 SinTable::simdFullQuad alignas(
     16)[NUM_WAVEFORMS][nQuadrants * nPoints];       // for each quad it is q, q+1, dq + 1
 SIMD_M128 SinTable::simdCubic alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
+SIMD_M128 SinTable::simdZOH alignas(16)[nPoints];
 
 bool SinTable::staticsInitialized{false};
 
@@ -549,6 +550,11 @@ void SinTable::initializeStatics()
                 r[j] = cubicHermiteCoefficients[j][i];
             }
             simdCubic[i] = SIMD_MM(load_ps)(r);
+        }
+
+        {
+            float r alignas(16)[4]{1.f, 0.f, 0.f, 0.f};
+            simdZOH[i] = SIMD_MM(load_ps)(r);
         }
     }
     staticsInitialized = true;

@@ -16,7 +16,10 @@
 #ifndef BACONPAUL_SIX_SINES_UI_WAVEFORM_DISPLAY_H
 #define BACONPAUL_SIX_SINES_UI_WAVEFORM_DISPLAY_H
 
+#include <string>
+
 #include "dsp/sintable.h"
+#include "synth/patch.h"
 #include "ui/patch-data-bindings.h"
 
 namespace baconpaul::six_sines::ui
@@ -81,11 +84,16 @@ static constexpr int waveformMenuAudioInCount =
 /*
  * Return the next selectable waveform value stepping dir (+1/-1) from current,
  * wrapping at the ends. Skips separator entries.
+ *
+ * USER_TABLE joins the list only when the operator actually has a table loaded. There is
+ * nothing to hear on an empty one, so jogging onto it would be a dead stop - but once a table
+ * is loaded it has to be in the list, or jogging off it and back lands somewhere else and the
+ * loaded table becomes unreachable by the jog that left it.
  */
-inline int nextWaveformValue(int current, int dir, bool includeAudioIn)
+inline int nextWaveformValue(int current, int dir, bool includeAudioIn, bool includeUserTable)
 {
     // Build a flat list of selectable values in display order.
-    int values[waveformMenuBaseCount + waveformMenuAudioInCount];
+    int values[waveformMenuBaseCount + waveformMenuAudioInCount + 1];
     int count = 0;
     for (int i = 0; i < waveformMenuBaseCount; ++i)
         if (!waveformMenuBase[i].isSeparator)
@@ -94,6 +102,9 @@ inline int nextWaveformValue(int current, int dir, bool includeAudioIn)
         for (int i = 0; i < waveformMenuAudioInCount; ++i)
             if (!waveformMenuAudioIn[i].isSeparator)
                 values[count++] = waveformMenuAudioIn[i].waveformValue;
+    // last, matching where it sits in the menu
+    if (includeUserTable || current == (int)SinTable::USER_TABLE)
+        values[count++] = (int)SinTable::USER_TABLE;
 
     // Find current position.
     int idx = 0;
@@ -116,12 +127,31 @@ inline int nextWaveformValue(int current, int dir, bool includeAudioIn)
 struct WaveformPatchDiscrete : PatchDiscrete
 {
     bool includeAudioIn{false};
+    // Set by the panel so the button can name the loaded table rather than just saying
+    // "Wavetable", which tells you nothing about which one you are hearing.
+    const Patch::SourceNode *sourceNode{nullptr};
 
     WaveformPatchDiscrete(SixSinesEditor &e, uint32_t id) : PatchDiscrete(e, id) {}
 
+    std::string getValueAsStringFor(int i) const override
+    {
+        if (i == (int)SinTable::USER_TABLE && sourceNode)
+        {
+            if (sourceNode->wavetable)
+            {
+                auto &n = sourceNode->wavetable->name;
+                return "WT: " + (n.empty() ? std::string("(unnamed)") : n);
+            }
+            return "WT: Sine to Saw";
+        }
+        return PatchDiscrete::getValueAsStringFor(i);
+    }
+
     void jog(int dir) override
     {
-        setValueFromGUI(nextWaveformValue(getValue(), dir, includeAudioIn));
+        // always: with nothing loaded the operator gets the built in table, so there is no
+        // longer a dead stop to protect against
+        setValueFromGUI(nextWaveformValue(getValue(), dir, includeAudioIn, true));
     }
 
     int getMax() const override
@@ -144,12 +174,17 @@ static_assert(
     {
         using namespace baconpaul::six_sines;
         using namespace baconpaul::six_sines::ui;
-        // Check every synthesized waveform (0..NUM_WAVEFORMS-1, excluding AUDIO_IN)
-        // appears exactly once in waveformMenuBase. Future waveforms added to the enum
-        // will automatically be caught here without needing to update this assert.
+        // Check every synthesized waveform (0..NUM_WAVEFORMS-1, excluding AUDIO_IN and
+        // USER_TABLE) appears exactly once in waveformMenuBase. Future waveforms added to
+        // the enum will automatically be caught here without needing to update this assert.
+        //
+        // USER_TABLE is excluded because it has no static table, same as AUDIO_IN. It IS
+        // jogged onto and it IS in the menu - but its menu row is built by hand alongside
+        // load, clear and playback, so it is not one of these plain value picks.
         for (int wf = 0; wf < static_cast<int>(SinTable::NUM_WAVEFORMS); ++wf)
         {
-            if (wf == static_cast<int>(SinTable::AUDIO_IN))
+            if (wf == static_cast<int>(SinTable::AUDIO_IN) ||
+                wf == static_cast<int>(SinTable::USER_TABLE))
                 continue;
             int count = 0;
             for (int i = 0; i < waveformMenuBaseCount; ++i)

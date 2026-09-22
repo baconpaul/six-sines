@@ -11,6 +11,12 @@ add_executable(six-sines-test
 		lfo_unison_random.cpp
 		phase_map_read_phase.cpp
 		sintable.cpp
+		oscillator_spectrum.cpp
+		wavetable_build.cpp
+		wavetable_io.cpp
+		wavetable_store.cpp
+		wavetable_stream.cpp
+		wavetable_dsp.cpp
 )
 
 target_link_libraries(six-sines-test

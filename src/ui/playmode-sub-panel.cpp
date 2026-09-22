@@ -14,6 +14,7 @@
  */
 
 #include "playmode-sub-panel.h"
+#include "filesystem/import.h"
 #include <cstdio>
 #include <sst/jucegui/layouts/ListLayout.h>
 #include "libMTSClient.h"
@@ -836,7 +837,7 @@ void PlayModeSubPanel::setThemeButtonLabel()
         if (stored.rfind(sentinel, 0) == 0)
             disp = stored.substr(sentinel.size());
         else
-            disp = juce::File(stored).getFileNameWithoutExtension().toStdString();
+            disp = fs::path(stored).stem().u8string();
     }
     themeButton->setLabel(disp);
 }

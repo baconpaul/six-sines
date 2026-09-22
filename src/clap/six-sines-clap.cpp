@@ -534,7 +534,8 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     std::unique_ptr<juce::Component> createEditor() override
     {
         auto res = std::make_unique<baconpaul::six_sines::ui::SixSinesEditor>(
-            engine->patchMain, engine->audioToMain, engine->mainToAudio, engine->audioOutputRing,
+            engine->patchMain, engine->wavetableHandoff, engine->audioToMain,
+            engine->mainToAudio, engine->audioOutputRing,
             engine->editorActive, engine->uiForceRebuild, engine->dawStateMain,
             *engine->defaultsProvider, _host.host());
 

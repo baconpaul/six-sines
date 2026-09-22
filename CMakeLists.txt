@@ -72,6 +72,8 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/presets/ui-theme-manager.cpp
 
         src/dsp/sintable.cpp
+        src/dsp/wavetable_build.cpp
+        src/dsp/wavetable_io.cpp
 
         src/synth/synth.cpp
         src/synth/voice.cpp
@@ -111,6 +113,8 @@ target_link_libraries(${PROJECT_NAME}-impl PUBLIC  # PW change to public since w
         sst-plugininfra::tinyxml
         sst-plugininfra::strnatcmp
         sst-plugininfra::patchbase
+        sst-plugininfra::miniz
+        pffft
         sst-plugininfra::version_information
         sst-filters
         sst::clap_juce_shim sst::clap_juce_shim_headers
