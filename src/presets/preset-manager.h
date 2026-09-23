@@ -76,6 +76,8 @@ struct PresetManager
 
     fs::path userPath;
     fs::path userPatchesPath;
+    // sibling of userPatchesPath; the default place the wavetable loader looks
+    fs::path userWavetablesPath;
     const clap_host_t *clapHost{nullptr};
 
     // Call with a null host to be read-only

@@ -128,6 +128,9 @@ PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
         userPatchesPath = userPath / "Patches";
         if (clapHost)
             fs::create_directories(userPatchesPath);
+        userWavetablesPath = userPath / "Wavetables";
+        if (clapHost)
+            fs::create_directories(userWavetablesPath);
     }
     catch (fs::filesystem_error &e)
     {
