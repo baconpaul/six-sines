@@ -17,7 +17,6 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
-#include <functional>
 #include <vector>
 
 #include "dsp/wavetable_io.h"
@@ -710,19 +709,21 @@ void SourceSubPanel::setSelectedIndex(size_t idx)
     addChildComponent(*wtPlaybackButton);
 
     wtJogPrev = std::make_unique<jcmp::GlyphButton>(jcmp::GlyphPainter::GlyphType::JOG_LEFT);
-    wtJogPrev->setOnCallback([w = juce::Component::SafePointer(this)]()
-                             {
-                                 if (w)
-                                     w->jogWavetableFile(-1);
-                             });
+    wtJogPrev->setOnCallback(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->jogWavetableFile(-1);
+        });
     addChildComponent(*wtJogPrev);
 
     wtJogNext = std::make_unique<jcmp::GlyphButton>(jcmp::GlyphPainter::GlyphType::JOG_RIGHT);
-    wtJogNext->setOnCallback([w = juce::Component::SafePointer(this)]()
-                             {
-                                 if (w)
-                                     w->jogWavetableFile(1);
-                             });
+    wtJogNext->setOnCallback(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->jogWavetableFile(1);
+        });
     addChildComponent(*wtJogNext);
 
     createComponent(editor, *this, sn.waveForm, wavButton, wavButtonD);
@@ -1184,7 +1185,7 @@ void SourceSubPanel::resized()
         body.add(knobCol);
 
         waveCol.add(body);
-        waveCol.add(sideLabelSlider(morphL, morph,40));
+        waveCol.add(sideLabelSlider(morphL, morph, 40));
         waveCol.add(jlo::Component(*wavButton).withHeight(uicLabelHeight));
     }
     else
@@ -1212,7 +1213,6 @@ void SourceSubPanel::resized()
         wtJogNext->setBounds(pb.getRight() - gs, pb.getY(), gs, gs);
         wtJogPrev->setBounds(pb.getRight() - 2 * gs - 2, pb.getY(), gs, gs);
     }
-
 
     // Extended Mode row — spans full width below the 4-column block
     auto extRowY = depy + depthColTotal + uicMargin * 2;
@@ -1497,10 +1497,9 @@ void SourceSubPanel::setEnabledState()
     auto onWavetable = (int)std::round(sn.waveForm.value) == SinTable::USER_TABLE;
     wtPlaybackButton->setVisible(onWavetable);
     // the arrows need a folder to walk, which only a table loaded from a file has
-    auto canJogFile =
-        onWavetable && sn.wavetableBlobIndex >= 0 &&
-        sn.wavetableBlobIndex < (int)editor.patchMainRef.wavetableBlobs.size() &&
-        !editor.patchMainRef.wavetableBlobs[sn.wavetableBlobIndex].sourcePath.empty();
+    auto canJogFile = onWavetable && sn.wavetableBlobIndex >= 0 &&
+                      sn.wavetableBlobIndex < (int)editor.patchMainRef.wavetableBlobs.size() &&
+                      !editor.patchMainRef.wavetableBlobs[sn.wavetableBlobIndex].sourcePath.empty();
     wtJogPrev->setVisible(canJogFile);
     wtJogNext->setVisible(canJogFile);
 
@@ -1634,6 +1633,51 @@ juce::PopupMenu SourceSubPanel::buildPlaybackMenu()
     return modes;
 }
 
+/*
+ * Every loadable file under a folder as a menu, nested folders first and no deeper than three.
+ * A folder we cannot read or that holds nothing yields an empty menu, which is how the callers
+ * decide not to show it at all.
+ */
+static juce::PopupMenu wavetableFolderMenu(SourceSubPanel *self, const fs::path &dir, int depth = 0)
+{
+    juce::PopupMenu into;
+    if (depth > 3)
+        return into;
+
+    std::vector<fs::path> subdirs, files;
+    try
+    {
+        for (const auto &de : fs::directory_iterator(dir))
+        {
+            if (de.is_directory())
+                subdirs.push_back(de.path());
+            else if (de.is_regular_file() && isLoadableWavetable(de.path()))
+                files.push_back(de.path());
+        }
+    }
+    catch (const fs::filesystem_error &)
+    {
+        return into;
+    }
+    std::sort(subdirs.begin(), subdirs.end());
+    std::sort(files.begin(), files.end());
+
+    for (const auto &d : subdirs)
+    {
+        auto sub = wavetableFolderMenu(self, d, depth + 1);
+        if (sub.getNumItems() > 0)
+            into.addSubMenu(juce::String(d.filename().u8string()), sub);
+    }
+    for (const auto &f : files)
+        into.addItem(juce::String(f.stem().u8string()), true, false,
+                     [f, w = juce::Component::SafePointer(self)]()
+                     {
+                         if (w)
+                             w->loadWavetableFile(f);
+                     });
+    return into;
+}
+
 void SourceSubPanel::showWaveformPopup()
 {
     auto &sn = editor.patchMainRef.sourceNodes[index];
@@ -1733,11 +1777,19 @@ void SourceSubPanel::showWaveformPopup()
     p.addSubMenu("Playback", modes,
                  currentVal == SinTable::USER_TABLE || sn.wavetableBlobIndex >= 0);
 
+    // The user's own folder reads the same way an installed library does, and likewise only
+    // appears when there is something in it.
+    juce::PopupMenu userMenu;
+    if (editor.presetManager && !editor.presetManager->userWavetablesPath.empty())
+        userMenu = wavetableFolderMenu(this, editor.presetManager->userWavetablesPath);
+
     // Each installed synth gets its own top level entry rather than being buried a level
     // deeper, since these are the lists people actually browse.
     auto factory = buildVendorFactoryMenus(this);
-    if (!factory.empty())
+    if (userMenu.getNumItems() > 0 || !factory.empty())
         p.addSeparator();
+    if (userMenu.getNumItems() > 0)
+        p.addSubMenu("User Wavetables", userMenu);
     for (auto &[vendor, menu] : factory)
         p.addSubMenu(vendor, menu);
 
@@ -1756,36 +1808,36 @@ void SourceSubPanel::showWaveformPopup()
  */
 void SourceSubPanel::showWavetableLoadDialog()
 {
-    namespace fs = std::filesystem;
-
     /*
-     * Wavetables sit beside Patches under the same user folder the preset manager already
-     * resolved - which handles the vendor and legacy layouts and the platform differences, none
-     * of which a hand built Documents path gets right.
+     * Wherever you opened one last, else the Wavetables folder the preset manager resolved
+     * beside Patches - which handles the vendor and legacy layouts and the platform
+     * differences, none of which a hand built Documents path gets right.
+     *
+     * The last directory is a user default rather than a member here, so browsing somewhere
+     * else once survives closing the editor.
      */
+    std::error_code ec;
     fs::path startPath;
-    if (editor.presetManager && !editor.presetManager->userPath.empty())
+    if (editor.defaultsProvider)
     {
-        auto wt = editor.presetManager->userPath / "Wavetables";
-        try
+        auto stored = editor.defaultsProvider->getUserDefaultValue(Defaults::lastWavetableDirectory,
+                                                                   std::string{});
+        if (!stored.empty())
         {
-            if (!fs::is_directory(wt))
-                fs::create_directories(wt);
-            startPath = fs::is_directory(wt) ? wt : editor.presetManager->userPath;
-        }
-        catch (const fs::filesystem_error &)
-        {
-            // no write access is not a reason to refuse to open a file dialog
-            startPath = editor.presetManager->userPath;
+            auto last = fs::u8path(stored);
+            if (fs::is_directory(last, ec))
+                startPath = last;
         }
     }
+    if (startPath.empty() && editor.presetManager)
+    {
+        const auto &wt = editor.presetManager->userWavetablesPath;
+        startPath = fs::is_directory(wt, ec) ? wt : editor.presetManager->userPath;
+    }
     // becomes a juce::File only to hand to the chooser
-    auto start = startPath.empty()
-                     ? juce::File()
-                     : juce::File(juce::String(startPath.u8string()));
+    auto start = startPath.empty() ? juce::File() : juce::File(juce::String(startPath.u8string()));
 
-    editor.fileChooser = std::make_unique<juce::FileChooser>("Load Wavetable", start,
-                                                             "*.wt;*.wav");
+    editor.fileChooser = std::make_unique<juce::FileChooser>("Load Wavetable", start, "*.wt;*.wav");
     editor.fileChooser->launchAsync(
         juce::FileBrowserComponent::canSelectFiles | juce::FileBrowserComponent::openMode,
         [w = juce::Component::SafePointer(this)](const juce::FileChooser &fc)
@@ -1796,7 +1848,11 @@ void SourceSubPanel::showWavetableLoadDialog()
             if (picked == juce::File{})
                 return;
             // the chooser is the only place a juce::File is allowed; leave it here
-            w->loadWavetableFile(fs::path(picked.getFullPathName().toStdString()));
+            auto asPath = fs::u8path(picked.getFullPathName().toStdString());
+            if (w->editor.defaultsProvider)
+                w->editor.defaultsProvider->updateUserDefaultValue(Defaults::lastWavetableDirectory,
+                                                                   asPath.parent_path().u8string());
+            w->loadWavetableFile(asPath);
         });
 }
 
@@ -1850,46 +1906,6 @@ void SourceSubPanel::loadWavetableFile(const fs::path &f)
 std::vector<std::pair<std::string, juce::PopupMenu>>
 SourceSubPanel::buildVendorFactoryMenus(SourceSubPanel *self)
 {
-    std::function<void(const fs::path &, juce::PopupMenu &, int)> walk =
-        [&](const fs::path &dir, juce::PopupMenu &into, int depth)
-    {
-        if (depth > 3)
-            return;
-
-        std::vector<fs::path> subdirs, files;
-        try
-        {
-            for (const auto &de : fs::directory_iterator(dir))
-            {
-                if (de.is_directory())
-                    subdirs.push_back(de.path());
-                else if (de.is_regular_file() && isLoadableWavetable(de.path()))
-                    files.push_back(de.path());
-            }
-        }
-        catch (const fs::filesystem_error &)
-        {
-            return; // a folder we cannot read is a folder with nothing in it
-        }
-        std::sort(subdirs.begin(), subdirs.end());
-        std::sort(files.begin(), files.end());
-
-        for (const auto &d : subdirs)
-        {
-            juce::PopupMenu sub;
-            walk(d, sub, depth + 1);
-            if (sub.getNumItems() > 0)
-                into.addSubMenu(juce::String(d.filename().u8string()), sub);
-        }
-        for (const auto &f : files)
-            into.addItem(juce::String(f.stem().u8string()), true, false,
-                         [f, w = juce::Component::SafePointer(self)]()
-                         {
-                             if (w)
-                                 w->loadWavetableFile(f);
-                         });
-    };
-
     auto libs = factoryWavetableLibraries();
 
     /*
@@ -1906,8 +1922,7 @@ SourceSubPanel::buildVendorFactoryMenus(SourceSubPanel *self)
     std::vector<std::pair<std::string, juce::PopupMenu>> byVendor;
     for (const auto &lib : libs)
     {
-        juce::PopupMenu sub;
-        walk(lib.path, sub, 0);
+        auto sub = wavetableFolderMenu(self, lib.path);
         if (sub.getNumItems() == 0)
             continue;
 

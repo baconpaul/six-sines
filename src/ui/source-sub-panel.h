@@ -109,7 +109,6 @@ struct SourceSubPanel : juce::Component,
     // the folder the table came from top right.
     std::unique_ptr<jcmp::GlyphButton> wtPlaybackButton, wtJogPrev, wtJogNext;
     void loadWavetableFile(const fs::path &);
-    // Built once on construction: an empty list simply means no Surge install here.
     // One entry per installed synth, in discovery order, for the caller to add at whatever
     // level it wants. Empty when none of them are on this machine.
     static std::vector<std::pair<std::string, juce::PopupMenu>>

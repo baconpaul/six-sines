@@ -34,9 +34,10 @@ enum Defaults
     spectrumAnalysisMode,
     spectrumScopeScale,
     sourceEditorType,
-    defaultMPEBend,        // int semitones; seeds DawExtraState.mpeBendRange on engine init
-    defaultMIDISmoothing,  // ms, stored as string; seeds midiCCSmoothingTimeMs
-    defaultParamSmoothing, // ms, stored as string; seeds paramAutomationSmoothingTimeMs
+    defaultMPEBend,         // int semitones; seeds DawExtraState.mpeBendRange on engine init
+    defaultMIDISmoothing,   // ms, stored as string; seeds midiCCSmoothingTimeMs
+    defaultParamSmoothing,  // ms, stored as string; seeds paramAutomationSmoothingTimeMs
+    lastWavetableDirectory, // u8 path; where the wavetable chooser opens next
     numDefaults
 };
 
@@ -76,6 +77,8 @@ inline std::string defaultName(Defaults d)
         return "defaultMIDISmoothing";
     case defaultParamSmoothing:
         return "defaultParamSmoothing";
+    case lastWavetableDirectory:
+        return "lastWavetableDirectory";
     case numDefaults:
     {
         SXSNLOG("Software Error - defaults found");
