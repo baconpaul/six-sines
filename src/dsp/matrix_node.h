@@ -363,13 +363,14 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
                 modlev[i] = base * lfoMul[i] + lfoAdd[i];
             }
         }
+        int32_t anyFeedback{0};
         for (int j = 0; j < blockSize; ++j)
         {
             onto.feedbackLevel[j] = (int32_t)((1 << 24) * modlev[j] * overdriveFactor);
+            anyFeedback |= onto.feedbackLevel[j];
         }
-        // Tell the OpSource to take the UsesFB=true template path on this block
-        // — feedbackLevel may be non-zero.
-        onto.hasActiveFeedback = true;
+        // feedback that is zero all block adds nothing, so the op can skip the serial fb chain
+        onto.hasActiveFeedback = anyFeedback != 0;
     }
 
     float fbMod{0.f};
