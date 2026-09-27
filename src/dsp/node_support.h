@@ -216,6 +216,14 @@ template <typename T> struct EnvelopeSupport
                 return;
             }
 
+            // a held sustain that has settled would recompute the same flat block
+            if (!envIsOneShot && voiceValues.gated && env.stage == env_t::s_sustain)
+            {
+                auto s = sustain + sustainMod;
+                if (env.outBlock0 == s && (!needsCurve || (env.outputCache[0] == s &&
+                                                           env.outputCache[blockSize - 1] == s)))
+                    return;
+            }
             auto gate = envIsOneShot ? env.stage < env_t::s_sustain : voiceValues.gated;
             env.processBlockWithDelayAndRateMul(
                 std::clamp(delay + delayMod, 0.f, 1.f),
