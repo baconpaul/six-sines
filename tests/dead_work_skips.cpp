@@ -144,3 +144,62 @@ TEST_CASE("Raising self feedback from zero mid note engages feedback", "[dead-wo
     REQUIRE(firstVoice(*s).src[0].hasActiveFeedback);
     REQUIRE(withFb != render(*off, 64));
 }
+
+namespace
+{
+bool allZero(const float *f)
+{
+    for (int i = 0; i < (int)blockSize; ++i)
+        if (f[i] != 0.f)
+            return false;
+    return true;
+}
+
+void route(Patch &p, int from, int to)
+{
+    p.matrixNodes[MatrixIndex::positionForSourceTarget(from, to)].active.value = 1.f;
+}
+} // namespace
+
+TEST_CASE("An operator nobody hears or modulates with is not rendered", "[dead-work]")
+{
+    auto s = makeSynth([](Patch &p) { p.sourceNodes[1].active.value = 1.f; });
+    render(*s, 16);
+    REQUIRE(allZero(firstVoice(*s).src[1].output));
+}
+
+TEST_CASE("An operator feeding only an unheard operator is not rendered", "[dead-work]")
+{
+    auto s = makeSynth(
+        [](Patch &p)
+        {
+            p.sourceNodes[1].active.value = 1.f;
+            p.sourceNodes[2].active.value = 1.f;
+            route(p, 1, 2);
+        });
+    render(*s, 16);
+    REQUIRE(allZero(firstVoice(*s).src[1].output));
+    REQUIRE(allZero(firstVoice(*s).src[2].output));
+}
+
+TEST_CASE("An operator modulating a heard operator is still rendered", "[dead-work]")
+{
+    auto s = makeSynth(
+        [](Patch &p)
+        {
+            // op 1 heard, op 0 only modulates it
+            p.sourceNodes[1].active.value = 1.f;
+            p.mixerNodes[1].active.value = 1.f;
+            p.mixerNodes[0].active.value = 0.f;
+            route(p, 0, 1);
+        });
+    render(*s, 16);
+    REQUIRE_FALSE(allZero(firstVoice(*s).src[0].output));
+}
+
+TEST_CASE("An unheard operator does not change the sound", "[dead-work]")
+{
+    auto unheard = makeSynth([](Patch &p) { p.sourceNodes[1].active.value = 1.f; });
+    auto off = makeSynth([](Patch &) {});
+    REQUIRE(render(*unheard, 512) == render(*off, 512));
+}

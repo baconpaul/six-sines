@@ -87,6 +87,16 @@ void Voice::attack()
     for (auto &n : matrixNode)
         n.attack();
 
+    // power buttons latch at attack, so who reads each op is fixed for the note
+    for (int i = numOps - 1; i >= 0; --i)
+    {
+        bool used = mixerNode[i].active;
+        for (int j = i + 1; j < (int)numOps && !used; ++j)
+            used = matrixNode[MatrixIndex::positionForSourceTarget(i, j)].active &&
+                   src[j].active && src[j].outputUsedCachedAtAttack;
+        src[i].outputUsedCachedAtAttack = used;
+    }
+
     voiceValues.setGated(true);
 }
 
@@ -201,7 +211,7 @@ void Voice::renderBlock()
 
     for (int i = 0; i < numOps; ++i)
     {
-        if (!src[i].active)
+        if (!src[i].active || !src[i].outputUsedCachedAtAttack)
         {
             src[i].clearOutputs();
             continue;

@@ -64,6 +64,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     bool active{false};
     bool unisonParticipatesPan{true}, unisonParticipatesTune{true};
     bool operatorOutputsToMain{true}, operatorOutputsToOp{true};
+    // false when no mixer or live route reads this op, so the voice skips rendering it
+    bool outputUsedCachedAtAttack{true};
 
     // todo waveshape
 
