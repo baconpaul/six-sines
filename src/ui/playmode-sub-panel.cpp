@@ -438,6 +438,11 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
                 w->setUltrasonicLabel();
         });
 
+    createComponent(editor, *this, out.legacyOutputFeedback, legacyOutputDsp, legacyOutputDspD);
+    legacyOutputDsp->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
+    legacyOutputDsp->setLabel("<= 1.2 dsp");
+    addAndMakeVisible(*legacyOutputDsp);
+
     auto mkLabel = [this](auto &slot, const std::string &t,
                           juce::Justification j = juce::Justification::centredRight)
     {
@@ -631,7 +636,14 @@ void PlayModeSubPanel::resized()
     pathCol.add(stageRow(bitDepthLabel, bitDepth));
     pathCol.add(stageRow(lowpassLabel, lowpass));
     pathCol.add(stageRow(highpassLabel, highpass));
-    pathCol.add(stageRow(outGainLabel, outGain));
+    {
+        // Output row: gain slider, then the legacy output toggle
+        auto row = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
+        row.add(jlo::Component(*outGainLabel).withWidth(labelW));
+        row.add(jlo::Component(*outGain).expandToFill());
+        row.add(jlo::Component(*legacyOutputDsp).withWidth(uicSubPanelColumnWidth));
+        pathCol.add(row);
+    }
     pathCol.add(stageRow(downsamplerLabel, rsEng));
 
     outer.add(pathCol);
