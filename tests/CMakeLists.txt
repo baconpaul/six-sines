@@ -18,6 +18,7 @@ add_executable(six-sines-test
 		wavetable_stream.cpp
 		wavetable_dsp.cpp
 		output_bus_clear.cpp
+		dead_work_skips.cpp
 )
 
 target_link_libraries(six-sines-test

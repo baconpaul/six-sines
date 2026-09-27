@@ -42,8 +42,8 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     float rmLevel alignas(16)[blockSize];
     float fmAmount alignas(16)[blockSize]; // in hz
     bool rmAssigned{false};
-    // Per-block signal from MatrixNodeSelf::applyBlock: true when self-feedback is
-    // active for this block (so feedbackLevel[] may be non-zero). The inner-loop
+    // Per-block signal from MatrixNodeSelf::applyBlock: true when some feedbackLevel[]
+    // is non-zero this block. The inner-loop
     // dispatcher uses this to pick a no-FB template instantiation that skips the
     // feedback math AND the fbv[] shift entirely — removing the per-sample
     // backward dependency unlocks a lot more compiler reordering.
@@ -790,6 +790,12 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
                 fbv[1] = fbv[0];
                 fbv[0] = out;
             }
+        }
+        if constexpr (!UsesFB)
+        {
+            // keep the history the fb path would have, so feedback returning next block is exact
+            fbv[1] = onto[blockSize - 2];
+            fbv[0] = onto[blockSize - 1];
         }
     }
 
