@@ -203,3 +203,47 @@ TEST_CASE("An unheard operator does not change the sound", "[dead-work]")
     auto off = makeSynth([](Patch &) {});
     REQUIRE(render(*unheard, 512) == render(*off, 512));
 }
+
+namespace
+{
+std::unique_ptr<Synth> makeSustainSynth()
+{
+    return makeSynth(
+        [](Patch &p)
+        {
+            p.mixerNodes[0].sustain.value = 0.6f;
+            p.mixerNodes[0].release.value = 0.3f;
+            p.output.release.value = 0.5f;
+        });
+}
+
+bool envIs(const Voice &v, float x)
+{
+    for (int i = 0; i < (int)blockSize; ++i)
+        if (v.mixerNode[0].env.outputCache[i] != x)
+            return false;
+    return true;
+}
+} // namespace
+
+TEST_CASE("A held sustain follows a sustain change mid note", "[dead-work]")
+{
+    auto s = makeSustainSynth();
+    render(*s, 64);
+    REQUIRE(envIs(firstVoice(*s), 0.6f));
+
+    s->patch.mixerNodes[0].sustain.value = 0.3f;
+    render(*s, 64);
+    REQUIRE(envIs(firstVoice(*s), 0.3f));
+}
+
+TEST_CASE("A held sustain still releases", "[dead-work]")
+{
+    auto s = makeSustainSynth();
+    render(*s, 64);
+    REQUIRE(envIs(firstVoice(*s), 0.6f));
+
+    s->voiceManager->processNoteOffEvent(0, 0, 57, -1, 0.f);
+    render(*s, 16);
+    REQUIRE(firstVoice(*s).mixerNode[0].env.outputCache[blockSize - 1] < 0.6f);
+}
