@@ -79,7 +79,7 @@ struct Param : pats::ParamBase, sst::cpputils::active_set_overlay<Param>::partic
 
 struct Patch : pats::PatchBase<Patch, Param>
 {
-    static constexpr uint32_t patchVersion{13};
+    static constexpr uint32_t patchVersion{14};
     static constexpr const char *id{"org.baconpaul.six-sines"};
 
     static constexpr uint32_t floatFlags{CLAP_PARAM_IS_AUTOMATABLE};
@@ -105,6 +105,8 @@ struct Patch : pats::PatchBase<Patch, Param>
     static constexpr uint64_t version_130a = 0x010301;
     // user wavetables: morph and its env / lfo depths
     static constexpr uint64_t version_130b = 0x010302;
+    // output bus cleared per block; legacy flag keeps the pre-14 feedback comb
+    static constexpr uint64_t version_130c = 0x010303;
 
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
     static md_t floatMd(uint64_t version = version_110)
@@ -1967,6 +1969,11 @@ struct Patch : pats::PatchBase<Patch, Param>
                                    .withGroupName(name())
                                    .withDefault(false)
                                    .withID(id(58))),
+              legacyOutputFeedback(boolMd(version_130c)
+                                       .withName(name() + " Legacy Output Feedback")
+                                       .withGroupName(name())
+                                       .withDefault(false)
+                                       .withID(id(59))),
               bitDepthAdjust(intMd(version_120e)
                                  .withName(name() + " Bit Depth Adjust")
                                  .withGroupName(name())
@@ -2043,6 +2050,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param lowpass, bitRateAdjust, zohPreFilter, bitDepthAdjust, highpass;
         Param ultrasonicFilter;
         Param outputGain;
+        Param legacyOutputFeedback;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -2080,7 +2088,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &zohPreFilter,
                                      &bitDepthAdjust,
                                      &highpass,
-                                     &outputGain};
+                                     &outputGain,
+                                     &legacyOutputFeedback};
             appendDAHDSRParams(res);
 
             for (int i = 0; i < numModsPer; ++i)

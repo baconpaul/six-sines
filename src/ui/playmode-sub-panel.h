@@ -140,6 +140,9 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<PatchDiscrete> ultrasonicFilterD;
     void setUltrasonicLabel();
 
+    std::unique_ptr<jcmp::ToggleButton> legacyOutputDsp;
+    std::unique_ptr<PatchDiscrete> legacyOutputDspD;
+
     std::unique_ptr<jcmp::HSliderFilled> outGain;
     std::unique_ptr<PatchContinuous> outGainD;
     std::unique_ptr<jcmp::Label> outGainLabel;

@@ -273,6 +273,13 @@ void Patch::migratePatchFromVersion(uint32_t version)
         output.zohPreFilter.value = 0;
     }
 
+    // pre-14 the output bus was never cleared, so those patches were voiced through the
+    // resulting feedback comb; keep them sounding as they did
+    if (version <= 13)
+    {
+        output.legacyOutputFeedback.value = 1;
+    }
+
     // v12 maps the LFO deform onto the StepLFO's full -2..2 smooth range (deform*2).
     // Pre-12 step-sequencer patches stored deform at half that scale, so halve it back
     // for any node currently in Step shape to preserve the original smoothing.
@@ -377,9 +384,8 @@ void Patch::readWavetablesFromState(TiXmlElement *root)
                 if (!inflateBytes(packed.data(), packed.size(), (size_t)raw, b.sourceBytes))
                     b.sourceBytes.clear();
             }
-            b.hash = b.sourceBytes.empty()
-                         ? 0
-                         : hashBytes(b.sourceBytes.data(), b.sourceBytes.size());
+            b.hash =
+                b.sourceBytes.empty() ? 0 : hashBytes(b.sourceBytes.data(), b.sourceBytes.size());
             byIdx[idx] = std::move(b);
         }
         if (!byIdx.empty())
