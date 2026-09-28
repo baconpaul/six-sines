@@ -732,6 +732,46 @@ void Synth::process(const clap_output_events_t *o)
         processInternal<false>(o);
 }
 
+void Synth::preloadTables(bool eventsPending)
+{
+    // nothing sounding and nothing arriving reads no tables
+    if (!head && !eventsPending)
+        return;
+
+    using EM = Patch::SourceNode::ExtendedMode;
+    using RW = Patch::SourceNode::ResonantSweepWindow;
+    bool used[SinTable::NUM_WAVEFORMS]{};
+    for (const auto &sn : patch.sourceNodes)
+    {
+        if (sn.active.value < 0.5f)
+            continue;
+        auto wf = (int)std::round(sn.waveForm.value);
+        if (wf >= 0 && wf < SinTable::USER_TABLE)
+            used[wf] = true;
+        if ((EM)(int)std::round(sn.extendedModeMode.value) == EM::RESONANT_SWEEP)
+        {
+            switch ((RW)(int)std::round(sn.resonantSweepWindowShape.value))
+            {
+            case RW::HANN:
+                used[SinTable::HANN_WINDOW] = true;
+                break;
+            case RW::BLACKMAN_HARRIS:
+                used[SinTable::BLACKMAN_HARRIS_WINDOW] = true;
+                break;
+            case RW::TUKEY:
+                used[SinTable::TUKEY_WINDOW] = true;
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    for (int i = 0; i < SinTable::NUM_WAVEFORMS; ++i)
+        if (used[i])
+            SinTable::preloadWaveForm((SinTable::WaveForm)i);
+    SinTable::preloadInterpolation();
+}
+
 void Synth::addToVoiceList(Voice *v)
 {
     v->prior = nullptr;

@@ -199,6 +199,9 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         // see the anchored value; this suppresses the per-block advance on the first block.)
         engine->monoValues.songPosNeedsResync = true;
 
+        // the host's other work between buffers has usually evicted our tables
+        engine->preloadTables(sz != 0);
+
         static constexpr int outBus{multiOut ? 1 + numOps : 1};
         static constexpr int outChan{multiOut ? (1 + numOps) * 2 : 2};
         float *out[outChan];
