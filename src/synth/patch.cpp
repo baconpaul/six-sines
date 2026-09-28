@@ -273,8 +273,7 @@ void Patch::migratePatchFromVersion(uint32_t version)
         output.zohPreFilter.value = 0;
     }
 
-    // pre-14 patches were voiced through the uncleared output bus and the old table slopes;
-    // keep them sounding as they did
+    // pre-14 patches were voiced through 1.2's dsp; keep them sounding as they did
     if (version <= 13)
     {
         output.legacyDsp.value = 1;

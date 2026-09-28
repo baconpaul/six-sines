@@ -152,6 +152,8 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         // original (`overdriveFactor * (modlev * fromOut)`) — bit-exact output.
         if (modMode == 1)
         {
+            // the mixer dc blocks a ring modulated op
+            onto.rmAssigned = true;
             // we want op * ( 1 - depth ) + op * rm * depth or
             // op * ( 1 + depth ( rm - 1 ) )
             // since the multiplier of depth is rmLevel and it starts at one that means
@@ -457,7 +459,9 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         memset(output, 0, sizeof(output));
     }
 
-    float doBlock{false};
+    bool doBlock{false};
+    // 1.2 never dc blocked a ring modulated op, since nothing set rmAssigned
+    bool blockRmCachedAtAttack{true};
     sst::basic_blocks::dsp::DCBlocker<blockSize> dcBlocker;
 
     void attack()
@@ -477,13 +481,12 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
 
             dcBlocker.reset();
             memset(output, 0, sizeof(output));
+            blockRmCachedAtAttack = !monoValues.legacyDsp;
 
+            // set every attack: a voice that once played one of these must not keep blocking
             auto wf = (SinTable::WaveForm)(from.waveForm);
-            if (wf == SinTable::TX3 || wf == SinTable::TX4 || wf == SinTable::TX7 ||
-                wf == SinTable::TX8 || wf == SinTable::SPIKY_TX4 || wf == SinTable::SPIKY_TX8)
-            {
-                doBlock = true;
-            }
+            doBlock = wf == SinTable::TX3 || wf == SinTable::TX4 || wf == SinTable::TX7 ||
+                      wf == SinTable::TX8 || wf == SinTable::SPIKY_TX4 || wf == SinTable::SPIKY_TX8;
         }
     }
 
@@ -512,7 +515,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
 
         float dcValues alignas(16)[blockSize];
         float *useOut;
-        if (from.rmAssigned || doBlock)
+        if ((from.rmAssigned && blockRmCachedAtAttack) || doBlock)
         {
             dcBlocker.filter(from.output, dcValues);
             useOut = dcValues;
