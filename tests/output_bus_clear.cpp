@@ -29,6 +29,7 @@
 
 #include "configuration.h"
 #include "dsp/sintable.h"
+#include "synth/matrix_index.h"
 #include "synth/patch.h"
 #include "synth/synth.h"
 #include "synth/voice.h"
@@ -211,4 +212,122 @@ TEST_CASE("A held note keeps its tables when the 1.2 dsp flag changes", "[output
 
     REQUIRE(tableForKey(*s, 60) == SinTable::quadTable(SinTable::SQUARISH, true));
     REQUIRE(tableForKey(*s, 64) == SinTable::quadTable(SinTable::SQUARISH, false));
+}
+
+namespace
+{
+// op 1 ring modulates op 2 at the same pitch and phase, so op 2 comes out as sin^2: mostly dc
+std::unique_ptr<Synth> makeRingModSynth(bool legacy)
+{
+    auto s = std::make_unique<Synth>(false);
+    s->setSampleRate(hostRate);
+    auto &p = s->patch;
+    p.output.playMode.value = 0.f;
+    p.output.polyLimit.value = 1.f;
+    p.output.unisonCount.value = 1.f;
+    p.output.velSensitivity.value = 0.f;
+    p.output.legacyDsp.value = legacy ? 1.f : 0.f;
+    auto flatEnv = [](auto &n)
+    {
+        n.delay.value = 0.f;
+        n.attack.value = 0.f;
+        n.hold.value = 0.f;
+        n.decay.value = 0.f;
+        n.sustain.value = 1.f;
+        n.release.value = 0.f;
+    };
+    flatEnv(p.output);
+    for (int i = 0; i < (int)numOps; ++i)
+    {
+        auto &sn = p.sourceNodes[i];
+        sn.active.value = i < 2 ? 1.f : 0.f;
+        sn.waveForm.value = (float)SinTable::SIN;
+        sn.ratio.value = 0.f;
+        sn.startingPhase.value = 0.f;
+        flatEnv(sn);
+        p.mixerNodes[i].active.value = i == 1 ? 1.f : 0.f;
+        p.mixerNodes[i].level.value = 1.f;
+        p.mixerNodes[i].pan.value = 0.f;
+        flatEnv(p.mixerNodes[i]);
+        p.selfNodes[i].active.value = 0.f;
+    }
+    for (auto &m : p.matrixNodes)
+        m.active.value = 0.f;
+    auto &rm = p.matrixNodes[MatrixIndex::positionForSourceTarget(0, 1)];
+    rm.active.value = 1.f;
+    rm.modulationMode.value = 1.f;
+    rm.level.value = 1.f;
+    flatEnv(rm);
+
+    s->reapplyControlSettings();
+    s->voiceManager->processNoteOnEvent(0, 0, 57, -1, 1.0f, 0.f);
+    // let the dc blocker settle before measuring
+    for (int i = 0; i < (int)(0.5 * hostRate) / (int)blockSize; ++i)
+        s->process(nullptr);
+    return s;
+}
+
+// mean over rms of the left channel
+double dcShare(Synth &s, double seconds)
+{
+    double sum{0}, sq{0};
+    size_t n{0};
+    for (int b = 0; b < (int)(seconds * hostRate / blockSize); ++b)
+    {
+        s.process(nullptr);
+        for (int i = 0; i < (int)blockSize; ++i)
+        {
+            sum += s.output[0][i];
+            sq += (double)s.output[0][i] * s.output[0][i];
+            ++n;
+        }
+    }
+    return std::fabs(sum / n) / std::sqrt(sq / n);
+}
+} // namespace
+
+TEST_CASE("A ring modulated op is dc blocked", "[output-bus]")
+{
+    REQUIRE(dcShare(*makeRingModSynth(false), 1.0) < 0.01);
+}
+
+TEST_CASE("The 1.2 dsp flag leaves a ring modulated op's dc in", "[output-bus]")
+{
+    REQUIRE(dcShare(*makeRingModSynth(true), 1.0) > 0.3);
+}
+
+TEST_CASE("A reused voice stops dc blocking once its op leaves a TX waveform", "[output-bus]")
+{
+    auto s = makeRingModSynth(false);
+    // free the fixture's voice so both notes below land on the same one
+    s->voiceManager->processNoteOffEvent(0, 0, 57, -1, 0.f);
+    for (int i = 0; i < 4096; ++i)
+        s->process(nullptr);
+    REQUIRE(s->head == nullptr);
+
+    auto &p = s->patch;
+    p.matrixNodes[MatrixIndex::positionForSourceTarget(0, 1)].active.value = 0.f;
+    p.sourceNodes[1].waveForm.value = (float)SinTable::TX3;
+    Voice *first{nullptr};
+
+    auto playAndRelease = [&]()
+    {
+        s->voiceManager->processNoteOnEvent(0, 0, 60, -1, 1.0f, 0.f);
+        for (int i = 0; i < 64; ++i)
+            s->process(nullptr);
+        REQUIRE(s->head);
+        if (!first)
+            first = s->head;
+        REQUIRE(s->head == first);
+        auto blocking = s->head->mixerNode[1].doBlock;
+        s->voiceManager->processNoteOffEvent(0, 0, 60, -1, 0.f);
+        for (int i = 0; i < 4096; ++i)
+            s->process(nullptr);
+        REQUIRE(s->head == nullptr);
+        return blocking;
+    };
+    REQUIRE(playAndRelease());
+
+    p.sourceNodes[1].waveForm.value = (float)SinTable::SIN;
+    REQUIRE_FALSE(playAndRelease());
 }

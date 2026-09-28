@@ -105,7 +105,7 @@ struct Patch : pats::PatchBase<Patch, Param>
     static constexpr uint64_t version_130a = 0x010301;
     // user wavetables: morph and its env / lfo depths
     static constexpr uint64_t version_130b = 0x010302;
-    // output bus cleared per block, table slopes fixed; the legacy flag keeps both as 1.2 had them
+    // 1.2 dsp fixes (output bus, table slopes, ring mod dc block); the legacy flag keeps 1.2's
     static constexpr uint64_t version_130c = 0x010303;
 
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
@@ -2050,7 +2050,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param lowpass, bitRateAdjust, zohPreFilter, bitDepthAdjust, highpass;
         Param ultrasonicFilter;
         Param outputGain;
-        // 1.2 and earlier: the uncleared output bus and the old squarish, sawish, blackman harris
+        // 1.2's dsp: uncleared output bus, old squarish / sawish / blackman harris, no rm dc block
         Param legacyDsp;
 
         std::array<Param, numModsPer> modtarget;
