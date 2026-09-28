@@ -103,6 +103,33 @@ struct SinTable
      * Zero order hold as data rather than as a branch in the inner loop.
      */
     static SIMD_M128 simdZOH alignas(16)[nPoints];
+
+    // squarish, sawish and blackman harris with the slopes 1.2 shipped; the 1.2 dsp flag reads these
+    static SIMD_M128 simdLegacyQuad alignas(16)[3][nQuadrants * nPoints];
+    static SIMD_M128 *legacyQuad(WaveForm wf)
+    {
+        switch (wf)
+        {
+        case SQUARISH:
+            return simdLegacyQuad[0];
+        case SAWISH:
+            return simdLegacyQuad[1];
+        case BLACKMAN_HARRIS_WINDOW:
+            return simdLegacyQuad[2];
+        default:
+            return nullptr;
+        }
+    }
+    static SIMD_M128 *quadTable(WaveForm wf, bool legacy)
+    {
+        if (legacy)
+            if (auto *l = legacyQuad(wf))
+                return l;
+        return simdFullQuad[wf];
+    }
+    static void fillLegacyTable(WaveForm wf,
+                                std::function<std::pair<double, double>(double x, int Q)> der);
+
     static bool staticsInitialized;
 
     SIMD_M128 *simdQuad;
@@ -124,15 +151,18 @@ struct SinTable
         for (size_t i = 0; i < bytes; i += 64)
             (void)c[i];
     }
-    static void preloadWaveForm(WaveForm wf) { touch(simdFullQuad[wf], sizeof(simdFullQuad[wf])); }
+    static void preloadWaveForm(WaveForm wf, bool legacy)
+    {
+        touch(quadTable(wf, legacy), sizeof(simdFullQuad[wf]));
+    }
     static void preloadInterpolation() { touch(simdCubic, sizeof(simdCubic)); }
 
-    void setWaveForm(WaveForm wf)
+    void setWaveForm(WaveForm wf, bool legacy = false)
     {
         auto stwf = size_t(wf);
         if (stwf >= NUM_WAVEFORMS) // mostly remove ine during dev
             stwf = 0;
-        simdQuad = simdFullQuad[stwf];
+        simdQuad = quadTable((WaveForm)stwf, legacy);
     }
 
     double frToPhase{0};

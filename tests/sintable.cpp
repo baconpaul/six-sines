@@ -121,3 +121,81 @@ TEST_CASE("The sine table has no discontinuity at a quadrant seam", "[sintable]"
         REQUIRE_THAT(d2, Catch::Matchers::WithinAbs(d1, 2e-4));
     }
 }
+
+namespace
+{
+// the shapes as fillTable writes their values, independent of the slopes the table stores
+double squarish(double x)
+{
+    static constexpr double dFr{1.0 / 32}, w{2 * M_PI * 8};
+    if (x <= dFr || x > 1.0 - dFr)
+        return std::sin(w * x);
+    if (x <= 0.5 - dFr)
+        return 1.0;
+    if (x < 0.5 + dFr)
+        return -std::sin(w * x);
+    return -1.0;
+}
+
+double sawish(double x)
+{
+    auto a = 1.0 - 2 * x;
+    auto b = std::sin(6 * M_PI * x);
+    auto c = std::sin(M_PI * (32 * std::pow(x - 0.5, 6) + 0.5));
+    return -(b + c * (a - b));
+}
+
+double blackmanHarris(double x)
+{
+    auto t = 2 * M_PI * x;
+    return 0.35875 - 0.48829 * std::cos(t) + 0.14128 * std::cos(2 * t) -
+           0.01168 * std::cos(3 * t) + 0.00196 * std::cos(4 * t);
+}
+
+double worstReadError(SinTable::WaveForm wf, double (*shape)(double), bool legacy = false)
+{
+    SinTable st;
+    st.setWaveForm(wf, legacy);
+    double worst{0};
+    // an odd stride so reads land all over the fractional bits
+    for (uint32_t ph = 0; ph < phase::phaseMax; ph += 61)
+    {
+        auto x = (double)ph / phase::phaseMax;
+        worst = std::max(worst, std::abs(st.at(ph) - shape(x)));
+    }
+    return worst;
+}
+} // namespace
+
+TEST_CASE("Tables with corrected slopes read within -110 dB of their shape", "[sintable]")
+{
+    // -110 dB of full scale
+    static constexpr double limit{3.1623e-6};
+    SECTION("squarish") { REQUIRE(worstReadError(SinTable::SQUARISH, squarish) < limit); }
+    SECTION("sawish") { REQUIRE(worstReadError(SinTable::SAWISH, sawish) < limit); }
+    SECTION("blackman harris")
+    {
+        REQUIRE(worstReadError(SinTable::BLACKMAN_HARRIS_WINDOW, blackmanHarris) < limit);
+    }
+}
+
+TEST_CASE("The 1.2 tables keep the slopes 1.2 shipped", "[sintable]")
+{
+    // 1.2 missed its shapes by -65, -79 and -86 dB; anything that close is not the fix
+    static constexpr double clearlyOld{1e-5};
+    REQUIRE(worstReadError(SinTable::SQUARISH, squarish, true) > clearlyOld);
+    REQUIRE(worstReadError(SinTable::SAWISH, sawish, true) > clearlyOld);
+    REQUIRE(worstReadError(SinTable::BLACKMAN_HARRIS_WINDOW, blackmanHarris, true) > clearlyOld);
+}
+
+TEST_CASE("Only squarish, sawish and blackman harris have a 1.2 table", "[sintable]")
+{
+    for (int w = 0; w < SinTable::USER_TABLE; ++w)
+    {
+        auto wf = (SinTable::WaveForm)w;
+        auto hasLegacy = wf == SinTable::SQUARISH || wf == SinTable::SAWISH ||
+                         wf == SinTable::BLACKMAN_HARRIS_WINDOW;
+        INFO("waveform " << w);
+        REQUIRE((SinTable::quadTable(wf, true) != SinTable::quadTable(wf, false)) == hasLegacy);
+    }
+}

@@ -98,6 +98,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     Patch::SourceNode::NoiseType noiseTypeCachedAtAttack{Patch::SourceNode::NoiseType::PINK};
     Patch::SourceNode::LFSRMode lfsrModeCachedAtAttack{Patch::SourceNode::LFSRMode::LONG_KEYTRACK};
     float resonantSweepKScaleCachedAtAttack{1.0f};
+    bool legacyDspCachedAtAttack{false};
 
     void cacheEnums()
     {
@@ -112,6 +113,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         waveFormCachedAtAttack =
             static_cast<SinTable::WaveForm>(static_cast<uint32_t>(std::round(waveForm)));
         isAudioInCachedAtAttack = (waveFormCachedAtAttack == SinTable::AUDIO_IN);
+        legacyDspCachedAtAttack = monoValues.legacyDsp;
 
         extendedModeCachedAtAttack =
             static_cast<EM>(static_cast<uint32_t>(std::round(sourceNode.extendedModeMode.value)));
@@ -184,13 +186,13 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             switch (resonantSweepWindowCachedAtAttack)
             {
             case RW::BLACKMAN_HARRIS:
-                stWindow.setWaveForm(SinTable::BLACKMAN_HARRIS_WINDOW);
+                stWindow.setWaveForm(SinTable::BLACKMAN_HARRIS_WINDOW, legacyDspCachedAtAttack);
                 break;
             case RW::TUKEY:
-                stWindow.setWaveForm(SinTable::TUKEY_WINDOW);
+                stWindow.setWaveForm(SinTable::TUKEY_WINDOW, legacyDspCachedAtAttack);
                 break;
             default:
-                stWindow.setWaveForm(SinTable::HANN_WINDOW);
+                stWindow.setWaveForm(SinTable::HANN_WINDOW, legacyDspCachedAtAttack);
                 break;
             }
         }
@@ -917,7 +919,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             return;
         }
         heldTable.reset();
-        st.setWaveForm(waveFormCachedAtAttack);
+        st.setWaveForm(waveFormCachedAtAttack, legacyDspCachedAtAttack);
     }
 
     // The table read, resolved at compile time. A runtime ternary here does not survive

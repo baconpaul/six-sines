@@ -980,7 +980,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
 
     const float &level, &velSen, &bendUp, &bendDown, &octTranspose, &pan, &fineTune, &lfoDepth;
     const float &defTrigV;
-    const float &legacyFeedbackV;
+    const float &legacyDspV;
     TriggerMode defaultTrigger;
 
     MainPanNode panModNode;
@@ -993,7 +993,7 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
           fromArr(f), level(on.level), bendUp(on.bendUp), bendDown(on.bendDown),
           octTranspose(on.octTranspose), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),
           LFOSupport(on, mv, vv), defTrigV(on.defaultTrigger), pan(on.pan), fineTune(on.fineTune),
-          lfoDepth(on.lfoDepth), legacyFeedbackV(on.legacyOutputFeedback), ftModNode(ftMN, mv, vv),
+          lfoDepth(on.lfoDepth), legacyDspV(on.legacyDsp), ftModNode(ftMN, mv, vv),
           panModNode(panMN, mv, vv)
     {
         memset(output, 0, sizeof(output));
@@ -1021,8 +1021,8 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     void renderBlock()
     {
         calculateModulation();
-        // pre-14 patches were voiced through the comb this leaves behind
-        if (legacyFeedbackV < 0.5f)
+        // 1.2 patches were voiced through the comb this leaves behind
+        if (legacyDspV < 0.5f)
             memset(output, 0, sizeof(output));
         for (const auto &from : fromArr)
         {

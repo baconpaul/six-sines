@@ -438,7 +438,7 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
                 w->setUltrasonicLabel();
         });
 
-    createComponent(editor, *this, out.legacyOutputFeedback, legacyOutputDsp, legacyOutputDspD);
+    createComponent(editor, *this, out.legacyDsp, legacyOutputDsp, legacyOutputDspD);
     legacyOutputDsp->setDrawMode(jcmp::ToggleButton::DrawMode::LABELED);
     legacyOutputDsp->setLabel("<= 1.2 dsp");
     addAndMakeVisible(*legacyOutputDsp);

@@ -107,6 +107,9 @@ struct MonoValues
     // Synth::reapplyControlSettings so it can never drift from bitRateZOH's rate.
     float noiseBandLimitHz{0.f};
 
+    // the patch's 1.2 dsp flag, from Synth::reapplyControlSettings; operators latch it at attack
+    bool legacyDsp{false};
+
     // Instance-scoped MPE config — lives on the engine, NOT in the patch. Persisted
     // via Synth::AudioDawState so DAW sessions round-trip without polluting patches.
     bool mpeActive{false};
