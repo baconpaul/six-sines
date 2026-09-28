@@ -247,3 +247,44 @@ TEST_CASE("A held sustain still releases", "[dead-work]")
     render(*s, 16);
     REQUIRE(firstVoice(*s).mixerNode[0].env.outputCache[blockSize - 1] < 0.6f);
 }
+
+namespace
+{
+// left over right energy of a rendered stretch
+double leftOverRight(Synth &s, int blocks)
+{
+    double l{0}, r{0};
+    for (int b = 0; b < blocks; ++b)
+    {
+        s.process(nullptr);
+        for (int i = 0; i < (int)blockSize; ++i)
+        {
+            l += s.output[0][i] * s.output[0][i];
+            r += s.output[1][i] * s.output[1][i];
+        }
+    }
+    return l / r;
+}
+} // namespace
+
+TEST_CASE("A mixer pan change mid note moves the sound", "[dead-work]")
+{
+    auto s = makeSynth([](Patch &p) { p.mixerNodes[0].pan.value = 0.6f; });
+    render(*s, 64);
+    REQUIRE(leftOverRight(*s, 256) < 0.5);
+
+    s->patch.mixerNodes[0].pan.value = -0.6f;
+    render(*s, 64);
+    REQUIRE(leftOverRight(*s, 256) > 2.0);
+}
+
+TEST_CASE("An output pan change mid note moves the sound", "[dead-work]")
+{
+    auto s = makeSynth([](Patch &p) { p.output.pan.value = 0.6f; });
+    render(*s, 64);
+    REQUIRE(leftOverRight(*s, 256) < 0.5);
+
+    s->patch.output.pan.value = -0.6f;
+    render(*s, 64);
+    REQUIRE(leftOverRight(*s, 256) > 2.0);
+}
