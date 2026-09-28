@@ -130,12 +130,13 @@ struct MacroVoiceNode : EnvelopeSupport<Patch::MacroNode>,
 
     void calculateModulation()
     {
+        // attack left these reset, and nothing but a source changes them
+        if (!anySources)
+            return;
+
         resetModulation();
         envResetMod();
         lfoResetMod();
-
-        if (!anySources)
-            return;
 
         for (int i = 0; i < numModsPer; ++i)
         {

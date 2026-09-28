@@ -219,12 +219,13 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
 
     void calculateModulation()
     {
+        // attack left these reset, and nothing but a source changes them
+        if (!anySources)
+            return;
+
         resetModulation();
         envResetMod();
         lfoResetMod();
-
-        if (!anySources)
-            return;
 
         for (int i = 0; i < numModsPer; ++i)
         {
@@ -385,12 +386,13 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
     }
     void calculateModulation()
     {
+        // attack left these reset, and nothing but a source changes them
+        if (!anySources)
+            return;
+
         resetModulation();
         envResetMod();
         lfoResetMod();
-
-        if (!anySources)
-            return;
 
         for (int i = 0; i < numModsPer; ++i)
         {
@@ -629,12 +631,13 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
 
     void calculateModulation()
     {
+        // attack left these reset, and nothing but a source changes them
+        if (!anySources)
+            return;
+
         resetModulation();
         envResetMod();
         lfoResetMod();
-
-        if (!anySources)
-            return;
 
         for (int i = 0; i < numModsPer; ++i)
         {
@@ -767,12 +770,13 @@ struct MainPanNode : EnvelopeSupport<Patch::MainPanNode>,
     }
     void calculateModulation()
     {
+        // attack left these reset, and nothing but a source changes them
+        if (!anySources)
+            return;
+
         resetModulation();
         envResetMod();
         lfoResetMod();
-
-        if (!anySources)
-            return;
 
         for (int i = 0; i < numModsPer; ++i)
         {
@@ -917,12 +921,13 @@ struct FineTuneNode : EnvelopeSupport<Patch::FineTuneNode>,
     }
     void calculateModulation()
     {
+        // attack left these reset, and nothing but a source changes them
+        if (!anySources)
+            return;
+
         resetModulation();
         envResetMod();
         lfoResetMod();
-
-        if (!anySources)
-            return;
 
         for (int i = 0; i < numModsPer; ++i)
         {
@@ -1116,12 +1121,13 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     }
     void calculateModulation()
     {
+        // attack left these reset, and nothing but a source changes them
+        if (!anySources)
+            return;
+
         resetModulation();
         envResetMod();
         lfoResetMod();
-
-        if (!anySources)
-            return;
 
         for (int i = 0; i < numModsPer; ++i)
         {
