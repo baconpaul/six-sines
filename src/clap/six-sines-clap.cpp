@@ -201,6 +201,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         // the host's other work between buffers has usually evicted our tables
         engine->preloadTables(sz != 0);
+        engine->refreshMtsMaster();
 
         static constexpr int outBus{multiOut ? 1 + numOps : 1};
         static constexpr int outChan{multiOut ? (1 + numOps) * 2 : 2};

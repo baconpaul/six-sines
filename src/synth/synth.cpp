@@ -732,6 +732,11 @@ void Synth::process(const clap_output_events_t *o)
         processInternal<false>(o);
 }
 
+void Synth::refreshMtsMaster()
+{
+    monoValues.mtsHasMaster = monoValues.mtsClient && MTS_HasMaster(monoValues.mtsClient);
+}
+
 void Synth::preloadTables(bool eventsPending)
 {
     // nothing sounding and nothing arriving reads no tables
