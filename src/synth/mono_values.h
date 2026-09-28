@@ -83,6 +83,8 @@ struct MonoValues
     std::array<float *, numMacros> macroPtr;
 
     MTSClient *mtsClient{nullptr};
+    // asked once per host buffer, not per voice per block
+    bool mtsHasMaster{false};
 
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
     sst::basic_blocks::tables::TwoToTheXProvider twoToTheX;

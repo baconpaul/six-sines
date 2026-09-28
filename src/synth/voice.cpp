@@ -135,7 +135,7 @@ void Voice::renderBlock()
     }
 
     float retuneKey = voiceValues.key;
-    if (monoValues.mtsClient && MTS_HasMaster(monoValues.mtsClient))
+    if (monoValues.mtsHasMaster)
     {
         if (monoValues.mpeActive)
         {

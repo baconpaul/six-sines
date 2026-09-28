@@ -316,6 +316,7 @@ struct Synth
     void processUIQueue(const clap_output_events_t *);
     // once per host buffer: pull the patch's tables back into cache before the blocks read them
     void preloadTables(bool eventsPending);
+    void refreshMtsMaster();
 
     // End-of-chain processing on the engine-rate stereo bus, in place.
     // Runs the saturator / lowpass / decimator / bitcrush / highpass stages.
