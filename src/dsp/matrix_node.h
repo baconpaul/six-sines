@@ -585,8 +585,11 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         if (pn != 0.f)
         {
             pn = (pn + 1) * 0.5;
-            sdsp::pan_laws::panmatrix_t pmat;
-            sdsp::pan_laws::monoEqualPower(pn, pmat);
+            if (pn != panLawFor)
+            {
+                panLawFor = pn;
+                sdsp::pan_laws::monoEqualPower(pn, pmat);
+            }
 
             mech::mul_block<blockSize>(vSum, pmat[0], output[0]);
             mech::mul_block<blockSize>(vSum, pmat[3], output[1]);
@@ -610,6 +613,10 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
     float lfoAtten{1.0};
     float lfoPanAtten{1.0};
     float panMod{0.0};
+
+    // the pan law costs a sin and cos; the pan is usually constant across a note
+    float panLawFor{-1.f};
+    sdsp::pan_laws::panmatrix_t pmat{};
 
     void resetModulation()
     {
@@ -1064,8 +1071,11 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
         if (pn != 0.f)
         {
             pn = (pn + 1) * 0.5;
-            sdsp::pan_laws::panmatrix_t pmat;
-            sdsp::pan_laws::stereoEqualPower(pn, pmat);
+            if (pn != panLawFor)
+            {
+                panLawFor = pn;
+                sdsp::pan_laws::stereoEqualPower(pn, pmat);
+            }
 
             for (int i = 0; i < blockSize; ++i)
             {
@@ -1092,6 +1102,10 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     float panMod{0.f};
     float depthAtten{1.0};
     float lfoAtten{1.0};
+
+    // the pan law costs a sin and cos; the pan is usually constant across a note
+    float panLawFor{-1.f};
+    sdsp::pan_laws::panmatrix_t pmat{};
 
     void resetModulation()
     {
