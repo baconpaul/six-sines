@@ -117,6 +117,16 @@ struct SinTable
     static void fillTable(int WF, std::function<std::pair<double, double>(double x, int Q)> der);
     static void initializeStatics();
 
+    // plain loads, not prefetch hints: a linear walk trips the hardware stream prefetcher
+    static void touch(const void *p, size_t bytes)
+    {
+        auto *c = static_cast<const volatile uint8_t *>(p);
+        for (size_t i = 0; i < bytes; i += 64)
+            (void)c[i];
+    }
+    static void preloadWaveForm(WaveForm wf) { touch(simdFullQuad[wf], sizeof(simdFullQuad[wf])); }
+    static void preloadInterpolation() { touch(simdCubic, sizeof(simdCubic)); }
+
     void setWaveForm(WaveForm wf)
     {
         auto stwf = size_t(wf);
