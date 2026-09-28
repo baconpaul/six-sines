@@ -456,30 +456,52 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         softResetPhaseCount = softPhaseCount;
     }
 
+    // a block whose feedback keeps one sign has a shorter exact form, chosen as a template
+    // argument so no compiler is left to split, or select inside, the sample loop
+    enum FbMode
+    {
+        FB_OFF,
+        FB_POSITIVE,
+        FB_NEGATIVE,
+        FB_MIXED
+    };
+
     void innerLoop(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs)
     {
         // Split on per-block self-feedback so we pick the right template
         // instantiation of innerLoopImpl. The flag is set by
         // MatrixNodeSelf::applyBlock and stays false when self-FB is off for
-        // this op (the common case for modulator stacks) — the UsesFB=false
+        // this op (the common case for modulator stacks) — the FB_OFF
         // path then skips the feedback math entirely.
-        if (hasActiveFeedback)
+        if (!hasActiveFeedback)
         {
-            if (usesWavetableCachedAtAttack)
-                innerLoopDispatch<true, true>(onto, fbv, rf, dRF, phs);
-            else
-                innerLoopDispatch<true, false>(onto, fbv, rf, dRF, phs);
+            innerLoopForFb<FB_OFF>(onto, fbv, rf, dRF, phs);
+            return;
         }
+        bool allPositive{true}, allNegative{true};
+        for (int i = 0; i < blockSize; ++i)
+        {
+            allPositive = allPositive && feedbackLevel[i] >= 0;
+            allNegative = allNegative && feedbackLevel[i] < 0;
+        }
+        if (allPositive)
+            innerLoopForFb<FB_POSITIVE>(onto, fbv, rf, dRF, phs);
+        else if (allNegative)
+            innerLoopForFb<FB_NEGATIVE>(onto, fbv, rf, dRF, phs);
         else
-        {
-            if (usesWavetableCachedAtAttack)
-                innerLoopDispatch<false, true>(onto, fbv, rf, dRF, phs);
-            else
-                innerLoopDispatch<false, false>(onto, fbv, rf, dRF, phs);
-        }
+            innerLoopForFb<FB_MIXED>(onto, fbv, rf, dRF, phs);
     }
 
-    template <bool UsesFB, bool IsWT>
+    template <FbMode FB>
+    void innerLoopForFb(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs)
+    {
+        if (usesWavetableCachedAtAttack)
+            innerLoopDispatch<FB, true>(onto, fbv, rf, dRF, phs);
+        else
+            innerLoopDispatch<FB, false>(onto, fbv, rf, dRF, phs);
+    }
+
+    template <FbMode FB, bool IsWT>
     void innerLoopDispatch(float *onto, float *fbv, float rf, const float dRF, uint32_t &phs)
     {
         using EM = Patch::SourceNode::ExtendedMode;
@@ -487,31 +509,30 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         switch (extendedModeCachedAtAttack)
         {
         case EM::NONE:
-            innerLoopImpl<UsesFB, IsWT, EM::NONE>(onto, fbv, rf, dRF, phs);
+            innerLoopImpl<FB, IsWT, EM::NONE>(onto, fbv, rf, dRF, phs);
             break;
         case EM::PHASE_REMAP:
         {
             switch (phaseMapShapeCachedAtAttack)
             {
             case PM::SAW:
-                innerLoopImpl<UsesFB, IsWT, EM::PHASE_REMAP, PM::SAW>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<FB, IsWT, EM::PHASE_REMAP, PM::SAW>(onto, fbv, rf, dRF, phs);
                 break;
             case PM::SQUARE:
-                innerLoopImpl<UsesFB, IsWT, EM::PHASE_REMAP, PM::SQUARE>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<FB, IsWT, EM::PHASE_REMAP, PM::SQUARE>(onto, fbv, rf, dRF, phs);
                 break;
             case PM::PULSE:
-                innerLoopImpl<UsesFB, IsWT, EM::PHASE_REMAP, PM::PULSE>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<FB, IsWT, EM::PHASE_REMAP, PM::PULSE>(onto, fbv, rf, dRF, phs);
                 break;
             case PM::DOUBLE:
-                innerLoopImpl<UsesFB, IsWT, EM::PHASE_REMAP, PM::DOUBLE>(onto, fbv, rf, dRF, phs);
+                innerLoopImpl<FB, IsWT, EM::PHASE_REMAP, PM::DOUBLE>(onto, fbv, rf, dRF, phs);
                 break;
             case PM::SIN_TO_SQUARE:
-                innerLoopImpl<UsesFB, IsWT, EM::PHASE_REMAP, PM::SIN_TO_SQUARE>(onto, fbv, rf, dRF,
-                                                                                phs);
+                innerLoopImpl<FB, IsWT, EM::PHASE_REMAP, PM::SIN_TO_SQUARE>(onto, fbv, rf, dRF,
+                                                                            phs);
                 break;
             case PM::DOUBLE_SAW:
-                innerLoopImpl<UsesFB, IsWT, EM::PHASE_REMAP, PM::DOUBLE_SAW>(onto, fbv, rf, dRF,
-                                                                             phs);
+                innerLoopImpl<FB, IsWT, EM::PHASE_REMAP, PM::DOUBLE_SAW>(onto, fbv, rf, dRF, phs);
                 break;
             }
             break;
@@ -523,39 +544,37 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             switch (resonantSweepWindowCachedAtAttack)
             {
             case RW::SAW:
-                innerLoopImpl<UsesFB, IsWT, EM::RESONANT_SWEEP,
-                              Patch::SourceNode::PhaseMapShape::SAW, RW::SAW>(
-                    onto, fbv, rf, dRF, phs, resonantSweepKScaleCachedAtAttack);
+                innerLoopImpl<FB, IsWT, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::SAW>(onto, fbv, rf, dRF, phs, resonantSweepKScaleCachedAtAttack);
                 break;
             case RW::TRIANGLE:
-                innerLoopImpl<UsesFB, IsWT, EM::RESONANT_SWEEP,
-                              Patch::SourceNode::PhaseMapShape::SAW, RW::TRIANGLE>(
-                    onto, fbv, rf, dRF, phs, resonantSweepKScaleCachedAtAttack);
+                innerLoopImpl<FB, IsWT, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::TRIANGLE>(onto, fbv, rf, dRF, phs,
+                                            resonantSweepKScaleCachedAtAttack);
                 break;
             case RW::TRAPEZOID:
-                innerLoopImpl<UsesFB, IsWT, EM::RESONANT_SWEEP,
-                              Patch::SourceNode::PhaseMapShape::SAW, RW::TRAPEZOID>(
-                    onto, fbv, rf, dRF, phs, resonantSweepKScaleCachedAtAttack);
+                innerLoopImpl<FB, IsWT, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::TRAPEZOID>(onto, fbv, rf, dRF, phs,
+                                             resonantSweepKScaleCachedAtAttack);
                 break;
             case RW::FULLTRAP:
-                innerLoopImpl<UsesFB, IsWT, EM::RESONANT_SWEEP,
-                              Patch::SourceNode::PhaseMapShape::SAW, RW::FULLTRAP>(
-                    onto, fbv, rf, dRF, phs, resonantSweepKScaleCachedAtAttack);
+                innerLoopImpl<FB, IsWT, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::FULLTRAP>(onto, fbv, rf, dRF, phs,
+                                            resonantSweepKScaleCachedAtAttack);
                 break;
             case RW::HANN:
-                innerLoopImpl<UsesFB, IsWT, EM::RESONANT_SWEEP,
-                              Patch::SourceNode::PhaseMapShape::SAW, RW::HANN>(
-                    onto, fbv, rf, dRF, phs, resonantSweepKScaleCachedAtAttack);
+                innerLoopImpl<FB, IsWT, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::HANN>(onto, fbv, rf, dRF, phs, resonantSweepKScaleCachedAtAttack);
                 break;
             case RW::BLACKMAN_HARRIS:
-                innerLoopImpl<UsesFB, IsWT, EM::RESONANT_SWEEP,
-                              Patch::SourceNode::PhaseMapShape::SAW, RW::BLACKMAN_HARRIS>(
-                    onto, fbv, rf, dRF, phs, resonantSweepKScaleCachedAtAttack);
+                innerLoopImpl<FB, IsWT, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::BLACKMAN_HARRIS>(onto, fbv, rf, dRF, phs,
+                                                   resonantSweepKScaleCachedAtAttack);
                 break;
             case RW::TUKEY:
-                innerLoopImpl<UsesFB, IsWT, EM::RESONANT_SWEEP,
-                              Patch::SourceNode::PhaseMapShape::SAW, RW::TUKEY>(
-                    onto, fbv, rf, dRF, phs, resonantSweepKScaleCachedAtAttack);
+                innerLoopImpl<FB, IsWT, EM::RESONANT_SWEEP, Patch::SourceNode::PhaseMapShape::SAW,
+                              RW::TUKEY>(onto, fbv, rf, dRF, phs,
+                                         resonantSweepKScaleCachedAtAttack);
                 break;
             }
             break;
@@ -568,23 +587,23 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             switch (noiseModeCachedAtAttack)
             {
             case NM::ADD_TO_PHASE:
-                innerLoopImpl<UsesFB, IsWT, EM::NOISE, PMSAW, RWSAW, NM::ADD_TO_PHASE>(
-                    onto, fbv, rf, dRF, phs);
+                innerLoopImpl<FB, IsWT, EM::NOISE, PMSAW, RWSAW, NM::ADD_TO_PHASE>(onto, fbv, rf,
+                                                                                   dRF, phs);
                 break;
             case NM::ADD_TO_SIGNAL:
-                innerLoopImpl<UsesFB, IsWT, EM::NOISE, PMSAW, RWSAW, NM::ADD_TO_SIGNAL>(
-                    onto, fbv, rf, dRF, phs);
+                innerLoopImpl<FB, IsWT, EM::NOISE, PMSAW, RWSAW, NM::ADD_TO_SIGNAL>(onto, fbv, rf,
+                                                                                    dRF, phs);
                 break;
             case NM::MIX_WITH_SIGNAL:
-                innerLoopImpl<UsesFB, IsWT, EM::NOISE, PMSAW, RWSAW, NM::MIX_WITH_SIGNAL>(
-                    onto, fbv, rf, dRF, phs);
+                innerLoopImpl<FB, IsWT, EM::NOISE, PMSAW, RWSAW, NM::MIX_WITH_SIGNAL>(onto, fbv, rf,
+                                                                                      dRF, phs);
                 break;
             case NM::MUL_BY_SIGNAL:
-                innerLoopImpl<UsesFB, IsWT, EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_SIGNAL>(
-                    onto, fbv, rf, dRF, phs);
+                innerLoopImpl<FB, IsWT, EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_SIGNAL>(onto, fbv, rf,
+                                                                                    dRF, phs);
                 break;
             case NM::MUL_BY_UNI_SIGNAL:
-                innerLoopImpl<UsesFB, IsWT, EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_UNI_SIGNAL>(
+                innerLoopImpl<FB, IsWT, EM::NOISE, PMSAW, RWSAW, NM::MUL_BY_UNI_SIGNAL>(
                     onto, fbv, rf, dRF, phs);
                 break;
             }
@@ -594,7 +613,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     }
 
     template <
-        bool UsesFB, bool IsWT, Patch::SourceNode::ExtendedMode ET,
+        FbMode FB, bool IsWT, Patch::SourceNode::ExtendedMode ET,
         Patch::SourceNode::PhaseMapShape S = Patch::SourceNode::PhaseMapShape::SAW,
         Patch::SourceNode::ResonantSweepWindow R = Patch::SourceNode::ResonantSweepWindow::SAW,
         Patch::SourceNode::NoiseMode NM = Patch::SourceNode::NoiseMode::ADD_TO_PHASE>
@@ -666,12 +685,17 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             lfsrMode = lfsrModeCachedAtAttack;
         }
 
+        // the loop state in locals, so phs and fbv are not stored and reloaded every sample
+        uint32_t phsL{phs};
+        int32_t dPhaseL{dPhase};
+        float fb0{fbv[0]}, fb1{fbv[1]};
+
         for (int i = 0; i < blockSize; ++i)
         {
-            dPhase = st.dPhase((baseFrequency * (1.0 + fmAmount[i])) * rf + absOffset);
+            dPhaseL = st.dPhase((baseFrequency * (1.0 + fmAmount[i])) * rf + absOffset);
             rf += dRF;
 
-            phs += dPhase;
+            phsL += dPhaseL;
             // When self-feedback is inactive for this block, skip the fb math
             // entirely (constexpr-out). When active, use an int compare for the
             // sign bit instead of std::signbit on int32_t — std::signbit's
@@ -680,20 +704,38 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             // extended-mode transform downstream, so this gating must be at the
             // top of the per-sample loop, not around EM::NONE only.
             uint32_t ph{0};
-            if constexpr (UsesFB)
+            if constexpr (FB != FB_OFF)
             {
-                auto fb = 0.5 * (fbv[0] + fbv[1]);
-                auto sb = (feedbackLevel[i] < 0);
-                // fb = sb ? fb * fb : fb. Ugh a branch. but bool = 0/1, so
-                // (1-sb) * fb + sb * fb * fb - 3 mul, 2 add
-                // fb - sb * fb + sb * fb * fb - 3 nul 2 add
-                // fb * ( 1 - sb * ( 1 - fb)) - 2 mul 2 add
-                fb = fb * (1 - sb * (1 - fb));
-                ph = phs + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb);
+                if constexpr (FB == FB_POSITIVE)
+                {
+                    // the value the general form gives: 1 - 0 * x is exactly 1 and halving is
+                    // exact, so both round the same exact product once
+                    ph = phsL + phaseInput[i] +
+                         (int32_t)((double)(fb0 + fb1) * (0.5 * (double)feedbackLevel[i]));
+                }
+                else if constexpr (FB == FB_NEGATIVE)
+                {
+                    // 1 - (1 - fb) is exactly fb unless fb is too small to move the phase, and a
+                    // float squared fits a double, so this rounds the same exact product once
+                    auto s = (double)(fb0 + fb1);
+                    ph = phsL + phaseInput[i] +
+                         (int32_t)((s * s) * (0.25 * (double)feedbackLevel[i]));
+                }
+                else
+                {
+                    auto fb = 0.5 * (fb0 + fb1);
+                    auto sb = (feedbackLevel[i] < 0);
+                    // fb = sb ? fb * fb : fb. Ugh a branch. but bool = 0/1, so
+                    // (1-sb) * fb + sb * fb * fb - 3 mul, 2 add
+                    // fb - sb * fb + sb * fb * fb - 3 nul 2 add
+                    // fb * ( 1 - sb * ( 1 - fb)) - 2 mul 2 add
+                    fb = fb * (1 - sb * (1 - fb));
+                    ph = phsL + phaseInput[i] + (int32_t)(feedbackLevel[i] * fb);
+                }
             }
             else
             {
-                ph = phs + phaseInput[i];
+                ph = phsL + phaseInput[i];
             }
 
             if constexpr (IsWT)
@@ -789,13 +831,20 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
 
             out = out * rmLevel[i];
             onto[i] = out;
-            if constexpr (UsesFB)
+            if constexpr (FB != FB_OFF)
             {
-                fbv[1] = fbv[0];
-                fbv[0] = out;
+                fb1 = fb0;
+                fb0 = out;
             }
         }
-        if constexpr (!UsesFB)
+        phs = phsL;
+        dPhase = dPhaseL;
+        if constexpr (FB != FB_OFF)
+        {
+            fbv[0] = fb0;
+            fbv[1] = fb1;
+        }
+        else
         {
             // keep the history the fb path would have, so feedback returning next block is exact
             fbv[1] = onto[blockSize - 2];
