@@ -105,7 +105,7 @@ struct Patch : pats::PatchBase<Patch, Param>
     static constexpr uint64_t version_130a = 0x010301;
     // user wavetables: morph and its env / lfo depths
     static constexpr uint64_t version_130b = 0x010302;
-    // output bus cleared per block; legacy flag keeps the pre-14 feedback comb
+    // output bus cleared per block, table slopes fixed; the legacy flag keeps both as 1.2 had them
     static constexpr uint64_t version_130c = 0x010303;
 
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
@@ -1969,11 +1969,11 @@ struct Patch : pats::PatchBase<Patch, Param>
                                    .withGroupName(name())
                                    .withDefault(false)
                                    .withID(id(58))),
-              legacyOutputFeedback(boolMd(version_130c)
-                                       .withName(name() + " Legacy Output Feedback")
-                                       .withGroupName(name())
-                                       .withDefault(false)
-                                       .withID(id(59))),
+              legacyDsp(boolMd(version_130c)
+                            .withName(name() + " Legacy 1.2 DSP")
+                            .withGroupName(name())
+                            .withDefault(false)
+                            .withID(id(59))),
               bitDepthAdjust(intMd(version_120e)
                                  .withName(name() + " Bit Depth Adjust")
                                  .withGroupName(name())
@@ -2050,7 +2050,8 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param lowpass, bitRateAdjust, zohPreFilter, bitDepthAdjust, highpass;
         Param ultrasonicFilter;
         Param outputGain;
-        Param legacyOutputFeedback;
+        // 1.2 and earlier: the uncleared output bus and the old squarish, sawish, blackman harris
+        Param legacyDsp;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -2089,7 +2090,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &bitDepthAdjust,
                                      &highpass,
                                      &outputGain,
-                                     &legacyOutputFeedback};
+                                     &legacyDsp};
             appendDAHDSRParams(res);
 
             for (int i = 0; i < numModsPer; ++i)

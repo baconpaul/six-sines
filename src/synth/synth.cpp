@@ -768,7 +768,7 @@ void Synth::preloadTables(bool eventsPending)
     }
     for (int i = 0; i < SinTable::NUM_WAVEFORMS; ++i)
         if (used[i])
-            SinTable::preloadWaveForm((SinTable::WaveForm)i);
+            SinTable::preloadWaveForm((SinTable::WaveForm)i, monoValues.legacyDsp);
     SinTable::preloadInterpolation();
 }
 
@@ -1002,6 +1002,8 @@ void Synth::reapplyControlSettings()
             setSampleRate(hostSampleRate);
         }
     }
+
+    monoValues.legacyDsp = patch.output.legacyDsp.value > 0.5f;
 
     auto val = (int)std::round(patch.output.playMode.value);
     if (val != 0)
@@ -1288,6 +1290,7 @@ void Synth::handleAudioThreadParamSideEffects(Param *dest)
         dest->meta.id == patch.output.pianoModeActive.meta.id ||
         dest->meta.id == patch.output.sampleRateStrategy.meta.id ||
         dest->meta.id == patch.output.resampleEngine.meta.id ||
+        dest->meta.id == patch.output.legacyDsp.meta.id ||
         dest->meta.id == patch.output.lowpass.meta.id ||
         dest->meta.id == patch.output.highpass.meta.id ||
         dest->meta.id == patch.output.bitRateAdjust.meta.id ||

@@ -31,6 +31,7 @@
 #include "dsp/sintable.h"
 #include "synth/patch.h"
 #include "synth/synth.h"
+#include "synth/voice.h"
 
 using namespace baconpaul::six_sines;
 
@@ -89,7 +90,7 @@ std::unique_ptr<Synth> makeSineSynth(bool legacyFeedback)
     flatEnv(p.output);
     p.output.level.value = 1.f;
     p.output.velSensitivity.value = 0.f;
-    p.output.legacyOutputFeedback.value = legacyFeedback ? 1.f : 0.f;
+    p.output.legacyDsp.value = legacyFeedback ? 1.f : 0.f;
 
     s->reapplyControlSettings();
     s->voiceManager->processNoteOnEvent(0, 0, 45, -1, 1.0f, 0.f);
@@ -121,7 +122,7 @@ double rmsOverSeconds(Synth &s, double seconds)
 TEST_CASE("Output bus clears each block by default", "[output-bus]")
 {
     auto p = makePatch();
-    REQUIRE(p->output.legacyOutputFeedback.value == 0.f);
+    REQUIRE(p->output.legacyDsp.value == 0.f);
 }
 
 TEST_CASE("Streams from version 13 and earlier keep the legacy output feedback", "[output-bus]")
@@ -133,7 +134,7 @@ TEST_CASE("Streams from version 13 and earlier keep the legacy output feedback",
 
     auto q = makePatch();
     REQUIRE(q->fromState(v13));
-    REQUIRE(q->output.legacyOutputFeedback.value == 1.f);
+    REQUIRE(q->output.legacyDsp.value == 1.f);
 }
 
 TEST_CASE("A version 14 stream round trips the legacy output flag", "[output-bus]")
@@ -141,10 +142,10 @@ TEST_CASE("A version 14 stream round trips the legacy output flag", "[output-bus
     for (float v : {0.f, 1.f})
     {
         auto p = makePatch();
-        p->output.legacyOutputFeedback.value = v;
+        p->output.legacyDsp.value = v;
         auto q = makePatch();
         REQUIRE(q->fromState(p->toState()));
-        REQUIRE(q->output.legacyOutputFeedback.value == v);
+        REQUIRE(q->output.legacyDsp.value == v);
     }
 }
 
@@ -156,4 +157,58 @@ TEST_CASE("Legacy output feedback raises a low sine by the comb gain", "[output-
 
     // 1 / (1 - g) with g = 0.15 * level^3 * env = 0.15
     REQUIRE(legacy / clean == Approx(1.0 / 0.85).margin(0.01));
+}
+
+namespace
+{
+std::unique_ptr<Synth> makeSquarishSynth(bool legacy)
+{
+    auto s = std::make_unique<Synth>(false);
+    s->setSampleRate(hostRate);
+    auto &p = s->patch;
+    p.output.playMode.value = 0.f;
+    p.output.polyLimit.value = 4.f;
+    p.output.unisonCount.value = 1.f;
+    p.output.legacyDsp.value = legacy ? 1.f : 0.f;
+    p.sourceNodes[0].active.value = 1.f;
+    p.sourceNodes[0].waveForm.value = (float)SinTable::SQUARISH;
+    p.mixerNodes[0].active.value = 1.f;
+    s->reapplyControlSettings();
+    return s;
+}
+
+const SIMD_M128 *tableForKey(Synth &s, int key)
+{
+    for (auto *v = s.head; v; v = v->next)
+        if (v->voiceValues.key == key)
+            return v->src[0].st.simdQuad;
+    return nullptr;
+}
+} // namespace
+
+TEST_CASE("The 1.2 dsp flag reads squarish from the 1.2 table", "[output-bus]")
+{
+    for (bool legacy : {false, true})
+    {
+        auto s = makeSquarishSynth(legacy);
+        s->voiceManager->processNoteOnEvent(0, 0, 60, -1, 1.0f, 0.f);
+        s->process(nullptr);
+        INFO("legacy " << legacy);
+        REQUIRE(tableForKey(*s, 60) == SinTable::quadTable(SinTable::SQUARISH, legacy));
+    }
+}
+
+TEST_CASE("A held note keeps its tables when the 1.2 dsp flag changes", "[output-bus]")
+{
+    auto s = makeSquarishSynth(true);
+    s->voiceManager->processNoteOnEvent(0, 0, 60, -1, 1.0f, 0.f);
+    s->process(nullptr);
+
+    s->patch.output.legacyDsp.value = 0.f;
+    s->reapplyControlSettings();
+    s->voiceManager->processNoteOnEvent(0, 0, 64, -1, 1.0f, 0.f);
+    s->process(nullptr);
+
+    REQUIRE(tableForKey(*s, 60) == SinTable::quadTable(SinTable::SQUARISH, true));
+    REQUIRE(tableForKey(*s, 64) == SinTable::quadTable(SinTable::SQUARISH, false));
 }

@@ -28,6 +28,7 @@ SIMD_M128 SinTable::simdFullQuad alignas(
     16)[NUM_WAVEFORMS][nQuadrants * nPoints];       // for each quad it is q, q+1, dq + 1
 SIMD_M128 SinTable::simdCubic alignas(16)[nPoints]; // it is cq, cq+1, cdq, cd1+1
 SIMD_M128 SinTable::simdZOH alignas(16)[nPoints];
+SIMD_M128 SinTable::simdLegacyQuad alignas(16)[3][nQuadrants * nPoints];
 
 bool SinTable::staticsInitialized{false};
 
@@ -41,6 +42,29 @@ void SinTable::fillTable(int WF, std::function<std::pair<double, double>(double 
             auto [v, dvdx] = der(xTable[Q][i], Q);
             quadrantTable[WF][Q][i] = static_cast<float>(v);
             dQuadrantTable[WF][Q][i] = static_cast<float>(dvdx * dxdPhase);
+        }
+    }
+}
+
+void SinTable::fillLegacyTable(WaveForm wf,
+                               std::function<std::pair<double, double>(double x, int Q)> der)
+{
+    // the same float rounding fillTable and the simd pack apply, so these match 1.2 exactly
+    static constexpr double dxdPhase = 1.0 / (nQuadrants * nPoints);
+    auto *dest = legacyQuad(wf);
+    for (int Q = 0; Q < nQuadrants; ++Q)
+    {
+        float v[nPoints + 1], d[nPoints + 1];
+        for (int i = 0; i < nPoints + 1; ++i)
+        {
+            auto [a, b] = der(xTable[Q][i], Q);
+            v[i] = static_cast<float>(a);
+            d[i] = static_cast<float>(b * dxdPhase);
+        }
+        for (int i = 0; i < nPoints; ++i)
+        {
+            float r alignas(16)[4]{v[i], d[i], v[i + 1], d[i + 1]};
+            dest[nPoints * Q + i] = SIMD_MM(load_ps)(r);
         }
     }
 }
@@ -89,11 +113,11 @@ void SinTable::initializeStatics()
                   static constexpr double winFreq{8.0};
                   static constexpr double dFr{1.0 / (4 * winFreq)};
                   static constexpr double twoPiF{twoPi * winFreq};
-                  float v{0}, dv{0};
+                  double v{0}, dv{0};
                   if (x <= dFr || x > 1.0 - dFr)
                   {
                       v = sin(twoPiF * x);
-                      dv = twoPiF * cos(2.0 * M_PI * 4 * x);
+                      dv = twoPiF * cos(twoPiF * x);
                   }
                   else if (x <= 0.5 - dFr)
                   {
@@ -103,7 +127,7 @@ void SinTable::initializeStatics()
                   else if (x < 0.5 + dFr)
                   {
                       v = -sin(twoPiF * x);
-                      dv = twoPiF * cos(2.0 * M_PI * winFreq * x);
+                      dv = -twoPiF * cos(twoPiF * x);
                   }
                   else
                   {
@@ -140,7 +164,7 @@ void SinTable::initializeStatics()
                   auto eps = 0.00001;
                   auto cp = sin(M_PI * (32 * pow((x + eps - 0.5), 6) + 0.5));
                   auto cm = sin(M_PI * (32 * pow((x - eps - 0.5), 6) + 0.5));
-                  auto dc = (cp - cm) / 2 * eps;
+                  auto dc = (cp - cm) / (2 * eps);
 
                   auto v = b + c * (a - b);
                   auto dv = db + dc * (a - b) + c * (da - db);
@@ -465,9 +489,8 @@ void SinTable::initializeStatics()
     {
         auto v = a0 - a1 * cos(twoPi * x) + a2 * cos(2 * twoPi * x) - a3 * cos(3 * twoPi * x) +
                  a4 * cos(4 * twoPi * x);
-        auto dv = -a1 * twoPi * sin(twoPi * x) + a2 * 2 * twoPi * sin(2 * twoPi * x) -
-                  a3 * 3 * twoPi * sin(3 * twoPi * x) + a4 * 4 * twoPi * sin(4 * twoPi * x);
-        ;
+        auto dv = a1 * twoPi * sin(twoPi * x) - a2 * 2 * twoPi * sin(2 * twoPi * x) +
+                  a3 * 3 * twoPi * sin(3 * twoPi * x) - a4 * 4 * twoPi * sin(4 * twoPi * x);
         return std::make_pair(v, dv);
     };
     fillTable(SinTable::WaveForm::BLACKMAN_HARRIS_WINDOW, [cosSum](double x, int Q)
@@ -480,8 +503,64 @@ void SinTable::initializeStatics()
                       return std::make_pair(0.0, 0.0);
                   }
                   auto res = cosSum(x * 2, 0.35875, 0.48829, 0.14128, 0.01168, 0.00196);
-                  return std::make_pair(res.first, res.second * 2);
+                  // keeps the slope sign it has always shipped with, so it sounds as it did
+                  return std::make_pair(res.first, -res.second * 2);
               });
+
+    // 1.2's slopes: squarish in float with the wrong edge slopes, sawish with its dc scaled by
+    // eps squared, blackman harris with every slope sign flipped
+    fillLegacyTable(WaveForm::SQUARISH,
+                    [](double x, int Q)
+                    {
+                        static constexpr double winFreq{8.0};
+                        static constexpr double dFr{1.0 / (4 * winFreq)};
+                        static constexpr double twoPiF{twoPi * winFreq};
+                        float v{0}, dv{0};
+                        if (x <= dFr || x > 1.0 - dFr)
+                        {
+                            v = sin(twoPiF * x);
+                            dv = twoPiF * cos(2.0 * M_PI * 4 * x);
+                        }
+                        else if (x <= 0.5 - dFr)
+                        {
+                            v = 1.0;
+                            dv = 0.0;
+                        }
+                        else if (x < 0.5 + dFr)
+                        {
+                            v = -sin(twoPiF * x);
+                            dv = twoPiF * cos(2.0 * M_PI * winFreq * x);
+                        }
+                        else
+                        {
+                            v = -1.0;
+                            dv = 0.0;
+                        }
+                        return std::make_pair(v, dv);
+                    });
+    fillLegacyTable(WaveForm::SAWISH,
+                    [](double x, int Q)
+                    {
+                        auto a = 1.0 - 2 * x;
+                        auto da = -2;
+                        auto b = sin(6 * M_PI * x);
+                        auto db = 6 * M_PI * cos(6 * M_PI * x);
+                        auto c = sin(M_PI * (32 * pow((x - 0.5), 6) + 0.5));
+                        auto eps = 0.00001;
+                        auto cp = sin(M_PI * (32 * pow((x + eps - 0.5), 6) + 0.5));
+                        auto cm = sin(M_PI * (32 * pow((x - eps - 0.5), 6) + 0.5));
+                        auto dc = (cp - cm) / 2 * eps;
+                        auto v = b + c * (a - b);
+                        auto dv = db + dc * (a - b) + c * (da - db);
+                        return std::make_pair(-v, -dv);
+                    });
+    // negating the corrected slope reproduces 1.2's bit for bit: rounding is sign symmetric
+    fillLegacyTable(WaveForm::BLACKMAN_HARRIS_WINDOW,
+                    [cosSum](double x, int Q)
+                    {
+                        auto res = cosSum(x, 0.35875, 0.48829, 0.14128, 0.01168, 0.00196);
+                        return std::make_pair(res.first, -res.second);
+                    });
 
     // Tukey with alpha 0.15
     fillTable(SinTable::WaveForm::TUKEY_WINDOW,
