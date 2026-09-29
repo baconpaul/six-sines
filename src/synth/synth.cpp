@@ -791,7 +791,9 @@ void Synth::addToVoiceList(Voice *v)
 
 Voice *Synth::removeFromVoiceList(Voice *cvoice)
 {
-    if (patch.output.portaContMode.value > 0.5 && voiceCount == 1)
+    // poly never glides, so never arm a continuation for the next note
+    if (patch.output.playMode.value > 0.5 && patch.output.portaContMode.value > 0.5 &&
+        voiceCount == 1)
     {
         portaContinuation.sourceKey =
             cvoice->voiceValues.key + cvoice->voiceValues.portaDiff * cvoice->voiceValues.portaSign;
@@ -1020,6 +1022,9 @@ void Synth::reapplyControlSettings()
     else
     {
         voiceManager->setPlaymode(0, voiceManager_t::PlayMode::POLY_VOICES);
+        // drop any continuation armed while in mono
+        portaContinuation.active = false;
+        portaContinuation.updateEveryBlock = false;
         if (patch.output.pianoModeActive.value > 0.5)
         {
             voiceManager->repeatedKeyMode = voiceManager_t::RepeatedKeyMode::PIANO;
