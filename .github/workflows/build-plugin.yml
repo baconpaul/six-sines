@@ -37,6 +37,13 @@ jobs:
             name: linux-x64
             cmake_args: -GNinja
 
+          # x64 linux ships from the docker build below; arm ships from here
+          - os: ubuntu-24.04-arm
+            name: linux-arm64
+            cmake_args: -GNinja -DSIXSINES_EXTRA_ZIP_NAME=-ubuntu24.04-arm64
+            gcc_version: 13
+            upload_linux: true
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -47,6 +54,7 @@ jobs:
         uses: surge-synthesizer/sst-githubactions/prepare-for-juce@main
         with:
           os: ${{ runner.os }}
+          gccversion: ${{ matrix.gcc_version || 12 }}
 
       - name: Install Inno Setup
         uses: surge-synthesizer/sst-githubactions/install-innosetup@main
@@ -90,7 +98,7 @@ jobs:
           ls -l build/installer
 
       - name: Upload artifact
-        if: github.event_name != 'pull_request' && runner.os != 'Linux'  # We get this through docker
+        if: github.event_name != 'pull_request' && (runner.os != 'Linux' || matrix.upload_linux)  # x64 linux comes from docker
         uses: actions/upload-artifact@v4
         with:
           path: build/installer

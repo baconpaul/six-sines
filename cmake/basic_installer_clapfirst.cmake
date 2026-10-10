@@ -8,6 +8,7 @@ function(add_clapfirst_installer)
             ASSET_OUTPUT_DIRECTORY
             PRODUCT_NAME
             INSTALLER_PREFIX
+            EXTRA_ZIP_NAME  # appended after the system name, e.g. "-ubuntu24.04-arm64"
     )
     set(multiValueArgs
             TARGETS  # A list of plugin formats, "CLAP" "VST3" "AUV2"
@@ -37,7 +38,7 @@ function(add_clapfirst_installer)
 
 
     string(TIMESTAMP INST_DATE "%Y-%m-%d")
-    set(INST_ZIP ${CIN_INSTALLER_PREFIX}-${CMAKE_SYSTEM_NAME}${INST_EXTRA_ZIP_NAME}-${INST_DATE}-${GIT_COMMIT_HASH}.zip)
+    set(INST_ZIP ${CIN_INSTALLER_PREFIX}-${CMAKE_SYSTEM_NAME}${CIN_EXTRA_ZIP_NAME}-${INST_DATE}-${GIT_COMMIT_HASH}.zip)
     message(STATUS "Zip File Name is ${INST_ZIP}")
 
     message(STATUS "PRODUCT NAME is ${CIN_PRODUCT_NAME}")
