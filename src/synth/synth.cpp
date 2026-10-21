@@ -1017,7 +1017,7 @@ void Synth::reapplyControlSettings()
     {
         voiceManager->setPlaymode(0, voiceManager_t::PlayMode::MONO_NOTES,
                                   (int)voiceManager_t::MonoPlayModeFeatures::NATURAL_LEGATO);
-        voiceManager->repeatedKeyMode = voiceManager_t::RepeatedKeyMode::MULTI_VOICE;
+        voiceManager->setRepeatedKeyMode(0, voiceManager_t::RepeatedKeyMode::MULTI_VOICE);
     }
     else
     {
@@ -1027,11 +1027,11 @@ void Synth::reapplyControlSettings()
         portaContinuation.updateEveryBlock = false;
         if (patch.output.pianoModeActive.value > 0.5)
         {
-            voiceManager->repeatedKeyMode = voiceManager_t::RepeatedKeyMode::PIANO;
+            voiceManager->setRepeatedKeyMode(0, voiceManager_t::RepeatedKeyMode::PIANO);
         }
         else
         {
-            voiceManager->repeatedKeyMode = voiceManager_t::RepeatedKeyMode::MULTI_VOICE;
+            voiceManager->setRepeatedKeyMode(0, voiceManager_t::RepeatedKeyMode::MULTI_VOICE);
         }
     }
 
