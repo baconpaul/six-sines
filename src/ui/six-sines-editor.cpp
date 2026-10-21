@@ -775,7 +775,7 @@ void SixSinesEditor::showPresetPopup()
             clapHost->get_extension(clapHost, CLAP_WRAPPER_STANDALONE_FEATURES));
         if (sf && sf->supports_audio_midi_configuration_screen(clapHost))
         {
-            p.addItem("Audio Settings...",
+            p.addItem("Audio/MIDI Settings...",
                       [sf, h = clapHost]() { sf->show_audio_midi_configuration_screen(h); });
             p.addSeparator();
         }
