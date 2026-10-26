@@ -13,6 +13,10 @@
  * The source code and license are at https://github.com/baconpaul/six-sines
  */
 
+#include <algorithm>
+#include <cctype>
+#include <string>
+
 #include "preset-discovery-impl.h"
 #include "configuration.h"
 #include "presets/preset-manager.h"
@@ -25,12 +29,33 @@ namespace prov
 {
 struct Provider
 {
+    clap_preset_discovery_provider provider{};
     presets::PresetManager pm{nullptr};
     const clap_preset_discovery_indexer_t *indexer{nullptr};
 };
+
+bool matchesBlockedHost(const char *s)
+{
+    if (!s)
+        return false;
+
+    std::string v{s};
+    std::transform(v.begin(), v.end(), v.begin(), [](unsigned char c) { return std::tolower(c); });
+    return v.find("fender") != std::string::npos || v.find("presonus") != std::string::npos;
+}
+
 bool init(const struct clap_preset_discovery_provider *provider)
 {
     auto pm = static_cast<Provider *>(provider->provider_data);
+
+    // some fender and presonus indexers crash with our provider
+    if (matchesBlockedHost(pm->indexer->vendor) || matchesBlockedHost(pm->indexer->name))
+    {
+        auto vendor = pm->indexer->vendor ? pm->indexer->vendor : "(null)";
+        auto name = pm->indexer->name ? pm->indexer->name : "(null)";
+        SXSNLOG("Skipping preset discovery for indexer '" << name << "' / '" << vendor << "'");
+        return false;
+    }
 
     struct clap_preset_discovery_location fac{CLAP_PRESET_DISCOVERY_IS_FACTORY_CONTENT,
                                               "Six Sines Factory Content",
@@ -139,12 +164,13 @@ const clap_preset_discovery_provider_t *create(const clap_preset_discovery_facto
 {
     if (strcmp(provider_id, "org.baconpaul.six-sines.preset-discovery") == 0)
     {
-        static auto pm = new prov::Provider{};
+        // owned by the host until destroy
+        auto pm = new prov::Provider{};
         pm->indexer = indexer;
-        static struct clap_preset_discovery_provider provider = {
+        pm->provider = {
             get_descriptor(nullptr, 0), pm, prov::init, prov::destroy, prov::get_metadata,
             prov::get_extension};
-        return &provider;
+        return &pm->provider;
     }
     return nullptr;
 }

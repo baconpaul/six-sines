@@ -175,10 +175,8 @@ const void *get_factory(const char *factory_id)
     }
     if (strcmp(factory_id, CLAP_PRESET_DISCOVERY_FACTORY_ID) == 0 ||
         strcmp(factory_id, CLAP_PRESET_DISCOVERY_FACTORY_ID_COMPAT) == 0)
-
     {
-        // Uncomment this to try the preset discovery
-        // return sixSinesPresetDiscoveryFactory();
+        return sixSinesPresetDiscoveryFactory();
     }
     return nullptr;
 }
