@@ -400,7 +400,8 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
 
     auto &out = editor.patchMainRef.output;
     createComponent(editor, *this, out.sampleRateStrategy, srStrat, srStratD);
-    addAndMakeVisible(*srStrat);
+    if (forcedSampleRateStrategyDefault < 0)
+        addAndMakeVisible(*srStrat);
     createComponent(editor, *this, out.resampleEngine, rsEng, rsEngD);
     addAndMakeVisible(*rsEng);
 
@@ -461,6 +462,11 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     mkLabel(highpassLabel, "High Pass:");
     mkLabel(outGainLabel, "Output:");
     mkLabel(downsamplerLabel, "Downsampler:");
+    if (forcedSampleRateStrategyDefault >= 0)
+        mkLabel(forcedRateLabel,
+                forcedSampleRateStrategyDefault == SR_2X ? "2x Host (build forced)"
+                                                         : "1x Host (build forced)",
+                juce::Justification::centredLeft);
 
     uiSectionTitle = std::make_unique<jcmp::RuledLabel>();
     uiSectionTitle->setText("User Interface");
@@ -621,7 +627,10 @@ void PlayModeSubPanel::resized()
         return row;
     };
 
-    pathCol.add(stageRow(sampleRateLabel, srStrat));
+    if (forcedRateLabel)
+        pathCol.add(stageRow(sampleRateLabel, forcedRateLabel));
+    else
+        pathCol.add(stageRow(sampleRateLabel, srStrat));
     pathCol.add(stageRow(ultrasonicLabel, ultrasonicFilter));
     pathCol.add(stageRow(saturationLabel, satType, satDrive.get()));
     {
@@ -928,6 +937,10 @@ void PlayModeSubPanel::setEnabledState()
     auto brOn = editor.patchMainRef.output.bitRateAdjust.value > 0.5;
     zohPreFilter->setEnabled(brOn);
     zohPreFilterLabel->setEnabled(brOn);
+
+    // a forced 2x or 1x build has no resampler
+    rsEng->setEnabled(forcedSampleRateStrategyDefault < 0);
+    downsamplerLabel->setEnabled(forcedSampleRateStrategyDefault < 0);
 
     auto me = editor.dawStateMainRef.audio.mpeActive;
     mpeRangeEditor->setEnabled(me);

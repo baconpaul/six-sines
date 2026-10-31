@@ -49,8 +49,20 @@ enum SampleRateStrategy
     SR_110120 = 0, // If in 44.1 land use 110.25, if not use 120 (2.5x the 'base' rate)
     SR_132144 = 1, // or 3x
     SR_176192 = 2, // or 4x
-    SR_220240 = 3  // or 5x
+    SR_220240 = 3, // or 5x
+    // engine-only, never streamed: reached through forcedSampleRateStrategy
+    SR_2X = 4, // exactly twice the host rate, half-rate filter down, no resampler
+    SR_1X = 5  // exactly the host rate, no resampler; aliases
 };
+
+// set by the SIX_SINES_FORCE_ENGINE_RATE cmake option; -1 follows the patch
+#if defined(SIX_SINES_FORCE_ENGINE_RATE_2X)
+static constexpr int forcedSampleRateStrategyDefault{SR_2X};
+#elif defined(SIX_SINES_FORCE_ENGINE_RATE_1X)
+static constexpr int forcedSampleRateStrategyDefault{SR_1X};
+#else
+static constexpr int forcedSampleRateStrategyDefault{-1};
+#endif
 
 enum ResamplerEngine
 {

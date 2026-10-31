@@ -54,6 +54,8 @@ Synth::Synth(bool mo)
 
     std::fill(lState.begin(), lState.end(), nullptr);
     std::fill(rState.begin(), rState.end(), nullptr);
+    for (auto &h : halfRate)
+        h = std::make_unique<halfRate_t>(6, true);
 
     // User-defaults reader. Uses the same path/product name as the editor so both share the
     // one preferences file. Construction only reads it; nothing is written here.
@@ -294,9 +296,16 @@ void Synth::setSampleRate(double sampleRate)
         mul = 5;
     }
     break;
+    case SR_2X:
+    case SR_1X:
+        break;
     }
 
-    if (is441)
+    if (sampleRateStrategy == SR_2X)
+        internalRate = hostSampleRate * 2;
+    else if (sampleRateStrategy == SR_1X)
+        internalRate = hostSampleRate;
+    else if (is441)
         internalRate = 44100 * mul;
     else
         internalRate = 48000 * mul;
@@ -313,7 +322,12 @@ void Synth::setSampleRate(double sampleRate)
     }
     sampleRateRatio = hostSampleRate / engineSampleRate;
 
-    if (usesLanczos())
+    if (usesHostMultiple())
+    {
+        for (auto &h : halfRate)
+            h->reset();
+    }
+    else if (usesLanczos())
     {
         for (int i = 0; i < (isMultiOut ? (1 + numOps) : 1); ++i)
             resampler[i] = std::make_unique<resampler_t>((float)monoValues.sr.sampleRate,
@@ -537,7 +551,26 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
         // before downsampling. Per-op buses in multiOut are not processed yet.
         processEndOfBlock(lOutput[0], lOutput[1]);
 
-        if (usesLanczos())
+        if (sampleRateStrategy == SR_2X)
+        {
+            for (int rsi = 0; rsi < (multiOut ? (numOps + 1) : 1); ++rsi)
+            {
+                halfRate[rsi]->process_block_D2(lOutput[2 * rsi], lOutput[2 * rsi + 1], blockSize,
+                                                output[2 * rsi] + generated,
+                                                output[2 * rsi + 1] + generated);
+            }
+            generated += blockSize / 2;
+        }
+        else if (sampleRateStrategy == SR_1X)
+        {
+            for (int rsi = 0; rsi < (multiOut ? (numOps + 1) : 1); ++rsi)
+            {
+                memcpy(output[2 * rsi], lOutput[2 * rsi], sizeof(lOutput[0]));
+                memcpy(output[2 * rsi + 1], lOutput[2 * rsi + 1], sizeof(lOutput[0]));
+            }
+            generated += blockSize;
+        }
+        else if (usesLanczos())
         {
             if constexpr (multiOut)
             {
@@ -656,7 +689,7 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
         }
     }
 
-    if (resamplerEngine == LANCZOS)
+    if (usesLanczos() && resamplerEngine == LANCZOS)
     {
         if constexpr (multiOut)
         {
@@ -672,7 +705,7 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
             resampler[0]->renormalizePhases();
         }
     }
-    if (resamplerEngine == ZOH)
+    if (usesLanczos() && resamplerEngine == ZOH)
     {
         if constexpr (multiOut)
         {
@@ -688,7 +721,7 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
             resampler[0]->renormalizePhases();
         }
     }
-    if (resamplerEngine == LINTERP)
+    if (usesLanczos() && resamplerEngine == LINTERP)
     {
         if constexpr (multiOut)
         {
@@ -997,10 +1030,17 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
 
 void Synth::reapplyControlSettings()
 {
-    if (sampleRateStrategy != (SampleRateStrategy)patch.output.sampleRateStrategy.value ||
+    auto srs = (SampleRateStrategy)std::round(patch.output.sampleRateStrategy.value);
+    // a patch can only ask for the streamed strategies
+    if (srs < SR_110120 || srs > SR_220240)
+        srs = SR_110120;
+    if (forcedSampleRateStrategy >= 0)
+        srs = (SampleRateStrategy)forcedSampleRateStrategy;
+
+    if (sampleRateStrategy != srs ||
         resamplerEngine != (ResamplerEngine)patch.output.resampleEngine.value)
     {
-        sampleRateStrategy = (SampleRateStrategy)patch.output.sampleRateStrategy.value;
+        sampleRateStrategy = srs;
         resamplerEngine = (ResamplerEngine)patch.output.resampleEngine.value;
 
         if (hostSampleRate > 0)

@@ -24,6 +24,7 @@
 
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
 #include "sst/filters/ButterworthLPHP.h"
+#include "sst/filters/HalfRateFilter.h"
 #include "samplerate.h"
 
 class TiXmlElement;
@@ -57,16 +58,26 @@ struct Synth
     bool isTableInitialized{MatrixIndex::initialize()}; // this forces this init before other ctors
 
     SampleRateStrategy sampleRateStrategy{SampleRateStrategy::SR_110120};
+    // when >= 0 the engine runs this strategy whatever the patch says
+    int forcedSampleRateStrategy{forcedSampleRateStrategyDefault};
     ResamplerEngine resamplerEngine{ResamplerEngine::SRC_FAST};
+    // 2x and 1x run at an exact multiple of the host rate and ignore the resampler engine
+    inline bool usesHostMultiple() const
+    {
+        return sampleRateStrategy == SR_2X || sampleRateStrategy == SR_1X;
+    }
     inline bool usesLanczos() const
     {
-        return resamplerEngine == ResamplerEngine::LANCZOS || resamplerEngine == ZOH ||
-               resamplerEngine == LINTERP;
+        return !usesHostMultiple() && (resamplerEngine == ResamplerEngine::LANCZOS ||
+                                       resamplerEngine == ZOH || resamplerEngine == LINTERP);
     }
 
     using resampler_t = sst::basic_blocks::dsp::LanczosResampler<blockSize>;
     std::array<std::unique_ptr<resampler_t>, 1 + numOps> resampler;
     std::array<SRC_STATE *, 1 + numOps> lState{}, rState{};
+
+    using halfRate_t = sst::filters::HalfRate::HalfRateFilter;
+    std::array<std::unique_ptr<halfRate_t>, 1 + numOps> halfRate;
 
     // Audio input upsampling: host rate -> engine rate
     using audioInResampler_t = sst::basic_blocks::dsp::LanczosResampler<blockSize>;
@@ -628,7 +639,6 @@ struct Synth
      * slot was unavailable so the caller knows to come back.
      */
     bool reconcileWavetables();
-
 
     // Errors from the last reconcile, for the UI to show. Main thread only.
     std::array<std::string, numOps> wavetableError;
