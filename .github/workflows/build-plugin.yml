@@ -54,7 +54,7 @@ jobs:
         uses: surge-synthesizer/sst-githubactions/prepare-for-juce@main
         with:
           os: ${{ runner.os }}
-          gccversion: ${{ matrix.gcc_version || 12 }}
+          gccversion: ${{ matrix.gcc_version || 13 }}
 
       - name: Install Inno Setup
         uses: surge-synthesizer/sst-githubactions/install-innosetup@main

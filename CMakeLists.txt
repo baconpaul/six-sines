@@ -12,6 +12,7 @@ set(PRODUCT_NAME "Six Sines")
 option(USE_SANITIZER "Build and link with ASAN" FALSE)
 option(COPY_AFTER_BUILD "Will copy after build" TRUE)
 option(BUILD_SINGLE_ONLY "Only build the one plugin - no seven sines out" FALSE)
+set(SIX_SINES_FORCE_ENGINE_RATE "" CACHE STRING "Ignore the patch engine rate and run at 2X or 1X the host rate")
 
 include(cmake/compile-options.cmake)
 
@@ -92,6 +93,16 @@ if (${BUILD_SINGLE_ONLY})
     target_compile_definitions(${PROJECT_NAME}-impl PRIVATE
             CLAP_PLUGIN_COUNT=1
     )
+endif()
+
+if (SIX_SINES_FORCE_ENGINE_RATE STREQUAL "2X")
+    message(STATUS "Forcing the engine rate to 2x the host rate")
+    target_compile_definitions(${PROJECT_NAME}-impl PUBLIC SIX_SINES_FORCE_ENGINE_RATE_2X=1)
+elseif (SIX_SINES_FORCE_ENGINE_RATE STREQUAL "1X")
+    message(STATUS "Forcing the engine rate to 1x the host rate")
+    target_compile_definitions(${PROJECT_NAME}-impl PUBLIC SIX_SINES_FORCE_ENGINE_RATE_1X=1)
+elseif (NOT SIX_SINES_FORCE_ENGINE_RATE STREQUAL "")
+    message(FATAL_ERROR "SIX_SINES_FORCE_ENGINE_RATE must be empty, 2X or 1X")
 endif()
 
 if (WIN32)

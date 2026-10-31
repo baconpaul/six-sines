@@ -125,6 +125,7 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<PatchDiscrete> srStratD;
     std::unique_ptr<jcmp::JogUpDownButton> rsEng;
     std::unique_ptr<PatchDiscrete> rsEngD;
+    std::unique_ptr<jcmp::Label> forcedRateLabel;
 
     std::unique_ptr<jcmp::JogUpDownButton> satType, lowpass, bitRate, bitDepth, highpass;
     std::unique_ptr<PatchDiscrete> satTypeD, lowpassD, bitRateD, bitDepthD, highpassD;
