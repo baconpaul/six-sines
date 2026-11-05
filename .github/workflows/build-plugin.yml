@@ -97,6 +97,12 @@ jobs:
         run: |
           ls -l build/installer
 
+      - name: Show Linux deb
+        if: runner.os == 'Linux'
+        run: |
+          dpkg-deb -I build/installer/*.deb
+          dpkg-deb -c build/installer/*.deb
+
       - name: Upload artifact
         if: github.event_name != 'pull_request' && (runner.os != 'Linux' || matrix.upload_linux)  # x64 linux comes from docker
         uses: actions/upload-artifact@v4
@@ -127,6 +133,8 @@ jobs:
       - name: Show Installer Directory
         run: |
           ls -l ./build/installer
+          dpkg-deb -I ./build/installer/*.deb
+          dpkg-deb -c ./build/installer/*.deb
 
       - name: Upload artifact
         if: github.event_name != 'pull_request'
