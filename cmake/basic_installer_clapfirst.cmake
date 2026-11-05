@@ -127,13 +127,26 @@ function(add_clapfirst_installer)
                 COMMAND ${CMAKE_COMMAND} -E tar cvf installer/${INST_ZIP} --format=zip ${CIN_ASSET_OUTPUT_DIRECTORY}/
                 COMMAND ${CMAKE_COMMAND} -E echo "Installer in: installer/${INST_ZIP}")
 
-        #add_custom_command(
-        #        TARGET obxf-installer
-        #        POST_BUILD
-        #        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        #        USES_TERMINAL
-        #        COMMAND scripts/installer_linux/make_deb.sh ${OBXF_PRODUCT_DIR} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/installer "${OBXF_DATE}-${GIT_COMMIT_HASH}"
-        #)
+        # non-debian hosts still get the zip
+        find_program(INST_DPKG_DEB dpkg-deb)
+        if (INST_DPKG_DEB)
+            set(INST_DEB ${CIN_INSTALLER_PREFIX}-${CMAKE_SYSTEM_NAME}${CIN_EXTRA_ZIP_NAME}-${INST_DATE}-${GIT_COMMIT_HASH}.deb)
+            if ("${GIT_IMPLIED_DISPLAY_VERSION}" MATCHES "^v([0-9].*)$")
+                set(INST_DEB_VERSION "${CMAKE_MATCH_1}")
+            else()
+                set(INST_DEB_VERSION "NIGHTLY-${INST_DATE}-${GIT_COMMIT_HASH}")
+            endif()
+            message(STATUS "Deb File Name is ${INST_DEB} with version ${INST_DEB_VERSION}")
+
+            add_custom_command(
+                    TARGET ${TGT}
+                    POST_BUILD
+                    USES_TERMINAL
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                    COMMAND ${CMAKE_SOURCE_DIR}/scripts/installer_linux/make_deb.sh ${CIN_ASSET_OUTPUT_DIRECTORY} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/installer/${INST_DEB} "${INST_DEB_VERSION}"
+                    COMMAND ${CMAKE_COMMAND} -E echo "Deb in: installer/${INST_DEB}"
+            )
+        endif ()
 
     endif ()
 endfunction()
