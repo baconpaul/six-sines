@@ -29,6 +29,10 @@ namespace baconpaul::six_sines
 static constexpr size_t blockSize{8};
 static constexpr double blockSizeInv{1.0 / 8};
 
+// memcpy from this, since clang on darwin turns a fill-with-1 loop into a memset_pattern16 call
+static_assert(blockSize == 8, "unitBlock initializer assumes 8");
+alignas(16) inline constexpr float unitBlock[blockSize]{1, 1, 1, 1, 1, 1, 1, 1};
+
 static constexpr size_t numOps{6};
 static constexpr size_t matrixSize{(numOps * (numOps - 1)) / 2};
 static constexpr size_t numMacros{6};
