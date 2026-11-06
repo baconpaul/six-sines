@@ -320,9 +320,9 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
         {
             phaseInput[i] = 0;
             feedbackLevel[i] = 0;
-            rmLevel[i] = 1.f;
             fmAmount[i] = 0.f;
         }
+        memcpy(rmLevel, unitBlock, sizeof(rmLevel));
         rmAssigned = false;
         hasActiveFeedback = false;
     }

@@ -102,11 +102,9 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         float lfoMul alignas(16)[blockSize], lfoAdd alignas(16)[blockSize];
         if (lfoDepthMode < 0.5f) // Add
         {
+            memcpy(lfoMul, unitBlock, sizeof(lfoMul));
             for (int j = 0; j < blockSize; ++j)
-            {
-                lfoMul[j] = 1.f;
                 lfoAdd[j] = d * lfo.outputBlock[j];
-            }
         }
         else if (lfoDepthMode < 1.5f) // Scale
         {
@@ -323,11 +321,9 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
         float lfoMul alignas(16)[blockSize], lfoAdd alignas(16)[blockSize];
         if (lfoFBMode < 0.5f) // Add
         {
+            memcpy(lfoMul, unitBlock, sizeof(lfoMul));
             for (int j = 0; j < blockSize; ++j)
-            {
-                lfoMul[j] = 1.f;
                 lfoAdd[j] = d * lfo.outputBlock[j];
-            }
         }
         else if (lfoFBMode < 1.5f) // Scale
         {
@@ -543,11 +539,9 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         float lfoMul alignas(16)[blockSize], lfoAdd alignas(16)[blockSize];
         if (lfoLevelMode < 0.5f) // Add
         {
+            memcpy(lfoMul, unitBlock, sizeof(lfoMul));
             for (int j = 0; j < blockSize; ++j)
-            {
-                lfoMul[j] = 1.f;
                 lfoAdd[j] = d * lfo.outputBlock[j];
-            }
         }
         else if (lfoLevelMode < 1.5f) // Scale
         {
