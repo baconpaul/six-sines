@@ -30,24 +30,47 @@ namespace baconpaul::six_sines
 {
 namespace mech = sst::basic_blocks::mechanics;
 
-struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
-                        public LFOSupport<MatrixNodeFrom, Patch::MatrixNode>,
-                        public ModulationSupport<Patch::MatrixNode, MatrixNodeFrom>
+template <size_t BS>
+struct MatrixNodeFrom : public EnvelopeSupport<BS, Patch::MatrixNode>,
+                        public LFOSupport<BS, MatrixNodeFrom<BS>, Patch::MatrixNode>,
+                        public ModulationSupport<Patch::MatrixNode, MatrixNodeFrom<BS>>
 {
-    OpSource &onto, &from;
+    static constexpr size_t blockSize{BS};
+    using env_base_t = EnvelopeSupport<BS, Patch::MatrixNode>;
+    using lfo_base_t = LFOSupport<BS, MatrixNodeFrom<BS>, Patch::MatrixNode>;
+    using mod_base_t = ModulationSupport<Patch::MatrixNode, MatrixNodeFrom<BS>>;
+    using env_base_t::env;
+    using env_base_t::envAttack;
+    using env_base_t::envHandleModulationValue;
+    using env_base_t::envIsMult;
+    using env_base_t::envProcess;
+    using env_base_t::envResetMod;
+    using lfo_base_t::lfo;
+    using lfo_base_t::lfoAttack;
+    using lfo_base_t::lfoHandleModulationValue;
+    using lfo_base_t::lfoIsEnveloped;
+    using lfo_base_t::lfoProcess;
+    using lfo_base_t::lfoResetMod;
+    using mod_base_t::anySources;
+    using mod_base_t::bindModulation;
+    using mod_base_t::depthPointers;
+    using mod_base_t::lfoUsedAsModulationSource;
+    using mod_base_t::sourcePointers;
+
+    OpSource<BS> &onto, &from;
 
     const Patch::MatrixNode &matrixNode;
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
     const float &level, &activeV, &modmodeV, &rmScaleV, &lfoToDepth, &envToLevel, &overdriveV,
         &lfoDepthMode;
-    MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource &on, OpSource &fr, MonoValues &mv,
+    MatrixNodeFrom(const Patch::MatrixNode &mn, OpSource<BS> &on, OpSource<BS> &fr, MonoValues &mv,
                    const VoiceValues &vv)
         : matrixNode(mn), monoValues(mv), voiceValues(vv), onto(on), from(fr), level(mn.level),
-          modmodeV(mn.modulationMode), activeV(mn.active), EnvelopeSupport(mn, mv, vv),
-          LFOSupport(mn, mv, vv), lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel),
-          overdriveV(mn.overdrive), lfoDepthMode(mn.lfoDepthMode),
-          ModulationSupport(mn, this, mv, vv), rmScaleV(mn.modulationScale)
+          modmodeV(mn.modulationMode), activeV(mn.active), env_base_t(mn, mv, vv),
+          lfo_base_t(mn, mv, vv), lfoToDepth(mn.lfoToDepth), envToLevel(mn.envToLevel),
+          overdriveV(mn.overdrive), lfoDepthMode(mn.lfoDepthMode), mod_base_t(mn, this, mv, vv),
+          rmScaleV(mn.modulationScale)
     {
     }
 
@@ -102,7 +125,7 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
         float lfoMul alignas(16)[blockSize], lfoAdd alignas(16)[blockSize];
         if (lfoDepthMode < 0.5f) // Add
         {
-            memcpy(lfoMul, unitBlock, sizeof(lfoMul));
+            memcpy(lfoMul, unitBlock<blockSize>.data(), sizeof(lfoMul));
             for (int j = 0; j < blockSize; ++j)
                 lfoAdd[j] = d * lfo.outputBlock[j];
         }
@@ -265,22 +288,46 @@ struct MatrixNodeFrom : public EnvelopeSupport<Patch::MatrixNode>,
     }
 };
 
-struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
-                        LFOSupport<MatrixNodeSelf, Patch::SelfNode>,
-                        ModulationSupport<Patch::SelfNode, MatrixNodeSelf>
+template <size_t BS>
+struct MatrixNodeSelf : public EnvelopeSupport<BS, Patch::SelfNode>,
+                        public LFOSupport<BS, MatrixNodeSelf<BS>, Patch::SelfNode>,
+                        public ModulationSupport<Patch::SelfNode, MatrixNodeSelf<BS>>
 {
-    OpSource &onto;
+    static constexpr size_t blockSize{BS};
+    using env_base_t = EnvelopeSupport<BS, Patch::SelfNode>;
+    using lfo_base_t = LFOSupport<BS, MatrixNodeSelf<BS>, Patch::SelfNode>;
+    using mod_base_t = ModulationSupport<Patch::SelfNode, MatrixNodeSelf<BS>>;
+    using env_base_t::env;
+    using env_base_t::envAttack;
+    using env_base_t::envHandleModulationValue;
+    using env_base_t::envIsMult;
+    using env_base_t::envProcess;
+    using env_base_t::envResetMod;
+    using lfo_base_t::lfo;
+    using lfo_base_t::lfoAttack;
+    using lfo_base_t::lfoHandleModulationValue;
+    using lfo_base_t::lfoIsEnveloped;
+    using lfo_base_t::lfoProcess;
+    using lfo_base_t::lfoResetMod;
+    using mod_base_t::anySources;
+    using mod_base_t::bindModulation;
+    using mod_base_t::depthPointers;
+    using mod_base_t::lfoUsedAsModulationSource;
+    using mod_base_t::sourcePointers;
+
+    OpSource<BS> &onto;
 
     const Patch::SelfNode &selfNode;
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
     const float &fbBase, &lfoToFB, &activeV, &envToFB, &overdriveV, &lfoFBMode;
-    MatrixNodeSelf(const Patch::SelfNode &sn, OpSource &on, MonoValues &mv, const VoiceValues &vv)
+    MatrixNodeSelf(const Patch::SelfNode &sn, OpSource<BS> &on, MonoValues &mv,
+                   const VoiceValues &vv)
         : selfNode(sn), monoValues(mv), voiceValues(vv), onto(on), fbBase(sn.fbLevel),
           lfoToFB(sn.lfoToFB), activeV(sn.active), envToFB(sn.envToFB), overdriveV(sn.overdrive),
-          lfoFBMode(sn.lfoFBMode), EnvelopeSupport(sn, mv, vv), LFOSupport(sn, mv, vv),
-          ModulationSupport(sn, this, mv, vv) {};
+          lfoFBMode(sn.lfoFBMode), env_base_t(sn, mv, vv), lfo_base_t(sn, mv, vv),
+          mod_base_t(sn, this, mv, vv) {};
     bool active{true}, lfoMul{false};
     float overdriveFactor{1.0};
 
@@ -321,7 +368,7 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
         float lfoMul alignas(16)[blockSize], lfoAdd alignas(16)[blockSize];
         if (lfoFBMode < 0.5f) // Add
         {
-            memcpy(lfoMul, unitBlock, sizeof(lfoMul));
+            memcpy(lfoMul, unitBlock<blockSize>.data(), sizeof(lfoMul));
             for (int j = 0; j < blockSize; ++j)
                 lfoAdd[j] = d * lfo.outputBlock[j];
         }
@@ -432,12 +479,35 @@ struct MatrixNodeSelf : EnvelopeSupport<Patch::SelfNode>,
     bool checkLfoUsed() { return lfoToFB != 0 || lfoUsedAsModulationSource; }
 };
 
-struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
-                   LFOSupport<MixerNode, Patch::MixerNode>,
-                   ModulationSupport<Patch::MixerNode, MixerNode>
+template <size_t BS>
+struct MixerNode : public EnvelopeSupport<BS, Patch::MixerNode>,
+                   public LFOSupport<BS, MixerNode<BS>, Patch::MixerNode>,
+                   public ModulationSupport<Patch::MixerNode, MixerNode<BS>>
 {
+    static constexpr size_t blockSize{BS};
+    using env_base_t = EnvelopeSupport<BS, Patch::MixerNode>;
+    using lfo_base_t = LFOSupport<BS, MixerNode<BS>, Patch::MixerNode>;
+    using mod_base_t = ModulationSupport<Patch::MixerNode, MixerNode<BS>>;
+    using env_base_t::env;
+    using env_base_t::envAttack;
+    using env_base_t::envHandleModulationValue;
+    using env_base_t::envIsMult;
+    using env_base_t::envProcess;
+    using env_base_t::envResetMod;
+    using lfo_base_t::lfo;
+    using lfo_base_t::lfoAttack;
+    using lfo_base_t::lfoHandleModulationValue;
+    using lfo_base_t::lfoIsEnveloped;
+    using lfo_base_t::lfoProcess;
+    using lfo_base_t::lfoResetMod;
+    using mod_base_t::anySources;
+    using mod_base_t::bindModulation;
+    using mod_base_t::depthPointers;
+    using mod_base_t::lfoUsedAsModulationSource;
+    using mod_base_t::sourcePointers;
+
     float output alignas(16)[2][blockSize];
-    OpSource &from;
+    OpSource<BS> &from;
 
     const Patch::MixerNode &mixerNode;
     const MonoValues &monoValues;
@@ -446,11 +516,11 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
     const float &level, &activeF, &pan, &lfoToLevel, &lfoToPan, &envToLevel, &lfoLevelMode;
     bool active{false};
 
-    MixerNode(const Patch::MixerNode &mn, OpSource &f, MonoValues &mv, const VoiceValues &vv)
+    MixerNode(const Patch::MixerNode &mn, OpSource<BS> &f, MonoValues &mv, const VoiceValues &vv)
         : mixerNode(mn), monoValues(mv), voiceValues(vv), from(f), pan(mn.pan), level(mn.level),
           activeF(mn.active), lfoToLevel(mn.lfoToLevel), lfoToPan(mn.lfoToPan),
-          envToLevel(mn.envToLevel), lfoLevelMode(mn.lfoLevelMode), EnvelopeSupport(mn, mv, vv),
-          LFOSupport(mn, mv, vv), ModulationSupport(mn, this, mv, vv)
+          envToLevel(mn.envToLevel), lfoLevelMode(mn.lfoLevelMode), env_base_t(mn, mv, vv),
+          lfo_base_t(mn, mv, vv), mod_base_t(mn, this, mv, vv)
     {
         memset(output, 0, sizeof(output));
     }
@@ -539,7 +609,7 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
         float lfoMul alignas(16)[blockSize], lfoAdd alignas(16)[blockSize];
         if (lfoLevelMode < 0.5f) // Add
         {
-            memcpy(lfoMul, unitBlock, sizeof(lfoMul));
+            memcpy(lfoMul, unitBlock<blockSize>.data(), sizeof(lfoMul));
             for (int j = 0; j < blockSize; ++j)
                 lfoAdd[j] = d * lfo.outputBlock[j];
         }
@@ -680,10 +750,32 @@ struct MixerNode : EnvelopeSupport<Patch::MixerNode>,
     }
 };
 
-struct MainPanNode : EnvelopeSupport<Patch::MainPanNode>,
-                     ModulationSupport<Patch::MainPanNode, MainPanNode>,
-                     LFOSupport<MainPanNode, Patch::MainPanNode>
+template <size_t BS>
+struct MainPanNode : public EnvelopeSupport<BS, Patch::MainPanNode>,
+                     public ModulationSupport<Patch::MainPanNode, MainPanNode<BS>>,
+                     public LFOSupport<BS, MainPanNode<BS>, Patch::MainPanNode>
 {
+    static constexpr size_t blockSize{BS};
+    using env_base_t = EnvelopeSupport<BS, Patch::MainPanNode>;
+    using lfo_base_t = LFOSupport<BS, MainPanNode<BS>, Patch::MainPanNode>;
+    using mod_base_t = ModulationSupport<Patch::MainPanNode, MainPanNode<BS>>;
+    using env_base_t::env;
+    using env_base_t::envAttack;
+    using env_base_t::envHandleModulationValue;
+    using env_base_t::envProcess;
+    using env_base_t::envResetMod;
+    using lfo_base_t::lfo;
+    using lfo_base_t::lfoAttack;
+    using lfo_base_t::lfoHandleModulationValue;
+    using lfo_base_t::lfoIsEnveloped;
+    using lfo_base_t::lfoProcess;
+    using lfo_base_t::lfoResetMod;
+    using mod_base_t::anySources;
+    using mod_base_t::bindModulation;
+    using mod_base_t::depthPointers;
+    using mod_base_t::lfoUsedAsModulationSource;
+    using mod_base_t::sourcePointers;
+
     // float level alignas(16)[blockSize];
     float level{0.f};
 
@@ -695,8 +787,8 @@ struct MainPanNode : EnvelopeSupport<Patch::MainPanNode>,
     const float &lfoD, &envD;
 
     MainPanNode(const Patch::MainPanNode &mn, MonoValues &mv, const VoiceValues &vv)
-        : ModulationSupport(mn, this, mv, vv), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv, vv),
-          modNode(mn), monoValues(mv), voiceValues(vv), lfoD(mn.lfoDepth), envD(mn.envDepth)
+        : mod_base_t(mn, this, mv, vv), env_base_t(mn, mv, vv), lfo_base_t(mn, mv, vv), modNode(mn),
+          monoValues(mv), voiceValues(vv), lfoD(mn.lfoDepth), envD(mn.envDepth)
     {
     }
 
@@ -821,10 +913,32 @@ struct MainPanNode : EnvelopeSupport<Patch::MainPanNode>,
     bool checkLfoUsed() { return lfoD != 0 || lfoUsedAsModulationSource; }
 };
 
-struct FineTuneNode : EnvelopeSupport<Patch::FineTuneNode>,
-                      ModulationSupport<Patch::FineTuneNode, FineTuneNode>,
-                      LFOSupport<FineTuneNode, Patch::FineTuneNode>
+template <size_t BS>
+struct FineTuneNode : public EnvelopeSupport<BS, Patch::FineTuneNode>,
+                      public ModulationSupport<Patch::FineTuneNode, FineTuneNode<BS>>,
+                      public LFOSupport<BS, FineTuneNode<BS>, Patch::FineTuneNode>
 {
+    static constexpr size_t blockSize{BS};
+    using env_base_t = EnvelopeSupport<BS, Patch::FineTuneNode>;
+    using lfo_base_t = LFOSupport<BS, FineTuneNode<BS>, Patch::FineTuneNode>;
+    using mod_base_t = ModulationSupport<Patch::FineTuneNode, FineTuneNode<BS>>;
+    using env_base_t::env;
+    using env_base_t::envAttack;
+    using env_base_t::envHandleModulationValue;
+    using env_base_t::envProcess;
+    using env_base_t::envResetMod;
+    using lfo_base_t::lfo;
+    using lfo_base_t::lfoAttack;
+    using lfo_base_t::lfoHandleModulationValue;
+    using lfo_base_t::lfoIsEnveloped;
+    using lfo_base_t::lfoProcess;
+    using lfo_base_t::lfoResetMod;
+    using mod_base_t::anySources;
+    using mod_base_t::bindModulation;
+    using mod_base_t::depthPointers;
+    using mod_base_t::lfoUsedAsModulationSource;
+    using mod_base_t::sourcePointers;
+
     // float level alignas(16)[blockSize];
     float level{0.f}, coarseLevel{0.f};
 
@@ -836,7 +950,7 @@ struct FineTuneNode : EnvelopeSupport<Patch::FineTuneNode>,
     const float &lfoD, &envD, &coarseTune, &lfoCoarseD, &envCoarseD;
 
     FineTuneNode(const Patch::FineTuneNode &mn, MonoValues &mv, const VoiceValues &vv)
-        : ModulationSupport(mn, this, mv, vv), EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv, vv),
+        : mod_base_t(mn, this, mv, vv), env_base_t(mn, mv, vv), lfo_base_t(mn, mv, vv),
           coarseTune(mn.coarseTune), modNode(mn), monoValues(mv), voiceValues(vv),
           lfoD(mn.lfoDepth), envD(mn.envDepth), lfoCoarseD(mn.lfoCoarseDepth),
           envCoarseD(mn.envCoarseDepth)
@@ -975,12 +1089,35 @@ struct FineTuneNode : EnvelopeSupport<Patch::FineTuneNode>,
     bool checkLfoUsed() { return lfoD != 0 || lfoCoarseD != 0 || lfoUsedAsModulationSource; }
 };
 
-struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
-                    ModulationSupport<Patch::OutputNode, OutputNode>,
-                    LFOSupport<OutputNode, Patch::OutputNode>
+template <size_t BS>
+struct OutputNode : public EnvelopeSupport<BS, Patch::OutputNode>,
+                    public ModulationSupport<Patch::OutputNode, OutputNode<BS>>,
+                    public LFOSupport<BS, OutputNode<BS>, Patch::OutputNode>
 {
+    static constexpr size_t blockSize{BS};
+    using env_base_t = EnvelopeSupport<BS, Patch::OutputNode>;
+    using lfo_base_t = LFOSupport<BS, OutputNode<BS>, Patch::OutputNode>;
+    using mod_base_t = ModulationSupport<Patch::OutputNode, OutputNode<BS>>;
+    using env_base_t::allowVoiceTrigger;
+    using env_base_t::env;
+    using env_base_t::envAttack;
+    using env_base_t::envHandleModulationValue;
+    using env_base_t::envProcess;
+    using env_base_t::envResetMod;
+    using lfo_base_t::lfo;
+    using lfo_base_t::lfoAttack;
+    using lfo_base_t::lfoHandleModulationValue;
+    using lfo_base_t::lfoIsEnveloped;
+    using lfo_base_t::lfoProcess;
+    using lfo_base_t::lfoResetMod;
+    using mod_base_t::anySources;
+    using mod_base_t::bindModulation;
+    using mod_base_t::depthPointers;
+    using mod_base_t::lfoUsedAsModulationSource;
+    using mod_base_t::sourcePointers;
+
     float output alignas(16)[2][blockSize];
-    std::array<MixerNode, numOps> &fromArr;
+    std::array<MixerNode<BS>, numOps> &fromArr;
 
     const Patch::OutputNode &outputNode;
 
@@ -992,18 +1129,17 @@ struct OutputNode : EnvelopeSupport<Patch::OutputNode>,
     const float &legacyDspV;
     TriggerMode defaultTrigger;
 
-    MainPanNode panModNode;
-    FineTuneNode ftModNode;
+    MainPanNode<BS> panModNode;
+    FineTuneNode<BS> ftModNode;
 
     OutputNode(const Patch::OutputNode &on, const Patch::MainPanNode &panMN,
-               const Patch::FineTuneNode &ftMN, std::array<MixerNode, numOps> &f, MonoValues &mv,
-               const VoiceValues &vv)
-        : outputNode(on), ModulationSupport(on, this, mv, vv), monoValues(mv), voiceValues(vv),
-          fromArr(f), level(on.level), bendUp(on.bendUp), bendDown(on.bendDown),
-          octTranspose(on.octTranspose), velSen(on.velSensitivity), EnvelopeSupport(on, mv, vv),
-          LFOSupport(on, mv, vv), defTrigV(on.defaultTrigger), pan(on.pan), fineTune(on.fineTune),
-          lfoDepth(on.lfoDepth), legacyDspV(on.legacyDsp), ftModNode(ftMN, mv, vv),
-          panModNode(panMN, mv, vv)
+               const Patch::FineTuneNode &ftMN, std::array<MixerNode<BS>, numOps> &f,
+               MonoValues &mv, const VoiceValues &vv)
+        : outputNode(on), mod_base_t(on, this, mv, vv), monoValues(mv), voiceValues(vv), fromArr(f),
+          level(on.level), bendUp(on.bendUp), bendDown(on.bendDown), octTranspose(on.octTranspose),
+          velSen(on.velSensitivity), env_base_t(on, mv, vv), lfo_base_t(on, mv, vv),
+          defTrigV(on.defaultTrigger), pan(on.pan), fineTune(on.fineTune), lfoDepth(on.lfoDepth),
+          legacyDspV(on.legacyDsp), ftModNode(ftMN, mv, vv), panModNode(panMN, mv, vv)
     {
         memset(output, 0, sizeof(output));
         allowVoiceTrigger = false;

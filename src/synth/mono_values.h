@@ -37,6 +37,9 @@ struct SRProvider
         return (blockSize * sampleRateInv) * ttx.twoToThe(-f);
     }
 
+    // the sst envelopes read this through a pointer, so it is runtime; voices assert it matches
+    size_t blockSize{defaultEngineBlockSize};
+
     void setSampleRate(double sr)
     {
         samplerate = sr;
@@ -102,7 +105,7 @@ struct MonoValues
     float unisonSpreadFactorMinus1{0.f};
     float unisonPanScalar{0.f};
 
-    float audioInBlock alignas(16)[blockSize]{}; // engine-rate audio in, mono mix
+    float audioInBlock alignas(16)[maxEngineBlockSize]{}; // engine-rate audio in, mono mix
 
     // Anti-alias ceiling for the per-voice noise source = active bit-rate-crusher
     // Nyquist (f_z/2), or 0 when the crusher is off (no limit). Derived in

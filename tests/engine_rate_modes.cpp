@@ -73,7 +73,7 @@ std::unique_ptr<Synth> makeSineSynth(int forced, float ratio)
     s->voiceManager->processNoteOnEvent(0, 0, sineKey, -1, 1.0f, 0.f);
 
     // let the envelopes and the decimator settle before anything is captured
-    for (int i = 0; i < 4096 / blockSize; ++i)
+    for (int i = 0; i < 4096 / Synth::defaultBlockSize; ++i)
         s->process(nullptr);
     return s;
 }
@@ -90,10 +90,10 @@ Capture captureOneSecond(Synth &s)
     double acc{0};
     size_t n{0};
     float prior{0};
-    for (int b = 0; b < (int)(hostRate / blockSize); ++b)
+    for (int b = 0; b < (int)(hostRate / Synth::defaultBlockSize); ++b)
     {
         s.process(nullptr);
-        for (int i = 0; i < (int)blockSize; ++i)
+        for (int i = 0; i < (int)Synth::defaultBlockSize; ++i)
         {
             auto v = s.output[0][i];
             acc += (double)v * v;

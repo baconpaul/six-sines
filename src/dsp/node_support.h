@@ -48,8 +48,10 @@ enum TriggerMode
 static const char *TriggerModeName[5]{"On Start or In Release (Legato)", "On Start Voice Only",
                                       "On Any Key Press", "Patch Default", "On Release"};
 
-template <typename T> struct EnvelopeSupport
+template <size_t BS, typename T> struct EnvelopeSupport
 {
+    static constexpr size_t blockSize{BS};
+
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
 
@@ -298,8 +300,10 @@ template <typename T> struct EnvelopeSupport
     }
 };
 
-template <typename Parent, typename T, bool needsSmoothing = true> struct LFOSupport
+template <size_t BS, typename Parent, typename T, bool needsSmoothing = true> struct LFOSupport
 {
+    static constexpr size_t blockSize{BS};
+
     const T &paramBundle;
     MonoValues &monoValues; // non-const so we can read the RNG
     const VoiceValues &lfoVoiceValues;
@@ -748,11 +752,11 @@ template <typename Bundle, typename Node> struct ModulationSupport
             break;
 
         case ModMatrixConfig::Source::INTERNAL_LFO:
-            sourcePointers[which] = &(enclosingNode->lfo.outputBlock[blockSize - 1]);
+            sourcePointers[which] = &(enclosingNode->lfo.outputBlock[Node::blockSize - 1]);
             break;
 
         case ModMatrixConfig::Source::INTERNAL_ENV:
-            sourcePointers[which] = &(enclosingNode->env.outputCache[blockSize - 1]);
+            sourcePointers[which] = &(enclosingNode->env.outputCache[Node::blockSize - 1]);
             break;
 
         default:

@@ -65,7 +65,7 @@ TEST_CASE("A chord on a fresh mono voice retriggers from silence", "[envelope]")
     playChord(*s, 48);
     s->process(nullptr);
     REQUIRE(s->head);
-    REQUIRE(s->head->src[0].env.outputCache[0] < 0.1f);
+    REQUIRE(s->headAs()->src[0].env.outputCache[0] < 0.1f);
 }
 
 TEST_CASE("A chord on a reused mono voice retriggers from silence", "[envelope]")
@@ -75,8 +75,8 @@ TEST_CASE("A chord on a reused mono voice retriggers from silence", "[envelope]"
     for (int i = 0; i < 4000; ++i)
         s->process(nullptr);
     REQUIRE(s->head);
-    auto *held = s->head;
-    REQUIRE(held->src[0].env.outputCache[blockSize - 1] > 0.9f);
+    auto *held = s->headAs();
+    REQUIRE(held->src[0].env.outputCache[Synth::defaultBlockSize - 1] > 0.9f);
 
     // end the note at full level, then land a chord on the same voice
     s->voiceManager->allSoundsOff();
@@ -87,5 +87,5 @@ TEST_CASE("A chord on a reused mono voice retriggers from silence", "[envelope]"
     playChord(*s, 48);
     s->process(nullptr);
     REQUIRE(s->head == held);
-    REQUIRE(s->head->src[0].env.outputCache[0] < 0.1f);
+    REQUIRE(s->headAs()->src[0].env.outputCache[0] < 0.1f);
 }

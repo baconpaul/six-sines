@@ -77,7 +77,7 @@ TEST_CASE("mpe_lag attack snap", "[mpe_smoothing]")
 {
     auto synth = bringUpSynth();
     synth->voiceManager->processNoteOnEvent(0, 0, 60, -1, 0.8f, 0.f);
-    auto *v = synth->head;
+    auto *v = synth->headAs();
     REQUIRE(v != nullptr);
 
     // Simulate setVoiceMIDIMPE* / setNoteExpression dispatching after attack.
@@ -105,7 +105,7 @@ TEST_CASE("mpe_lag mid-note smoothing", "[mpe_smoothing]")
 {
     auto synth = bringUpSynth();
     synth->voiceManager->processNoteOnEvent(0, 0, 60, -1, 0.8f, 0.f);
-    auto *v = synth->head;
+    auto *v = synth->headAs();
     REQUIRE(v != nullptr);
 
     // First block: snap to 0.
@@ -136,7 +136,7 @@ TEST_CASE("mpe_lag fresh attack always snaps", "[mpe_smoothing]")
     // safely past the snap (firstBlockAfterAttack cleared) and smoothing
     // toward a different target.
     synth->voiceManager->processNoteOnEvent(0, 0, 60, -1, 0.8f, 0.f);
-    auto *vA = synth->head;
+    auto *vA = synth->headAs();
     REQUIRE(vA != nullptr);
     vA->voiceValues.mpeBendInSemis = 12.0f;
     synth->process(nullptr);
@@ -150,8 +150,8 @@ TEST_CASE("mpe_lag fresh attack always snaps", "[mpe_smoothing]")
     // must be true (independent of A's), and its first block must snap to
     // its own target, not chirp from 0.
     synth->voiceManager->processNoteOnEvent(0, 0, 62, -1, 0.8f, 0.f);
-    Voice *vB = nullptr;
-    for (auto *c = synth->head; c != nullptr; c = c->next)
+    Synth::defaultVoice_t *vB = nullptr;
+    for (auto *c = synth->headAs(); c != nullptr; c = c->nextVoice())
         if (c != vA)
             vB = c;
     REQUIRE(vB != nullptr);
@@ -175,7 +175,7 @@ TEST_CASE("mpe_lag mod source pointer rebind", "[mpe_smoothing]")
     synth->reapplyControlSettings();
 
     synth->voiceManager->processNoteOnEvent(0, 0, 60, -1, 0.8f, 0.f);
-    auto *v = synth->head;
+    auto *v = synth->headAs();
     REQUIRE(v != nullptr);
 
     // Points-at-lag .v.

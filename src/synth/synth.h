@@ -20,7 +20,9 @@
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <string>
+#include <algorithm>
 
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
 #include "sst/filters/ButterworthLPHP.h"
@@ -52,7 +54,14 @@ namespace baconpaul::six_sines
 {
 struct Synth
 {
-    float output alignas(16)[2 * (1 + numOps)][blockSize];
+    static constexpr size_t defaultBlockSize{defaultEngineBlockSize};
+    using defaultVoice_t = Voice<defaultBlockSize>;
+
+    // the engine block, and the host samples each process() makes; changes only in process()
+    size_t blockSize{defaultBlockSize};
+    size_t pendingBlockSize{defaultBlockSize};
+
+    float output alignas(16)[2 * (1 + numOps)][maxEngineBlockSize];
 
     bool isMultiOut{false};
     bool isTableInitialized{MatrixIndex::initialize()}; // this forces this init before other ctors
@@ -72,7 +81,8 @@ struct Synth
                                        resamplerEngine == ZOH || resamplerEngine == LINTERP);
     }
 
-    using resampler_t = sst::basic_blocks::dsp::LanczosResampler<blockSize>;
+    // we fill whole blocks ourselves, so the template block size goes unused
+    using resampler_t = sst::basic_blocks::dsp::LanczosResampler<maxEngineBlockSize>;
     std::array<std::unique_ptr<resampler_t>, 1 + numOps> resampler;
     std::array<SRC_STATE *, 1 + numOps> lState{}, rState{};
 
@@ -80,7 +90,7 @@ struct Synth
     std::array<std::unique_ptr<halfRate_t>, 1 + numOps> halfRate;
 
     // Audio input upsampling: host rate -> engine rate
-    using audioInResampler_t = sst::basic_blocks::dsp::LanczosResampler<blockSize>;
+    using audioInResampler_t = sst::basic_blocks::dsp::LanczosResampler<maxEngineBlockSize>;
     std::unique_ptr<audioInResampler_t> audioInResampler;
     void pushAudioIn(float L, float R)
     {
@@ -100,13 +110,31 @@ struct Synth
     struct VMConfig
     {
         static constexpr size_t maxVoiceCount{maxVoices};
-        using voice_t = Voice;
+        using voice_t = VoiceBase;
     };
+    using voice_t = VMConfig::voice_t;
 
-    std::array<Voice, VMConfig::maxVoiceCount> voices;
-    Voice *head{nullptr};
-    void addToVoiceList(Voice *);
-    Voice *removeFromVoiceList(Voice *); // returns next
+    // every slot fits the largest voice, so a block size change rebuilds the pool in place
+    static constexpr size_t voiceSlotBytes{
+        std::max({sizeof(Voice<8>), sizeof(Voice<16>), sizeof(Voice<32>)})};
+    struct alignas(64) VoiceSlot
+    {
+        std::byte bytes[voiceSlotBytes];
+    };
+    std::unique_ptr<VoiceSlot[]> voiceSlots;
+    std::array<voice_t *, VMConfig::maxVoiceCount> voices{};
+    template <size_t BS> void buildVoices();
+    void destroyVoices();
+    void applyPendingBlockSize();
+
+    voice_t *head{nullptr};
+    template <size_t BS = defaultBlockSize> Voice<BS> *headAs() const
+    {
+        assert(blockSize == BS);
+        return static_cast<Voice<BS> *>(head);
+    }
+    void addToVoiceList(voice_t *);
+    voice_t *removeFromVoiceList(voice_t *); // returns next
     void dumpVoiceList();
     int voiceCount{0};
 
@@ -125,15 +153,15 @@ struct Synth
         Synth &synth;
         VMResponder(Synth &s) : synth(s) {}
 
-        std::function<void(Voice *)> doVoiceEndCallback = [](auto) {};
-        void setVoiceEndCallback(std::function<void(Voice *)> f) { doVoiceEndCallback = f; }
-        void retriggerVoiceWithNewNoteID(Voice *v, int32_t nid, float vel)
+        std::function<void(voice_t *)> doVoiceEndCallback = [](auto) {};
+        void setVoiceEndCallback(std::function<void(voice_t *)> f) { doVoiceEndCallback = f; }
+        void retriggerVoiceWithNewNoteID(voice_t *v, int32_t nid, float vel)
         {
             v->voiceValues.setGated(true);
             v->voiceValues.velocity = vel;
             v->retriggerAllEnvelopesForReGate();
         }
-        void moveVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
+        void moveVoice(voice_t *v, uint16_t p, uint16_t c, uint16_t k, float ve)
         {
             v->setupPortaTo(k, synth.patch.output.portaTime.value);
             v->voiceValues.setKey(k);
@@ -141,7 +169,7 @@ struct Synth
             v->retriggerAllEnvelopesForKeyPress();
         }
 
-        void moveAndRetriggerVoice(Voice *v, uint16_t p, uint16_t c, uint16_t k, float ve)
+        void moveAndRetriggerVoice(voice_t *v, uint16_t p, uint16_t c, uint16_t k, float ve)
         {
             v->setupPortaTo(k, synth.patch.output.portaTime.value);
             v->voiceValues.setKey(k);
@@ -163,10 +191,10 @@ struct Synth
         void endVoiceCreationTransaction(uint16_t, uint16_t, uint16_t, int32_t, float) {}
 
         void discardHostVoice(int32_t vid) {}
-        void terminateVoice(Voice *voice)
+        void terminateVoice(voice_t *voice)
         {
             voice->voiceValues.setGated(false);
-            voice->fadeBlocks = Voice::fadeOverBlocks;
+            voice->beginTerminationFade();
         }
         int32_t initializeMultipleVoices(
             int32_t ct,
@@ -197,38 +225,38 @@ struct Synth
                 {
                     for (int i = lastStart; i < VMConfig::maxVoiceCount; ++i)
                     {
-                        if (synth.voices[i].used == false)
+                        if (synth.voices[i]->used == false)
                         {
-                            obuf[vc].voice = &synth.voices[i];
-                            synth.voices[i].used = true;
-                            synth.voices[i].voiceValues.setGated(true);
-                            synth.voices[i].voiceValues.setKey(key);
-                            synth.voices[i].voiceValues.channel = ch;
-                            synth.voices[i].voiceValues.velocity = vel;
-                            synth.voices[i].voiceValues.releaseVelocity = 0;
-                            synth.voices[i].voiceValues.uniCount = ct;
-                            synth.voices[i].voiceValues.uniIndex = vc;
-                            synth.voices[i].voiceValues.hasCenterVoice = hasCenter;
-                            synth.voices[i].voiceValues.isCenterVoice =
+                            obuf[vc].voice = synth.voices[i];
+                            synth.voices[i]->used = true;
+                            synth.voices[i]->voiceValues.setGated(true);
+                            synth.voices[i]->voiceValues.setKey(key);
+                            synth.voices[i]->voiceValues.channel = ch;
+                            synth.voices[i]->voiceValues.velocity = vel;
+                            synth.voices[i]->voiceValues.releaseVelocity = 0;
+                            synth.voices[i]->voiceValues.uniCount = ct;
+                            synth.voices[i]->voiceValues.uniIndex = vc;
+                            synth.voices[i]->voiceValues.hasCenterVoice = hasCenter;
+                            synth.voices[i]->voiceValues.isCenterVoice =
                                 hasCenter && (std::fabs(uniScale) < 1e-4f);
-                            synth.voices[i].voiceValues.uniRatioMul = 1.f;
-                            synth.voices[i].voiceValues.uniPanShift = 0.f;
-                            synth.voices[i].voiceValues.uniPMScale = uniScale;
-                            synth.voices[i].voiceValues.notePhaseSeed = notePhaseSeed;
-                            synth.voices[i].voiceValues.phaseRandom = (vc > 0 && upr);
-                            synth.voices[i].voiceValues.rephaseOnRetrigger = (!upr && prt);
-                            synth.voices[i].voiceValues.noteExpressionTuningInSemis = 0;
-                            synth.voices[i].voiceValues.noteExpressionPanBipolar = 0;
+                            synth.voices[i]->voiceValues.uniRatioMul = 1.f;
+                            synth.voices[i]->voiceValues.uniPanShift = 0.f;
+                            synth.voices[i]->voiceValues.uniPMScale = uniScale;
+                            synth.voices[i]->voiceValues.notePhaseSeed = notePhaseSeed;
+                            synth.voices[i]->voiceValues.phaseRandom = (vc > 0 && upr);
+                            synth.voices[i]->voiceValues.rephaseOnRetrigger = (!upr && prt);
+                            synth.voices[i]->voiceValues.noteExpressionTuningInSemis = 0;
+                            synth.voices[i]->voiceValues.noteExpressionPanBipolar = 0;
 
                             if (synth.portaContinuation.active)
                             {
-                                synth.voices[i].restartPortaTo(synth.portaContinuation.sourceKey,
-                                                               key, synth.patch.output.portaTime,
-                                                               synth.portaContinuation.portaFrac);
+                                synth.voices[i]->restartPortaTo(synth.portaContinuation.sourceKey,
+                                                                key, synth.patch.output.portaTime,
+                                                                synth.portaContinuation.portaFrac);
                             }
-                            synth.voices[i].attack();
+                            synth.voices[i]->attack();
 
-                            synth.addToVoiceList(&synth.voices[i]);
+                            synth.addToVoiceList(synth.voices[i]);
 
                             made++;
                             lastStart = i + 1;
@@ -243,12 +271,12 @@ struct Synth
 
             return made;
         }
-        void releaseVoice(Voice *v, float rv)
+        void releaseVoice(voice_t *v, float rv)
         {
             v->voiceValues.setGated(false);
             v->voiceValues.releaseVelocity = rv;
         }
-        void setNoteExpression(Voice *v, int32_t e, double val)
+        void setNoteExpression(voice_t *v, int32_t e, double val)
         {
             switch (e)
             {
@@ -262,21 +290,21 @@ struct Synth
                 break;
             }
         }
-        void setVoicePolyphonicParameterModulation(Voice *, uint32_t, double) {}
-        void setVoiceMonophonicParameterModulation(Voice *, uint32_t, double) {}
-        void setPolyphonicAftertouch(Voice *v, int8_t a) { v->voiceValues.polyAt = a / 127.0; }
+        void setVoicePolyphonicParameterModulation(voice_t *, uint32_t, double) {}
+        void setVoiceMonophonicParameterModulation(voice_t *, uint32_t, double) {}
+        void setPolyphonicAftertouch(voice_t *v, int8_t a) { v->voiceValues.polyAt = a / 127.0; }
 
-        void setVoiceMIDIMPEChannelPitchBend(Voice *v, uint16_t b)
+        void setVoiceMIDIMPEChannelPitchBend(voice_t *v, uint16_t b)
         {
             auto stb = (b - 8192) * 1.0 / 8192;
             v->voiceValues.mpeBendNormalized = stb;
             v->voiceValues.mpeBendInSemis = stb * synth.monoValues.mpeBendRange;
         }
-        void setVoiceMIDIMPEChannelPressure(Voice *v, int8_t p)
+        void setVoiceMIDIMPEChannelPressure(voice_t *v, int8_t p)
         {
             v->voiceValues.mpePressure = p / 127.0;
         }
-        void setVoiceMIDIMPETimbre(Voice *v, int8_t t)
+        void setVoiceMIDIMPETimbre(voice_t *v, int8_t t)
         {
             v->voiceValues.mpeTimbre = t / 127.0;
             // Bipolar: 64 -> 0, 0 -> -1, 127 -> +1. The lower half has one extra
@@ -321,7 +349,8 @@ struct Synth
     double hostSampleRate{0}, engineSampleRate{0}, sampleRateRatio{0};
     void setSampleRate(double sampleRate);
 
-    template <bool multiOut> void processInternal(const clap_output_events_t *);
+    template <bool multiOut, size_t BS>
+    void processInternal(std::chrono::high_resolution_clock::time_point start);
 
     void process(const clap_output_events_t *);
     void processUIQueue(const clap_output_events_t *);
@@ -331,7 +360,7 @@ struct Synth
 
     // End-of-chain processing on the engine-rate stereo bus, in place.
     // Runs the saturator / lowpass / decimator / bitcrush / highpass stages.
-    void processEndOfBlock(float *L, float *R);
+    template <size_t BS> void processEndOfBlock(float *L, float *R);
 
     // End-of-chain stage state. Coefficients are recomputed in
     // reapplyControlSettings; the active flags gate the per-block work.
@@ -679,7 +708,7 @@ struct Synth
     sst::basic_blocks::dsp::VUPeak vuPeak;
     std::array<sst::basic_blocks::dsp::VUPeak, numOps> opVuPeak;
     double cpuUsage{0};
-    int32_t updateVuEvery{(int32_t)(48000 * 2.5 / 60 / blockSize)}; // approx
+    int32_t updateVuEvery{(int32_t)(48000 * 2.5 / 60 / defaultBlockSize)}; // approx
     int32_t lastVuUpdate{updateVuEvery};
 
     const clap_host_t *clapHost{nullptr};

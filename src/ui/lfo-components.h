@@ -98,7 +98,7 @@ template <typename Comp, typename Patch> struct LFOComponents
         // A UI-thread copy of the engine's step LFO, run purely to render the overlay
         // so the displayed shape always matches what the voice produces. Declaration
         // order matters: stepTuning must precede stepLFO (constructed from it).
-        using stepLfo_t = sst::basic_blocks::modulators::StepLFO<blockSize>;
+        using stepLfo_t = sst::basic_blocks::modulators::StepLFO<defaultEngineBlockSize>;
         sst::basic_blocks::tables::EqualTuningProvider stepTuning;
         sst::basic_blocks::modulators::Transport stepTransport;
         sst::basic_blocks::dsp::RNG stepRng;
@@ -130,7 +130,7 @@ template <typename Comp, typename Patch> struct LFOComponents
                     stepStorage.rateIsForSingleStep = true;
 
                     constexpr int pointsPerStep = 24;
-                    double sr = (double)pointsPerStep * blockSize;
+                    double sr = (double)pointsPerStep * defaultEngineBlockSize;
                     stepLFO.setSampleRate(sr, 1.0 / sr);
                     stepLFO.assign(&stepStorage, 0.f, &stepTransport, stepRng, false);
 
@@ -138,7 +138,7 @@ template <typename Comp, typename Patch> struct LFOComponents
                     curveSamples.reserve(total);
                     for (int j = 0; j < total; ++j)
                     {
-                        stepLFO.process(0.f, 0, false, false, blockSize);
+                        stepLFO.process(0.f, 0, false, false, defaultEngineBlockSize);
                         curveSamples.push_back(std::clamp(stepLFO.output, -1.f, 1.f));
                     }
                 }

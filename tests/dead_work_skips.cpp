@@ -90,16 +90,16 @@ std::vector<float> render(Synth &s, int blocks)
     for (int b = 0; b < blocks; ++b)
     {
         s.process(nullptr);
-        for (int i = 0; i < (int)blockSize; ++i)
+        for (int i = 0; i < (int)Synth::defaultBlockSize; ++i)
             res.push_back(s.output[0][i]);
     }
     return res;
 }
 
-Voice &firstVoice(Synth &s)
+Synth::defaultVoice_t &firstVoice(Synth &s)
 {
     REQUIRE(s.head != nullptr);
-    return *s.head;
+    return *s.headAs();
 }
 } // namespace
 
@@ -149,7 +149,7 @@ namespace
 {
 bool allZero(const float *f)
 {
-    for (int i = 0; i < (int)blockSize; ++i)
+    for (int i = 0; i < (int)Synth::defaultBlockSize; ++i)
         if (f[i] != 0.f)
             return false;
     return true;
@@ -217,9 +217,9 @@ std::unique_ptr<Synth> makeSustainSynth()
         });
 }
 
-bool envIs(const Voice &v, float x)
+bool envIs(const Synth::defaultVoice_t &v, float x)
 {
-    for (int i = 0; i < (int)blockSize; ++i)
+    for (int i = 0; i < (int)Synth::defaultBlockSize; ++i)
         if (v.mixerNode[0].env.outputCache[i] != x)
             return false;
     return true;
@@ -245,7 +245,7 @@ TEST_CASE("A held sustain still releases", "[dead-work]")
 
     s->voiceManager->processNoteOffEvent(0, 0, 57, -1, 0.f);
     render(*s, 16);
-    REQUIRE(firstVoice(*s).mixerNode[0].env.outputCache[blockSize - 1] < 0.6f);
+    REQUIRE(firstVoice(*s).mixerNode[0].env.outputCache[Synth::defaultBlockSize - 1] < 0.6f);
 }
 
 namespace
@@ -257,7 +257,7 @@ double leftOverRight(Synth &s, int blocks)
     for (int b = 0; b < blocks; ++b)
     {
         s.process(nullptr);
-        for (int i = 0; i < (int)blockSize; ++i)
+        for (int i = 0; i < (int)Synth::defaultBlockSize; ++i)
         {
             l += s.output[0][i] * s.output[0][i];
             r += s.output[1][i] * s.output[1][i];

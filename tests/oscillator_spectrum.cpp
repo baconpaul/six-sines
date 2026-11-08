@@ -101,7 +101,7 @@ std::unique_ptr<Synth> makeSineSynth(int key)
     s->voiceManager->processNoteOnEvent(0, 0, key, -1, 1.0f, 0.f);
 
     // let the envelopes and the resampler settle before anything is captured
-    for (int i = 0; i < 4096 / blockSize; ++i)
+    for (int i = 0; i < 4096 / Synth::defaultBlockSize; ++i)
         s->process(nullptr);
     return s;
 }
@@ -127,7 +127,7 @@ Measurement measureKey(int key)
     while ((int)buf.size() < fftSize)
     {
         s->process(nullptr);
-        for (int i = 0; i < blockSize && (int)buf.size() < fftSize; ++i)
+        for (int i = 0; i < Synth::defaultBlockSize && (int)buf.size() < fftSize; ++i)
             buf.push_back(s->output[0][i]);
     }
 

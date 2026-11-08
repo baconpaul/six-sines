@@ -22,6 +22,7 @@ add_executable(six-sines-test
 		preset_discovery.cpp
 		engine_rate_modes.cpp
 		envelope_retrigger.cpp
+		engine_block_size.cpp
 )
 
 target_link_libraries(six-sines-test

@@ -17,6 +17,7 @@
 #define BACONPAUL_SIX_SINES_CONFIGURATION_H
 
 #include <stddef.h>
+#include <array>
 #include <cstdint>
 #include <string>
 #include <cstring>
@@ -26,12 +27,26 @@
 namespace baconpaul::six_sines
 {
 
-static constexpr size_t blockSize{8};
-static constexpr double blockSizeInv{1.0 / 8};
+// the dsp nodes and voice take their block size as a template argument; the patch picks one
+static constexpr size_t defaultEngineBlockSize{8};
+static constexpr size_t maxEngineBlockSize{32};
+
+// streamed
+enum EngineBlockSize
+{
+    EBS_8 = 0,
+    EBS_16 = 1,
+    EBS_32 = 2
+};
 
 // memcpy from this, since clang on darwin turns a fill-with-1 loop into a memset_pattern16 call
-static_assert(blockSize == 8, "unitBlock initializer assumes 8");
-alignas(16) inline constexpr float unitBlock[blockSize]{1, 1, 1, 1, 1, 1, 1, 1};
+template <size_t BS>
+alignas(16) inline constexpr auto unitBlock = []()
+{
+    std::array<float, BS> r{};
+    r.fill(1.f);
+    return r;
+}();
 
 static constexpr size_t numOps{6};
 static constexpr size_t matrixSize{(numOps * (numOps - 1)) / 2};

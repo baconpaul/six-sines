@@ -17,6 +17,7 @@
 #define BACONPAUL_SIX_SINES_UI_SETTINGS_PANEL_H
 
 #include <sst/jucegui/components/Label.h>
+#include <sst/jucegui/components/MultiSwitch.h>
 #include <sst/jucegui/components/NamedPanel.h>
 #include <sst/jucegui/components/ToggleButton.h>
 #include <sst/jucegui/component-adapters/DiscreteToReference.h>
@@ -25,6 +26,8 @@
 
 namespace baconpaul::six_sines::ui
 {
+struct PatchDiscrete;
+
 struct SettingsPanel : jcmp::NamedPanel, HasEditor
 {
     SettingsPanel(SixSinesEditor &);
@@ -48,6 +51,15 @@ struct SettingsPanel : jcmp::NamedPanel, HasEditor
     std::unique_ptr<jcmp::Label> voiceCount;
     std::unique_ptr<jcmp::Label> cpuLabel;
     double lastCpu{-2000};
+
+    std::unique_ptr<jcmp::Label> blockSizeLabel;
+    std::unique_ptr<jcmp::MultiSwitch> blockSize;
+    std::unique_ptr<PatchDiscrete> blockSizeD;
+    // picking a block size should not open the voicing screen
+    struct NoPanelSelect
+    {
+        void beginEdit() {}
+    } noPanelSelect;
 
     bool isPlayScreenShowing{false};
     bool suppressPowerOff{false};

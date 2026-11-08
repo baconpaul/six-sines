@@ -244,7 +244,7 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 out[i][s] = engine->output[i][blockPos];
 
             blockPos++;
-            if (blockPos == blockSize)
+            if (blockPos == engine->blockSize)
             {
                 blockPos = 0;
             }

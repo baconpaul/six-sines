@@ -56,7 +56,7 @@ std::shared_ptr<const Wavetable> sineTable()
 // Just over one cycle at middle C on the 2.5x oversampled engine, so a waveform
 // difference has somewhere to show up.
 static constexpr int renderBlocks{64};
-static constexpr int renderSamples{renderBlocks * blockSize};
+static constexpr int renderSamples{renderBlocks * Synth::defaultBlockSize};
 
 struct Rendered
 {
@@ -100,7 +100,7 @@ Rendered renderBothPaths(std::shared_ptr<const Wavetable> table,
         s->reapplyControlSettings();
         s->voiceManager->processNoteOnEvent(0, 0, 60, -1, 0.8f, 0.f);
 
-        auto *v = s->head;
+        auto *v = s->headAs();
         REQUIRE(v != nullptr);
         auto *op = &v->src[0];
 
@@ -109,7 +109,7 @@ Rendered renderBothPaths(std::shared_ptr<const Wavetable> table,
         for (int b = 0; b < renderBlocks; ++b)
         {
             v->renderBlock();
-            for (int i = 0; i < blockSize; ++i)
+            for (int i = 0; i < Synth::defaultBlockSize; ++i)
                 into.push_back(op->output[i]);
         }
     }
@@ -266,7 +266,7 @@ uint32_t levelForNote(const std::shared_ptr<const Wavetable> &table, int key, do
     s->reapplyControlSettings();
     s->voiceManager->processNoteOnEvent(0, 0, key, -1, 0.8f, 0.f);
 
-    auto *v = s->head;
+    auto *v = s->headAs();
     REQUIRE(v != nullptr);
     for (int b = 0; b < 4; ++b)
         v->renderBlock();
@@ -296,8 +296,7 @@ TEST_CASE("A higher note reads a coarser mip level", "[wavetable][dsp]")
     REQUIRE(prev > 0);
 }
 
-TEST_CASE("The selected level keeps its harmonics under the engine Nyquist",
-          "[wavetable][dsp]")
+TEST_CASE("The selected level keeps its harmonics under the engine Nyquist", "[wavetable][dsp]")
 {
     MatrixIndex::initialize();
     auto table = sineTable();
@@ -388,10 +387,9 @@ std::shared_ptr<const Wavetable> harmonicTable(const std::vector<int> &harmonicP
     sf.nFrames = (uint32_t)harmonicPerFrame.size();
     sf.samples.resize(sf.nFrames * sf.cycleLength);
     for (uint32_t f = 0; f < sf.nFrames; ++f)
-        for (uint32_t i = 0; i < sf.cycleLength; ++i
-            )
-            sf.samples[f * sf.cycleLength + i] = static_cast<float>(
-                std::sin(2 * M_PI * harmonicPerFrame[f] * i / sf.cycleLength));
+        for (uint32_t i = 0; i < sf.cycleLength; ++i)
+            sf.samples[f * sf.cycleLength + i] =
+                static_cast<float>(std::sin(2 * M_PI * harmonicPerFrame[f] * i / sf.cycleLength));
     return buildWavetableFromSource(sf, 0x6000 + sf.nFrames, "harm");
 }
 
@@ -418,14 +416,14 @@ std::vector<float> renderWavetable(const std::shared_ptr<const Wavetable> &table
     s->reapplyControlSettings();
     s->voiceManager->processNoteOnEvent(0, 0, 36, -1, 0.8f, 0.f);
 
-    auto *v = s->head;
+    auto *v = s->headAs();
     REQUIRE(v != nullptr);
     std::vector<float> out;
     out.reserve(renderSamples);
     for (int b = 0; b < renderBlocks; ++b)
     {
         v->renderBlock();
-        for (int i = 0; i < blockSize; ++i)
+        for (int i = 0; i < Synth::defaultBlockSize; ++i)
             out.push_back(v->src[0].output[i]);
     }
     return out;
