@@ -405,6 +405,16 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     createComponent(editor, *this, out.resampleEngine, rsEng, rsEngD);
     addAndMakeVisible(*rsEng);
 
+    createComponent(editor, *this, out.forceSampleRate, forceRate, forceRateD);
+    forceRate->direction = jcmp::MultiSwitch::HORIZONTAL;
+    addAndMakeVisible(*forceRate);
+    forceRateD->onGuiSetValue = op;
+    editor.componentRefreshByID[out.forceSampleRate.meta.id] = op;
+
+    createComponent(editor, *this, out.engineBlockSize, blockSize, blockSizeD);
+    blockSize->direction = jcmp::MultiSwitch::HORIZONTAL;
+    addAndMakeVisible(*blockSize);
+
     createComponent(editor, *this, out.saturationType, satType, satTypeD);
     addAndMakeVisible(*satType);
     createComponent(editor, *this, out.saturationDrive, satDrive, satDriveD);
@@ -452,6 +462,8 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
         slot->setJustification(j);
         addAndMakeVisible(*slot);
     };
+    mkLabel(blockSizeLabel, "Block:");
+    mkLabel(forceRateLabel, "O/S Strategy:");
     mkLabel(sampleRateLabel, "Sample Rate:");
     mkLabel(ultrasonicLabel, "Ultrasonic Filter:");
     mkLabel(saturationLabel, "Saturation:");
@@ -606,7 +618,7 @@ void PlayModeSubPanel::resized()
     // arrow connectors between stages.
     // Explicit height (9 rows) so the outer VList reserves space and the section below
     // is placed beneath it rather than overlapping.
-    auto pathColHeight = 9 * uicLabelHeight + 8 * uicMargin;
+    auto pathColHeight = 10 * uicLabelHeight + 9 * uicMargin;
     auto pathCol =
         jlo::VList().withWidth(fullWidth).withHeight(pathColHeight).withAutoGap(uicMargin);
 
@@ -627,6 +639,16 @@ void PlayModeSubPanel::resized()
         return row;
     };
 
+    {
+        auto blockLabelW = 3 * uicLabelHeight;
+        auto switchW = (fullWidth - labelW - blockLabelW - 3 * uicMargin) / 2;
+        auto row = jlo::HList().withHeight(uicLabelHeight).withAutoGap(uicMargin);
+        row.add(jlo::Component(*forceRateLabel).withWidth(labelW));
+        row.add(jlo::Component(*forceRate).withWidth(switchW));
+        row.add(jlo::Component(*blockSizeLabel).withWidth(blockLabelW));
+        row.add(jlo::Component(*blockSize).expandToFill());
+        pathCol.add(row);
+    }
     if (forcedRateLabel)
         pathCol.add(stageRow(sampleRateLabel, forcedRateLabel));
     else
@@ -938,9 +960,16 @@ void PlayModeSubPanel::setEnabledState()
     zohPreFilter->setEnabled(brOn);
     zohPreFilterLabel->setEnabled(brOn);
 
-    // a forced 2x or 1x build has no resampler
-    rsEng->setEnabled(forcedSampleRateStrategyDefault < 0);
-    downsamplerLabel->setEnabled(forcedSampleRateStrategyDefault < 0);
+    // a 2x or 1x engine has no oversampled rate or resampler; a forced build ignores the patch
+    auto buildForced = forcedSampleRateStrategyDefault >= 0;
+    auto forced =
+        buildForced || (int)std::round(editor.patchMainRef.output.forceSampleRate.value) != FSR_HI;
+    forceRate->setEnabled(!buildForced);
+    forceRateLabel->setEnabled(!buildForced);
+    srStrat->setEnabled(!forced);
+    sampleRateLabel->setEnabled(!forced);
+    rsEng->setEnabled(!forced);
+    downsamplerLabel->setEnabled(!forced);
 
     auto me = editor.dawStateMainRef.audio.mpeActive;
     mpeRangeEditor->setEnabled(me);

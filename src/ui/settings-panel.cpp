@@ -16,7 +16,6 @@
 #include "settings-panel.h"
 #include "ui-constants.h"
 #include "playmode-sub-panel.h"
-#include "patch-data-bindings.h"
 
 namespace baconpaul::six_sines::ui
 {
@@ -45,14 +44,6 @@ SettingsPanel::SettingsPanel(SixSinesEditor &e) : jcmp::NamedPanel("Settings"), 
     cpuLabel = std::make_unique<jcmp::Label>();
     cpuLabel->setText("CPU: 0.0%");
     addAndMakeVisible(*cpuLabel);
-
-    blockSizeLabel = std::make_unique<jcmp::Label>();
-    blockSizeLabel->setText("Block");
-    addAndMakeVisible(*blockSizeLabel);
-    createComponent(editor, noPanelSelect, editor.patchMainRef.output.engineBlockSize, blockSize,
-                    blockSizeD);
-    blockSize->direction = jcmp::MultiSwitch::HORIZONTAL;
-    addAndMakeVisible(*blockSize);
 }
 
 SettingsPanel::~SettingsPanel() = default;
@@ -68,14 +59,9 @@ void SettingsPanel::resized()
     int labelX = btnX + settingsBtnSize + 2 * uicMargin;
     int labelW = sb.getRight() - labelX;
     int labelH = uicLabelHeight;
-    int labelsY = sb.getY() + (sb.getHeight() - 3 * labelH - uicMargin) / 2;
+    int labelsY = sb.getY() + (sb.getHeight() - 2 * labelH) / 2;
     voiceCount->setBounds(labelX, labelsY, labelW, labelH);
     cpuLabel->setBounds(labelX, labelsY + labelH, labelW, labelH);
-
-    auto bsRow = juce::Rectangle<int>(labelX, labelsY + 2 * labelH + uicMargin, labelW, labelH);
-    int bsLabelW = 32;
-    blockSizeLabel->setBounds(bsRow.withWidth(bsLabelW));
-    blockSize->setBounds(bsRow.withTrimmedLeft(bsLabelW));
 }
 
 void SettingsPanel::beginEdit()

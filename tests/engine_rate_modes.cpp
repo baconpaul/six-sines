@@ -133,6 +133,31 @@ TEST_CASE("A patch cannot select 2x or 1x without the build override", "[engine-
     }
 }
 
+TEST_CASE("A patch picks 2x or 1x with forceSampleRate", "[engine-rate]")
+{
+    auto s = makeSineSynth(-1, 0.f);
+    REQUIRE(s->patch.output.forceSampleRate.value == (float)FSR_HI);
+    REQUIRE(s->engineSampleRate == 120000.0);
+
+    // the held note fades at the old rate before the change lands
+    s->patch.output.forceSampleRate.value = (float)FSR_2X;
+    s->reapplyControlSettings();
+    REQUIRE(s->engineSampleRate == 120000.0);
+    for (int i = 0; i < 1000 && s->pendingRateChange; ++i)
+        s->process(nullptr);
+    REQUIRE(s->head == nullptr);
+    REQUIRE(s->engineSampleRate == 2 * hostRate);
+
+    // with nothing sounding it lands at once
+    s->patch.output.forceSampleRate.value = (float)FSR_1X;
+    s->reapplyControlSettings();
+    REQUIRE(s->engineSampleRate == hostRate);
+
+    s->patch.output.forceSampleRate.value = (float)FSR_HI;
+    s->reapplyControlSettings();
+    REQUIRE(s->engineSampleRate == 120000.0);
+}
+
 TEST_CASE("2x and 1x pass an in-band sine at pitch", "[engine-rate]")
 {
     for (auto forced : {SR_2X, SR_1X})

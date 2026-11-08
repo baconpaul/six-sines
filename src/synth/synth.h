@@ -60,6 +60,9 @@ struct Synth
     // the engine block, and the host samples each process() makes; changes only in process()
     size_t blockSize{defaultBlockSize};
     size_t pendingBlockSize{defaultBlockSize};
+    // a rate or resampler change waiting for the sounding voices to fade
+    bool pendingRateChange{false};
+    int quietBlocksBeforeRateChange{0};
 
     float output alignas(16)[2 * (1 + numOps)][maxEngineBlockSize];
 
@@ -114,18 +117,25 @@ struct Synth
     };
     using voice_t = VMConfig::voice_t;
 
-    // every slot fits the largest voice, so a block size change rebuilds the pool in place
-    static constexpr size_t voiceSlotBytes{
-        std::max({sizeof(Voice<8>), sizeof(Voice<16>), sizeof(Voice<32>)})};
-    struct alignas(64) VoiceSlot
+    // a pool per block size, built up front: constructing one costs the audio thread milliseconds
+    template <size_t BS>
+    using voicePool_t = std::array<std::unique_ptr<Voice<BS>>, VMConfig::maxVoiceCount>;
+    voicePool_t<8> voicePool8;
+    voicePool_t<16> voicePool16;
+    voicePool_t<32> voicePool32;
+    template <size_t BS> voicePool_t<BS> &voicePool()
     {
-        std::byte bytes[voiceSlotBytes];
-    };
-    std::unique_ptr<VoiceSlot[]> voiceSlots;
+        if constexpr (BS == 16)
+            return voicePool16;
+        else if constexpr (BS == 32)
+            return voicePool32;
+        else
+            return voicePool8;
+    }
     std::array<voice_t *, VMConfig::maxVoiceCount> voices{};
-    template <size_t BS> void buildVoices();
-    void destroyVoices();
-    void applyPendingBlockSize();
+    template <size_t BS> void buildVoicePool();
+    template <size_t BS> void useVoicePool();
+    void applyPendingEngineChanges();
 
     voice_t *head{nullptr};
     template <size_t BS = defaultBlockSize> Voice<BS> *headAs() const

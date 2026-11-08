@@ -127,6 +127,12 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<PatchDiscrete> rsEngD;
     std::unique_ptr<jcmp::Label> forcedRateLabel;
 
+    std::unique_ptr<jcmp::MultiSwitch> forceRate;
+    std::unique_ptr<PatchDiscrete> forceRateD;
+
+    std::unique_ptr<jcmp::MultiSwitch> blockSize;
+    std::unique_ptr<PatchDiscrete> blockSizeD;
+
     std::unique_ptr<jcmp::JogUpDownButton> satType, lowpass, bitRate, bitDepth, highpass;
     std::unique_ptr<PatchDiscrete> satTypeD, lowpassD, bitRateD, bitDepthD, highpassD;
 
@@ -148,7 +154,7 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<PatchContinuous> outGainD;
     std::unique_ptr<jcmp::Label> outGainLabel;
 
-    std::unique_ptr<jcmp::Label> sampleRateLabel, downsamplerLabel;
+    std::unique_ptr<jcmp::Label> sampleRateLabel, downsamplerLabel, blockSizeLabel, forceRateLabel;
     std::unique_ptr<jcmp::Label> saturationLabel, lowpassLabel, bitRateLabel, bitDepthLabel,
         highpassLabel, ultrasonicLabel;
 

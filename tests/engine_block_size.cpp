@@ -17,6 +17,7 @@
 
 #include <cmath>
 #include <memory>
+#include <set>
 
 #include "configuration.h"
 #include "dsp/sintable.h"
@@ -99,6 +100,18 @@ double rmsOverSeconds(Synth &s, double seconds)
     }
     return std::sqrt(acc / n);
 }
+
+// held voices fade out at the old size before the switch lands
+int processUntilBlockSize(Synth &s, size_t bs)
+{
+    int blocks{0};
+    while (s.blockSize != bs && blocks < 1000)
+    {
+        s.process(nullptr);
+        ++blocks;
+    }
+    return blocks;
+}
 } // namespace
 
 TEST_CASE("Engine block size defaults to 8", "[block-size]")
@@ -135,7 +148,9 @@ TEST_CASE("Changing block size ends held voices and the next note plays", "[bloc
     REQUIRE(s->voiceManager->getVoiceCount() == 1);
 
     setBlockSize(*s, EBS_32);
-    s->process(nullptr);
+    auto blocks = processUntilBlockSize(*s, 32);
+    REQUIRE(blocks > 1);
+    REQUIRE(blocks <= 256 / 8 + 2);
     REQUIRE(s->blockSize == 32);
     REQUIRE(s->head == nullptr);
     REQUIRE(s->voiceCount == 0);
@@ -152,8 +167,30 @@ TEST_CASE("Changing block size ends held voices and the next note plays", "[bloc
     REQUIRE(rmsOverSeconds(*s, 0.1) > 0.1);
 
     setBlockSize(*s, EBS_8);
-    s->process(nullptr);
+    blocks = processUntilBlockSize(*s, 8);
+    REQUIRE(blocks > 1);
+    REQUIRE(blocks <= 256 / 32 + 2);
     REQUIRE(s->blockSize == 8);
     REQUIRE(s->head == nullptr);
     REQUIRE(s->voiceManager->getVoiceCount() == 0);
+}
+
+TEST_CASE("A block size switch reuses voices built up front", "[block-size]")
+{
+    // building a pool takes milliseconds, which on the audio thread is a dropout
+    auto s = makeSineSynth(EBS_8);
+    auto first8 = s->voices;
+    std::set<Synth::voice_t *> seen(first8.begin(), first8.end());
+
+    for (auto [b, bs] : {std::pair{EBS_16, 16}, std::pair{EBS_32, 32}})
+    {
+        setBlockSize(*s, b);
+        processUntilBlockSize(*s, bs);
+        for (auto *v : s->voices)
+            REQUIRE(seen.insert(v).second);
+    }
+
+    setBlockSize(*s, EBS_8);
+    processUntilBlockSize(*s, 8);
+    REQUIRE(s->voices == first8);
 }

@@ -39,6 +39,14 @@ enum EngineBlockSize
     EBS_32 = 2
 };
 
+// streamed; hi runs the patch's oversampled rate and resampler, 1x and 2x override it
+enum ForceSampleRate
+{
+    FSR_1X = 0,
+    FSR_2X = 1,
+    FSR_HI = 2
+};
+
 // memcpy from this, since clang on darwin turns a fill-with-1 loop into a memset_pattern16 call
 template <size_t BS>
 alignas(16) inline constexpr auto unitBlock = []()

@@ -23,6 +23,7 @@ add_executable(six-sines-test
 		engine_rate_modes.cpp
 		envelope_retrigger.cpp
 		engine_block_size.cpp
+		clap_block_continuity.cpp
 )
 
 target_link_libraries(six-sines-test

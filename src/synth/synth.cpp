@@ -36,11 +36,15 @@ int debugLevel{0};
 namespace mech = sst::basic_blocks::mechanics;
 namespace sdsp = sst::basic_blocks::dsp;
 
-Synth::Synth(bool mo)
-    : isMultiOut(mo), voiceSlots(new VoiceSlot[VMConfig::maxVoiceCount]), responder(*this),
-      monoResponder(*this)
+Synth::Synth(bool mo) : isMultiOut(mo), responder(*this), monoResponder(*this)
 {
-    buildVoices<defaultBlockSize>();
+    buildVoicePool<defaultBlockSize>();
+    // the other pools must not move the random sequence the default one leaves behind
+    auto rngAfterDefaultPool = monoValues.rng;
+    buildVoicePool<16>();
+    buildVoicePool<32>();
+    monoValues.rng = rngAfterDefaultPool;
+    useVoicePool<defaultBlockSize>();
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
     monoValues.mtsClient = MTS_RegisterClient();
 
@@ -131,8 +135,6 @@ Synth::Synth(bool mo)
 
 Synth::~Synth()
 {
-    destroyVoices();
-
     if (monoValues.mtsClient)
     {
         MTS_DeregisterClient(monoValues.mtsClient);
@@ -380,6 +382,9 @@ void Synth::setSampleRate(double sampleRate)
         // paramAutomationSmoothingTimeMs is in milliseconds.
         p->lag.setRateInMilliseconds(monoValues.paramAutomationSmoothingTimeMs, engineSampleRate,
                                      1.0 / blockSize);
+        // a lag in flight lands where it was going, not where it had got to
+        if (p->lag.isActive())
+            p->value = p->lag.getTargetValue();
         p->lag.snapTo(p->value);
     }
     paramLagSet.removeAll();
@@ -783,7 +788,7 @@ void Synth::process(const clap_output_events_t *o)
         SinTable::initializeStatics();
 
     processUIQueue(o);
-    applyPendingBlockSize();
+    applyPendingEngineChanges();
 
     switch (blockSize)
     {
@@ -799,32 +804,55 @@ void Synth::process(const clap_output_events_t *o)
     }
 }
 
-template <size_t BS> void Synth::buildVoices()
+template <size_t BS> void Synth::buildVoicePool()
 {
-    destroyVoices();
+    monoValues.sr.blockSize = BS;
+    for (auto &v : voicePool<BS>())
+        v = std::make_unique<Voice<BS>>(patch, monoValues);
+}
+
+template <size_t BS> void Synth::useVoicePool()
+{
     blockSize = BS;
     pendingBlockSize = BS;
     monoValues.sr.blockSize = BS;
+    auto &pool = voicePool<BS>();
     for (size_t i = 0; i < VMConfig::maxVoiceCount; ++i)
-        voices[i] = new (voiceSlots[i].bytes) Voice<BS>(patch, monoValues);
+        voices[i] = pool[i].get();
 }
 
-void Synth::destroyVoices()
+void Synth::applyPendingEngineChanges()
 {
-    for (auto &v : voices)
+    if (!pendingRateChange && pendingBlockSize == blockSize)
+        return;
+
+    // fade what is sounding with the old engine and change once it has gone, rather than click
+    if (audioRunning && head)
     {
-        if (v)
-            v->~VoiceBase();
-        v = nullptr;
+        for (auto *v = head; v; v = v->next)
+            if (v->fadeBlocks < 0)
+                v->beginTerminationFade();
+        quietBlocksBeforeRateChange = 0;
+        return;
     }
-}
 
-void Synth::applyPendingBlockSize()
-{
+    if (pendingRateChange)
+    {
+        // the old resampler still holds the end of the fade; run 10ms of silence through it
+        if (audioRunning && quietBlocksBeforeRateChange < engineSampleRate * 0.01 / blockSize)
+        {
+            quietBlocksBeforeRateChange++;
+            return;
+        }
+        pendingRateChange = false;
+        quietBlocksBeforeRateChange = 0;
+        reapplyControlSettings();
+    }
+
     if (pendingBlockSize == blockSize)
         return;
 
-    // the pool is rebuilt under the voice manager, so end voices now rather than fade them
+    // the voice manager is about to see a different pool, so nothing may still be sounding
     while (head)
     {
         auto v = head;
@@ -836,13 +864,13 @@ void Synth::applyPendingBlockSize()
     switch (pendingBlockSize)
     {
     case 16:
-        buildVoices<16>();
+        useVoicePool<16>();
         break;
     case 32:
-        buildVoices<32>();
+        useVoicePool<32>();
         break;
     default:
-        buildVoices<8>();
+        useVoicePool<8>();
         break;
     }
 
@@ -1123,17 +1151,29 @@ void Synth::reapplyControlSettings()
         srs = SR_110120;
     if (forcedSampleRateStrategy >= 0)
         srs = (SampleRateStrategy)forcedSampleRateStrategy;
+    else if (auto fsr = (int)std::round(patch.output.forceSampleRate.value); fsr == FSR_1X)
+        srs = SR_1X;
+    else if (fsr == FSR_2X)
+        srs = SR_2X;
 
-    if (sampleRateStrategy != srs ||
-        resamplerEngine != (ResamplerEngine)patch.output.resampleEngine.value)
+    auto rse = (ResamplerEngine)patch.output.resampleEngine.value;
+    if (sampleRateStrategy != srs || resamplerEngine != rse)
     {
-        sampleRateStrategy = srs;
-        resamplerEngine = (ResamplerEngine)patch.output.resampleEngine.value;
-
-        if (hostSampleRate > 0)
+        // new resamplers would swallow the fade of what is sounding, so process() comes back
+        if (hostSampleRate > 0 && audioRunning && head)
         {
-            voiceManager->allSoundsOff();
-            setSampleRate(hostSampleRate);
+            pendingRateChange = true;
+        }
+        else
+        {
+            sampleRateStrategy = srs;
+            resamplerEngine = rse;
+
+            if (hostSampleRate > 0)
+            {
+                voiceManager->allSoundsOff();
+                setSampleRate(hostSampleRate);
+            }
         }
     }
 
@@ -1442,6 +1482,7 @@ void Synth::handleAudioThreadParamSideEffects(Param *dest)
         dest->meta.id == patch.output.resampleEngine.meta.id ||
         dest->meta.id == patch.output.legacyDsp.meta.id ||
         dest->meta.id == patch.output.engineBlockSize.meta.id ||
+        dest->meta.id == patch.output.forceSampleRate.meta.id ||
         dest->meta.id == patch.output.lowpass.meta.id ||
         dest->meta.id == patch.output.highpass.meta.id ||
         dest->meta.id == patch.output.bitRateAdjust.meta.id ||
