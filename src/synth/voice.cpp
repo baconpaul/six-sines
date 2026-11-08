@@ -48,6 +48,9 @@ Voice::Voice(const Patch &p, MonoValues &mv)
     std::fill(cmRatio.begin(), cmRatio.end(), 1.f);
     for (int i = 0; i < numOps; ++i)
         src[i].opIndex = i;
+
+    // the nodes ran their attack against whatever patch was loaded; start as a finished voice does
+    cleanup();
 }
 
 void Voice::attack()

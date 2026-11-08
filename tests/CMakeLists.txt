@@ -21,6 +21,7 @@ add_executable(six-sines-test
 		dead_work_skips.cpp
 		preset_discovery.cpp
 		engine_rate_modes.cpp
+		envelope_retrigger.cpp
 )
 
 target_link_libraries(six-sines-test
