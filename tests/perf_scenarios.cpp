@@ -308,11 +308,11 @@ auto makeVoiceDriver(Synth &s)
             s.monoValues.twoToTheX.twoToThe(s.patch.output.unisonSpread.value) - 1.f;
         s.monoValues.unisonPanScalar = s.patch.output.unisonPan.value;
 
-        auto *cv = s.head;
+        auto *cv = s.headAs();
         while (cv)
         {
             cv->renderBlock();
-            cv = cv->next;
+            cv = cv->nextVoice();
         }
     };
 }
@@ -321,7 +321,7 @@ auto makeVoiceDriver(Synth &s)
 // samplesPerBlock = blockSize at the engine rate.
 auto makeInnerDriver(Synth &s)
 {
-    auto *cv = s.head;
+    auto *cv = s.headAs();
     REQUIRE(cv != nullptr);
     auto *op = &cv->src[0];
     return [op, cv]()
@@ -342,8 +342,8 @@ uint64_t hashOneOutputBlock(Synth &s)
 {
     s.process(nullptr);
     // Synth::output is [2*(1+numOps)][blockSize] — main pair is rows 0/1.
-    uint64_t h = hashFloats(s.output[0], blockSize);
-    h ^= hashFloats(s.output[1], blockSize) * 0x9E3779B97F4A7C15ull;
+    uint64_t h = hashFloats(s.output[0], Synth::defaultBlockSize);
+    h ^= hashFloats(s.output[1], Synth::defaultBlockSize) * 0x9E3779B97F4A7C15ull;
     return h;
 }
 
@@ -409,7 +409,7 @@ void runScenario(const char *tag, Level level, const ScenarioSpec &spec, int num
     d.voices = numVoices;
     d.activeOps = spec.activeOps;
     d.block_ns = r.median_ns_per_iter;
-    d.samplesPerBlock = blockSize;
+    d.samplesPerBlock = Synth::defaultBlockSize;
     d.stddev_pct = r.stddev_pct;
     d.iters_per_sample = r.iters_per_sample;
     d.hash = hash;

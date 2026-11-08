@@ -33,10 +33,34 @@
 
 namespace baconpaul::six_sines
 {
-struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
-                              LFOSupport<OpSource, Patch::SourceNode, false>,
-                              ModulationSupport<Patch::SourceNode, OpSource>
+template <size_t BS>
+struct alignas(16) OpSource : public EnvelopeSupport<BS, Patch::SourceNode>,
+                              public LFOSupport<BS, OpSource<BS>, Patch::SourceNode, false>,
+                              public ModulationSupport<Patch::SourceNode, OpSource<BS>>
 {
+    static constexpr size_t blockSize{BS};
+    static constexpr double blockSizeInv{1.0 / BS};
+    using env_base_t = EnvelopeSupport<BS, Patch::SourceNode>;
+    using lfo_base_t = LFOSupport<BS, OpSource<BS>, Patch::SourceNode, false>;
+    using mod_base_t = ModulationSupport<Patch::SourceNode, OpSource<BS>>;
+    using env_base_t::env;
+    using env_base_t::envAttack;
+    using env_base_t::envHandleModulationValue;
+    using env_base_t::envProcess;
+    using env_base_t::envResetMod;
+    using env_base_t::retriggerHasFloor;
+    using lfo_base_t::lfo;
+    using lfo_base_t::lfoAttack;
+    using lfo_base_t::lfoHandleModulationValue;
+    using lfo_base_t::lfoIsEnveloped;
+    using lfo_base_t::lfoProcess;
+    using lfo_base_t::lfoResetMod;
+    using mod_base_t::anySources;
+    using mod_base_t::bindModulation;
+    using mod_base_t::depthPointers;
+    using mod_base_t::lfoUsedAsModulationSource;
+    using mod_base_t::sourcePointers;
+
     int32_t phaseInput alignas(16)[blockSize];
     int32_t feedbackLevel alignas(16)[blockSize];
     float rmLevel alignas(16)[blockSize];
@@ -150,12 +174,12 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
     }
 
     OpSource(const Patch::SourceNode &sn, MonoValues &mv, const VoiceValues &vv)
-        : sourceNode(sn), monoValues(mv), voiceValues(vv), EnvelopeSupport(sn, mv, vv),
-          LFOSupport(sn, mv, vv), ModulationSupport(sn, this, mv, vv), ratio(sn.ratio),
-          activeV(sn.active), envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio),
-          waveForm(sn.waveForm), kt(sn.keyTrack), ktv(sn.keyTrackValue),
-          ktlo(sn.keyTrackValueIsLow), ktlov(sn.keyTrackLowFrequencyValue),
-          startPhase(sn.startingPhase), octTranspose(sn.octTranspose), absOffset(sn.absoluteOffset),
+        : sourceNode(sn), monoValues(mv), voiceValues(vv), env_base_t(sn, mv, vv),
+          lfo_base_t(sn, mv, vv), mod_base_t(sn, this, mv, vv), ratio(sn.ratio), activeV(sn.active),
+          envToRatio(sn.envToRatio), lfoToRatio(sn.lfoToRatio), waveForm(sn.waveForm),
+          kt(sn.keyTrack), ktv(sn.keyTrackValue), ktlo(sn.keyTrackValueIsLow),
+          ktlov(sn.keyTrackLowFrequencyValue), startPhase(sn.startingPhase),
+          octTranspose(sn.octTranspose), absOffset(sn.absoluteOffset),
           lfoToRatioFine(sn.lfoToRatioFine), envToRatioFine(sn.envToRatioFine),
           noiseHelper(mv.rng, mv.dbToLinear)
     {
@@ -322,7 +346,7 @@ struct alignas(16) OpSource : public EnvelopeSupport<Patch::SourceNode>,
             feedbackLevel[i] = 0;
             fmAmount[i] = 0.f;
         }
-        memcpy(rmLevel, unitBlock, sizeof(rmLevel));
+        memcpy(rmLevel, unitBlock<blockSize>.data(), sizeof(rmLevel));
         rmAssigned = false;
         hasActiveFeedback = false;
     }

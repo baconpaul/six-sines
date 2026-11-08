@@ -41,7 +41,7 @@ std::string stripParams(std::string xml, const std::vector<uint32_t> &ids)
 
 // One op, PHASE_REMAP/SAW over a sine, rendered raw off the OpSource so the
 // mixer and output stage can't colour the comparison.
-std::array<float, blockSize> renderPhaseRemapOp(float readPhase)
+std::array<float, Synth::defaultBlockSize> renderPhaseRemapOp(float readPhase)
 {
     auto s = std::make_unique<Synth>(false);
     s->setSampleRate(48000.0);
@@ -67,14 +67,14 @@ std::array<float, blockSize> renderPhaseRemapOp(float readPhase)
     s->reapplyControlSettings();
     s->voiceManager->processNoteOnEvent(0, 0, 60, -1, 0.8f, 0.f);
 
-    auto *v = s->head;
+    auto *v = s->headAs();
     REQUIRE(v != nullptr);
     auto *op = &v->src[0];
     op->zeroInputs();
     op->renderBlock();
 
-    std::array<float, blockSize> out{};
-    for (int i = 0; i < blockSize; ++i)
+    std::array<float, Synth::defaultBlockSize> out{};
+    for (int i = 0; i < Synth::defaultBlockSize; ++i)
         out[i] = op->output[i];
     return out;
 }
@@ -133,7 +133,7 @@ TEST_CASE("Phase map read phase rotates the read", "[phase-map]")
     {
         auto rotated = renderPhaseRemapOp(0.25f);
         bool anyDiff{false};
-        for (int i = 0; i < blockSize; ++i)
+        for (int i = 0; i < Synth::defaultBlockSize; ++i)
             anyDiff = anyDiff || std::fabs(rotated[i] - base[i]) > 1e-4f;
         REQUIRE(anyDiff);
     }
@@ -143,14 +143,14 @@ TEST_CASE("Phase map read phase rotates the read", "[phase-map]")
         // sin(x + pi) == -sin(x), and this only holds if the offset is added
         // *after* the remap — remap(ph + half) is not remap(ph) + half.
         auto flipped = renderPhaseRemapOp(0.5f);
-        for (int i = 0; i < blockSize; ++i)
+        for (int i = 0; i < Synth::defaultBlockSize; ++i)
             REQUIRE(flipped[i] == Approx(-base[i]).margin(1e-6));
     }
 
     SECTION("a full cycle wraps back to no offset")
     {
         auto wrapped = renderPhaseRemapOp(1.f);
-        for (int i = 0; i < blockSize; ++i)
+        for (int i = 0; i < Synth::defaultBlockSize; ++i)
             REQUIRE(wrapped[i] == Approx(base[i]).margin(1e-6));
     }
 }

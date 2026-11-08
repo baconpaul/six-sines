@@ -24,25 +24,26 @@ namespace baconpaul::six_sines
 
 namespace scpu = sst::cpputils;
 
-Voice::Voice(const Patch &p, MonoValues &mv)
+template <size_t BS>
+Voice<BS>::Voice(const Patch &p, MonoValues &mv)
     : monoValues(mv), out(p.output, p.mainPanMod, p.fineTuneMod, mixerNode, mv, voiceValues),
       output{out.output[0], out.output[1]},
-      src(scpu::make_array_lambda<OpSource, numOps>(
-          [this, &p, &mv](auto i) { return OpSource(p.sourceNodes[i], mv, voiceValues); })),
-      mixerNode(scpu::make_array_lambda<MixerNode, numOps>(
+      src(scpu::make_array_lambda<OpSource<BS>, numOps>(
+          [this, &p, &mv](auto i) { return OpSource<BS>(p.sourceNodes[i], mv, voiceValues); })),
+      mixerNode(scpu::make_array_lambda<MixerNode<BS>, numOps>(
           [this, &p, &mv](auto i)
-          { return MixerNode(p.mixerNodes[i], this->src[i], mv, voiceValues); })),
-      selfNode(scpu::make_array_lambda<MatrixNodeSelf, numOps>(
+          { return MixerNode<BS>(p.mixerNodes[i], this->src[i], mv, voiceValues); })),
+      selfNode(scpu::make_array_lambda<MatrixNodeSelf<BS>, numOps>(
           [this, &p, &mv](auto i)
-          { return MatrixNodeSelf(p.selfNodes[i], this->src[i], mv, voiceValues); })),
-      matrixNode(scpu::make_array_lambda<MatrixNodeFrom, matrixSize>(
+          { return MatrixNodeSelf<BS>(p.selfNodes[i], this->src[i], mv, voiceValues); })),
+      matrixNode(scpu::make_array_lambda<MatrixNodeFrom<BS>, matrixSize>(
           [&p, this, &mv](auto i)
           {
-              return MatrixNodeFrom(p.matrixNodes[i], this->targetAtMatrix(i),
-                                    this->sourceAtMatrix(i), mv, voiceValues);
+              return MatrixNodeFrom<BS>(p.matrixNodes[i], this->targetAtMatrix(i),
+                                        this->sourceAtMatrix(i), mv, voiceValues);
           })),
-      macroNode(scpu::make_array_lambda<MacroVoiceNode, numMacros>(
-          [&p, this, &mv](auto i) { return MacroVoiceNode(p.macroNodes[i], mv, voiceValues); }))
+      macroNode(scpu::make_array_lambda<MacroVoiceNode<BS>, numMacros>(
+          [&p, this, &mv](auto i) { return MacroVoiceNode<BS>(p.macroNodes[i], mv, voiceValues); }))
 {
     std::fill(isKeytrack.begin(), isKeytrack.end(), true);
     std::fill(cmRatio.begin(), cmRatio.end(), 1.f);
@@ -53,8 +54,9 @@ Voice::Voice(const Patch &p, MonoValues &mv)
     cleanup();
 }
 
-void Voice::attack()
+template <size_t BS> void Voice<BS>::attack()
 {
+    assert(monoValues.sr.blockSize == BS);
     voiceValues.velocityLag.snapTo(voiceValues.velocity);
     voiceValues.velocityLag.setRateInMilliseconds(10, monoValues.sr.sampleRate, 1.0 / blockSize);
 
@@ -95,15 +97,15 @@ void Voice::attack()
     {
         bool used = mixerNode[i].active;
         for (int j = i + 1; j < (int)numOps && !used; ++j)
-            used = matrixNode[MatrixIndex::positionForSourceTarget(i, j)].active &&
-                   src[j].active && src[j].outputUsedCachedAtAttack;
+            used = matrixNode[MatrixIndex::positionForSourceTarget(i, j)].active && src[j].active &&
+                   src[j].outputUsedCachedAtAttack;
         src[i].outputUsedCachedAtAttack = used;
     }
 
     voiceValues.setGated(true);
 }
 
-void Voice::renderBlock()
+template <size_t BS> void Voice<BS>::renderBlock()
 {
     // Advance MPE / note-expression lags before any pitch math or per-node mod
     // matrix evaluation. On the first block after attack, snap (voicemanager
@@ -254,10 +256,16 @@ void Voice::renderBlock()
 
 static_assert(numOps == 6, "Rebuild this table if not");
 
-OpSource &Voice::sourceAtMatrix(size_t pos) { return src[MatrixIndex::sourceIndexAt(pos)]; }
-OpSource &Voice::targetAtMatrix(size_t pos) { return src[MatrixIndex::targetIndexAt(pos)]; }
+template <size_t BS> OpSource<BS> &Voice<BS>::sourceAtMatrix(size_t pos)
+{
+    return src[MatrixIndex::sourceIndexAt(pos)];
+}
+template <size_t BS> OpSource<BS> &Voice<BS>::targetAtMatrix(size_t pos)
+{
+    return src[MatrixIndex::targetIndexAt(pos)];
+}
 
-void Voice::retriggerAllEnvelopesForKeyPress()
+template <size_t BS> void Voice<BS>::retriggerAllEnvelopesForKeyPress()
 {
     auto dtm = out.defaultTrigger;
     auto mtm = [dtm](auto tm)
@@ -306,7 +314,7 @@ void Voice::retriggerAllEnvelopesForKeyPress()
         out.panModNode.envAttack();
 }
 
-void Voice::retriggerAllEnvelopesForReGate()
+template <size_t BS> void Voice<BS>::retriggerAllEnvelopesForReGate()
 {
     auto dtm = out.defaultTrigger;
 
@@ -358,7 +366,7 @@ void Voice::retriggerAllEnvelopesForReGate()
         out.panModNode.envAttack();
 }
 
-void Voice::cleanup()
+template <size_t BS> void Voice<BS>::cleanup()
 {
     used = false;
     fadeBlocks = -1;
@@ -404,7 +412,7 @@ void Voice::cleanup()
     out.panModNode.envCleanup();
 }
 
-void Voice::setupPortaTo(uint16_t newKey, float log2Time)
+template <size_t BS> void Voice<BS>::setupPortaTo(uint16_t newKey, float log2Time)
 {
     if (log2Time < -8 + 1e-5)
     {
@@ -437,7 +445,8 @@ void Voice::setupPortaTo(uint16_t newKey, float log2Time)
     voiceValues.portaSign = sign;
 }
 
-void Voice::restartPortaTo(float sourceKey, uint16_t newKey, float log2Time, float portaFrac)
+template <size_t BS>
+void Voice<BS>::restartPortaTo(float sourceKey, uint16_t newKey, float log2Time, float portaFrac)
 {
     if (log2Time < -8 + 1e-5)
     {
@@ -461,4 +470,7 @@ void Voice::restartPortaTo(float sourceKey, uint16_t newKey, float log2Time, flo
     voiceValues.portaSign = sign;
 }
 
+template struct Voice<8>;
+template struct Voice<16>;
+template struct Voice<32>;
 } // namespace baconpaul::six_sines

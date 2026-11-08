@@ -32,10 +32,33 @@ namespace mech = sst::basic_blocks::mechanics;
  * when the macro's power button (macroPower) is enabled. When power is off, the node
  * simply mirrors the static mono level.
  */
-struct MacroVoiceNode : EnvelopeSupport<Patch::MacroNode>,
-                        LFOSupport<MacroVoiceNode, Patch::MacroNode>,
-                        ModulationSupport<Patch::MacroNode, MacroVoiceNode>
+template <size_t BS>
+struct MacroVoiceNode : public EnvelopeSupport<BS, Patch::MacroNode>,
+                        public LFOSupport<BS, MacroVoiceNode<BS>, Patch::MacroNode>,
+                        public ModulationSupport<Patch::MacroNode, MacroVoiceNode<BS>>
 {
+    static constexpr size_t blockSize{BS};
+    using env_base_t = EnvelopeSupport<BS, Patch::MacroNode>;
+    using lfo_base_t = LFOSupport<BS, MacroVoiceNode<BS>, Patch::MacroNode>;
+    using mod_base_t = ModulationSupport<Patch::MacroNode, MacroVoiceNode<BS>>;
+    using env_base_t::env;
+    using env_base_t::envAttack;
+    using env_base_t::envHandleModulationValue;
+    using env_base_t::envIsMult;
+    using env_base_t::envProcess;
+    using env_base_t::envResetMod;
+    using lfo_base_t::lfo;
+    using lfo_base_t::lfoAttack;
+    using lfo_base_t::lfoHandleModulationValue;
+    using lfo_base_t::lfoIsEnveloped;
+    using lfo_base_t::lfoProcess;
+    using lfo_base_t::lfoResetMod;
+    using mod_base_t::anySources;
+    using mod_base_t::bindModulation;
+    using mod_base_t::depthPointers;
+    using mod_base_t::lfoUsedAsModulationSource;
+    using mod_base_t::sourcePointers;
+
     const Patch::MacroNode &macroNode;
     const MonoValues &monoValues;
     const VoiceValues &voiceValues;
@@ -52,8 +75,8 @@ struct MacroVoiceNode : EnvelopeSupport<Patch::MacroNode>,
     MacroVoiceNode(const Patch::MacroNode &mn, MonoValues &mv, const VoiceValues &vv)
         : macroNode(mn), monoValues(mv), voiceValues(vv), level(mn.level),
           macroPowerV(mn.macroPower), envDepth(mn.envDepth), lfoDepth(mn.lfoDepth),
-          lfoLevelMode(mn.lfoLevelMode), ModulationSupport(mn, this, mv, vv),
-          EnvelopeSupport(mn, mv, vv), LFOSupport(mn, mv, vv)
+          lfoLevelMode(mn.lfoLevelMode), mod_base_t(mn, this, mv, vv), env_base_t(mn, mv, vv),
+          lfo_base_t(mn, mv, vv)
     {
     }
 

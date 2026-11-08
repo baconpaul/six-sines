@@ -97,7 +97,7 @@ std::unique_ptr<Synth> makeSineSynth(bool legacyFeedback)
     s->voiceManager->processNoteOnEvent(0, 0, 45, -1, 1.0f, 0.f);
 
     // let the envelopes and the resampler settle before anything is captured
-    for (int i = 0; i < 4096 / blockSize; ++i)
+    for (int i = 0; i < 4096 / Synth::defaultBlockSize; ++i)
         s->process(nullptr);
     return s;
 }
@@ -106,11 +106,11 @@ double rmsOverSeconds(Synth &s, double seconds)
 {
     double acc{0};
     size_t n{0};
-    auto blocks = (int)(seconds * hostRate / blockSize);
+    auto blocks = (int)(seconds * hostRate / Synth::defaultBlockSize);
     for (int b = 0; b < blocks; ++b)
     {
         s.process(nullptr);
-        for (int i = 0; i < (int)blockSize; ++i)
+        for (int i = 0; i < (int)Synth::defaultBlockSize; ++i)
         {
             acc += (double)s.output[0][i] * s.output[0][i];
             ++n;
@@ -180,7 +180,7 @@ std::unique_ptr<Synth> makeSquarishSynth(bool legacy)
 
 const SIMD_M128 *tableForKey(Synth &s, int key)
 {
-    for (auto *v = s.head; v; v = v->next)
+    for (auto *v = s.headAs(); v; v = v->nextVoice())
         if (v->voiceValues.key == key)
             return v->src[0].st.simdQuad;
     return nullptr;
@@ -262,7 +262,7 @@ std::unique_ptr<Synth> makeRingModSynth(bool legacy)
     s->reapplyControlSettings();
     s->voiceManager->processNoteOnEvent(0, 0, 57, -1, 1.0f, 0.f);
     // let the dc blocker settle before measuring
-    for (int i = 0; i < (int)(0.5 * hostRate) / (int)blockSize; ++i)
+    for (int i = 0; i < (int)(0.5 * hostRate) / (int)Synth::defaultBlockSize; ++i)
         s->process(nullptr);
     return s;
 }
@@ -272,10 +272,10 @@ double dcShare(Synth &s, double seconds)
 {
     double sum{0}, sq{0};
     size_t n{0};
-    for (int b = 0; b < (int)(seconds * hostRate / blockSize); ++b)
+    for (int b = 0; b < (int)(seconds * hostRate / Synth::defaultBlockSize); ++b)
     {
         s.process(nullptr);
-        for (int i = 0; i < (int)blockSize; ++i)
+        for (int i = 0; i < (int)Synth::defaultBlockSize; ++i)
         {
             sum += s.output[0][i];
             sq += (double)s.output[0][i] * s.output[0][i];
@@ -308,7 +308,7 @@ TEST_CASE("A reused voice stops dc blocking once its op leaves a TX waveform", "
     auto &p = s->patch;
     p.matrixNodes[MatrixIndex::positionForSourceTarget(0, 1)].active.value = 0.f;
     p.sourceNodes[1].waveForm.value = (float)SinTable::TX3;
-    Voice *first{nullptr};
+    Synth::defaultVoice_t *first{nullptr};
 
     auto playAndRelease = [&]()
     {
@@ -317,9 +317,9 @@ TEST_CASE("A reused voice stops dc blocking once its op leaves a TX waveform", "
             s->process(nullptr);
         REQUIRE(s->head);
         if (!first)
-            first = s->head;
+            first = s->headAs();
         REQUIRE(s->head == first);
-        auto blocking = s->head->mixerNode[1].doBlock;
+        auto blocking = s->headAs()->mixerNode[1].doBlock;
         s->voiceManager->processNoteOffEvent(0, 0, 60, -1, 0.f);
         for (int i = 0; i < 4096; ++i)
             s->process(nullptr);

@@ -143,9 +143,9 @@ struct DigestParams
     const char *level{"?"};
     int voices{0};
     int activeOps{0};
-    double block_ns{0};             // wall-clock per processed block at this level
-    int samplesPerBlock{blockSize}; // host-rate samples this block produces (plugin) or
-                                    // engine-rate samples for voice/inner
+    double block_ns{0};                          // wall-clock per processed block at this level
+    int samplesPerBlock{defaultEngineBlockSize}; // host-rate samples this block produces (plugin)
+                                                 // or engine-rate samples for voice/inner
     double stddev_pct{0};
     int iters_per_sample{0}; // how many work() calls each timed sample contained
     uint64_t hash{0};

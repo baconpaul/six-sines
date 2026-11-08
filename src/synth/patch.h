@@ -107,6 +107,10 @@ struct Patch : pats::PatchBase<Patch, Param>
     static constexpr uint64_t version_130b = 0x010302;
     // 1.2 dsp fixes (output bus, table slopes, ring mod dc block); the legacy flag keeps 1.2's
     static constexpr uint64_t version_130c = 0x010303;
+    // engine block size per patch
+    static constexpr uint64_t version_130d = 0x010304;
+    // force the engine to 1x or 2x host rate per patch
+    static constexpr uint64_t version_130e = 0x010305;
 
     static md_t baseMd(uint64_t version = version_110) { return md_t().withVersion(version); }
     static md_t floatMd(uint64_t version = version_110)
@@ -1974,6 +1978,33 @@ struct Patch : pats::PatchBase<Patch, Param>
                             .withGroupName(name())
                             .withDefault(false)
                             .withID(id(59))),
+              // a change stops every voice, so it is not automatable
+              engineBlockSize(intMd(version_130d)
+                                  .withName(name() + " Engine Block Size")
+                                  .withGroupName(name())
+                                  .withFlags(CLAP_PARAM_IS_STEPPED)
+                                  .withDefault(EngineBlockSize::EBS_8)
+                                  .withRange(EngineBlockSize::EBS_8, EngineBlockSize::EBS_32)
+                                  .withID(id(60))
+                                  .withUnorderedMapFormatting({
+                                      {EngineBlockSize::EBS_8, "8"},
+                                      {EngineBlockSize::EBS_16, "16"},
+                                      {EngineBlockSize::EBS_32, "32"},
+                                  })),
+              // a change rebuilds the engine, so it is neither automatable nor shown to the host
+              forceSampleRate(intMd(version_130e)
+                                  .withName(name() + " Force Sample Rate")
+                                  .withGroupName(name())
+                                  .withFlags(CLAP_PARAM_IS_STEPPED | CLAP_PARAM_IS_HIDDEN)
+                                  // range first: withRange clamps the default to the old range
+                                  .withRange(ForceSampleRate::FSR_1X, ForceSampleRate::FSR_HI)
+                                  .withDefault(ForceSampleRate::FSR_HI)
+                                  .withID(id(61))
+                                  .withUnorderedMapFormatting({
+                                      {ForceSampleRate::FSR_1X, "1x"},
+                                      {ForceSampleRate::FSR_2X, "2x"},
+                                      {ForceSampleRate::FSR_HI, "Hi"},
+                                  })),
               bitDepthAdjust(intMd(version_120e)
                                  .withName(name() + " Bit Depth Adjust")
                                  .withGroupName(name())
@@ -2052,6 +2083,8 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param outputGain;
         // 1.2's dsp: uncleared output bus, old squarish / sawish / blackman harris, no rm dc block
         Param legacyDsp;
+        Param engineBlockSize;
+        Param forceSampleRate;
 
         std::array<Param, numModsPer> modtarget;
 
@@ -2090,7 +2123,9 @@ struct Patch : pats::PatchBase<Patch, Param>
                                      &bitDepthAdjust,
                                      &highpass,
                                      &outputGain,
-                                     &legacyDsp};
+                                     &legacyDsp,
+                                     &engineBlockSize,
+                                     &forceSampleRate};
             appendDAHDSRParams(res);
 
             for (int i = 0; i < numModsPer; ++i)

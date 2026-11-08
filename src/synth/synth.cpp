@@ -26,6 +26,8 @@
 
 #include "libMTSClient.h"
 
+#include <new>
+
 namespace baconpaul::six_sines
 {
 
@@ -34,10 +36,15 @@ int debugLevel{0};
 namespace mech = sst::basic_blocks::mechanics;
 namespace sdsp = sst::basic_blocks::dsp;
 
-Synth::Synth(bool mo)
-    : isMultiOut(mo), responder(*this), monoResponder(*this),
-      voices(sst::cpputils::make_array<Voice, VMConfig::maxVoiceCount>(patch, monoValues))
+Synth::Synth(bool mo) : isMultiOut(mo), responder(*this), monoResponder(*this)
 {
+    buildVoicePool<defaultBlockSize>();
+    // the other pools must not move the random sequence the default one leaves behind
+    auto rngAfterDefaultPool = monoValues.rng;
+    buildVoicePool<16>();
+    buildVoicePool<32>();
+    monoValues.rng = rngAfterDefaultPool;
+    useVoicePool<defaultBlockSize>();
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
     monoValues.mtsClient = MTS_RegisterClient();
 
@@ -375,6 +382,9 @@ void Synth::setSampleRate(double sampleRate)
         // paramAutomationSmoothingTimeMs is in milliseconds.
         p->lag.setRateInMilliseconds(monoValues.paramAutomationSmoothingTimeMs, engineSampleRate,
                                      1.0 / blockSize);
+        // a lag in flight lands where it was going, not where it had got to
+        if (p->lag.isActive())
+            p->value = p->lag.getTargetValue();
         p->lag.snapTo(p->value);
     }
     paramLagSet.removeAll();
@@ -394,14 +404,26 @@ void Synth::setSampleRate(double sampleRate)
     reapplyControlSettings();
 }
 
-template <bool multiOut> void Synth::processInternal(const clap_output_events_t *outq)
+// the library fixes its block at compile time and ours follows the patch
+template <size_t BS, ResamplerEngine E>
+void populateResampledBlock(Synth::resampler_t &r, float *L, float *R)
 {
-    auto start = std::chrono::high_resolution_clock::now();
-    if (!SinTable::staticsInitialized)
-        SinTable::initializeStatics();
+    double r0 = r.phaseI - r.phaseO;
+    for (size_t i = 0; i < BS; ++i)
+    {
+        if constexpr (E == LANCZOS)
+            r.read(r0 - i * r.dPhaseO, L[i], R[i]);
+        else if constexpr (E == ZOH)
+            r.readZOH(r0 - i * r.dPhaseO, L[i], R[i]);
+        else
+            r.readLin(r0 - i * r.dPhaseO, L[i], R[i]);
+    }
+    r.phaseO += BS * r.dPhaseO;
+}
 
-    processUIQueue(outq);
-
+template <bool multiOut, size_t BS>
+void Synth::processInternal(std::chrono::high_resolution_clock::time_point start)
+{
     if (!audioRunning)
     {
         memset(output, 0, sizeof(output));
@@ -433,7 +455,7 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
     if (monoValues.isPlayingAndHasSecondsTimeline && monoValues.songPosNeedsResync)
         monoValues.songPosSeconds = monoValues.hostSongPosSeconds;
     else
-        monoValues.songPosSeconds += (double)blockSize / hostSampleRate;
+        monoValues.songPosSeconds += (double)BS / hostSampleRate;
     monoValues.songPosNeedsResync = false;
 
     int loops{0};
@@ -443,7 +465,7 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
     int generated{0};
 
     if (usesLanczos())
-        generated = (resampler[0]->inputsRequiredToGenerateOutputs(blockSize) > 0 ? 0 : blockSize);
+        generated = (resampler[0]->inputsRequiredToGenerateOutputs(BS) > 0 ? 0 : BS);
 
     std::array<bool, numOps> mixerActive;
     if constexpr (multiOut)
@@ -451,7 +473,7 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
         std::fill(mixerActive.begin(), mixerActive.end(), false);
     }
 
-    while (generated < blockSize)
+    while (generated < BS)
     {
         loops++;
         lagHandler.process();
@@ -466,9 +488,9 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
             ((int)std::round(patch.sourceNodes[0].waveForm.value) == SinTable::AUDIO_IN);
         if (audioInResampler && op1IsAudioIn)
         {
-            float aiL[blockSize]{}, aiR[blockSize]{};
-            auto got = (int)audioInResampler->populateNext(aiL, aiR, blockSize);
-            for (int i = 0; i < blockSize; ++i)
+            float aiL[BS]{}, aiR[BS]{};
+            auto got = (int)audioInResampler->populateNext(aiL, aiR, BS);
+            for (int i = 0; i < BS; ++i)
                 monoValues.audioInBlock[i] = (i < got) ? (aiL[i] + aiR[i]) * 0.5f : 0.f;
         }
         else
@@ -487,24 +509,24 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
             }
         }
 
-        float lOutput alignas(16)[2 * (1 + (multiOut ? numOps : 0))][blockSize];
+        float lOutput alignas(16)[2 * (1 + (multiOut ? numOps : 0))][BS];
         memset(lOutput, 0, sizeof(lOutput));
 
-        auto cvoice = head;
-        Voice *removeVoice{nullptr};
+        auto cvoice = static_cast<Voice<BS> *>(head);
+        voice_t *removeVoice{nullptr};
 
         while (cvoice)
         {
             assert(cvoice->used);
             cvoice->renderBlock();
 
-            mech::accumulate_from_to<blockSize>(cvoice->output[0], lOutput[0]);
-            mech::accumulate_from_to<blockSize>(cvoice->output[1], lOutput[1]);
+            mech::accumulate_from_to<BS>(cvoice->output[0], lOutput[0]);
+            mech::accumulate_from_to<BS>(cvoice->output[1], lOutput[1]);
 
             if constexpr (multiOut)
             {
                 // TODO if voice active check
-                float stp[2][blockSize];
+                float stp[2][BS];
                 for (int i = 0; i < numOps; ++i)
                 {
                     if (!cvoice->mixerNode[i].active)
@@ -516,25 +538,25 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
                         continue;
                     }
                     mixerActive[i] = true;
-                    mech::mul_block<blockSize>(cvoice->out.finalEnvLevel,
-                                               cvoice->mixerNode[i].output[0], stp[0]);
-                    mech::mul_block<blockSize>(cvoice->out.finalEnvLevel,
-                                               cvoice->mixerNode[i].output[1], stp[1]);
-                    mech::accumulate_from_to<blockSize>(stp[0], lOutput[2 + 2 * i]);
-                    mech::accumulate_from_to<blockSize>(stp[1], lOutput[2 + 2 * i + 1]);
+                    mech::mul_block<BS>(cvoice->out.finalEnvLevel, cvoice->mixerNode[i].output[0],
+                                        stp[0]);
+                    mech::mul_block<BS>(cvoice->out.finalEnvLevel, cvoice->mixerNode[i].output[1],
+                                        stp[1]);
+                    mech::accumulate_from_to<BS>(stp[0], lOutput[2 + 2 * i]);
+                    mech::accumulate_from_to<BS>(stp[1], lOutput[2 + 2 * i + 1]);
                 }
             }
 
-            if (cvoice->out.env.stage > OutputNode::env_t::s_release || cvoice->fadeBlocks == 0)
+            if (cvoice->out.env.stage > OutputNode<BS>::env_t::s_release || cvoice->fadeBlocks == 0)
             {
                 auto rvoice = cvoice;
-                cvoice = removeFromVoiceList(cvoice);
+                cvoice = static_cast<Voice<BS> *>(removeFromVoiceList(cvoice));
                 rvoice->next = removeVoice;
                 removeVoice = rvoice;
             }
             else
             {
-                cvoice = cvoice->next;
+                cvoice = cvoice->nextVoice();
             }
         }
 
@@ -549,17 +571,17 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
 
         // End-of-chain stages run on the main engine-rate stereo bus,
         // before downsampling. Per-op buses in multiOut are not processed yet.
-        processEndOfBlock(lOutput[0], lOutput[1]);
+        processEndOfBlock<BS>(lOutput[0], lOutput[1]);
 
         if (sampleRateStrategy == SR_2X)
         {
             for (int rsi = 0; rsi < (multiOut ? (numOps + 1) : 1); ++rsi)
             {
-                halfRate[rsi]->process_block_D2(lOutput[2 * rsi], lOutput[2 * rsi + 1], blockSize,
+                halfRate[rsi]->process_block_D2(lOutput[2 * rsi], lOutput[2 * rsi + 1], BS,
                                                 output[2 * rsi] + generated,
                                                 output[2 * rsi + 1] + generated);
             }
-            generated += blockSize / 2;
+            generated += BS / 2;
         }
         else if (sampleRateStrategy == SR_1X)
         {
@@ -568,7 +590,7 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
                 memcpy(output[2 * rsi], lOutput[2 * rsi], sizeof(lOutput[0]));
                 memcpy(output[2 * rsi + 1], lOutput[2 * rsi + 1], sizeof(lOutput[0]));
             }
-            generated += blockSize;
+            generated += BS;
         }
         else if (usesLanczos())
         {
@@ -576,7 +598,7 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
             {
                 for (int rsi = 0; rsi < numOps + 1; ++rsi)
                 {
-                    for (int i = 0; i < blockSize; ++i)
+                    for (int i = 0; i < BS; ++i)
                     {
                         resampler[rsi]->push(lOutput[rsi * 2][i], lOutput[rsi * 2 + 1][i]);
                     }
@@ -584,13 +606,12 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
             }
             else
             {
-                for (int i = 0; i < blockSize; ++i)
+                for (int i = 0; i < BS; ++i)
                 {
                     resampler[0]->push(lOutput[0][i], lOutput[1][i]);
                 }
             }
-            generated =
-                (resampler[0]->inputsRequiredToGenerateOutputs(blockSize) > 0 ? 0 : blockSize);
+            generated = (resampler[0]->inputsRequiredToGenerateOutputs(BS) > 0 ? 0 : BS);
         }
         else
         {
@@ -599,8 +620,8 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
             {
                 d.data_in = lOutput[2 * rsi];
                 d.data_out = output[2 * rsi] + generated;
-                d.input_frames = blockSize;
-                d.output_frames = blockSize - generated;
+                d.input_frames = BS;
+                d.output_frames = BS - generated;
                 d.end_of_input = 0;
                 d.src_ratio = sampleRateRatio;
 
@@ -609,8 +630,8 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
 
                 d.data_in = lOutput[2 * rsi + 1];
                 d.data_out = output[2 * rsi + 1] + generated;
-                d.input_frames = blockSize;
-                d.output_frames = blockSize - generated;
+                d.input_frames = BS;
+                d.output_frames = BS - generated;
                 d.end_of_input = 0;
                 d.src_ratio = sampleRateRatio;
 
@@ -627,12 +648,12 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
 
         if (editorActive.load(std::memory_order_relaxed))
         {
-            float stp[numOps][2][blockSize];
+            float stp[numOps][2][BS];
             memset(stp, 0, sizeof(stp));
-            auto cvoice = head;
+            auto cvoice = static_cast<Voice<BS> *>(head);
             while (cvoice)
             {
-                float tmp[2][blockSize];
+                float tmp[2][BS];
                 for (int i = 0; i < numOps; ++i)
                 {
                     if (!cvoice->mixerNode[i].active)
@@ -641,16 +662,16 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
                     }
                     // Sum every voice's contribution (unison etc.) rather than
                     // overwriting, matching the summed main bus.
-                    mech::mul_block<blockSize>(cvoice->out.finalEnvLevel,
-                                               cvoice->mixerNode[i].output[0], tmp[0]);
-                    mech::mul_block<blockSize>(cvoice->out.finalEnvLevel,
-                                               cvoice->mixerNode[i].output[1], tmp[1]);
-                    mech::accumulate_from_to<blockSize>(tmp[0], stp[i][0]);
-                    mech::accumulate_from_to<blockSize>(tmp[1], stp[i][1]);
+                    mech::mul_block<BS>(cvoice->out.finalEnvLevel, cvoice->mixerNode[i].output[0],
+                                        tmp[0]);
+                    mech::mul_block<BS>(cvoice->out.finalEnvLevel, cvoice->mixerNode[i].output[1],
+                                        tmp[1]);
+                    mech::accumulate_from_to<BS>(tmp[0], stp[i][0]);
+                    mech::accumulate_from_to<BS>(tmp[1], stp[i][1]);
                 }
-                cvoice = cvoice->next;
+                cvoice = cvoice->nextVoice();
             }
-            for (int i = 0; i < blockSize; ++i)
+            for (int i = 0; i < BS; ++i)
             {
                 vuPeak.process(lOutput[0][i], lOutput[1][i]);
                 for (int j = 0; j < numOps; ++j)
@@ -695,13 +716,14 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
         {
             for (int rsi = 0; rsi < numOps + 1; ++rsi)
             {
-                resampler[rsi]->populateNextBlockSize(output[rsi * 2], output[rsi * 2 + 1]);
+                populateResampledBlock<BS, LANCZOS>(*resampler[rsi], output[rsi * 2],
+                                                    output[rsi * 2 + 1]);
                 resampler[rsi]->renormalizePhases();
             }
         }
         else
         {
-            resampler[0]->populateNextBlockSize(output[0], output[1]);
+            populateResampledBlock<BS, LANCZOS>(*resampler[0], output[0], output[1]);
             resampler[0]->renormalizePhases();
         }
     }
@@ -711,13 +733,14 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
         {
             for (int rsi = 0; rsi < numOps + 1; ++rsi)
             {
-                resampler[rsi]->populateNextBlockSizeZOH(output[rsi * 2], output[rsi * 2 + 1]);
+                populateResampledBlock<BS, ZOH>(*resampler[rsi], output[rsi * 2],
+                                                output[rsi * 2 + 1]);
                 resampler[rsi]->renormalizePhases();
             }
         }
         else
         {
-            resampler[0]->populateNextBlockSizeZOH(output[0], output[1]);
+            populateResampledBlock<BS, ZOH>(*resampler[0], output[0], output[1]);
             resampler[0]->renormalizePhases();
         }
     }
@@ -727,13 +750,14 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
         {
             for (int rsi = 0; rsi < numOps + 1; ++rsi)
             {
-                resampler[rsi]->populateNextBlockSizeLin(output[rsi * 2], output[rsi * 2 + 1]);
+                populateResampledBlock<BS, LINTERP>(*resampler[rsi], output[rsi * 2],
+                                                    output[rsi * 2 + 1]);
                 resampler[rsi]->renormalizePhases();
             }
         }
         else
         {
-            resampler[0]->populateNextBlockSizeLin(output[0], output[1]);
+            populateResampledBlock<BS, LINTERP>(*resampler[0], output[0], output[1]);
             resampler[0]->renormalizePhases();
         }
     }
@@ -743,14 +767,14 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
         // Tap host-SR main bus for visualizers (only when someone is listening).
         if (audioOutputRing.subscribed())
         {
-            audioOutputRing.push(output[0], output[1], blockSize);
+            audioOutputRing.push(output[0], output[1], BS);
         }
 
         // Finish CPU calculation
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
         auto micros = duration.count();
-        auto availmicrosinv = hostSampleRate * 1e-9 / blockSize;
+        auto availmicrosinv = hostSampleRate * 1e-9 / BS;
         auto pct = micros * availmicrosinv;
         auto cpuFac = 0.995;
         cpuUsage = cpuUsage * cpuFac + pct * (1 - cpuFac);
@@ -759,10 +783,101 @@ template <bool multiOut> void Synth::processInternal(const clap_output_events_t 
 
 void Synth::process(const clap_output_events_t *o)
 {
-    if (isMultiOut)
-        processInternal<true>(o);
-    else
-        processInternal<false>(o);
+    auto start = std::chrono::high_resolution_clock::now();
+    if (!SinTable::staticsInitialized)
+        SinTable::initializeStatics();
+
+    processUIQueue(o);
+    applyPendingEngineChanges();
+
+    switch (blockSize)
+    {
+    case 16:
+        isMultiOut ? processInternal<true, 16>(start) : processInternal<false, 16>(start);
+        break;
+    case 32:
+        isMultiOut ? processInternal<true, 32>(start) : processInternal<false, 32>(start);
+        break;
+    default:
+        isMultiOut ? processInternal<true, 8>(start) : processInternal<false, 8>(start);
+        break;
+    }
+}
+
+template <size_t BS> void Synth::buildVoicePool()
+{
+    monoValues.sr.blockSize = BS;
+    for (auto &v : voicePool<BS>())
+        v = std::make_unique<Voice<BS>>(patch, monoValues);
+}
+
+template <size_t BS> void Synth::useVoicePool()
+{
+    blockSize = BS;
+    pendingBlockSize = BS;
+    monoValues.sr.blockSize = BS;
+    auto &pool = voicePool<BS>();
+    for (size_t i = 0; i < VMConfig::maxVoiceCount; ++i)
+        voices[i] = pool[i].get();
+}
+
+void Synth::applyPendingEngineChanges()
+{
+    if (!pendingRateChange && pendingBlockSize == blockSize)
+        return;
+
+    // fade what is sounding with the old engine and change once it has gone, rather than click
+    if (audioRunning && head)
+    {
+        for (auto *v = head; v; v = v->next)
+            if (v->fadeBlocks < 0)
+                v->beginTerminationFade();
+        quietBlocksBeforeRateChange = 0;
+        return;
+    }
+
+    if (pendingRateChange)
+    {
+        // the old resampler still holds the end of the fade; run 10ms of silence through it
+        if (audioRunning && quietBlocksBeforeRateChange < engineSampleRate * 0.01 / blockSize)
+        {
+            quietBlocksBeforeRateChange++;
+            return;
+        }
+        pendingRateChange = false;
+        quietBlocksBeforeRateChange = 0;
+        reapplyControlSettings();
+    }
+
+    if (pendingBlockSize == blockSize)
+        return;
+
+    // the voice manager is about to see a different pool, so nothing may still be sounding
+    while (head)
+    {
+        auto v = head;
+        removeFromVoiceList(v);
+        responder.doVoiceEndCallback(v);
+    }
+    portaContinuation.active = false;
+
+    switch (pendingBlockSize)
+    {
+    case 16:
+        useVoicePool<16>();
+        break;
+    case 32:
+        useVoicePool<32>();
+        break;
+    default:
+        useVoicePool<8>();
+        break;
+    }
+
+    if (engineSampleRate > 0)
+        lagHandler.setRate(60, blockSize, monoValues.sr.sampleRate);
+    applySmoothingTimes();
+    updateVuEvery = (int32_t)(48000 * 2.5 / 60 / blockSize);
 }
 
 void Synth::refreshMtsMaster()
@@ -810,7 +925,7 @@ void Synth::preloadTables(bool eventsPending)
     SinTable::preloadInterpolation();
 }
 
-void Synth::addToVoiceList(Voice *v)
+void Synth::addToVoiceList(voice_t *v)
 {
     v->prior = nullptr;
     v->next = head;
@@ -822,7 +937,7 @@ void Synth::addToVoiceList(Voice *v)
     voiceCount++;
 }
 
-Voice *Synth::removeFromVoiceList(Voice *cvoice)
+Synth::voice_t *Synth::removeFromVoiceList(voice_t *cvoice)
 {
     // poly never glides, so never arm a continuation for the next note
     if (patch.output.playMode.value > 0.5 && patch.output.portaContMode.value > 0.5 &&
@@ -1036,21 +1151,46 @@ void Synth::reapplyControlSettings()
         srs = SR_110120;
     if (forcedSampleRateStrategy >= 0)
         srs = (SampleRateStrategy)forcedSampleRateStrategy;
+    else if (auto fsr = (int)std::round(patch.output.forceSampleRate.value); fsr == FSR_1X)
+        srs = SR_1X;
+    else if (fsr == FSR_2X)
+        srs = SR_2X;
 
-    if (sampleRateStrategy != srs ||
-        resamplerEngine != (ResamplerEngine)patch.output.resampleEngine.value)
+    auto rse = (ResamplerEngine)patch.output.resampleEngine.value;
+    if (sampleRateStrategy != srs || resamplerEngine != rse)
     {
-        sampleRateStrategy = srs;
-        resamplerEngine = (ResamplerEngine)patch.output.resampleEngine.value;
-
-        if (hostSampleRate > 0)
+        // new resamplers would swallow the fade of what is sounding, so process() comes back
+        if (hostSampleRate > 0 && audioRunning && head)
         {
-            voiceManager->allSoundsOff();
-            setSampleRate(hostSampleRate);
+            pendingRateChange = true;
+        }
+        else
+        {
+            sampleRateStrategy = srs;
+            resamplerEngine = rse;
+
+            if (hostSampleRate > 0)
+            {
+                voiceManager->allSoundsOff();
+                setSampleRate(hostSampleRate);
+            }
         }
     }
 
     monoValues.legacyDsp = patch.output.legacyDsp.value > 0.5f;
+
+    switch ((int)std::round(patch.output.engineBlockSize.value))
+    {
+    case EBS_16:
+        pendingBlockSize = 16;
+        break;
+    case EBS_32:
+        pendingBlockSize = 32;
+        break;
+    default:
+        pendingBlockSize = 8;
+        break;
+    }
 
     auto val = (int)std::round(patch.output.playMode.value);
     if (val != 0)
@@ -1219,10 +1359,10 @@ void Synth::applySmoothingTimes()
     }
 }
 
-void Synth::processEndOfBlock(float *L, float *R)
+template <size_t BS> void Synth::processEndOfBlock(float *L, float *R)
 {
     if (ultrasonicActive)
-        ultrasonicFilter.processBlock(L, R, blockSize);
+        ultrasonicFilter.processBlock(L, R, BS);
 
     auto satType = (int)std::round(patch.output.saturationType.value);
     if (satType != SAT_NONE)
@@ -1231,7 +1371,7 @@ void Synth::processEndOfBlock(float *L, float *R)
         auto drive = dv * dv * dv;
         if (satType == SAT_SOFT)
         {
-            for (int i = 0; i < blockSize; ++i)
+            for (int i = 0; i < BS; ++i)
             {
                 L[i] = softSaturator(L[i] * drive);
                 R[i] = softSaturator(R[i] * drive);
@@ -1239,7 +1379,7 @@ void Synth::processEndOfBlock(float *L, float *R)
         }
         else if (satType == SAT_OJD)
         {
-            for (int i = 0; i < blockSize; ++i)
+            for (int i = 0; i < BS; ++i)
             {
                 L[i] = ojdSaturator(L[i] * drive);
                 R[i] = ojdSaturator(R[i] * drive);
@@ -1249,11 +1389,11 @@ void Synth::processEndOfBlock(float *L, float *R)
 
     if (bitRatePreFilterActive)
     {
-        bitRatePreFilter.processBlock(L, R, blockSize);
+        bitRatePreFilter.processBlock(L, R, BS);
     }
     if (bitRateActive)
     {
-        for (int i = 0; i < blockSize; ++i)
+        for (int i = 0; i < BS; ++i)
             bitRateZOH.step(L[i], R[i]);
     }
 
@@ -1276,7 +1416,7 @@ void Synth::processEndOfBlock(float *L, float *R)
         // bits levels span -1..1, so scale = 2^(bits-1) (e.g. 8 bit → 128 steps each side).
         auto scale = (float)(1 << (bits - 1));
         auto invScale = 1.f / scale;
-        for (int i = 0; i < blockSize; ++i)
+        for (int i = 0; i < BS; ++i)
         {
             L[i] = std::round(L[i] * scale) * invScale;
             R[i] = std::round(R[i] * scale) * invScale;
@@ -1284,16 +1424,16 @@ void Synth::processEndOfBlock(float *L, float *R)
     }
 
     if (lpActive)
-        lpFilter.processBlock(L, R, blockSize);
+        lpFilter.processBlock(L, R, BS);
     if (hpActive)
-        hpFilter.processBlock(L, R, blockSize);
+        hpFilter.processBlock(L, R, BS);
 
     // Output gain: param value v in [0, 2], applied gain = v^3 (display in dB).
     auto v = patch.output.outputGain.value;
     auto g = v * v * v;
     if (g != 1.f)
     {
-        for (int i = 0; i < blockSize; ++i)
+        for (int i = 0; i < BS; ++i)
         {
             L[i] *= g;
             R[i] *= g;
@@ -1341,6 +1481,8 @@ void Synth::handleAudioThreadParamSideEffects(Param *dest)
         dest->meta.id == patch.output.sampleRateStrategy.meta.id ||
         dest->meta.id == patch.output.resampleEngine.meta.id ||
         dest->meta.id == patch.output.legacyDsp.meta.id ||
+        dest->meta.id == patch.output.engineBlockSize.meta.id ||
+        dest->meta.id == patch.output.forceSampleRate.meta.id ||
         dest->meta.id == patch.output.lowpass.meta.id ||
         dest->meta.id == patch.output.highpass.meta.id ||
         dest->meta.id == patch.output.bitRateAdjust.meta.id ||

@@ -73,7 +73,7 @@ std::unique_ptr<Synth> makeSineSynth(int forced, float ratio)
     s->voiceManager->processNoteOnEvent(0, 0, sineKey, -1, 1.0f, 0.f);
 
     // let the envelopes and the decimator settle before anything is captured
-    for (int i = 0; i < 4096 / blockSize; ++i)
+    for (int i = 0; i < 4096 / Synth::defaultBlockSize; ++i)
         s->process(nullptr);
     return s;
 }
@@ -90,10 +90,10 @@ Capture captureOneSecond(Synth &s)
     double acc{0};
     size_t n{0};
     float prior{0};
-    for (int b = 0; b < (int)(hostRate / blockSize); ++b)
+    for (int b = 0; b < (int)(hostRate / Synth::defaultBlockSize); ++b)
     {
         s.process(nullptr);
-        for (int i = 0; i < (int)blockSize; ++i)
+        for (int i = 0; i < (int)Synth::defaultBlockSize; ++i)
         {
             auto v = s.output[0][i];
             acc += (double)v * v;
@@ -131,6 +131,31 @@ TEST_CASE("A patch cannot select 2x or 1x without the build override", "[engine-
         s->reapplyControlSettings();
         REQUIRE(s->engineSampleRate == 120000.0);
     }
+}
+
+TEST_CASE("A patch picks 2x or 1x with forceSampleRate", "[engine-rate]")
+{
+    auto s = makeSineSynth(-1, 0.f);
+    REQUIRE(s->patch.output.forceSampleRate.value == (float)FSR_HI);
+    REQUIRE(s->engineSampleRate == 120000.0);
+
+    // the held note fades at the old rate before the change lands
+    s->patch.output.forceSampleRate.value = (float)FSR_2X;
+    s->reapplyControlSettings();
+    REQUIRE(s->engineSampleRate == 120000.0);
+    for (int i = 0; i < 1000 && s->pendingRateChange; ++i)
+        s->process(nullptr);
+    REQUIRE(s->head == nullptr);
+    REQUIRE(s->engineSampleRate == 2 * hostRate);
+
+    // with nothing sounding it lands at once
+    s->patch.output.forceSampleRate.value = (float)FSR_1X;
+    s->reapplyControlSettings();
+    REQUIRE(s->engineSampleRate == hostRate);
+
+    s->patch.output.forceSampleRate.value = (float)FSR_HI;
+    s->reapplyControlSettings();
+    REQUIRE(s->engineSampleRate == 120000.0);
 }
 
 TEST_CASE("2x and 1x pass an in-band sine at pitch", "[engine-rate]")
