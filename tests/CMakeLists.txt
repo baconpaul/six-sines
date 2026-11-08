@@ -21,6 +21,7 @@ add_executable(six-sines-test
 		dead_work_skips.cpp
 		preset_discovery.cpp
 		engine_rate_modes.cpp
+		main_envelope.cpp
 		envelope_retrigger.cpp
 		engine_block_size.cpp
 		clap_block_continuity.cpp
