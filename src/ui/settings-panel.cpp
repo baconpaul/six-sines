@@ -34,6 +34,9 @@ SettingsPanel::SettingsPanel(SixSinesEditor &e) : jcmp::NamedPanel("Settings"), 
     {
         if (b)
             beginEdit();
+        else
+            // shows whether settings is selected, so clicking it again keeps it there
+            playScreenD->setValueFromModel(true);
     };
     sst::jucegui::component_adapters::setTraversalId(playScreen, 4);
 
