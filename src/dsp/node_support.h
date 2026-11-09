@@ -71,7 +71,7 @@ template <size_t BS, typename T> struct EnvelopeSupport
     bool envIsOneShot{false};
     bool allowVoiceTrigger{true};
 
-    bool active{true}, constantEnv{false};
+    bool active{true}, constantEnv{false}, allowConstantEnv{true};
     using range_t = sst::basic_blocks::modulators::TwentyFiveSecondExp;
     using env_t = sst::basic_blocks::modulators::AHDSRShapedSC<SRProvider, blockSize, range_t>;
     env_t env;
@@ -105,7 +105,8 @@ template <size_t BS, typename T> struct EnvelopeSupport
         auto mn = 0.0001;
         auto mx = 1 - mn;
 
-        if (decay < mn && attackv < mn && hold < mn && delay < mn && release > mx)
+        if (allowConstantEnv && decay < mn && attackv < mn && hold < mn && delay < mn &&
+            release > mx)
         {
             constantEnv = true;
         }

@@ -1098,6 +1098,7 @@ struct OutputNode : public EnvelopeSupport<BS, Patch::OutputNode>,
     using env_base_t = EnvelopeSupport<BS, Patch::OutputNode>;
     using lfo_base_t = LFOSupport<BS, OutputNode<BS>, Patch::OutputNode>;
     using mod_base_t = ModulationSupport<Patch::OutputNode, OutputNode<BS>>;
+    using env_base_t::allowConstantEnv;
     using env_base_t::allowVoiceTrigger;
     using env_base_t::env;
     using env_base_t::envAttack;
@@ -1143,6 +1144,8 @@ struct OutputNode : public EnvelopeSupport<BS, Patch::OutputNode>,
     {
         memset(output, 0, sizeof(output));
         allowVoiceTrigger = false;
+        // main's envelope stage ends the voice, so it has to run
+        allowConstantEnv = false;
     }
 
     void attack()
