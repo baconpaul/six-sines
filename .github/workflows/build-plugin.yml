@@ -40,7 +40,7 @@ jobs:
           # x64 linux ships from the docker build below; arm ships from here
           - os: ubuntu-24.04-arm
             name: linux-arm64
-            cmake_args: -GNinja -DSIXSINES_EXTRA_ZIP_NAME=-ubuntu24.04-arm64
+            cmake_args: -GNinja -DSIXSINES_EXTRA_ZIP_NAME=-aarch64
             gcc_version: 13
             upload_linux: true
 

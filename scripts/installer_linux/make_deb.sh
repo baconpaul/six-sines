@@ -92,6 +92,7 @@ Provides: vst-plugin
 Section: sound
 Priority: optional
 Homepage: https://github.com/baconpaul/six-sines
+Sndstation-Kind: clap-plugin
 Description: Audio rate inter-modulation synthesizer
  Six Sines is a small synthesizer which explores audio rate inter-modulation
  of signals. This package contains the CLAP and VST3 plugins and a standalone

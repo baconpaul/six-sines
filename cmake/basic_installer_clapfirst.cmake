@@ -8,7 +8,7 @@ function(add_clapfirst_installer)
             ASSET_OUTPUT_DIRECTORY
             PRODUCT_NAME
             INSTALLER_PREFIX
-            EXTRA_ZIP_NAME  # appended after the system name, e.g. "-ubuntu24.04-arm64"
+            EXTRA_ZIP_NAME  # appended after the system name, e.g. "-aarch64"
     )
     set(multiValueArgs
             TARGETS  # A list of plugin formats, "CLAP" "VST3" "AUV2"
