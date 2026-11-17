@@ -169,7 +169,7 @@ make_clapfirst_plugins(
 
 
 include(cmake/basic_installer_clapfirst.cmake)
-set(SIXSINES_EXTRA_ZIP_NAME "" CACHE STRING "Appended to the installer zip name, e.g. -ubuntu24.04-arm64")
+set(SIXSINES_EXTRA_ZIP_NAME "" CACHE STRING "Appended to the installer zip name, e.g. -aarch64")
 
 add_clapfirst_installer(
         INSTALLER_TARGET ${PROJECT_NAME}-installer
