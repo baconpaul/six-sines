@@ -143,7 +143,8 @@ function(add_clapfirst_installer)
                     POST_BUILD
                     USES_TERMINAL
                     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                    COMMAND ${CMAKE_SOURCE_DIR}/scripts/installer_linux/make_deb.sh ${CIN_ASSET_OUTPUT_DIRECTORY} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/installer/${INST_DEB} "${INST_DEB_VERSION}"
+                    COMMAND ${CMAKE_COMMAND} -E env DEB_BASE_VERSION=${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}
+                        ${CMAKE_SOURCE_DIR}/scripts/installer_linux/make_deb.sh ${CIN_ASSET_OUTPUT_DIRECTORY} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/installer/${INST_DEB} "${INST_DEB_VERSION}"
                     COMMAND ${CMAKE_COMMAND} -E echo "Deb in: installer/${INST_DEB}"
             )
         endif ()
