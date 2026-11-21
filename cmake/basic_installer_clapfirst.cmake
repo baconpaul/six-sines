@@ -38,7 +38,14 @@ function(add_clapfirst_installer)
 
 
     string(TIMESTAMP INST_DATE "%Y-%m-%d")
-    set(INST_ZIP ${CIN_INSTALLER_PREFIX}-${CMAKE_SYSTEM_NAME}${CIN_EXTRA_ZIP_NAME}-${INST_DATE}-${GIT_COMMIT_HASH}.zip)
+    # a v-tag build is named for its release; anything else is a dated nightly of the next one
+    if ("${GIT_IMPLIED_DISPLAY_VERSION}" MATCHES "^v([0-9].*)$")
+        set(INST_VERSION "${CMAKE_MATCH_1}")
+    else()
+        set(INST_VERSION "${CMAKE_PROJECT_VERSION}-nightly-${INST_DATE}-${GIT_COMMIT_HASH}")
+    endif()
+    message(STATUS "Installer version is ${INST_VERSION}")
+    set(INST_ZIP ${CIN_INSTALLER_PREFIX}-${CMAKE_SYSTEM_NAME}${CIN_EXTRA_ZIP_NAME}-${INST_VERSION}.zip)
     message(STATUS "Zip File Name is ${INST_ZIP}")
 
     message(STATUS "PRODUCT NAME is ${CIN_PRODUCT_NAME}")
@@ -52,8 +59,8 @@ function(add_clapfirst_installer)
                 VERBATIM
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                 COMMAND ${CMAKE_COMMAND} -E make_directory installer
-                COMMAND echo ${CMAKE_SOURCE_DIR}/libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh ${CIN_PRODUCT_NAME} ${CIN_ASSET_OUTPUT_DIR} ${CMAKE_SOURCE_DIR}/resources/installer_mac ${CMAKE_BINARY_DIR}/installer "${INST_DATE}-${GIT_COMMIT_HASH}"
-                COMMAND ${CMAKE_SOURCE_DIR}/libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh ${CIN_PRODUCT_NAME} ${CIN_ASSET_OUTPUT_DIRECTORY} ${CMAKE_SOURCE_DIR}/resources/installer_mac ${CMAKE_BINARY_DIR}/installer "${INST_DATE}-${GIT_COMMIT_HASH}"
+                COMMAND echo ${CMAKE_SOURCE_DIR}/libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh ${CIN_PRODUCT_NAME} ${CIN_ASSET_OUTPUT_DIR} ${CMAKE_SOURCE_DIR}/resources/installer_mac ${CMAKE_BINARY_DIR}/installer "${INST_VERSION}"
+                COMMAND ${CMAKE_SOURCE_DIR}/libs/sst/sst-plugininfra/scripts/installer_mac/make_installer.sh ${CIN_PRODUCT_NAME} ${CIN_ASSET_OUTPUT_DIRECTORY} ${CMAKE_SOURCE_DIR}/resources/installer_mac ${CMAKE_BINARY_DIR}/installer "${INST_VERSION}"
         )
     elseif (WIN32)
         message(STATUS "Configuring for win installer")
@@ -103,7 +110,7 @@ function(add_clapfirst_installer)
                         /F"${WIN_INSTALLER}"
                         /DName="${PRODUCT_NAME}"
                         /DNameCondensed="${PRODUCT_NAME}"
-                        /DVersion="${GIT_COMMIT_HASH}"
+                        /DVersion="${INST_VERSION}"
                         /DID="2cfbe819-3947-4c10-93cc-03a2896fdfec"
                         /DPublisher="BaconPaul"
                         /DCLAP /DVST3 /DVST3_IS_SINGLE_FILE /DSA
@@ -130,7 +137,7 @@ function(add_clapfirst_installer)
         # non-debian hosts still get the zip
         find_program(INST_DPKG_DEB dpkg-deb)
         if (INST_DPKG_DEB)
-            set(INST_DEB ${CIN_INSTALLER_PREFIX}-${CMAKE_SYSTEM_NAME}${CIN_EXTRA_ZIP_NAME}-${INST_DATE}-${GIT_COMMIT_HASH}.deb)
+            set(INST_DEB ${CIN_INSTALLER_PREFIX}-${CMAKE_SYSTEM_NAME}${CIN_EXTRA_ZIP_NAME}-${INST_VERSION}.deb)
             if ("${GIT_IMPLIED_DISPLAY_VERSION}" MATCHES "^v([0-9].*)$")
                 set(INST_DEB_VERSION "${CMAKE_MATCH_1}")
             else()
