@@ -74,7 +74,7 @@ But remember, "Programming an FM/PM/RM synth is hard" is not a bug in six-sines!
 ## Why is this a `baconpaul` and not a `surge-synthesizer` project
 
 Well you know. It's not quite up to snuff for a surge project. And its pretty idiosyncratic.
-I may do a few more side quest projects in 2025. Lets see.
+I may do a few more side quest projects in 2025. Lets see. Hey, I did!
 
 ## Some Credits
 
