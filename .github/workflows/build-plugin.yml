@@ -27,7 +27,7 @@ jobs:
         include:
           - os: windows-latest
             name: windows-x64
-            cmake_args: -DCMAKE_CXX_COMPLIER=clang++ -DCMAKE_C_COMPILER=clang -GNinja
+            cmake_args: -DCMAKE_C_COMPILER="$SS_LLVM/clang.exe" -DCMAKE_CXX_COMPILER="$SS_LLVM/clang++.exe" -GNinja
 
           - os: macos-latest
             name: macos
@@ -61,6 +61,15 @@ jobs:
         uses: surge-synthesizer/sst-githubactions/install-innosetup@main
         with:
           version: "6.7.1"
+
+      # the standalone llvm on PATH lags the visual studio stl, which wants clang 22 or newer
+      - name: Locate Visual Studio's clang
+        if: runner.os == 'Windows'
+        run: |
+          vs=$(vswhere -latest -prerelease -products '*' -property installationPath)
+          llvm="${vs//\\//}/VC/Tools/Llvm/x64/bin"
+          "$llvm/clang++.exe" --version
+          echo "SS_LLVM=$llvm" >> "$GITHUB_ENV"
 
       - uses: apple-actions/import-codesign-certs@v3
         if: runner.os == 'macOS' && github.event_name != 'pull_request'
