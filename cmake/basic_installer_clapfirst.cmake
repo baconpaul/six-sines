@@ -64,7 +64,8 @@ function(add_clapfirst_installer)
         )
     elseif (WIN32)
         message(STATUS "Configuring for win installer")
-        cmake_path(REMOVE_EXTENSION INST_ZIP OUTPUT_VARIABLE WIN_INSTALLER)
+        # the version has dots, so only drop the .zip
+        cmake_path(REMOVE_EXTENSION INST_ZIP LAST_ONLY OUTPUT_VARIABLE WIN_INSTALLER)
         set(WINCOL ${CIN_ASSET_OUTPUT_DIRECTORY}/installer_copy)
         file(MAKE_DIRECTORY ${WINCOL})
 
