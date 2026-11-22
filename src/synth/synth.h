@@ -390,9 +390,8 @@ struct Synth
 
         void setRate(float targetRate, float engineRate)
         {
-            rate = engineRate > 0 ? targetRate / engineRate : 0.f;
-            // step() consumes one phase>=1 per call; rate>1 would lose updates.
-            assert(rate <= 1.f);
+            // a target at or above the engine rate (1x engine) is a pass through
+            rate = engineRate > 0 ? std::min(targetRate / engineRate, 1.f) : 0.f;
         }
         void reset()
         {
