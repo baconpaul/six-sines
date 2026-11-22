@@ -814,6 +814,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                       return baseMd()
                           .withName(name(idx) + " Mod Target " + std::to_string(i))
                           .withGroupName(name(idx))
+                          .asInt()
                           .withRange(0, 2000)
                           .withDefault(TargetID::NONE)
                           .withID(id(160 + i, idx));
@@ -1167,6 +1168,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                       return baseMd()
                           .withName(name(idx) + " Mod Target " + std::to_string(i))
                           .withGroupName(name(idx))
+                          .asInt()
                           .withRange(0, 2000)
                           .withDefault(TargetID::NONE)
                           .withID(id(55 + i, idx));
@@ -1294,6 +1296,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                       return baseMd()
                           .withName(name(idx) + " Mod Target " + std::to_string(i))
                           .withGroupName(name(idx))
+                          .asInt()
                           .withRange(0, 2000)
                           .withDefault(TargetID::NONE)
                           .withID(id(80 + i, idx));
@@ -1432,6 +1435,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                       return baseMd()
                           .withName(name(idx) + " Mod Target " + std::to_string(i))
                           .withGroupName(name(idx))
+                          .asInt()
                           .withRange(0, 2000)
                           .withDefault(TargetID::NONE)
                           .withID(id(60 + i, idx));
@@ -1535,6 +1539,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                       return baseMd(version_120c)
                           .withName(name(idx) + " Mod Target " + std::to_string(i))
                           .withGroupName(name(idx))
+                          .asInt()
                           .withRange(0, 2000)
                           .withDefault(TargetID::NONE)
                           .withID(id(60 + i, idx));
@@ -1615,6 +1620,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                       return baseMd()
                           .withName(opName + " Mod Target " + std::to_string(i))
                           .withGroupName(opName)
+                          .asInt()
                           .withRange(0, 2000)
                           .withDefault(TargetID::NONE)
                           .withID(id(200 + i, idx));
@@ -2050,6 +2056,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                       return baseMd()
                           .withName(name() + " Mod Target " + std::to_string(i))
                           .withGroupName(name())
+                          .asInt()
                           .withRange(0, 2000)
                           .withDefault(TargetID::NONE)
                           .withID(id(150 + i));

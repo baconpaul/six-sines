@@ -25,6 +25,7 @@ add_executable(six-sines-test
 		envelope_retrigger.cpp
 		engine_block_size.cpp
 		clap_block_continuity.cpp
+		clap_validator_cases.cpp
 )
 
 target_link_libraries(six-sines-test

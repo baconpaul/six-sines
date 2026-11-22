@@ -131,4 +131,17 @@ TEST_CASE("ZOHRateDownsampler golden", "[output_stage]")
         for (int i = 0; i < 6; ++i)
             REQUIRE(in[i] == Approx(expected[i]));
     }
+
+    SECTION("a target above the engine rate passes through")
+    {
+        // a 48k crusher on a 1x engine at 44.1k
+        z.setRate(48000.f, 44100.f);
+        z.reset();
+        std::array<float, 8> in{1, 2, 3, 4, 5, 6, 7, 8};
+        std::array<float, 8> rIn = in;
+        for (int i = 0; i < 8; ++i)
+            z.step(in[i], rIn[i]);
+        for (int i = 0; i < 8; ++i)
+            REQUIRE(in[i] == Approx(i + 1));
+    }
 }
