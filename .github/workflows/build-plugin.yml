@@ -37,12 +37,11 @@ jobs:
             name: linux-x64
             cmake_args: -GNinja
 
-          # x64 linux ships from the docker build below; arm ships from here
+          # linux ships from docker below; these legs only build and test
           - os: ubuntu-24.04-arm
             name: linux-arm64
             cmake_args: -GNinja -DSIXSINES_EXTRA_ZIP_NAME=-aarch64
             gcc_version: 13
-            upload_linux: true
 
     steps:
       - name: Checkout code
@@ -114,7 +113,7 @@ jobs:
           dpkg-deb -c build/installer/*.deb
 
       - name: Upload artifact
-        if: github.event_name != 'pull_request' && (runner.os != 'Linux' || matrix.upload_linux)  # x64 linux comes from docker
+        if: github.event_name != 'pull_request' && runner.os != 'Linux'  # linux comes from docker
         uses: actions/upload-artifact@v4
         with:
           path: build/installer
@@ -122,8 +121,20 @@ jobs:
 
 
   build_plugin_docker:
-    name: Build - Docker Ubuntu 22
-    runs-on: ubuntu-latest
+    name: Build - Docker Ubuntu 22 ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            os: ubuntu-latest
+            image: ghcr.io/surge-synthesizer/sst-dockerimages/ubuntu22_gcc12:main
+            cmake_args: ""
+
+          - arch: arm64
+            os: ubuntu-24.04-arm
+            image: ghcr.io/surge-synthesizer/sst-dockerimages/ubuntu22_gcc12_arm64:main
+            cmake_args: -DSIXSINES_EXTRA_ZIP_NAME=-aarch64
 
     steps:
       - name: Checkout code
@@ -135,10 +146,10 @@ jobs:
       - name: Build in Docker
         uses: surge-synthesizer/sst-githubactions/cmake-in-docker@main
         with:
-          image: ghcr.io/surge-synthesizer/sst-dockerimages/ubuntu22_gcc12:main
+          image: ${{ matrix.image }}
           username: ${{ github.actor }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          cmakeArgs: -DCMAKE_BUILD_TYPE=Release -GNinja  -DCOPY_AFTER_BUILD=FALSE  -DGITHUB_ACTIONS_BUILD=TRUE
+          cmakeArgs: -DCMAKE_BUILD_TYPE=Release -GNinja  -DCOPY_AFTER_BUILD=FALSE  -DGITHUB_ACTIONS_BUILD=TRUE ${{ matrix.cmake_args }}
           target: six-sines-installer
 
       - name: Show Installer Directory
@@ -147,12 +158,19 @@ jobs:
           dpkg-deb -I ./build/installer/*.deb
           dpkg-deb -c ./build/installer/*.deb
 
+      - name: Check glibc
+        uses: surge-synthesizer/sst-githubactions/check-glibc@main
+        with:
+          path: ./build/installer/*.deb
+          maxGlibc: "2.35"
+          maxGlibcxx: "3.4.30"
+
       - name: Upload artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           path: build/installer
-          name: build-docker-linux
+          name: build-docker-linux-${{ matrix.arch }}
 
   publish-plugin-nightly:
     name: Publish Nightly
