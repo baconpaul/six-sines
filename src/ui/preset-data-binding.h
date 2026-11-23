@@ -56,7 +56,7 @@ struct PresetDataBinding : sst::jucegui::data::Discrete
     bool isDirty{false};
 
     // no slot in the list: the extra entry at -1 shows the name and nothing else
-    bool hasExtra() const { return selected.kind == LoadedPreset::Kind::Unknown; }
+    bool hasExtra() const { return getValue() < 0; }
 
     int getValue() const override
     {

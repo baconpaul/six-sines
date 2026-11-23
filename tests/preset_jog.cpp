@@ -309,6 +309,44 @@ TEST_CASE("An out-of-band rebuild does not relocate onto a same-named factory pr
     REQUIRE(b.getValueAsString() == label("MyFolder", "EP 3"));
 }
 
+TEST_CASE("Loading a user file added since the last scan gives it a slot", "[preset][jog]")
+{
+    ensureDspTables();
+
+    ScratchPresets sp("unscanned");
+    sp.addUserPatch("Mine.sxsnp", "Keys/EP 3.sxsnp");
+
+    Engine e;
+    ui::PresetDataBinding b(sp.pm, *e.patch, *e.queue, e.des);
+    wireBinding(sp.pm, b);
+
+    // restored from a backup behind the manager's back
+    fs::copy_file(sp.root / "Mine.sxsnp", sp.root / "Restored.sxsnp");
+
+    sp.pm.loadUserPresetDirect(*e.patch, *e.queue, sp.root / "Restored.sxsnp");
+
+    REQUIRE(b.getValueAsString() == "Restored");
+    REQUIRE(b.getValue() == userIndexOf(sp.pm, "Restored.sxsnp"));
+}
+
+TEST_CASE("A loaded user preset whose file vanished keeps its name", "[preset][jog]")
+{
+    ensureDspTables();
+
+    ScratchPresets sp("vanished");
+    sp.addUserPatch("Gone.sxsnp", "Keys/EP 3.sxsnp");
+
+    Engine e;
+    ui::PresetDataBinding b(sp.pm, *e.patch, *e.queue, e.des);
+    wireBinding(sp.pm, b);
+    b.setValueFromGUI(userIndexOf(sp.pm, "Gone.sxsnp"));
+
+    fs::remove(sp.root / "Gone.sxsnp");
+    sp.pm.rescanUserPresets();
+
+    REQUIRE(b.getValueAsString() == "Gone");
+}
+
 TEST_CASE("The selected user preset survives a session save and restore", "[preset][jog]")
 {
     ensureDspTables();
