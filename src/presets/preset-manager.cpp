@@ -15,6 +15,7 @@
 
 #include "preset-manager.h"
 #include "synth/synth.h"
+#include <algorithm>
 #include <sstream>
 #include <fstream>
 #include <cstring>
@@ -276,6 +277,11 @@ void PresetManager::loadUserPresetDirect(Patch &patch, Synth::mainToAudioQueue_T
     patch.fromState(buffer.str());
 
     auto loaded = identifyUserPath(p);
+    // a file dropped into the user tree since the last scan has no slot yet
+    if (loaded.kind == LoadedPreset::Kind::User &&
+        std::find(userPatches.begin(), userPatches.end(), loaded.path) == userPatches.end())
+        rescanUserPresets();
+
     nameAndMarkClean(patch, loaded.displayName);
     Synth::sendEntirePatchToAudio(patch, mainToAudio, clapHost);
     if (onPresetLoaded)
