@@ -68,6 +68,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/ui/mainpan-sub-panel.cpp
         src/ui/playmode-sub-panel.cpp
         src/ui/settings-panel.cpp
+        src/ui/tuning-screen.cpp
 
         src/presets/preset-manager.cpp
         src/presets/ui-theme-manager.cpp
@@ -81,6 +82,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/synth/patch.cpp
         src/synth/mod_matrix.cpp
         src/synth/macro_usage.cpp
+        src/synth/tuning.cpp
 
 )
 target_include_directories(${PROJECT_NAME}-impl PUBLIC src)
@@ -117,6 +119,7 @@ target_link_libraries(${PROJECT_NAME}-impl PUBLIC  # PW change to public since w
         simde
         clap-helpers clap-wrapper-extensions
         mts-esp-client
+        tuning-library
         fmt-header-only
         sst-basic-blocks sst-voicemanager sst-jucegui sst-cpputils
         sst-plugininfra

@@ -21,6 +21,27 @@
 
 namespace baconpaul::six_sines::ui
 {
+struct TuningModeJog
+    : sst::jucegui::component_adapters::DiscreteToValueReference<jcmp::JogUpDownButton, int>
+{
+    using DiscreteToValueReference::DiscreteToValueReference;
+    int getMin() const override { return TM_MTS; }
+    int getMax() const override { return TM_SCL_KBM; }
+    int getDefaultValue() const override { return TM_MTS; }
+    std::string getValueAsStringFor(int i) const override
+    {
+        switch (i)
+        {
+        case TM_12TET:
+            return "12-TET";
+        case TM_SCL_KBM:
+            return "SCL/KBM";
+        default:
+            return "MTS";
+        }
+    }
+};
+
 // A JogUpDownButton whose arrows / wheel step through a fixed set of values rather than
 // every integer in the range. The popup menu is delegated to onShowPopup so the host panel
 // can present just those choices.
@@ -376,14 +397,44 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     };
     addAndMakeVisible(*voiceLimit);
 
-    mtsTitle = std::make_unique<jcmp::RuledLabel>();
-    mtsTitle->setText("MTS");
-    addAndMakeVisible(*mtsTitle);
-    mtsStatusLabel = std::make_unique<jcmp::Label>();
-    mtsStatusLabel->setText("No MTS");
-    mtsStatusLabel->setJustification(juce::Justification::centred);
-    mtsStatusLabel->setEnabled(false);
-    addAndMakeVisible(*mtsStatusLabel);
+    tuningTitle = std::make_unique<jcmp::RuledLabel>();
+    tuningTitle->setText("Tuning");
+    addAndMakeVisible(*tuningTitle);
+
+    tuningModeD = std::make_unique<TuningModeJog>(editor.dawStateMainRef.audio.tuningMode);
+    tuningModeD->setLabel("Tuning Mode");
+    addAndMakeVisible(*tuningModeD->widget);
+    auto onTuning = [w = juce::Component::SafePointer(this)]()
+    {
+        if (w)
+        {
+            w->tuningModeD->widget->repaint();
+            w->setEnabledState();
+            w->updateTuningStatus(true);
+        }
+    };
+    tuningModeD->onValueChanged = [w = juce::Component::SafePointer(this), onTuning](int)
+    {
+        if (!w)
+            return;
+        w->editor.pushAudioDawState();
+        onTuning();
+    };
+    editor.dawExtraStateRefreshListeners.push_back(onTuning);
+
+    tuningStatusLabel = std::make_unique<jcmp::Label>();
+    tuningStatusLabel->setJustification(juce::Justification::centred);
+    addAndMakeVisible(*tuningStatusLabel);
+
+    sclKbmButton = std::make_unique<jcmp::TextPushButton>();
+    sclKbmButton->setLabel("SCL/KBM");
+    sclKbmButton->setOnCallback(
+        [w = juce::Component::SafePointer(this)]()
+        {
+            if (w)
+                w->editor.showTuningScreen();
+        });
+    addAndMakeVisible(*sclKbmButton);
 
     panicTitle = std::make_unique<jcmp::RuledLabel>();
     panicTitle->setText("Panic");
@@ -525,6 +576,7 @@ PlayModeSubPanel::PlayModeSubPanel(SixSinesEditor &e) : HasEditor(e)
     addAndMakeVisible(*editThemeButton);
 
     setEnabledState();
+    updateTuningStatus(true);
 }
 
 void PlayModeSubPanel::resized()
@@ -536,7 +588,7 @@ void PlayModeSubPanel::resized()
     //   col1: Voices / Unison
     //   col2: Play (mode + triggers + porta)
     //   col3: Bend / Octave
-    //   col4: MTS / Panic
+    //   col4: Tuning / Panic
     // The two tallest columns (1 and 2) drive the row height.
     auto topRowHeight = uicTitleLabelInnerBox + 7 * uicLabelHeight + 7 * uicMargin;
 
@@ -574,8 +626,10 @@ void PlayModeSubPanel::resized()
     topRow.add(col3);
 
     auto col4 = jlo::VList().withWidth(skinny).withAutoGap(uicMargin);
-    col4.add(titleLabelGaplessLayout(mtsTitle));
-    col4.add(jlo::Component(*mtsStatusLabel).withHeight(uicLabelHeight));
+    col4.add(titleLabelGaplessLayout(tuningTitle));
+    col4.add(jlo::Component(*tuningModeD->widget).withHeight(uicLabelHeight));
+    col4.add(jlo::Component(*tuningStatusLabel).withHeight(uicLabelHeight));
+    col4.add(jlo::Component(*sclKbmButton).withHeight(uicLabelHeight));
     col4.add(titleLabelGaplessLayout(panicTitle));
     col4.add(jlo::Component(*panicButton).withHeight(uicLabelHeight));
     topRow.add(col4);
@@ -971,6 +1025,8 @@ void PlayModeSubPanel::setEnabledState()
     rsEng->setEnabled(!forced);
     downsamplerLabel->setEnabled(!forced);
 
+    sclKbmButton->setEnabled(editor.dawStateMainRef.audio.tuningMode == TM_SCL_KBM);
+
     auto me = editor.dawStateMainRef.audio.mpeActive;
     mpeRangeEditor->setEnabled(me);
     mpeRangeL->setEnabled(me);
@@ -998,30 +1054,55 @@ void PlayModeSubPanel::showPolyLimitMenu()
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
 }
 
-void PlayModeSubPanel::updateMTSStatus()
+void PlayModeSubPanel::updateTuningStatus(bool force)
 {
-    if (++mtsIdleCount < 50)
+    if (!force && ++tuningIdleCount < 50)
         return;
-    mtsIdleCount = 0;
+    tuningIdleCount = 0;
 
-    auto *cli = editor.mtsClient;
-    bool connected = cli && MTS_HasMaster(cli);
+    auto mode = editor.dawStateMainRef.audio.tuningMode;
     std::string text;
-    if (connected)
+    bool live{false};
+    switch (mode)
     {
-        const char *name = MTS_GetScaleName(cli);
-        text = (name && *name) ? std::string(name) : std::string("Connected");
+    case TM_12TET:
+        text = "12-TET";
+        live = true;
+        break;
+    case TM_SCL_KBM:
+    {
+        const auto &m = editor.dawStateMainRef.main;
+        if (m.sclText != cachedSclText || m.kbmText != cachedKbmText)
+        {
+            cachedSclText = m.sclText;
+            cachedKbmText = m.kbmText;
+            cachedSclName = sclKbmDisplayName(m.sclText, m.kbmText);
+        }
+        live = !cachedSclName.empty();
+        text = live ? cachedSclName : "No SCL/KBM";
     }
-    else
+    break;
+    default:
     {
-        text = "No MTS";
+        auto *cli = editor.mtsClient;
+        live = cli && MTS_HasMaster(cli);
+        if (live)
+        {
+            const char *name = MTS_GetScaleName(cli);
+            text = (name && *name) ? std::string(name) : std::string("Connected");
+        }
+        else
+        {
+            text = "No MTS";
+        }
+    }
+    break;
     }
 
-    if (connected != mtsConnected || text != mtsStatusLabel->getText())
+    if (force || text != tuningStatusLabel->getText() || live != tuningStatusLabel->isEnabled())
     {
-        mtsConnected = connected;
-        mtsStatusLabel->setEnabled(connected);
-        mtsStatusLabel->setText(text);
+        tuningStatusLabel->setEnabled(live);
+        tuningStatusLabel->setText(text);
     }
 }
 

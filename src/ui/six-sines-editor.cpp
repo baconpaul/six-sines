@@ -36,6 +36,7 @@ CMRC_DECLARE(sixsines_fonts);
 #include "matrix-sub-panel.h"
 #include "finetune-sub-panel.h"
 #include "playmode-sub-panel.h"
+#include "tuning-screen.h"
 #include "settings-panel.h"
 #include "mainpan-sub-panel.h"
 #include "self-sub-panel.h"
@@ -117,16 +118,16 @@ using sheet_t = jstl::StyleSheet;
 static constexpr sheet_t::Class PatchMenu("six-sines.patch-menu");
 
 SixSinesEditor::SixSinesEditor(Patch &patchMain, WavetableHandoff &handoff,
-                               Synth::audioToMainQueue_t &atou,
+                               TuningHandoff &tuningHandoff, Synth::audioToMainQueue_t &atou,
                                Synth::mainToAudioQueue_T &utoa, Synth::audioOutputQueue_t &aor,
                                std::atomic<bool> &editorActiveIn,
                                std::atomic<uint32_t> &uiForceRebuildIn,
                                Synth::DawStateMain &dawStateMain, defaultsProvder_t &defaults,
                                const clap_host_t *h)
     : jcmp::WindowPanel(true), patchMainRef(patchMain), wavetableHandoffRef(handoff),
-      audioToMain(atou), mainToAudio(utoa), audioOutputRing(aor), editorActive(editorActiveIn),
-      uiForceRebuild(uiForceRebuildIn), dawStateMainRef(dawStateMain), defaultsProvider(&defaults),
-      clapHost(h)
+      tuningHandoffRef(tuningHandoff), audioToMain(atou), mainToAudio(utoa), audioOutputRing(aor),
+      editorActive(editorActiveIn), uiForceRebuild(uiForceRebuildIn), dawStateMainRef(dawStateMain),
+      defaultsProvider(&defaults), clapHost(h)
 {
     lastForceRebuild = uiForceRebuild.load();
     setTitle("Six Sines - an Audio Rate Modulation Synthesizer");
@@ -433,7 +434,7 @@ void SixSinesEditor::idle()
     }
 
     if (playModeSubPanel)
-        playModeSubPanel->updateMTSStatus();
+        playModeSubPanel->updateTuningStatus();
 }
 
 void SixSinesEditor::paint(juce::Graphics &g)
@@ -1536,6 +1537,31 @@ void SixSinesEditor::reportError(const std::string &title, const std::string &ms
             auto prompt = sst::jucegui::screens::AlertOrPrompt::Alert(title, msg);
             w->displayModalOverlay(std::move(prompt));
         });
+}
+
+bool SixSinesEditor::applySclKbmText(const std::string &scl, const std::string &kbm)
+{
+    // a mapping with no scale means 12-TET under that mapping, not no tuning
+    auto useScl = (scl.empty() && !kbm.empty()) ? twelveTETSclText() : scl;
+
+    std::string err;
+    if (!publishSclKbm(useScl, kbm, tuningHandoffRef, err))
+    {
+        reportError("Tuning Error", "The scale or mapping did not parse. " + err);
+        return false;
+    }
+    dawStateMainRef.main.sclText = useScl;
+    dawStateMainRef.main.kbmText = kbm;
+    for (auto &l : dawExtraStateRefreshListeners)
+        l();
+    return true;
+}
+
+void SixSinesEditor::showTuningScreen()
+{
+    if (searchForOverlay<TuningScreen>())
+        return;
+    displayModalOverlay(std::make_unique<TuningScreen>(*this));
 }
 
 void SixSinesEditor::showAboutScreen()

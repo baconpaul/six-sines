@@ -22,8 +22,7 @@
 #include <sst/basic-blocks/dsp/RNG.h>
 
 #include "mod_matrix.h"
-
-struct MTSClient;
+#include "tuning.h"
 
 namespace baconpaul::six_sines
 {
@@ -85,9 +84,7 @@ struct MonoValues
 
     std::array<float *, numMacros> macroPtr;
 
-    MTSClient *mtsClient{nullptr};
-    // asked once per host buffer, not per voice per block
-    bool mtsHasMaster{false};
+    Tuning tuning;
 
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
     sst::basic_blocks::tables::TwoToTheXProvider twoToTheX;

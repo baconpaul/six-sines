@@ -49,3 +49,6 @@
 [submodule "libs/pffft"]
 	path = libs/pffft
 	url = https://github.com/surge-synthesizer/pffft.git
+[submodule "libs/sst/tuning-library"]
+	path = libs/sst/tuning-library
+	url = https://github.com/surge-synthesizer/tuning-library

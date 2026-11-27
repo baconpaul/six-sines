@@ -47,6 +47,13 @@ enum ForceSampleRate
     FSR_HI = 2
 };
 
+enum TuningMode
+{
+    TM_MTS = 0,
+    TM_12TET = 1,
+    TM_SCL_KBM = 2
+};
+
 // memcpy from this, since clang on darwin turns a fill-with-1 loop into a memset_pattern16 call
 template <size_t BS>
 alignas(16) inline constexpr auto unitBlock = []()
