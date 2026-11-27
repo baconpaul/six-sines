@@ -83,6 +83,8 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     // The main-thread side of wavetable handover. The tables themselves hang off patchMainRef's
     // source nodes, so this is only needed to build and publish after a load gesture.
     WavetableHandoff &wavetableHandoffRef;
+    // the session scl/kbm reaches the audio thread only through applySclKbmText
+    TuningHandoff &tuningHandoffRef;
     std::array<std::string, numOps> wavetableError{};
     // Errors are shown once each. The reconcile runs every idle, so without this a patch
     // carrying a bad blob would raise the same alert forever.
@@ -108,11 +110,11 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
     uint32_t lastForceRebuild{0};
     const clap_host_t *clapHost{nullptr};
 
-    SixSinesEditor(Patch &patchMain, WavetableHandoff &handoff, Synth::audioToMainQueue_t &atou,
-                   Synth::mainToAudioQueue_T &utoa, Synth::audioOutputQueue_t &aor,
-                   std::atomic<bool> &editorActive, std::atomic<uint32_t> &uiForceRebuild,
-                   Synth::DawStateMain &dawStateMain, defaultsProvder_t &defaults,
-                   const clap_host_t *ch);
+    SixSinesEditor(Patch &patchMain, WavetableHandoff &handoff, TuningHandoff &tuningHandoff,
+                   Synth::audioToMainQueue_t &atou, Synth::mainToAudioQueue_T &utoa,
+                   Synth::audioOutputQueue_t &aor, std::atomic<bool> &editorActive,
+                   std::atomic<uint32_t> &uiForceRebuild, Synth::DawStateMain &dawStateMain,
+                   defaultsProvder_t &defaults, const clap_host_t *ch);
     virtual ~SixSinesEditor();
 
     // Rebuild every widget from patchMainRef after an out-of-band load (host stateLoad / preset).
@@ -299,6 +301,9 @@ struct SixSinesEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<S
 
     void showNavigationMenu();
     void showAboutScreen();
+    void showTuningScreen();
+    // validate, store in the session and publish; reports and changes nothing on a bad scale
+    bool applySclKbmText(const std::string &scl, const std::string &kbm);
 
     void setZoomFactor(float zf);
     float zoomFactor{1.0f};

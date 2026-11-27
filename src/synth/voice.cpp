@@ -17,7 +17,6 @@
 #include "sst/cpputils/constructors.h"
 #include "synth/matrix_index.h"
 #include "synth/patch.h"
-#include "libMTSClient.h"
 
 namespace baconpaul::six_sines
 {
@@ -140,11 +139,12 @@ template <size_t BS> void Voice<BS>::renderBlock()
     }
 
     float retuneKey = voiceValues.key;
-    if (monoValues.mtsHasMaster)
+    const auto &tuning = monoValues.tuning;
+    if (tuning.retunes())
     {
         if (monoValues.mpeActive)
         {
-            // Interpolate the MTS retuning across the two semitones the
+            // Interpolate the retuning across the two semitones the
             // bent key straddles, so MPE bend tracks the local scale slope.
             const float bend = voiceValues.mpeBendInSemisLag.v;
             float floatKey = (float)voiceValues.key + bend;
@@ -152,16 +152,13 @@ template <size_t BS> void Voice<BS>::renderBlock()
             int loKey = std::clamp(iFloatKey, 0, 126);
             int hiKey = loKey + 1;
             float frac = std::clamp(floatKey - (float)loKey, 0.f, 1.f);
-            float loRetune =
-                MTS_RetuningInSemitones(monoValues.mtsClient, loKey, voiceValues.channel);
-            float hiRetune =
-                MTS_RetuningInSemitones(monoValues.mtsClient, hiKey, voiceValues.channel);
+            float loRetune = tuning.retuningInSemitones(loKey, voiceValues.channel);
+            float hiRetune = tuning.retuningInSemitones(hiKey, voiceValues.channel);
             retuneKey += bend + (1.f - frac) * loRetune + frac * hiRetune;
         }
         else
         {
-            retuneKey +=
-                MTS_RetuningInSemitones(monoValues.mtsClient, voiceValues.key, voiceValues.channel);
+            retuneKey += tuning.retuningInSemitones(voiceValues.key, voiceValues.channel);
         }
     }
     else

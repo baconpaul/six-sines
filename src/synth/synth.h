@@ -108,6 +108,8 @@ struct Synth
     // Getting a built table across to the audio thread, and knowing when the old one is safe
     // to free. The tables themselves live on the patch, one per SourceNode on each side.
     WavetableHandoff wavetableHandoff;
+    // the session scl/kbm, built on main; publish through publishSclKbm
+    TuningHandoff tuningHandoff;
     sst::basic_blocks::dsp::LagCollection<130> midiCCLagCollection; // 130 for 128 + pitch + chanat
 
     struct VMConfig
@@ -367,6 +369,8 @@ struct Synth
     // once per host buffer: pull the patch's tables back into cache before the blocks read them
     void preloadTables(bool eventsPending);
     void refreshMtsMaster();
+    // once per block: adopt a newly published scale
+    void refreshTuning();
 
     // End-of-chain processing on the engine-rate stereo bus, in place.
     // Runs the saturator / lowpass / decimator / bitcrush / highpass stages.
@@ -486,6 +490,8 @@ struct Synth
         // note-expression lags. paramAutomationSmoothingTimeMs: per-param host-automation lag.
         float midiCCSmoothingTimeMs{25.f};
         float paramAutomationSmoothingTimeMs{2.f};
+        // session state so it survives patch changes, like the scl/kbm it selects
+        int tuningMode{TM_MTS};
     };
 
     // MainDawState is the part only the UI needs; it never crosses to the audio thread, so it may
@@ -496,6 +502,9 @@ struct Synth
     {
         std::string colorMapXml;
         bool mpeFromExtraState{false};
+
+        // session tuning, applied only through publishSclKbm. Empty scl means none
+        std::string sclText{}, kbmText{};
 
         // Which preset the session is showing. patch.name carries only the bare display name,
         // which is not a unique key - a user preset can share it with a factory one - so the
@@ -554,6 +563,7 @@ struct Synth
         monoValues.mpeBendRange = s.mpeBendRange;
         monoValues.midiCCSmoothingTimeMs = s.midiCCSmoothingTimeMs;
         monoValues.paramAutomationSmoothingTimeMs = s.paramAutomationSmoothingTimeMs;
+        monoValues.tuning.mode = (TuningMode)std::clamp(s.tuningMode, (int)TM_MTS, (int)TM_SCL_KBM);
         applyMpeState();
         applySmoothingTimes();
     }

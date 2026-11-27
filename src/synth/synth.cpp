@@ -46,7 +46,7 @@ Synth::Synth(bool mo) : isMultiOut(mo), responder(*this), monoResponder(*this)
     monoValues.rng = rngAfterDefaultPool;
     useVoicePool<defaultBlockSize>();
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
-    monoValues.mtsClient = MTS_RegisterClient();
+    monoValues.tuning.mtsClient = MTS_RegisterClient();
 
     for (int i = 0; i < numMacros; ++i)
     {
@@ -135,9 +135,9 @@ Synth::Synth(bool mo) : isMultiOut(mo), responder(*this), monoResponder(*this)
 
 Synth::~Synth()
 {
-    if (monoValues.mtsClient)
+    if (monoValues.tuning.mtsClient)
     {
-        MTS_DeregisterClient(monoValues.mtsClient);
+        MTS_DeregisterClient(monoValues.tuning.mtsClient);
     }
 
     for (auto ls : lState)
@@ -197,6 +197,22 @@ void Synth::toDawExtraState(TiXmlElement &e, const DawStateMain &s)
     sm.SetDoubleAttribute("paramAutomationMs", s.audio.paramAutomationSmoothingTimeMs);
     e.InsertEndChild(sm);
 
+    auto cdata = [&e](const char *tag, const std::string &body)
+    {
+        if (body.empty())
+            return;
+        TiXmlElement el(tag);
+        TiXmlText t(body);
+        t.SetCDATA(true);
+        el.InsertEndChild(t);
+        e.InsertEndChild(el);
+    };
+    TiXmlElement tu("tuning");
+    tu.SetAttribute("mode", s.audio.tuningMode);
+    e.InsertEndChild(tu);
+    cdata("scl", s.main.sclText);
+    cdata("kbm", s.main.kbmText);
+
     // Which preset slot the session sits on. The patch name alone cannot say whether "Harmony 4"
     // is the factory one or the user's.
     if (!s.main.presetKind.empty())
@@ -247,6 +263,22 @@ void Synth::fromDawExtraState(TiXmlElement &e, DawStateMain &s)
             s.audio.midiCCSmoothingTimeMs = (float)v;
         if (sm->QueryDoubleAttribute("paramAutomationMs", &v) == TIXML_SUCCESS)
             s.audio.paramAutomationSmoothingTimeMs = (float)v;
+    }
+
+    auto cdata = [&e](const char *tag) -> std::string
+    {
+        auto *el = e.FirstChildElement(tag);
+        auto *n = el ? el->FirstChild() : nullptr;
+        auto *txt = n ? n->ToText() : nullptr;
+        return (txt && txt->Value()) ? std::string(txt->Value()) : std::string();
+    };
+    s.main.sclText = cdata("scl");
+    s.main.kbmText = cdata("kbm");
+    if (auto *tu = e.FirstChildElement("tuning"))
+    {
+        int m{TM_MTS};
+        if (tu->QueryIntAttribute("mode", &m) == TIXML_SUCCESS)
+            s.audio.tuningMode = std::clamp(m, (int)TM_MTS, (int)TM_SCL_KBM);
     }
 
     // Absent before 1.3 and in any state written without a preset selection; the reader then
@@ -698,7 +730,8 @@ void Synth::processInternal(std::chrono::high_resolution_clock::time_point start
                 AudioToMainMsg msg3{AudioToMainMsg::UPDATE_CPU_USAGE, 0, (float)(cpuUsage * 100)};
                 audioToMain.push(msg3);
 
-                AudioToMainMsg msg4{AudioToMainMsg::MTS_POINTER, 0, 0, 0, monoValues.mtsClient};
+                AudioToMainMsg msg4{AudioToMainMsg::MTS_POINTER, 0, 0, 0,
+                                    monoValues.tuning.mtsClient};
                 audioToMain.push(msg4);
 
                 lastVuUpdate = 0;
@@ -789,6 +822,7 @@ void Synth::process(const clap_output_events_t *o)
 
     processUIQueue(o);
     applyPendingEngineChanges();
+    refreshTuning();
 
     switch (blockSize)
     {
@@ -882,7 +916,14 @@ void Synth::applyPendingEngineChanges()
 
 void Synth::refreshMtsMaster()
 {
-    monoValues.mtsHasMaster = monoValues.mtsClient && MTS_HasMaster(monoValues.mtsClient);
+    monoValues.tuning.mtsHasMaster =
+        monoValues.tuning.mtsClient && MTS_HasMaster(monoValues.tuning.mtsClient);
+}
+
+void Synth::refreshTuning()
+{
+    if (tuningHandoff.consume())
+        monoValues.tuning.sclKbm = tuningHandoff.frontBuffer();
 }
 
 void Synth::preloadTables(bool eventsPending)
@@ -1007,7 +1048,7 @@ void Synth::processUIQueue(const clap_output_events_t *outq)
             // engine-owned non-patch bits it can't read directly: the sample rate and MTS pointer.
             audioToMain.push({AudioToMainMsg::SEND_SAMPLE_RATE, 0, (float)hostSampleRate,
                               (float)engineSampleRate});
-            AudioToMainMsg mts{AudioToMainMsg::MTS_POINTER, 0, 0, 0, monoValues.mtsClient};
+            AudioToMainMsg mts{AudioToMainMsg::MTS_POINTER, 0, 0, 0, monoValues.tuning.mtsClient};
             audioToMain.push(mts);
         }
         break;

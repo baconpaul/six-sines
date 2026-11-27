@@ -17,6 +17,7 @@ add_subdirectory(sst/sst-basic-blocks)
 add_subdirectory(sst/sst-jucegui)
 add_subdirectory(sst/sst-voicemanager)
 add_subdirectory(sst/sst-filters)
+add_subdirectory(sst/tuning-library)
 
 set(SST_PLUGININFRA_PROVIDE_TINYXML ON CACHE BOOL "yesxml")
 set(SST_PLUGININFRA_PROVIDE_PATCHBASE ON CACHE BOOL "patchbase pls")

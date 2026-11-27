@@ -32,6 +32,8 @@ namespace baconpaul::six_sines::ui
 // A JogUpDownButton whose arrows / wheel / menu step through a fixed set of values (the
 // voice-limit choices) rather than every integer in the range. Defined in the .cpp.
 struct SteppedJogButton;
+// the mts / 12-tet / scl-kbm jog, bound to session state rather than a patch param
+struct TuningModeJog;
 
 // As with the base JogUpDownButton, the value is shown in the label so a tooltip is redundant.
 template <> constexpr bool suppressTooltipByWidget<SteppedJogButton>() { return true; }
@@ -49,11 +51,14 @@ struct PlayModeSubPanel : juce::Component, HasEditor
     std::unique_ptr<jcmp::MultiSwitch> playMode;
     std::unique_ptr<PatchDiscrete> playModeD;
 
-    std::unique_ptr<jcmp::RuledLabel> bendTitle, uniTitle, tsposeTitle, panicTitle, mtsTitle;
-    std::unique_ptr<jcmp::Label> mtsStatusLabel;
-    int mtsIdleCount{0};
-    bool mtsConnected{false};
-    void updateMTSStatus();
+    std::unique_ptr<jcmp::RuledLabel> bendTitle, uniTitle, tsposeTitle, panicTitle, tuningTitle;
+    std::unique_ptr<TuningModeJog> tuningModeD;
+    std::unique_ptr<jcmp::Label> tuningStatusLabel;
+    std::unique_ptr<jcmp::TextPushButton> sclKbmButton;
+    int tuningIdleCount{0};
+    // the parsed scale name, recomputed only when the session text changes
+    std::string cachedSclText, cachedKbmText, cachedSclName;
+    void updateTuningStatus(bool force = false);
 
     std::unique_ptr<jcmp::Label> bUpL, bDnL;
     std::unique_ptr<PatchContinuous> bUpD, bDnD;

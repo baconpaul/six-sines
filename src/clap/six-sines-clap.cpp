@@ -356,6 +356,15 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             loadedState.audio.mpeBendRange =
                 (int)std::round(engine->patchMain.output.legacyMpeBendRange.value);
         }
+        std::string tuningErr;
+        if (!publishSclKbm(loadedState.main.sclText, loadedState.main.kbmText,
+                           engine->tuningHandoff, tuningErr))
+        {
+            SXSNLOG("[ERROR] Session scale did not parse, using none: " << tuningErr);
+            loadedState.main.sclText.clear();
+            loadedState.main.kbmText.clear();
+            publishSclKbm({}, {}, engine->tuningHandoff, tuningErr);
+        }
         engine->dawStateMain = loadedState;
         engine->uiForceRebuild++; // an open editor rebuilds from patchMain
 
@@ -538,10 +547,9 @@ struct SixSinesClap : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     std::unique_ptr<juce::Component> createEditor() override
     {
         auto res = std::make_unique<baconpaul::six_sines::ui::SixSinesEditor>(
-            engine->patchMain, engine->wavetableHandoff, engine->audioToMain,
-            engine->mainToAudio, engine->audioOutputRing,
-            engine->editorActive, engine->uiForceRebuild, engine->dawStateMain,
-            *engine->defaultsProvider, _host.host());
+            engine->patchMain, engine->wavetableHandoff, engine->tuningHandoff, engine->audioToMain,
+            engine->mainToAudio, engine->audioOutputRing, engine->editorActive,
+            engine->uiForceRebuild, engine->dawStateMain, *engine->defaultsProvider, _host.host());
 
         res->onZoomChanged = [this](auto f)
         {
